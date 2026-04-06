@@ -1,37 +1,65 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');`;
 
 const css = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; }
-.serif { font-family: 'Lora', serif; }
+body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; min-height: 100vh; }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
 
-.header { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 0 32px; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; flex-shrink: 0; }
-.logo { font-family: 'Lora', serif; font-size: 17px; color: #1a1a18; letter-spacing: -0.3px; }
+/* HEADER */
+.header { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 0 32px; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; }
+.logo { font-family: 'Lora', serif; font-size: 17px; color: #1a1a18; }
 .logo span { color: #8B6F47; }
-.stepper { display: flex; align-items: center; gap: 0; }
-.step-item { display: flex; align-items: center; gap: 7px; padding: 0 12px; font-size: 11px; font-weight: 500; color: #aaa; letter-spacing: 0.4px; text-transform: uppercase; cursor: default; white-space: nowrap; }
-.step-item.active { color: #1a1a18; }
-.step-item.done { color: #8B6F47; cursor: pointer; }
-.step-num { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
-.step-item.done .step-num { background: #8B6F47; border-color: #8B6F47; color: #fff; }
-.step-item.active .step-num { background: #1a1a18; border-color: #1a1a18; color: #fff; }
-.step-div { width: 20px; height: 1px; background: #E8E6DF; }
+.phase-nav { display: flex; align-items: center; gap: 0; }
+.phase-item { display: flex; align-items: center; gap: 7px; padding: 0 14px; font-size: 11px; font-weight: 600; color: #bbb; letter-spacing: 0.5px; text-transform: uppercase; cursor: default; white-space: nowrap; transition: color 0.2s; }
+.phase-item.active { color: #1a1a18; }
+.phase-item.done { color: #8B6F47; cursor: pointer; }
+.phase-item.done:hover { color: #7A6040; }
+.phase-num { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; transition: all 0.2s; }
+.phase-item.done .phase-num { background: #8B6F47; border-color: #8B6F47; color: #fff; }
+.phase-item.active .phase-num { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.phase-div { width: 28px; height: 1px; background: #E8E6DF; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #2E6B2E; background: #EEF5EE; padding: 3px 10px; border-radius: 20px; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: #2E6B2E; animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-.page { max-width: 860px; margin: 0 auto; padding: 40px 32px 72px; width: 100%; }
-.page-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 500; color: #1a1a18; margin-bottom: 6px; }
-.page-sub { font-size: 14px; color: #777; line-height: 1.65; margin-bottom: 36px; }
+/* LAYOUT */
+.page { max-width: 920px; margin: 0 auto; padding: 40px 32px 80px; width: 100%; }
+.page-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 500; margin-bottom: 6px; }
+.page-sub { font-size: 14px; color: #777; line-height: 1.65; margin-bottom: 36px; max-width: 600px; }
 
-.upload-zone { border: 1.5px dashed #C8C4BB; border-radius: 12px; padding: 48px 32px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; }
-.upload-zone:hover, .upload-zone.drag { border-color: #8B6F47; background: #FAF8F4; }
-.upload-icon { font-size: 32px; margin-bottom: 14px; color: #C8C4BB; }
-.upload-label { font-family: 'Lora', serif; font-size: 15px; color: #1a1a18; margin-bottom: 6px; }
-.upload-hint { font-size: 13px; color: #999; margin-bottom: 20px; }
+/* RIVER BADGE */
+.river-badge { display: inline-flex; align-items: center; gap: 6px; background: #1a1a18; border-radius: 8px; padding: 6px 14px; margin-bottom: 32px; }
+.river-letter { font-family: 'Lora', serif; font-size: 13px; font-weight: 600; color: #8B6F47; }
+.river-sep { color: #444; font-size: 11px; }
+.river-word { font-size: 11px; color: rgba(255,255,255,0.5); }
 
-.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; line-height: 1; }
+/* CARDS */
+.card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 22px; margin-bottom: 16px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.card-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; }
+.card-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 10px; border-radius: 20px; }
+.badge-r { background: #FDE8E8; color: #9B2C2C; }
+.badge-i { background: #FEF3E2; color: #92540A; }
+.badge-v { background: #EEF5EE; color: #276227; }
+.badge-e { background: #EEF2F8; color: #3A5A8C; }
+.badge-r2 { background: #F5EEF5; color: #6B3A7A; }
+.badge-prep { background: #F3EDE6; color: #7A5C30; }
+
+/* FORM ELEMENTS */
+.field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
+.field-label .req { color: #8B6F47; }
+input[type=text], select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #1a1a18; background: #FAFAF8; outline: none; transition: border-color 0.15s; resize: vertical; }
+input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; background: #fff; }
+.field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; line-height: 1; white-space: nowrap; }
 .btn:disabled { opacity: 0.4; cursor: default; }
 .btn-primary { background: #1a1a18; color: #fff; }
 .btn-primary:hover:not(:disabled) { background: #333; }
@@ -41,576 +69,393 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .btn-gold:hover:not(:disabled) { background: #7A6040; }
 .btn-green { background: #2E6B2E; color: #fff; }
 .btn-green:hover:not(:disabled) { background: #245424; }
-.btn-lg { padding: 12px 24px; font-size: 14px; }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-lg { padding: 13px 26px; font-size: 14px; }
+.btn-sm { padding: 6px 13px; font-size: 12px; }
+.actions-row { display: flex; gap: 10px; margin-top: 28px; align-items: center; flex-wrap: wrap; }
 
-.card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-.card-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; margin-bottom: 14px; }
+/* RIVER STAGE NAVIGATOR */
+.river-nav { display: flex; gap: 0; margin-bottom: 0; border-bottom: 1px solid #E8E6DF; background: #FAFAF8; overflow-x: auto; flex-shrink: 0; }
+.river-tab { padding: 11px 16px; font-size: 11px; font-weight: 600; cursor: pointer; color: #bbb; border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; border-bottom: 2px solid transparent; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; }
+.river-tab:hover { color: #1a1a18; }
+.river-tab.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #fff; }
+.river-tab.filled { color: #2E6B2E; }
+.river-tab.filled.active { color: #8B6F47; }
+.fill-dot { width: 6px; height: 6px; border-radius: 50%; background: #2E6B2E; flex-shrink: 0; }
 
-.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.field-row { display: flex; flex-direction: column; gap: 5px; }
-.field-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
-.field-label .req { color: #8B6F47; }
-select, input[type=text], textarea { width: 100%; padding: 8px 11px; border: 1px solid #E8E6DF; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #1a1a18; background: #FAFAF8; appearance: none; outline: none; transition: border-color 0.15s; resize: vertical; }
-select:focus, input[type=text]:focus, textarea:focus { border-color: #8B6F47; background: #fff; }
-
-.preview-table-wrap { overflow-x: auto; }
-.preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.preview-table th { background: #F5F3EE; padding: 7px 10px; text-align: left; font-weight: 600; color: #666; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
-.preview-table td { padding: 7px 10px; border-top: 1px solid #F0EDE6; color: #333; white-space: nowrap; }
-
-.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
-.summary-stat { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; padding: 16px; text-align: center; }
-.summary-num { font-family: 'Lora', serif; font-size: 26px; color: #8B6F47; margin-bottom: 3px; }
-.summary-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.4px; }
-
-.cohort-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 28px; }
-.cohort-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 12px; padding: 18px; cursor: pointer; transition: all 0.18s; }
-.cohort-card:hover { border-color: #8B6F47; }
-.cohort-card.selected { border-color: #8B6F47; background: #FAF8F4; }
-.cohort-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 7px; flex-shrink: 0; }
-.cohort-name { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; margin-bottom: 3px; display: flex; align-items: center; }
-.cohort-size { font-size: 11px; color: #999; margin-bottom: 10px; }
-.cohort-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-.tag { font-size: 10px; padding: 2px 9px; border-radius: 20px; font-weight: 600; }
-.tag-ind { background: #EEF2F8; color: #3A5A8C; }
-.tag-size { background: #F3EDE6; color: #7A5C30; }
-.tag-src { background: #EEF5EE; color: #2E6B2E; }
-.tag-out { background: #F5EEF5; color: #6B3A7A; }
-.cohort-stat { font-size: 11px; color: #777; }
-.cohort-stat strong { color: #1a1a18; }
-
-.outcome-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.outcome-tile { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.18s; }
-.outcome-tile:hover { border-color: #8B6F47; }
-.outcome-tile.selected { border-color: #8B6F47; background: #FAF8F4; }
-.outcome-icon { font-size: 18px; margin-bottom: 6px; }
-.outcome-title { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
-.outcome-sub { font-size: 11px; color: #999; line-height: 1.4; }
-
-.notice { background: #F8F6F1; border: 1px solid #E8E6DF; border-radius: 9px; padding: 13px 16px; font-size: 12px; color: #777; line-height: 1.6; margin-bottom: 20px; }
-.notice strong { color: #1a1a18; }
-
-.actions-row { display: flex; gap: 10px; margin-top: 28px; align-items: center; }
-
-/* ── LIVE CALL LAYOUT ── */
+/* SPLIT LAYOUT FOR IN-CALL */
 .call-layout { display: flex; flex: 1; height: calc(100vh - 58px); overflow: hidden; }
+.call-left { width: 55%; border-right: 1px solid #E8E6DF; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+.call-right { width: 45%; display: flex; flex-direction: column; background: #FAFAF8; overflow: hidden; }
+.panel-header { padding: 14px 20px; border-bottom: 1px solid #E8E6DF; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
+.panel-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; }
+.panel-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
 
-.call-left { width: 52%; border-right: 1px solid #E8E6DF; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
-.call-right { width: 48%; display: flex; flex-direction: column; background: #FAFAF8; overflow: hidden; }
+/* RIVER SECTION */
+.river-section { margin-bottom: 6px; }
+.river-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.river-icon { width: 32px; height: 32px; border-radius: 8px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 15px; font-weight: 600; color: #8B6F47; flex-shrink: 0; }
+.river-section-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; }
+.river-section-sub { font-size: 12px; color: #777; margin-top: 1px; }
 
-.call-panel-header { padding: 14px 20px; border-bottom: 1px solid #E8E6DF; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
-.call-panel-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; }
-.call-panel-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+/* GATE QUESTIONS */
+.gate { background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.gate.answered { border-color: #2E6B2E; background: #F4FAF4; }
+.gate-q { font-size: 13px; font-weight: 500; color: #1a1a18; margin-bottom: 10px; line-height: 1.4; }
+.gate-options { display: flex; flex-direction: column; gap: 6px; }
+.gate-option { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 7px; border: 1px solid #E8E6DF; background: #fff; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #333; text-align: left; }
+.gate-option:hover { border-color: #8B6F47; background: #FAF8F4; }
+.gate-option.selected { border-color: #2E6B2E; background: #EEF5EE; color: #2E6B2E; font-weight: 500; }
+.gate-answer { font-size: 12px; color: #2E6B2E; font-weight: 500; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
 
-.stage-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid #E8E6DF; background: #FAFAF8; flex-shrink: 0; }
-.stage-tab { padding: 9px 14px; font-size: 11px; font-weight: 500; cursor: pointer; color: #999; border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; border-bottom: 2px solid transparent; transition: all 0.15s; }
-.stage-tab:hover { color: #1a1a18; }
-.stage-tab.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #fff; }
-.stage-tab.completed { color: #2E6B2E; }
+/* DISCOVERY FIELDS */
+.discovery-field { margin-bottom: 12px; }
+.discovery-prompt { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; font-style: italic; }
+.discovery-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
 
-/* Decision tree nodes */
-.tree-stage { margin-bottom: 8px; }
-.tree-stage-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #999; margin-bottom: 8px; padding: 8px 0 0; }
+/* CONFIDENCE METER */
+.confidence-bar-wrap { margin-bottom: 16px; }
+.confidence-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.confidence-text { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
+.confidence-score { font-family: 'Lora', serif; font-size: 20px; font-weight: 500; }
+.confidence-track { height: 6px; background: #E8E6DF; border-radius: 3px; overflow: hidden; }
+.confidence-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease, background 0.5s ease; }
 
-.node { border: 1px solid #E8E6DF; border-radius: 10px; background: #fff; margin-bottom: 8px; overflow: hidden; transition: all 0.2s; }
-.node.active { border-color: #8B6F47; box-shadow: 0 0 0 2px rgba(139,111,71,0.1); }
-.node.completed { border-color: #2E6B2E; background: #F4FAF4; }
-.node.dimmed { opacity: 0.45; }
-
-.node-header { padding: 11px 14px; display: flex; align-items: flex-start; gap: 10px; }
-.node-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
-.node-icon.q { background: #1a1a18; color: #fff; }
-.node-icon.done { background: #2E6B2E; color: #fff; }
-.node-icon.act { background: #8B6F47; color: #fff; }
-.node-q { font-size: 13px; font-weight: 500; color: #1a1a18; line-height: 1.4; }
-.node-answer { font-size: 12px; color: #2E6B2E; font-weight: 500; margin-top: 3px; }
-
-.node-branches { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 6px; }
-.branch-btn { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 8px; border: 1px solid #E8E6DF; background: #FAFAF8; cursor: pointer; text-align: left; width: 100%; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
-.branch-btn:hover { border-color: #8B6F47; background: #FAF8F4; }
-.branch-if { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #8B6F47; min-width: 26px; padding-top: 2px; flex-shrink: 0; }
-.branch-text { font-size: 12px; color: #333; line-height: 1.45; }
-.branch-action { font-size: 11px; color: #8B6F47; font-weight: 500; margin-top: 2px; }
-
-.talk-box { background: #F8F6F1; border-left: 3px solid #8B6F47; border-radius: 0 8px 8px 0; padding: 11px 14px; margin: 10px 14px 12px; }
-.talk-box-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 5px; }
-.talk-box-text { font-size: 12px; color: #555; line-height: 1.6; font-style: italic; }
-
-.action-node { padding: 12px 14px; background: #F8F6F1; border-radius: 10px; border: 1px solid #E8E6DF; margin-bottom: 8px; }
-.action-node-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 8px; }
-.action-list { display: flex; flex-direction: column; gap: 6px; }
-.action-item { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: #333; line-height: 1.45; }
-.action-num { width: 18px; height: 18px; border-radius: 50%; background: #1a1a18; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
-
-.obj-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.obj-item { border: 1px solid #E8E6DF; border-radius: 8px; overflow: hidden; background: #fff; }
-.obj-q-btn { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; cursor: pointer; font-size: 12px; font-weight: 500; width: 100%; text-align: left; background: none; border: none; font-family: 'DM Sans', sans-serif; color: #1a1a18; }
-.obj-a-text { padding: 0 12px 9px; font-size: 12px; color: #555; line-height: 1.5; font-style: italic; border-top: 1px solid #F0EDE6; padding-top: 8px; }
-
-/* ── RIGHT PANEL TABS ── */
+/* RIGHT PANEL TABS */
 .right-tabs { display: flex; border-bottom: 1px solid #E8E6DF; background: #fff; flex-shrink: 0; }
-.right-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; cursor: pointer; color: #999; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.15s; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
+.right-tab { padding: 10px 14px; font-size: 11px; font-weight: 600; cursor: pointer; color: #999; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.15s; white-space: nowrap; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.4px; }
 .right-tab:hover { color: #1a1a18; }
 .right-tab.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #FAFAF8; }
 
-/* Call Prep */
-.prep-search { display: flex; gap: 8px; margin-bottom: 14px; }
-.prep-search input { flex: 1; }
+/* HYPOTHESIS CARDS */
+.hypothesis-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 9px; padding: 13px 14px; margin-bottom: 8px; }
+.hypothesis-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 4px; }
+.hypothesis-text { font-size: 12px; color: #333; line-height: 1.55; }
 
-.intel-section { margin-bottom: 16px; }
-.intel-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.intel-dot { width: 6px; height: 6px; border-radius: 50%; background: #8B6F47; }
-.intel-item { background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; }
-.intel-headline { font-size: 12px; font-weight: 500; color: #1a1a18; margin-bottom: 3px; line-height: 1.4; }
-.intel-meta { font-size: 11px; color: #999; }
-.intel-contact { display: flex; gap: 10px; align-items: flex-start; }
-.intel-avatar { width: 34px; height: 34px; border-radius: 50%; background: #E8E6DF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #555; flex-shrink: 0; }
-.intel-contact-info { flex: 1; }
-.intel-contact-name { font-size: 12px; font-weight: 600; color: #1a1a18; }
-.intel-contact-title { font-size: 11px; color: #777; }
-.intel-contact-signal { font-size: 11px; color: #8B6F47; margin-top: 3px; font-style: italic; }
+/* TALK TRACKS */
+.talk-box { background: #F8F6F1; border-left: 3px solid #8B6F47; border-radius: 0 8px 8px 0; padding: 12px 14px; margin-bottom: 12px; }
+.talk-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 5px; }
+.talk-text { font-size: 12px; color: #555; line-height: 1.6; font-style: italic; }
 
-.loading-pulse { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
-.pulse-line { height: 12px; background: linear-gradient(90deg, #F0EDE6 25%, #E8E4DC 50%, #F0EDE6 75%); background-size: 200% 100%; border-radius: 6px; animation: pulse 1.4s ease-in-out infinite; }
-@keyframes pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* OBJECTIONS */
+.obj-item { border: 1px solid #E8E6DF; border-radius: 8px; overflow: hidden; background: #fff; margin-bottom: 6px; }
+.obj-q-btn { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; cursor: pointer; font-size: 12px; font-weight: 500; width: 100%; text-align: left; background: none; border: none; font-family: 'DM Sans', sans-serif; color: #1a1a18; }
+.obj-a-text { padding: 8px 12px 10px; font-size: 12px; color: #555; line-height: 1.55; font-style: italic; border-top: 1px solid #F0EDE6; }
 
-/* Notes */
-.notes-area { width: 100%; min-height: 120px; font-size: 13px; padding: 10px; border-radius: 8px; border: 1px solid #E8E6DF; background: #fff; }
-.notes-meta { font-size: 11px; color: #999; margin-top: 6px; }
-.timestamp { font-size: 10px; color: #aaa; }
+/* LOADING */
+.loading-pulse { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.pulse-line { height: 11px; background: #F0EDE6; border-radius: 6px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%{opacity:1} 50%{opacity:0.4} 100%{opacity:1} }
 
-/* Post-call */
-.post-call-section { margin-bottom: 20px; }
-.post-call-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 8px; }
-.post-call-content { background: #fff; border: 1px solid #E8E6DF; border-radius: 9px; padding: 14px; font-size: 13px; color: #333; line-height: 1.65; white-space: pre-wrap; }
-.copy-btn { font-size: 11px; color: #8B6F47; cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; font-weight: 500; padding: 0; }
+/* POST CALL */
+.post-section { margin-bottom: 20px; }
+.post-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+.post-content { background: #fff; border: 1px solid #E8E6DF; border-radius: 9px; padding: 14px; font-size: 13px; color: #333; line-height: 1.65; white-space: pre-wrap; }
+.copy-btn { font-size: 11px; color: #8B6F47; cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; font-weight: 600; padding: 0; }
 .copy-btn:hover { text-decoration: underline; }
 
-/* Live indicator */
-.live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #2E6B2E; background: #EEF5EE; padding: 3px 10px; border-radius: 20px; }
-.live-dot { width: 6px; height: 6px; border-radius: 50%; background: #2E6B2E; animation: blink 1.2s ease-in-out infinite; }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+/* DEAL ROUTING */
+.routing-card { border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; border: 1.5px solid; }
+.route-fast { background: #EEF5EE; border-color: #2E6B2E; }
+.route-nurture { background: #FEF3E2; border-color: #BA7517; }
+.route-disq { background: #FDE8E8; border-color: #9B2C2C; }
+.route-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.route-fast .route-label { color: #2E6B2E; }
+.route-nurture .route-label { color: #92540A; }
+.route-disq .route-label { color: #9B2C2C; }
+.route-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+.route-desc { font-size: 12px; color: #555; line-height: 1.55; }
 
-.progress-bar { height: 3px; background: #E8E6DF; border-radius: 2px; margin-bottom: 14px; }
-.progress-fill { height: 100%; border-radius: 2px; background: #8B6F47; transition: width 0.3s; }
+/* SUMMARY */
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+.summary-stat { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; padding: 14px; text-align: center; }
+.summary-num { font-family: 'Lora', serif; font-size: 24px; color: #8B6F47; margin-bottom: 2px; }
+.summary-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.4px; }
 
 .divider { height: 1px; background: #E8E6DF; margin: 20px 0; }
-
+.notice { background: #F8F6F1; border: 1px solid #E8E6DF; border-radius: 9px; padding: 12px 16px; font-size: 12px; color: #777; line-height: 1.6; margin-bottom: 18px; }
+.notice strong { color: #1a1a18; }
 .scroll-anchor { height: 1px; }
 `;
 
-// ── DATA / LOGIC ──────────────────────────────────────────────────────────────
+// ── RIVER FRAMEWORK DATA ──────────────────────────────────────────────────────
 
-const COHORT_COLORS = ["#8B6F47", "#4A7A9B", "#6B8E6B", "#9B6B8E", "#7A7A4A"];
-
-const OUTCOMES = [
-  { id: "revenue", icon: "↑", title: "Revenue Growth", sub: "Pipeline, new logos, upsell" },
-  { id: "efficiency", icon: "⟳", title: "Operational Efficiency", sub: "Automation, cost reduction" },
-  { id: "retention", icon: "◎", title: "Customer Retention", sub: "Churn reduction, loyalty" },
-  { id: "workforce", icon: "✦", title: "Workforce Management", sub: "Payroll, HR ops" },
-  { id: "ai", icon: "◈", title: "Data & AI Adoption", sub: "Analytics, AI tooling" },
-  { id: "transformation", icon: "◇", title: "Strategic Transformation", sub: "Org change, M&A" },
+const RIVER_STAGES = [
+  {
+    id: "R1", letter: "R", label: "Reality",
+    sub: "Current state — where are they broken?",
+    badge: "badge-r",
+    color: "#9B2C2C",
+    gates: [
+      { id: "r1_current", q: "How is the prospect handling this problem today?", options: ["Manual / spreadsheets / no system", "Legacy tool they've outgrown", "Patchwork of multiple vendors", "Competitor solution that's underperforming", "No process at all"] },
+      { id: "r1_urgency", q: "What's driving urgency to solve this now?", options: ["Executive mandate / top-down pressure", "Recent failure or incident", "Growth has exposed the gap", "Competitive pressure", "Budget cycle opening up", "No clear urgency yet"] },
+    ],
+    discoveryPrompts: [
+      { id: "r_pain", label: "In their own words, what is the core pain?", hint: "Capture exact language — use verbatim in proposal" },
+      { id: "r_tried", label: "What have they already tried? Why did it fail?", hint: "Understand the graveyard before pitching your solution" },
+    ],
+    talkTrack: '"Before we get into what we do, I want to understand where you are today. Walk me through what happens right now when [problem area] comes up — what does that process actually look like?"',
+    objections: [
+      { q: "We already have something in place", a: '"That\'s helpful. What\'s working well about it — and where does it still fall short? I want to understand the gap before assuming we\'re a fit."' },
+      { q: "We\'re not sure this is a priority right now", a: '"Understood. What would need to change for it to become one? Is there an event or timeline that would accelerate the decision?"' },
+    ]
+  },
+  {
+    id: "I", letter: "I", label: "Impact",
+    sub: "What does this cost them — in dollars, time, people?",
+    badge: "badge-i",
+    color: "#92540A",
+    gates: [
+      { id: "i_cost", q: "Have they quantified the cost of this problem?", options: ["Yes — they have hard numbers", "Partial — they have a sense but not exact", "No — they haven\'t calculated it", "They don\'t think it\'s costing them much"] },
+      { id: "i_owner", q: "Who feels this pain most acutely?", options: ["C-Suite / Executive team", "Revenue / Sales leadership", "Operations / HR leadership", "Finance / CFO", "End users / frontline employees", "Multiple stakeholders equally"] },
+    ],
+    discoveryPrompts: [
+      { id: "i_dollars", label: "What is the measurable cost of inaction? (revenue, time, headcount, churn)", hint: "Push for a number. Even a rough estimate is better than nothing." },
+      { id: "i_softer", label: "What are the softer costs? (morale, reputation, missed opportunity)", hint: "These often matter more to champions than hard numbers" },
+    ],
+    talkTrack: '"I want to understand what this is actually costing you — not just in process pain, but in real dollars. When [problem] happens, what\'s the downstream impact? Have you ever tried to put a number on it?"',
+    objections: [
+      { q: "We don\'t really know what it\'s costing us", a: '"Let\'s build that together. If we look at [headcount × time lost], or [churn rate × ACV], what does that math look like? I\'d rather you own that number than have me tell you."' },
+      { q: "The cost seems manageable", a: '"What would make it unmanageable? At what point does this become a problem you can\'t ignore? I want to understand your threshold."' },
+    ]
+  },
+  {
+    id: "V", letter: "V", label: "Vision",
+    sub: "What does success look like — and who owns it?",
+    badge: "badge-v",
+    color: "#276227",
+    gates: [
+      { id: "v_outcome", q: "Can they articulate what success looks like in 90 days?", options: ["Yes — very specific and measurable", "Somewhat — directional but not specific", "No — they haven\'t defined it yet", "They have different definitions across stakeholders"] },
+      { id: "v_champion", q: "Is there a clear internal champion who will sell this upward?", options: ["Yes — identified and motivated", "Potential champion — needs equipping", "No champion identified yet", "Multiple potential champions"] },
+    ],
+    discoveryPrompts: [
+      { id: "v_success", label: "In their words: what does a win look like at Day 30, Day 90, Year 1?", hint: "This becomes your proposal headline — use their exact language" },
+      { id: "v_champion_detail", label: "Who is the internal champion? What do they personally win if this succeeds?", hint: "Champions need a personal win, not just an organizational one" },
+    ],
+    talkTrack: '"Let\'s talk about what success looks like on your end. If we\'re sitting here 90 days after you sign and everything has gone perfectly — what has changed? What can you point to and say that\'s working?"',
+    objections: [
+      { q: "We\'re not sure what success looks like yet", a: '"That\'s actually the most important thing we can figure out together before you sign anything. Can we spend 10 minutes defining that — because your answer will tell me whether we\'re the right fit."' },
+      { q: "Different stakeholders want different things", a: '"That\'s common. Who has the final say on what success means? And is there a shared outcome everyone can agree on, even if the details differ?"' },
+    ]
+  },
+  {
+    id: "E", letter: "E", label: "Entry Points",
+    sub: "Who decides, who influences, and what triggers a yes?",
+    badge: "badge-e",
+    color: "#3A5A8C",
+    gates: [
+      { id: "e_buyer", q: "Have you identified the economic buyer?", options: ["Yes — met them or confirmed identity", "Probable — know the role, not confirmed", "No — working through layers", "Unclear org structure"] },
+      { id: "e_process", q: "What does their decision process look like?", options: ["Clear — defined steps and timeline", "Informal — champion can move it", "Committee / consensus required", "RFP or formal procurement process", "Unknown"] },
+    ],
+    discoveryPrompts: [
+      { id: "e_stakeholders", label: "Map the buying committee: who approves, who influences, who can kill it?", hint: "Name every stakeholder you know. Flag the ones you haven't met." },
+      { id: "e_timeline", label: "What is the realistic decision timeline? Is there a forcing function?", hint: "Budget cycle, renewal date, board review, product launch — find the date" },
+    ],
+    talkTrack: '"I want to make sure I understand how you make decisions like this. Walk me through what the process looks like from here — who else needs to be involved, and what would need to be true for you to move forward?"',
+    objections: [
+      { q: "We need to get more people involved", a: '"Absolutely — who are the right people? I\'d rather get them in early than have them become a blocker. Can we set up a 30-minute call with that group this week?"' },
+      { q: "This will go through procurement", a: '"Understood. What does that process typically look like, and what\'s the timeline? I want to make sure we have everything they need ready before it hits their queue."' },
+    ]
+  },
+  {
+    id: "R2", letter: "R", label: "Route",
+    sub: "Fastest path to yes — and a successful Day 1",
+    badge: "badge-r2",
+    color: "#6B3A7A",
+    gates: [
+      { id: "r2_fit", q: "Based on everything you\'ve heard — what is your honest deal assessment?", options: ["Strong fit — ready to advance", "Good fit — a few gaps to close", "Uncertain — need more discovery", "Weak fit — misalignment on key criteria", "Not a fit — should not advance"] },
+      { id: "r2_blocker", q: "What is the single biggest risk to this deal?", options: ["No internal champion", "Budget not confirmed", "Competitor entrenched", "Timeline mismatch", "Stakeholder misalignment", "Technical / compliance barrier", "No compelling event"] },
+    ],
+    discoveryPrompts: [
+      { id: "r2_next", label: "What is the single most important next step to move this deal forward?", hint: "Be specific — a named action, a named person, a named date" },
+      { id: "r2_onboard", label: "What does a successful onboarding look like for them? What would make them feel great about saying yes?", hint: "This becomes your close framing and your CSM handoff brief" },
+    ],
+    talkTrack: '"Based on what you\'ve shared with me today, I have a clear picture of where you are and what you\'re trying to achieve. Here\'s what I think the right path looks like — and here\'s what I need from you to make it happen quickly and painlessly."',
+    objections: [
+      { q: "We\'re not ready to move forward yet", a: '"I hear you. What would need to change — or what would need to be true — for you to feel ready? I want to understand whether this is a timing issue or something more fundamental."' },
+      { q: "We need to think about it", a: '"Of course. What specifically do you need to think through? If I can help you work through that now, it might save us both a few weeks."' },
+    ]
+  },
 ];
 
-const SAMPLE_ROWS = [
-  { company: "Axiom Health", industry: "Healthcare", acv: "$85,000", lead_source: "Trade Show", close_date: "2024-03-15", product: "Analytics Platform", outcome: "reduce customer churn" },
-  { company: "Vertix Payments", industry: "Fintech", acv: "$220,000", lead_source: "Direct Outreach", close_date: "2024-01-22", product: "Revenue Intelligence", outcome: "grow revenue" },
-  { company: "Mediform Inc", industry: "Healthcare", acv: "$42,000", lead_source: "SEO", close_date: "2024-05-01", product: "Process Automation", outcome: "increase efficiency" },
-  { company: "ClearPay Corp", industry: "Fintech", acv: "$310,000", lead_source: "Referral", close_date: "2024-02-10", product: "Enterprise Suite", outcome: "scale revenue" },
-  { company: "Luminus Wellness", industry: "Health & Wellness", acv: "$18,000", lead_source: "SEO", close_date: "2024-06-01", product: "Engagement Tool", outcome: "improve retention" },
-  { company: "Trellis Markets", industry: "Market Research", acv: "$55,000", lead_source: "AI / ChatGPT", close_date: "2024-04-12", product: "Data Platform", outcome: "data & AI adoption" },
-  { company: "Parity Financial", industry: "Fintech", acv: "$180,000", lead_source: "Trade Show", close_date: "2024-03-28", product: "Payroll Intelligence", outcome: "manage payroll" },
-  { company: "OrionCare", industry: "Healthcare", acv: "$95,000", lead_source: "Referral", close_date: "2024-05-19", product: "Analytics Platform", outcome: "reduce churn" },
-  { company: "Summit Rewards", industry: "Digital Rewards", acv: "$67,000", lead_source: "Direct Outreach", close_date: "2024-01-30", product: "Incentive Engine", outcome: "customer acquisition" },
-  { company: "NovaPay", industry: "Fintech", acv: "$245,000", lead_source: "Referral", close_date: "2024-02-28", product: "Enterprise Suite", outcome: "scale revenue pipeline" },
-  { company: "BrightPath HR", industry: "HR Tech", acv: "$33,000", lead_source: "SEO", close_date: "2024-04-05", product: "Workforce Tool", outcome: "manage payroll effectively" },
-  { company: "Helix Analytics", industry: "Market Research", acv: "$78,000", lead_source: "AI / ChatGPT", close_date: "2024-06-10", product: "Data Platform", outcome: "AI adoption" },
-];
+// ── AI CALLS ──────────────────────────────────────────────────────────────────
 
-function parseACV(v) {
-  if (!v) return 0;
-  const n = parseFloat(v.toString().replace(/[$,]/g, "").replace(/k$/i, "000"));
-  return isNaN(n) ? 0 : n;
-}
-function labelACV(v) {
-  if (v === 0) return "Unknown";
-  if (v < 25000) return "SMB (<$25K)";
-  if (v < 100000) return "Mid-Market ($25K–$100K)";
-  return "Enterprise ($100K+)";
-}
-function getOutcomeTheme(row, mapping) {
-  const get = (k) => (mapping[k] ? (row[mapping[k]] || "") : "").toString().toLowerCase();
-  const txt = get("outcome") + get("product");
-  if (/revenue|growth|sales|pipeline/.test(txt)) return "Revenue Growth";
-  if (/efficien|automat|process|cost/.test(txt)) return "Operational Efficiency";
-  if (/churn|retain|loyal/.test(txt)) return "Customer Retention";
-  if (/payroll|hr|employ|workforce/.test(txt)) return "Workforce Management";
-  if (/ai|ml|data|analytic/.test(txt)) return "Data & AI Adoption";
-  return "Strategic Transformation";
-}
-
-function buildCohorts(rows, mapping) {
-  if (!rows.length) return [];
-  const get = (row, key) => (mapping[key] ? (row[mapping[key]] || "") : "").toString().trim();
-  const groups = {};
-  rows.forEach(row => {
-    const acv = parseACV(get(row, "acv"));
-    const band = labelACV(acv);
-    const ind = get(row, "industry") || "Other";
-    const src = get(row, "lead_source") || "Direct";
-    const outcome = getOutcomeTheme(row, mapping);
-    const key = band;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push({ row, ind, acv, band, src, outcome, company: get(row, "company") });
-  });
-  return Object.entries(groups)
-    .sort(([, a], [, b]) => b.length - a.length)
-    .slice(0, 5)
-    .map(([name, members], i) => {
-      const topInd = [...new Set(members.map(m => m.ind))].slice(0, 3);
-      const topSrc = [...new Set(members.map(m => m.src))].slice(0, 2);
-      const topOut = [...new Set(members.map(m => m.outcome))].slice(0, 2);
-      const acvs = members.filter(m => m.acv > 0);
-      const avgACV = acvs.length ? Math.round(acvs.reduce((s, m) => s + m.acv, 0) / acvs.length) : 0;
-      return { id: i, name, color: COHORT_COLORS[i], size: members.length, pct: Math.round(members.length / rows.length * 100), avgACV, topInd, topSrc, topOut, members };
-    });
-}
-
-function buildTree(cohort, outcomes) {
-  const isEnt = cohort.avgACV >= 100000;
-  const isSMB = cohort.avgACV < 25000 && cohort.avgACV > 0;
-  const pOut = outcomes[0] || cohort.topOut[0] || "Revenue Growth";
-  const cycle = isEnt ? "90–120 days" : isSMB ? "14–30 days" : "30–60 days";
-
-  const stages = [
-    {
-      id: "qual", name: "Qualification", time: isEnt ? "Wk 1–2" : "Day 1–3",
-      nodes: [
-        {
-          id: "q1", type: "decision",
-          q: "Does this prospect meet your ICP criteria?",
-          talkTrack: `"Before we get into what we do — what's driving urgency around ${pOut.toLowerCase()} right now, and what have you already tried?"`,
-          actions: ["Confirm budget authority and org structure", "Identify compelling event — what happens if they do nothing in 90 days?", `Map lead source: this cohort is primarily driven by ${cohort.topSrc.join(", ")}`],
-          branches: [
-            { label: "Yes — clear ICP fit", action: "→ Move to Discovery", next: "disc" },
-            { label: "Partial — some fit, gaps present", action: "→ Nurture sequence, 30-day follow-up", next: "nurture" },
-            { label: "No — not a fit", action: "→ Disqualify with grace, route to marketing", next: "disq" },
-          ]
-        },
-      ]
-    },
-    {
-      id: "disc", name: "Discovery", time: isEnt ? "Wk 2–4" : "Day 3–10",
-      nodes: [
-        {
-          id: "d1", type: "decision",
-          q: "Did you surface a quantifiable pain with a clear owner?",
-          talkTrack: `"Walk me through what breaks down when it comes to ${pOut.toLowerCase()}. When that breaks down, what's the downstream cost to the business?"`,
-          actions: ["Run 60-min structured discovery: current state → desired state → gap → cost of gap", `Quantify the pain: what does failing at ${pOut.toLowerCase()} cost per quarter?`, "Identify champion vs. economic buyer — are they the same person?", "Document desired outcomes in their exact words — use verbatim in proposal"],
-          branches: [
-            { label: "Yes — clear pain, clear owner", action: "→ Build value hypothesis, prep demo", next: "sol" },
-            { label: "Unclear — need more info", action: "→ Run second discovery, loop in CFO or RevOps", next: "disc" },
-            { label: "No pain identified", action: "→ No deal. Return to nurture.", next: "nurture" },
-          ]
-        },
-      ]
-    },
-    {
-      id: "sol", name: "Solution Alignment", time: isEnt ? "Wk 4–6" : "Day 10–20",
-      nodes: [
-        {
-          id: "s1", type: "decision",
-          q: "Is the champion actively selling this internally?",
-          talkTrack: `"Based on what you told me, the core problem is [restate in their words]. What I want to show you today is specifically how we address that — not everything we do, just what matters to your situation."`,
-          actions: [isEnt ? "Conduct scoped Proof of Value (POV) — document success criteria upfront" : "Run time-boxed pilot (2–3 weeks) with clear success metrics", "Present before/after narrative — their world today vs. with your solution", "Get verbal gate: 'If we can show X by Y date, do we have a deal?'", "Map competitive alternatives they're evaluating"],
-          branches: [
-            { label: "Yes — champion is selling internally", action: "→ Equip with internal business case template", next: "prop" },
-            { label: "Passive — not yet mobilized", action: "→ Schedule stakeholder alignment meeting", next: "sol" },
-            { label: "No internal access", action: "→ Escalate: request executive sponsor call", next: "sol" },
-          ]
-        },
-      ]
-    },
-    {
-      id: "prop", name: "Proposal & Negotiation", time: isEnt ? "Wk 6–10" : "Day 20–28",
-      nodes: [
-        {
-          id: "p1", type: "decision",
-          q: "Do you have verbal commitment from the economic buyer?",
-          talkTrack: `"I've built this specifically around what you told me matters. The investment reflects the scope of what you're trying to achieve. Let me walk you through the logic — not just the price."`,
-          actions: ["Lead with their outcomes on page 1 — their words, not yours", `Present 3-tier pricing: anchor high, make mid-tier obvious. Target: ~$${cohort.avgACV > 0 ? cohort.avgACV.toLocaleString() : "TBD"}`, isEnt ? "Include multi-year option with meaningful discount" : "Include fast-start incentive tied to signature date", "Walk the proposal live — never send and wait"],
-          branches: [
-            { label: "Yes — verbal commit from economic buyer", action: "→ Move to contract, set signature date", next: "close" },
-            { label: "Stalled — no movement", action: "→ Surface the real objection. Bring in executive sponsor.", next: "prop" },
-            { label: "Competitor risk", action: "→ Re-anchor on unique value. Ask: what would it take?", next: "prop" },
-          ]
-        },
-      ]
-    },
-    {
-      id: "close", name: "Close & Contract", time: isEnt ? "Wk 10–12" : "Day 28–35",
-      nodes: [
-        {
-          id: "c1", type: "decision",
-          q: "Is the onboarding handoff complete before signing?",
-          talkTrack: `"Let's talk about what happens on Day 1. I want you to feel like you made the right call the moment you sign — not like you're waiting to see if we deliver."`,
-          actions: ["Send contract within 24 hours of verbal close", "Know your legal walk-aways before redlines start", "Introduce CSM before ink dries — warm, not cold", "Confirm first milestone: what does success look like at Day 30?"],
-          branches: [
-            { label: "Yes — CSM named, kickoff scheduled", action: "→ Closed-won. Begin expansion planning at Day 90.", next: "onboard" },
-            { label: "No CSM assigned yet", action: "→ Critical gap. Do not close without a named CSM.", next: "close" },
-          ]
-        },
-      ]
-    },
-    {
-      id: "onboard", name: "Onboarding", time: isEnt ? "Days 1–60" : "Days 1–21",
-      nodes: [
-        {
-          id: "o1", type: "decision",
-          q: "Has the customer hit their first value milestone?",
-          talkTrack: `"Our goal in the next 30 days: we want you to feel like this was the most obvious decision you made all year. Here's exactly how we'll do that."`,
-          actions: [`Define first value milestone in writing: "We will have achieved ${pOut.toLowerCase()} when [measurable thing] happens by [date]"`, "Formal kickoff with all stakeholders — not just the champion", "Weekly check-ins for first 4 weeks, no exceptions", "Identify expansion signal: what behavior signals readiness for more?"],
-          branches: [
-            { label: "Yes — milestone achieved", action: "→ Expansion conversation. Introduce adjacent use case.", next: "expand" },
-            { label: "On track", action: "→ Continue weekly cadence. Surface success story.", next: "onboard" },
-            { label: "At risk", action: "→ Escalate immediately. Executive sponsor call within 48 hrs.", next: "rescue" },
-          ]
-        },
-      ]
-    },
-  ];
-  return { cycle, stages, pOut };
-}
-
-// ── AI CALL PREP ──────────────────────────────────────────────────────────────
-
-async function fetchCallPrep(company, industry, outcome) {
-  const prompt = `You are a B2B sales intelligence analyst. Generate a realistic, detailed call prep brief for a sales rep about to call "${company}" (industry: ${industry || "unknown"}, desired outcome: ${outcome || "revenue growth"}).
-
-Return ONLY valid JSON, no markdown, no explanation. Format:
-{
-  "summary": "2-sentence company overview",
-  "headlines": [
-    {"title": "headline text", "date": "Month YYYY", "signal": "why this matters for the call"},
-    {"title": "headline text", "date": "Month YYYY", "signal": "why this matters for the call"},
-    {"title": "headline text", "date": "Month YYYY", "signal": "why this matters for the call"}
-  ],
-  "jobs": [
-    {"title": "job title", "dept": "department", "signal": "what this hiring signal means"},
-    {"title": "job title", "dept": "department", "signal": "what this hiring signal means"}
-  ],
-  "competitors": ["Competitor A", "Competitor B", "Competitor C"],
-  "contacts": [
-    {"name": "Full Name", "title": "VP of Revenue", "initials": "FN", "linkedinSignal": "Recently posted about scaling outbound — strong champion signal", "talkingPoint": "Reference their post on [topic]"},
-    {"name": "Full Name", "title": "CFO", "initials": "FN", "linkedinSignal": "Commented on cost reduction article", "talkingPoint": "Lead with ROI framing"},
-    {"name": "Full Name", "title": "Head of Operations", "initials": "FN", "linkedinSignal": "Shared article on process automation", "talkingPoint": "Efficiency angle resonates"}
-  ],
-  "openingHook": "One sharp, specific opening line for this call based on a recent signal"
-}`;
-
+async function callAI(prompt) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
+      max_tokens: 1500,
       messages: [{ role: "user", content: prompt }]
     })
   });
   const data = await res.json();
   const text = data.content?.map(b => b.text || "").join("") || "";
-  try {
-    return JSON.parse(text.replace(/```json|```/g, "").trim());
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(text.replace(/```json|```/g, "").trim()); }
+  catch { return null; }
 }
 
-async function generatePostCall(company, cohortName, outcomes, treeState, notes) {
-  const decisions = Object.entries(treeState).map(([nodeId, choice]) => `${nodeId}: ${choice}`).join(", ");
-  const prompt = `You are a sales coach. Generate a post-call summary and follow-up email for a B2B sales rep.
+async function generatePrepBrief(prep) {
+  return callAI(`You are a senior B2B sales strategist. Generate a pre-call intelligence brief for a digital rewards/incentives sales rep.
 
-Company: ${company}
-Cohort: ${cohortName}
-Outcomes discussed: ${outcomes.join(", ")}
-Decision path taken: ${decisions || "Qualification stage"}
-Rep notes: ${notes || "No notes captured"}
+Company: ${prep.company}
+Industry: ${prep.industry}
+Role of contact: ${prep.contactRole}
+Deal size estimate: ${prep.acvEstimate}
+Lead source: ${prep.leadSource}
+Known pain / context: ${prep.knownContext || "None provided"}
 
 Return ONLY valid JSON:
 {
-  "summary": "3-4 sentence call summary covering what was discussed, key signals heard, and current deal status",
-  "nextSteps": ["Next step 1", "Next step 2", "Next step 3"],
-  "dealRisk": "Low / Medium / High — one sentence explanation",
-  "emailSubject": "Follow-up email subject line",
-  "emailBody": "Full follow-up email body (5-7 sentences, professional, outcome-focused, with a specific CTA and proposed next meeting time placeholder)"
-}`;
+  "companySnapshot": "2 sentence company overview relevant to a digital rewards sale",
+  "riverHypothesis": {
+    "reality": "What reality/current state do we expect to find?",
+    "impact": "What impact/cost do we expect this problem is creating?",
+    "vision": "What vision of success is this buyer likely holding?",
+    "entryPoints": "Who likely makes this decision and how?",
+    "route": "What is the likely fastest path to close based on company profile?"
+  },
+  "solutionHypothesis": "Which product/solution angle is most likely to resonate and why — 2 sentences",
+  "openingAngle": "One sharp, specific opening question tailored to this company and role",
+  "watchOuts": ["Watch-out 1", "Watch-out 2", "Watch-out 3"],
+  "keyContacts": [
+    {"name": "Likely Name", "title": "Title", "initials": "XX", "angle": "How to engage this person"},
+    {"name": "Likely Name", "title": "Title", "initials": "XX", "angle": "How to engage this person"}
+  ],
+  "competitors": ["Competitor A", "Competitor B"],
+  "recentSignals": ["Recent news/signal 1 relevant to the sale", "Recent news/signal 2"]
+}`);
+}
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }]
-    })
+async function generatePostCall(prep, riverData, gateAnswers, confidence) {
+  const riverSummary = RIVER_STAGES.map(s => {
+    const gates = s.gates.map(g => `${g.q}: ${gateAnswers[g.id] || "Not answered"}`).join("; ");
+    const discovery = s.discoveryPrompts.map(p => `${p.label}: ${riverData[p.id] || "Not captured"}`).join("; ");
+    return `${s.label}: ${gates} | ${discovery}`;
+  }).join("\n");
+
+  return callAI(`You are a senior sales coach reviewing a completed discovery call using the RIVER framework.
+
+Company: ${prep.company}
+Industry: ${prep.industry}
+Contact: ${prep.contactRole}
+Deal size estimate: ${prep.acvEstimate}
+Deal confidence score: ${confidence}%
+
+RIVER Capture:
+${riverSummary}
+
+Return ONLY valid JSON:
+{
+  "callSummary": "3-4 sentence narrative summary of what was learned on this call",
+  "riverScorecard": {
+    "reality": "What was confirmed or learned about their current state",
+    "impact": "What cost/impact was surfaced",
+    "vision": "What success looks like in their words",
+    "entryPoints": "What was learned about the buying process",
+    "route": "Recommended next move and why"
+  },
+  "dealRoute": "FAST_TRACK or NURTURE or DISQUALIFY",
+  "dealRouteReason": "One sentence explaining the routing decision",
+  "dealRisk": "The single biggest risk to this deal closing",
+  "nextSteps": ["Specific next step 1 with owner and date", "Specific next step 2", "Specific next step 3"],
+  "crmNote": "CRM-ready deal note — 4-5 sentences covering current state, pain, vision, decision process, and recommended next action",
+  "emailSubject": "Follow-up email subject line",
+  "emailBody": "Full follow-up email — professional, outcome-focused, references specific things discussed, ends with a clear CTA and proposed meeting time"
+}`);
+}
+
+// ── CONFIDENCE SCORE ──────────────────────────────────────────────────────────
+
+function calcConfidence(gateAnswers, riverData) {
+  const positiveGates = {
+    r1_urgency: ["Executive mandate / top-down pressure", "Recent failure or incident", "Budget cycle opening up"],
+    i_cost: ["Yes — they have hard numbers", "Partial — they have a sense but not exact"],
+    v_outcome: ["Yes — very specific and measurable", "Somewhat — directional but not specific"],
+    v_champion: ["Yes — identified and motivated", "Potential champion — needs equipping"],
+    e_buyer: ["Yes — met them or confirmed identity", "Probable — know the role, not confirmed"],
+    e_process: ["Clear — defined steps and timeline", "Informal — champion can move it"],
+    r2_fit: ["Strong fit — ready to advance", "Good fit — a few gaps to close"],
+  };
+  let score = 20;
+  Object.entries(positiveGates).forEach(([gateId, positives]) => {
+    if (positives.includes(gateAnswers[gateId])) score += 10;
+    else if (gateAnswers[gateId]) score += 3;
   });
-  const data = await res.json();
-  const text = data.content?.map(b => b.text || "").join("") || "";
-  try {
-    return JSON.parse(text.replace(/```json|```/g, "").trim());
-  } catch {
-    return null;
-  }
+  const filledDiscovery = RIVER_STAGES.flatMap(s => s.discoveryPrompts).filter(p => riverData[p.id]?.trim().length > 10).length;
+  score += filledDiscovery * 4;
+  return Math.min(score, 98);
+}
+
+function confidenceColor(score) {
+  if (score >= 75) return "#2E6B2E";
+  if (score >= 50) return "#BA7517";
+  return "#9B2C2C";
+}
+
+// ── COMPONENTS ────────────────────────────────────────────────────────────────
+
+function RiverBadge() {
+  const items = [
+    { l: "R", w: "Reality" }, { l: "I", w: "Impact" }, { l: "V", w: "Vision" },
+    { l: "E", w: "Entry Points" }, { l: "R", w: "Route" }
+  ];
+  return (
+    <div className="river-badge">
+      {items.map((item, i) => (
+        <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {i > 0 && <span className="river-sep">·</span>}
+          <span className="river-letter">{item.l}</span>
+          <span className="river-word">{item.w}</span>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [step, setStep] = useState(1);
-  const [rows, setRows] = useState([]);
-  const [headers, setHeaders] = useState([]);
-  const [mapping, setMapping] = useState({ company: "", industry: "", acv: "", lead_source: "", close_date: "", product: "", outcome: "" });
-  const [fileName, setFileName] = useState("");
-  const [drag, setDrag] = useState(false);
-  const [cohorts, setCohorts] = useState([]);
-  const [selectedCohort, setSelectedCohort] = useState(null);
-  const [selectedOutcomes, setSelectedOutcomes] = useState([]);
+  const [phase, setPhase] = useState(1);
 
-  // Live call state
-  const [callCompany, setCallCompany] = useState("");
-  const [activeStage, setActiveStage] = useState(0);
-  const [treeState, setTreeState] = useState({});
-  const [expandedObjs, setExpandedObjs] = useState({});
-  const [rightTab, setRightTab] = useState("prep");
-  const [notes, setNotes] = useState("");
-  const [noteTimestamps, setNoteTimestamps] = useState([]);
-
-  // Call prep state
-  const [prepSearch, setPrepSearch] = useState("");
-  const [prepData, setPrepData] = useState(null);
+  // Phase 1 state
+  const [prep, setPrep] = useState({ company: "", industry: "", contactRole: "", acvEstimate: "", leadSource: "", knownContext: "" });
+  const [prepBrief, setPrepBrief] = useState(null);
   const [prepLoading, setPrepLoading] = useState(false);
 
-  // Post-call
+  // Phase 2 state
+  const [activeRiver, setActiveRiver] = useState(0);
+  const [gateAnswers, setGateAnswers] = useState({});
+  const [riverData, setRiverData] = useState({});
+  const [expandedObjs, setExpandedObjs] = useState({});
+  const [rightTab, setRightTab] = useState("hypothesis");
+
+  // Phase 3 state
   const [postCall, setPostCall] = useState(null);
   const [postLoading, setPostLoading] = useState(false);
   const [copied, setCopied] = useState("");
 
-  const fileRef = useRef();
-  const notesRef = useRef();
-  const bottomRef = useRef();
+  const confidence = calcConfidence(gateAnswers, riverData);
 
-  const parseCSV = (text) => {
-    const lines = text.trim().split(/\r?\n/);
-    const hdrs = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
-    const data = lines.slice(1).map(line => {
-      const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
-      const obj = {};
-      hdrs.forEach((h, i) => obj[h] = vals[i] || "");
-      return obj;
-    }).filter(r => Object.values(r).some(v => v));
-    setHeaders(hdrs);
-    setRows(data);
-    const am = { ...mapping };
-    const n = s => s.toLowerCase().replace(/[\s_]/g, "");
-    hdrs.forEach(h => {
-      const hn = n(h);
-      if (hn.includes("company") || hn.includes("account")) am.company = h;
-      if (hn.includes("industry") || hn.includes("vertical")) am.industry = h;
-      if (hn.includes("acv") || hn.includes("deal") || hn.includes("amount") || hn.includes("value")) am.acv = h;
-      if (hn.includes("lead") || hn.includes("source") || hn.includes("channel")) am.lead_source = h;
-      if (hn.includes("close") || hn.includes("date")) am.close_date = h;
-      if (hn.includes("product") || hn.includes("solution")) am.product = h;
-      if (hn.includes("outcome") || hn.includes("goal")) am.outcome = h;
-    });
-    setMapping(am);
-  };
-
-  const loadSample = () => {
-    const hdrs = Object.keys(SAMPLE_ROWS[0]);
-    setHeaders(hdrs);
-    setRows(SAMPLE_ROWS);
-    setFileName("sample_crm_export.csv");
-    const m = {};
-    hdrs.forEach(h => m[h] = h);
-    setMapping(m);
-  };
-
-  const onFile = (file) => {
-    if (!file) return;
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = e => parseCSV(e.target.result);
-    reader.readAsText(file);
-  };
-
-  const handleDrop = useCallback(e => {
-    e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files[0]);
-  }, []);
-
-  const goToCohorts = () => {
-    const built = buildCohorts(rows, mapping);
-    setCohorts(built);
-    setSelectedCohort(built[0] || null);
-    setStep(2);
-  };
-
-  const goToOutcomes = () => {
-    if (selectedCohort) {
-      setSelectedOutcomes(selectedCohort.topOut.slice(0, 2));
-      setStep(3);
-    }
-  };
-
-  const goToCall = () => {
-    setActiveStage(0);
-    setTreeState({});
-    setNotes("");
-    setPostCall(null);
-    setPrepData(null);
-    setRightTab("prep");
-    if (selectedCohort && mapping.company) {
-      const firstCompany = selectedCohort.members[0]?.row[mapping.company] || "";
-      setPrepSearch(firstCompany);
-      setCallCompany(firstCompany);
-    }
-    setStep(4);
-  };
-
-  const runPrep = async (company) => {
-    if (!company.trim()) return;
-    setCallCompany(company);
+  const runPrep = async () => {
+    if (!prep.company || !prep.industry) return;
     setPrepLoading(true);
-    setPrepData(null);
-    const ind = selectedCohort?.topInd[0] || "";
-    const out = selectedOutcomes[0] || "";
-    const data = await fetchCallPrep(company, ind, out);
-    setPrepData(data);
+    const brief = await generatePrepBrief(prep);
+    setPrepBrief(brief);
     setPrepLoading(false);
-  };
-
-  const pickBranch = (nodeId, branchLabel, nextStage) => {
-    setTreeState(s => ({ ...s, [nodeId]: branchLabel }));
-    const stageIds = ["qual", "disc", "sol", "prop", "close", "onboard", "expand", "rescue", "nurture", "disq"];
-    const validStages = ["qual", "disc", "sol", "prop", "close", "onboard"];
-    if (validStages.includes(nextStage)) {
-      const idx = validStages.indexOf(nextStage);
-      if (idx > activeStage) setActiveStage(idx);
-    }
   };
 
   const runPostCall = async () => {
     setPostLoading(true);
-    setRightTab("post");
-    const data = await generatePostCall(
-      callCompany || "the prospect",
-      selectedCohort?.name || "",
-      selectedOutcomes,
-      treeState,
-      notes
-    );
-    setPostCall(data);
+    const result = await generatePostCall(prep, riverData, gateAnswers, confidence);
+    setPostCall(result);
     setPostLoading(false);
+    setPhase(3);
   };
 
   const copyText = (text, key) => {
@@ -620,251 +465,249 @@ export default function App() {
     });
   };
 
-  const tree = selectedCohort ? buildTree(selectedCohort, selectedOutcomes) : null;
-  const STEPS = ["Import Data", "Cohort Analysis", "Outcome Mapping", "Live Call Mode"];
-  const stageIds = ["qual", "disc", "sol", "prop", "close", "onboard"];
+  const isFilled = (stage) => stage.gates.some(g => gateAnswers[g.id]) || stage.discoveryPrompts.some(p => riverData[p.id]?.trim());
 
-  const completedStages = new Set(
-    Object.keys(treeState).map(nodeId => {
-      for (const [si, s] of tree?.stages.entries() || []) {
-        if (s.nodes.some(n => n.id === nodeId)) return si;
-      }
-      return -1;
-    }).filter(i => i >= 0)
-  );
+  const PHASES = ["Pre-Call Prep", "In-Call Navigator", "Post-Call Route"];
 
-  const progress = tree ? Math.round((completedStages.size / tree.stages.length) * 100) : 0;
+  const routeClass = postCall?.dealRoute === "FAST_TRACK" ? "route-fast" : postCall?.dealRoute === "NURTURE" ? "route-nurture" : "route-disq";
+  const routeLabel = postCall?.dealRoute === "FAST_TRACK" ? "Fast Track →" : postCall?.dealRoute === "NURTURE" ? "Nurture" : "Disqualify";
 
   return (
     <>
       <style>{FONTS}{css}</style>
       <div className="app">
         <header className="header">
-          <div className="logo serif">Cambrian <span>Catalyst</span></div>
-          <div className="stepper">
-            {STEPS.map((s, i) => (
+          <div className="logo">Cambrian <span>Catalyst</span> <span style={{ fontFamily: "DM Sans", fontSize: 13, color: "#aaa", fontWeight: 400 }}>· RIVER</span></div>
+          <div className="phase-nav">
+            {PHASES.map((p, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center" }}>
-                {i > 0 && <div className="step-div" />}
-                <div className={`step-item ${step === i + 1 ? "active" : step > i + 1 ? "done" : ""}`}
-                  onClick={() => { if (step > i + 1) setStep(i + 1); }}>
-                  <div className="step-num">{step > i + 1 ? "✓" : i + 1}</div>
-                  {s}
+                {i > 0 && <div className="phase-div" />}
+                <div className={`phase-item ${phase === i + 1 ? "active" : phase > i + 1 ? "done" : ""}`}
+                  onClick={() => { if (phase > i + 1) setPhase(i + 1); }}>
+                  <div className="phase-num">{phase > i + 1 ? "✓" : i + 1}</div>
+                  {p}
                 </div>
               </div>
             ))}
           </div>
-          {step === 4 && (
-            <div className="live-badge">
-              <div className="live-dot" />
-              Live Call
-            </div>
-          )}
-          {step !== 4 && <div style={{ width: 120 }} />}
+          <div className="header-right">
+            {phase === 2 && <div className="live-badge"><div className="live-dot" />Live Call</div>}
+            {phase !== 2 && <div style={{ width: 80 }} />}
+          </div>
         </header>
 
-        {/* ── STEP 1 ── */}
-        {step === 1 && (
+        {/* ── PHASE 1: PRE-CALL PREP ── */}
+        {phase === 1 && (
           <div className="page">
-            <div className="page-title serif">Import Customer Data</div>
-            <div className="page-sub">Upload a CRM export to begin cohort analysis. Auto-detects field mappings from Salesforce, HubSpot, or custom CSV exports.</div>
-            <div className={`upload-zone ${drag ? "drag" : ""}`}
-              onDragOver={e => { e.preventDefault(); setDrag(true); }}
-              onDragLeave={() => setDrag(false)}
-              onDrop={handleDrop}
-              onClick={() => fileRef.current.click()}>
-              <div className="upload-icon">↑</div>
-              <div className="upload-label serif">{fileName || "Drop your CSV file here"}</div>
-              <div className="upload-hint">{rows.length > 0 ? `${rows.length} records loaded` : "Salesforce · HubSpot · Custom CRM"}</div>
-              <button className="btn btn-secondary" onClick={e => { e.stopPropagation(); fileRef.current.click(); }}>Browse File</button>
-              <input ref={fileRef} type="file" accept=".csv" style={{ display: "none" }} onChange={e => onFile(e.target.files[0])} />
+            <div className="page-title" style={{ fontFamily: "Lora, serif" }}>Pre-Call Preparation</div>
+            <div className="page-sub">Build a complete intelligence brief before you pick up the phone. The RIVER framework gives you a hypothesis for every stage of the conversation.</div>
+            <RiverBadge />
+
+            <div className="card">
+              <div className="card-header">
+                <div className="card-title" style={{ fontFamily: "Lora, serif" }}>Prospect Details</div>
+                <div className={`card-badge badge-prep`}>Step 1</div>
+              </div>
+              <div className="field-grid-2">
+                {[
+                  { key: "company", label: "Company Name", req: true, placeholder: "e.g. Waste Management Inc" },
+                  { key: "industry", label: "Industry / Vertical", req: true, placeholder: "e.g. Large Employer" },
+                  { key: "contactRole", label: "Primary Contact Role", req: true, placeholder: "e.g. VP Total Rewards" },
+                  { key: "acvEstimate", label: "Estimated Deal Size", placeholder: "e.g. $85,000" },
+                  { key: "leadSource", label: "Lead Source", placeholder: "e.g. Trade Show, Referral" },
+                ].map(f => (
+                  <div className="field-row" key={f.key}>
+                    <div className="field-label">{f.label} {f.req && <span className="req">*</span>}</div>
+                    <input type="text" placeholder={f.placeholder} value={prep[f.key]} onChange={e => setPrep(p => ({ ...p, [f.key]: e.target.value }))} />
+                  </div>
+                ))}
+              </div>
+              <div className="field-row">
+                <div className="field-label">Known Context / Intel</div>
+                <textarea rows={3} placeholder="Anything you already know — recent news, referral notes, trigger events, prior conversations..." value={prep.knownContext} onChange={e => setPrep(p => ({ ...p, knownContext: e.target.value }))} />
+              </div>
             </div>
-            <div style={{ textAlign: "center", margin: "14px 0", color: "#ccc", fontSize: "12px" }}>— or —</div>
-            <div style={{ textAlign: "center", marginBottom: "28px" }}>
-              <button className="btn btn-secondary" onClick={loadSample}>Load Sample Data (12 accounts)</button>
+
+            <div className="actions-row">
+              <button className="btn btn-gold btn-lg" onClick={runPrep} disabled={prepLoading || !prep.company || !prep.industry || !prep.contactRole}>
+                {prepLoading ? "Generating Brief..." : "Generate RIVER Brief →"}
+              </button>
             </div>
-            {rows.length > 0 && (<>
-              <div className="card">
-                <div className="card-title serif">Map Your Fields</div>
-                <div className="field-grid">
-                  {[
-                    { key: "company", label: "Company / Account", req: true },
-                    { key: "industry", label: "Industry / Vertical", req: true },
-                    { key: "acv", label: "Deal Size / ACV", req: true },
-                    { key: "lead_source", label: "Lead Source", req: true },
-                    { key: "close_date", label: "Close Date" },
-                    { key: "product", label: "Product / Solution" },
-                    { key: "outcome", label: "Customer Outcome / Use Case" },
-                  ].map(f => (
-                    <div className="field-row" key={f.key}>
-                      <div className="field-label">{f.label} {f.req && <span className="req">*</span>}</div>
-                      <select value={mapping[f.key]} onChange={e => setMapping(m => ({ ...m, [f.key]: e.target.value }))}>
-                        <option value="">— not mapped —</option>
-                        {headers.map(h => <option key={h} value={h}>{h}</option>)}
-                      </select>
-                    </div>
+
+            {prepLoading && (
+              <div className="card" style={{ marginTop: 20 }}>
+                <div className="loading-pulse">
+                  {[75, 55, 85, 45, 70, 60, 80, 50].map((w, i) => (
+                    <div key={i} className="pulse-line" style={{ width: `${w}%`, animationDelay: `${i * 0.1}s` }} />
                   ))}
                 </div>
               </div>
-              <div className="card">
-                <div className="card-title serif">Data Preview <span style={{ fontFamily: "DM Sans", fontSize: "12px", fontWeight: 400, color: "#999" }}>(first 5 rows)</span></div>
-                <div className="preview-table-wrap">
-                  <table className="preview-table">
-                    <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
-                    <tbody>{rows.slice(0, 5).map((r, i) => <tr key={i}>{headers.map(h => <td key={h}>{r[h]}</td>)}</tr>)}</tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="actions-row">
-                <button className="btn btn-primary btn-lg" onClick={goToCohorts}>Build Cohorts →</button>
-              </div>
-            </>)}
-          </div>
-        )}
+            )}
 
-        {/* ── STEP 2 ── */}
-        {step === 2 && (
-          <div className="page">
-            <div className="page-title serif">Customer Cohort Analysis</div>
-            <div className="page-sub">{rows.length} accounts segmented into {cohorts.length} cohorts. Select a cohort to build its outcome map and live call playbook.</div>
-            <div className="summary-grid">
-              <div className="summary-stat"><div className="summary-num serif">{rows.length}</div><div className="summary-label">Total Accounts</div></div>
-              <div className="summary-stat"><div className="summary-num serif">{cohorts.length}</div><div className="summary-label">Cohorts</div></div>
-              <div className="summary-stat">
-                <div className="summary-num serif">${Math.round(rows.reduce((s, r) => s + parseACV(mapping.acv ? r[mapping.acv] : "0"), 0) / 1000)}K</div>
-                <div className="summary-label">Total Pipeline ACV</div>
-              </div>
-            </div>
-            <div className="cohort-grid">
-              {cohorts.map(c => (
-                <div key={c.id} className={`cohort-card ${selectedCohort?.id === c.id ? "selected" : ""}`} onClick={() => setSelectedCohort(c)}>
-                  <div className="cohort-name"><span className="cohort-dot" style={{ background: c.color }} />{c.name}</div>
-                  <div className="cohort-size">{c.size} accounts · {c.pct}% of base</div>
-                  <div className="cohort-tags">
-                    {c.topInd.map(t => <span key={t} className="tag tag-ind">{t}</span>)}
-                    {c.avgACV > 0 && <span className="tag tag-size">${(c.avgACV / 1000).toFixed(0)}K avg</span>}
-                    {c.topSrc.map(t => <span key={t} className="tag tag-src">{t}</span>)}
+            {prepBrief && !prepLoading && (
+              <>
+                <div className="divider" />
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title" style={{ fontFamily: "Lora, serif" }}>Company Snapshot</div>
+                    <div className="card-badge badge-prep">AI Brief</div>
                   </div>
-                  <div className="cohort-tags">{c.topOut.map(t => <span key={t} className="tag tag-out">{t}</span>)}</div>
-                  <div className="cohort-stat">Avg ACV: <strong>${c.avgACV > 0 ? c.avgACV.toLocaleString() : "Unknown"}</strong></div>
+                  <div style={{ fontSize: 13, color: "#444", lineHeight: 1.65, marginBottom: 16 }}>{prepBrief.companySnapshot}</div>
+                  {prepBrief.recentSignals?.length > 0 && (
+                    <>
+                      <div className="field-label" style={{ marginBottom: 8 }}>Recent Signals</div>
+                      {prepBrief.recentSignals.map((s, i) => (
+                        <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
+                          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#8B6F47", flexShrink: 0, marginTop: 5 }} />
+                          <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{s}</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
-              ))}
-            </div>
-            <div className="actions-row">
-              <button className="btn btn-secondary" onClick={() => setStep(1)}>← Back</button>
-              <button className="btn btn-primary btn-lg" onClick={goToOutcomes} disabled={!selectedCohort}>Map Outcomes →</button>
-            </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title" style={{ fontFamily: "Lora, serif" }}>RIVER Hypothesis</div>
+                    <div className="card-badge badge-prep">Pre-Call</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#aaa", marginBottom: 14 }}>Your hypothesis before the call. Use In-Call Navigator to validate or update each stage.</div>
+                  {prepBrief.riverHypothesis && RIVER_STAGES.map((stage, i) => {
+                    const keys = ["reality", "impact", "vision", "entryPoints", "route"];
+                    return (
+                      <div key={i} className="hypothesis-card">
+                        <div className="hypothesis-label">{stage.letter} — {stage.label}</div>
+                        <div className="hypothesis-text">{prepBrief.riverHypothesis[keys[i]]}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title" style={{ fontFamily: "Lora, serif" }}>Solution Hypothesis & Opening</div>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#444", lineHeight: 1.65, marginBottom: 16 }}>{prepBrief.solutionHypothesis}</div>
+                  <div className="talk-box">
+                    <div className="talk-label">Recommended Opening Question</div>
+                    <div className="talk-text">{prepBrief.openingAngle}</div>
+                  </div>
+                </div>
+
+                <div className="field-grid-2" style={{ gap: 14, marginBottom: 16 }}>
+                  <div className="card" style={{ margin: 0 }}>
+                    <div className="card-title" style={{ fontFamily: "Lora, serif", marginBottom: 12, fontSize: 14 }}>Key Contacts</div>
+                    {prepBrief.keyContacts?.map((c, i) => (
+                      <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "flex-start" }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#E8E6DF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#666", flexShrink: 0 }}>{c.initials}</div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: "#777" }}>{c.title}</div>
+                          <div style={{ fontSize: 11, color: "#8B6F47", marginTop: 2, fontStyle: "italic" }}>{c.angle}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="card" style={{ margin: 0 }}>
+                    <div className="card-title" style={{ fontFamily: "Lora, serif", marginBottom: 12, fontSize: 14 }}>Watch-Outs</div>
+                    {prepBrief.watchOuts?.map((w, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start" }}>
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#9B2C2C", flexShrink: 0, marginTop: 5 }} />
+                        <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{w}</div>
+                      </div>
+                    ))}
+                    {prepBrief.competitors?.length > 0 && (
+                      <>
+                        <div className="field-label" style={{ marginTop: 14, marginBottom: 8 }}>Likely Competitors</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                          {prepBrief.competitors.map((c, i) => (
+                            <span key={i} style={{ fontSize: 11, background: "#EEF2F8", color: "#3A5A8C", padding: "2px 9px", borderRadius: 20, fontWeight: 600 }}>{c}</span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="actions-row">
+                  <button className="btn btn-green btn-lg" onClick={() => setPhase(2)}>
+                    Start In-Call Navigator →
+                  </button>
+                  <button className="btn btn-secondary" onClick={runPrep}>Regenerate Brief</button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        {/* ── STEP 3 ── */}
-        {step === 3 && selectedCohort && (
-          <div className="page">
-            <div className="page-title serif">Outcome Mapping</div>
-            <div className="page-sub">Select the desired outcomes for <strong>{selectedCohort.name}</strong>. These tailor talk tracks, objection handling, and decision gates in the live call mode.</div>
-            <div className="notice"><strong>Outcome-agnostic · Industry-agnostic.</strong> The playbook framework works across all verticals. Outcomes customize the language and priority signals — not the sales motion.</div>
-            <div className="outcome-grid">
-              {OUTCOMES.map(o => (
-                <div key={o.id} className={`outcome-tile ${selectedOutcomes.includes(o.title) ? "selected" : ""}`} onClick={() => setSelectedOutcomes(p => p.includes(o.title) ? p.filter(x => x !== o.title) : [...p, o.title])}>
-                  <div className="outcome-icon">{o.icon}</div>
-                  <div className="outcome-title">{o.title}</div>
-                  <div className="outcome-sub">{o.sub}</div>
-                </div>
-              ))}
-            </div>
-            <div className="actions-row">
-              <button className="btn btn-secondary" onClick={() => setStep(2)}>← Back</button>
-              <button className="btn btn-green btn-lg" onClick={goToCall} disabled={selectedOutcomes.length === 0}>
-                Start Live Call Mode →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 4: LIVE CALL ── */}
-        {step === 4 && selectedCohort && tree && (
+        {/* ── PHASE 2: IN-CALL NAVIGATOR ── */}
+        {phase === 2 && (
           <div className="call-layout">
-
-            {/* LEFT: Decision Tree */}
+            {/* LEFT: RIVER Navigator */}
             <div className="call-left">
-              <div className="call-panel-header">
+              <div className="panel-header">
                 <div>
-                  <div className="call-panel-title serif">Live Call Playbook</div>
-                  <div style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>
-                    {selectedCohort.name} · {tree.cycle} cycle · {selectedOutcomes[0]}
+                  <div className="panel-title" style={{ fontFamily: "Lora, serif" }}>
+                    {prep.company || "In-Call"} · RIVER Navigator
+                  </div>
+                  <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
+                    {prep.contactRole} · {prep.industry}
                   </div>
                 </div>
-                <button className="btn btn-secondary btn-sm" onClick={() => setStep(3)}>← Setup</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setPhase(1)}>← Prep</button>
               </div>
 
-              <div className="stage-tabs">
-                {tree.stages.map((s, i) => (
-                  <button key={s.id} className={`stage-tab ${activeStage === i ? "active" : ""} ${completedStages.has(i) ? "completed" : ""}`}
-                    onClick={() => setActiveStage(i)}>
-                    {completedStages.has(i) ? "✓ " : ""}{s.name}
+              <div className="river-nav">
+                {RIVER_STAGES.map((s, i) => (
+                  <button key={s.id} className={`river-tab ${activeRiver === i ? "active" : ""} ${isFilled(s) ? "filled" : ""}`}
+                    onClick={() => setActiveRiver(i)}>
+                    {isFilled(s) && <div className="fill-dot" />}
+                    {s.letter} — {s.label}
                   </button>
                 ))}
               </div>
 
-              <div className="call-panel-body">
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${progress}%` }} />
+              <div className="panel-body">
+                {/* Confidence meter */}
+                <div className="confidence-bar-wrap">
+                  <div className="confidence-label">
+                    <div className="confidence-text">Deal Confidence</div>
+                    <div className="confidence-score" style={{ color: confidenceColor(confidence) }}>{confidence}%</div>
+                  </div>
+                  <div className="confidence-track">
+                    <div className="confidence-fill" style={{ width: `${confidence}%`, background: confidenceColor(confidence) }} />
+                  </div>
                 </div>
 
-                {tree.stages.map((stage, si) => si === activeStage && (
+                {RIVER_STAGES.map((stage, si) => si === activeRiver && (
                   <div key={stage.id}>
-                    <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: "12px" }}>
-                      Stage {si + 1} of {tree.stages.length} · {stage.time}
-                    </div>
-
-                    {/* Actions first */}
-                    <div className="action-node">
-                      <div className="action-node-label">Pre-Call / On-Call Actions</div>
-                      <div className="action-list">
-                        {stage.nodes[0].actions.map((a, i) => (
-                          <div key={i} className="action-item">
-                            <div className="action-num">{i + 1}</div>
-                            <div>{a}</div>
-                          </div>
-                        ))}
+                    <div className="river-header">
+                      <div className="river-icon">{stage.letter}</div>
+                      <div>
+                        <div className="river-section-title" style={{ fontFamily: "Lora, serif" }}>{stage.label}</div>
+                        <div className="river-section-sub">{stage.sub}</div>
                       </div>
                     </div>
 
-                    {/* Talk Track */}
-                    <div className="talk-box">
-                      <div className="talk-box-label">Talk Track</div>
-                      <div className="talk-box-text">{stage.nodes[0].talkTrack}</div>
-                    </div>
-
-                    {/* Decision gate */}
-                    {stage.nodes.map(node => (
-                      <div key={node.id} className={`node ${treeState[node.id] ? "completed" : "active"}`}>
-                        <div className="node-header">
-                          <div className={`node-icon ${treeState[node.id] ? "done" : "q"}`}>
-                            {treeState[node.id] ? "✓" : "?"}
-                          </div>
-                          <div>
-                            <div className="node-q">{node.q}</div>
-                            {treeState[node.id] && (
-                              <div className="node-answer">→ {treeState[node.id]}</div>
-                            )}
-                          </div>
-                        </div>
-                        {!treeState[node.id] && (
-                          <div className="node-branches">
-                            {node.branches.map((b, bi) => (
-                              <button key={bi} className="branch-btn" onClick={() => pickBranch(node.id, b.label, b.next)}>
-                                <div className="branch-if">{bi === 0 ? "Yes" : bi === 1 ? "Partial" : "No"}</div>
-                                <div>
-                                  <div className="branch-text">{b.label}</div>
-                                  <div className="branch-action">{b.action}</div>
-                                </div>
+                    {/* Gate questions */}
+                    {stage.gates.map((gate, gi) => (
+                      <div key={gate.id} className={`gate ${gateAnswers[gate.id] ? "answered" : ""}`}>
+                        <div className="gate-q">{gate.q}</div>
+                        {!gateAnswers[gate.id] ? (
+                          <div className="gate-options">
+                            {gate.options.map((opt, oi) => (
+                              <button key={oi} className="gate-option" onClick={() => setGateAnswers(a => ({ ...a, [gate.id]: opt }))}>
+                                <span style={{ fontSize: 10, color: "#aaa", minWidth: 14 }}>{String.fromCharCode(65 + oi)}</span>
+                                {opt}
                               </button>
                             ))}
                           </div>
-                        )}
-                        {treeState[node.id] && (
-                          <div style={{ padding: "0 14px 10px" }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => setTreeState(s => { const ns = { ...s }; delete ns[node.id]; return ns; })}>
+                        ) : (
+                          <div className="gate-answer">
+                            ✓ {gateAnswers[gate.id]}
+                            <button className="btn-secondary btn-sm" style={{ marginLeft: "auto", fontSize: 10, padding: "3px 8px", borderRadius: 6, border: "1px solid #E8E6DF", background: "transparent", cursor: "pointer", color: "#999", fontFamily: "DM Sans" }}
+                              onClick={() => setGateAnswers(a => { const n = { ...a }; delete n[gate.id]; return n; })}>
                               Undo
                             </button>
                           </div>
@@ -872,309 +715,282 @@ export default function App() {
                       </div>
                     ))}
 
-                    {/* Objections */}
-                    <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", margin: "14px 0 8px" }}>
-                      Objection Handling
+                    {/* Discovery fields */}
+                    <div style={{ marginTop: 14 }}>
+                      <div className="field-label" style={{ marginBottom: 10 }}>Discovery Capture</div>
+                      {stage.discoveryPrompts.map(prompt => (
+                        <div key={prompt.id} className="discovery-field">
+                          <div className="discovery-prompt">{prompt.label}</div>
+                          <textarea rows={3} placeholder="Capture what you're hearing..." value={riverData[prompt.id] || ""} onChange={e => setRiverData(d => ({ ...d, [prompt.id]: e.target.value }))} />
+                          <div className="discovery-hint">{prompt.hint}</div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="obj-list">
-                      {[
-                        { q: "We're not looking right now", a: `"Most of our best customers said the same. What would need to change for ${tree.pOut.toLowerCase()} to become a priority?"` },
-                        { q: "We don't have budget", a: `"Let's table that. If we found a clear ROI path to ${tree.pOut.toLowerCase()}, would leadership prioritize it next cycle?"` },
-                        { q: "We're evaluating other vendors", a: `"That's fair. What criteria matter most? Tell me what a win looks like and I'll make sure we're competing on the right ground."` },
-                        { q: "We need to involve IT / Legal", a: `"Absolutely — who's the right person to include? Better to get them in early than have them become a blocker later."` },
-                      ].map((o, i) => (
-                        <div key={i} className="obj-item">
-                          <button className="obj-q-btn" onClick={() => setExpandedObjs(s => ({ ...s, [`${si}-${i}`]: !s[`${si}-${i}`] }))}>
+
+                    {/* Talk track */}
+                    <div className="talk-box" style={{ marginTop: 14 }}>
+                      <div className="talk-label">Talk Track</div>
+                      <div className="talk-text">{stage.talkTrack}</div>
+                    </div>
+
+                    {/* Objections */}
+                    <div style={{ marginTop: 12 }}>
+                      <div className="field-label" style={{ marginBottom: 8 }}>Objection Handling</div>
+                      {stage.objections.map((o, oi) => (
+                        <div key={oi} className="obj-item">
+                          <button className="obj-q-btn" onClick={() => setExpandedObjs(s => ({ ...s, [`${si}-${oi}`]: !s[`${si}-${oi}`] }))}>
                             "{o.q}"
-                            <span style={{ color: "#aaa", fontSize: "14px" }}>{expandedObjs[`${si}-${i}`] ? "−" : "+"}</span>
+                            <span style={{ color: "#aaa" }}>{expandedObjs[`${si}-${oi}`] ? "−" : "+"}</span>
                           </button>
-                          {expandedObjs[`${si}-${i}`] && <div className="obj-a-text">{o.a}</div>}
+                          {expandedObjs[`${si}-${oi}`] && <div className="obj-a-text">{o.a}</div>}
                         </div>
                       ))}
                     </div>
 
                     {/* Stage nav */}
-                    <div style={{ display: "flex", gap: "8px", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #E8E6DF" }}>
-                      {si > 0 && <button className="btn btn-secondary btn-sm" onClick={() => setActiveStage(si - 1)}>← Prev Stage</button>}
-                      {si < tree.stages.length - 1 && (
-                        <button className="btn btn-gold btn-sm" onClick={() => setActiveStage(si + 1)}>
-                          Next: {tree.stages[si + 1].name} →
+                    <div style={{ display: "flex", gap: 8, marginTop: 20, paddingTop: 16, borderTop: "1px solid #E8E6DF" }}>
+                      {si > 0 && <button className="btn btn-secondary btn-sm" onClick={() => setActiveRiver(si - 1)}>← {RIVER_STAGES[si - 1].label}</button>}
+                      {si < RIVER_STAGES.length - 1 && (
+                        <button className="btn btn-gold btn-sm" onClick={() => setActiveRiver(si + 1)}>
+                          {RIVER_STAGES[si + 1].label} →
                         </button>
                       )}
-                      {si === tree.stages.length - 1 && (
+                      {si === RIVER_STAGES.length - 1 && (
                         <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
-                          {postLoading ? "Generating..." : "End Call & Generate Summary"}
+                          {postLoading ? "Generating Route..." : "End Call & Generate Route →"}
                         </button>
                       )}
                     </div>
+                    {si < RIVER_STAGES.length - 1 && (
+                      <div style={{ marginTop: 12 }}>
+                        <button className="btn btn-secondary btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={runPostCall} disabled={postLoading}>
+                          {postLoading ? "Generating..." : "End Call Early & Generate Route"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
-
-                {/* End call button visible at bottom of any stage */}
-                {activeStage < tree.stages.length - 1 && (
-                  <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #F0EDE6" }}>
-                    <button className="btn btn-secondary btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={runPostCall} disabled={postLoading}>
-                      {postLoading ? "Generating..." : "End Call Early & Generate Summary"}
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* RIGHT: Prep + Notes + Post-call */}
+            {/* RIGHT PANEL */}
             <div className="call-right">
               <div className="right-tabs">
-                {[["prep", "Call Prep"], ["notes", "Notes"], ["post", "Post-Call"]].map(([id, label]) => (
-                  <button key={id} className={`right-tab ${rightTab === id ? "active" : ""}`} onClick={() => setRightTab(id)}>
-                    {label}
-                    {id === "post" && postCall && " ✓"}
-                  </button>
+                {[["hypothesis", "Hypothesis"], ["prep", "Prep Brief"], ["notes", "Notes"]].map(([id, label]) => (
+                  <button key={id} className={`right-tab ${rightTab === id ? "active" : ""}`} onClick={() => setRightTab(id)}>{label}</button>
                 ))}
               </div>
+              <div className="panel-body">
 
-              <div className="call-panel-body">
+                {/* HYPOTHESIS TAB */}
+                {rightTab === "hypothesis" && prepBrief && (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: 12 }}>
+                      Pre-Call RIVER Hypothesis
+                    </div>
+                    {RIVER_STAGES.map((stage, i) => {
+                      const keys = ["reality", "impact", "vision", "entryPoints", "route"];
+                      const isActive = activeRiver === i;
+                      return (
+                        <div key={i} className="hypothesis-card" style={{ borderColor: isActive ? "#8B6F47" : "#E8E6DF", cursor: "pointer" }} onClick={() => setActiveRiver(i)}>
+                          <div className="hypothesis-label">{stage.letter} — {stage.label} {isFilled(stage) ? "✓" : ""}</div>
+                          <div className="hypothesis-text">{prepBrief.riverHypothesis?.[keys[i]] || "—"}</div>
+                          {riverData[stage.discoveryPrompts[0]?.id] && (
+                            <div style={{ marginTop: 8, fontSize: 11, color: "#2E6B2E", borderTop: "1px solid #E8E6DF", paddingTop: 6 }}>
+                              Captured: "{riverData[stage.discoveryPrompts[0].id].slice(0, 80)}{riverData[stage.discoveryPrompts[0].id].length > 80 ? "..." : ""}"
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: 8 }}>Solution Hypothesis</div>
+                      <div className="hypothesis-card">
+                        <div className="hypothesis-text">{prepBrief.solutionHypothesis}</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {rightTab === "hypothesis" && !prepBrief && (
+                  <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
+                    <div style={{ fontSize: 13 }}>No prep brief generated.<br />Go back to Pre-Call Prep to build one.</div>
+                    <button className="btn btn-secondary btn-sm" style={{ marginTop: 16 }} onClick={() => setPhase(1)}>← Go to Prep</button>
+                  </div>
+                )}
 
                 {/* PREP TAB */}
-                {rightTab === "prep" && (
+                {rightTab === "prep" && prepBrief && (
                   <>
-                    <div className="prep-search">
-                      <input
-                        type="text"
-                        placeholder="Company name..."
-                        value={prepSearch}
-                        onChange={e => setPrepSearch(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && runPrep(prepSearch)}
-                      />
-                      <button className="btn btn-gold btn-sm" onClick={() => runPrep(prepSearch)} disabled={prepLoading}>
-                        {prepLoading ? "..." : "Research"}
-                      </button>
+                    <div className="talk-box" style={{ marginBottom: 16 }}>
+                      <div className="talk-label">Opening Angle</div>
+                      <div className="talk-text">{prepBrief.openingAngle}</div>
                     </div>
-
-                    {/* Quick-pick from cohort */}
-                    {selectedCohort?.members.length > 0 && (
-                      <div style={{ marginBottom: "14px" }}>
-                        <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: "6px" }}>
-                          From your cohort
-                        </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                          {selectedCohort.members.slice(0, 6).map((m, i) => {
-                            const co = mapping.company ? m.row[mapping.company] : m.company;
-                            return (
-                              <button key={i} className="btn btn-secondary btn-sm" onClick={() => { setPrepSearch(co); runPrep(co); }}>
-                                {co}
-                              </button>
-                            );
-                          })}
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: 10 }}>Key Contacts</div>
+                    {prepBrief.keyContacts?.map((c, i) => (
+                      <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, background: "#fff", border: "1px solid #E8E6DF", borderRadius: 9, padding: "10px 12px" }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#E8E6DF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#666", flexShrink: 0 }}>{c.initials}</div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>{c.name} · {c.title}</div>
+                          <div style={{ fontSize: 11, color: "#8B6F47", fontStyle: "italic", marginTop: 2 }}>{c.angle}</div>
                         </div>
                       </div>
-                    )}
-
-                    {prepLoading && (
-                      <div className="loading-pulse">
-                        {[80, 60, 90, 50, 70, 40, 85].map((w, i) => (
-                          <div key={i} className="pulse-line" style={{ width: `${w}%`, animationDelay: `${i * 0.12}s` }} />
-                        ))}
+                    ))}
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", margin: "16px 0 10px" }}>Watch-Outs</div>
+                    {prepBrief.watchOuts?.map((w, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#9B2C2C", flexShrink: 0, marginTop: 5 }} />
+                        <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{w}</div>
                       </div>
-                    )}
-
-                    {prepData && !prepLoading && (
-                      <>
-                        {/* Opening hook */}
-                        <div className="talk-box" style={{ marginBottom: "16px" }}>
-                          <div className="talk-box-label">Recommended Opening Hook</div>
-                          <div className="talk-box-text">{prepData.openingHook}</div>
-                        </div>
-
-                        {/* Summary */}
-                        <div className="intel-section">
-                          <div className="intel-label"><div className="intel-dot" />Company Overview</div>
-                          <div className="intel-item">
-                            <div style={{ fontSize: "12px", color: "#333", lineHeight: 1.6 }}>{prepData.summary}</div>
-                          </div>
-                        </div>
-
-                        {/* Headlines */}
-                        <div className="intel-section">
-                          <div className="intel-label"><div className="intel-dot" />Recent News & Signals</div>
-                          {prepData.headlines?.map((h, i) => (
-                            <div key={i} className="intel-item">
-                              <div className="intel-headline">{h.title}</div>
-                              <div className="intel-meta">{h.date} · {h.signal}</div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Jobs */}
-                        <div className="intel-section">
-                          <div className="intel-label"><div className="intel-dot" />Active Job Postings</div>
-                          {prepData.jobs?.map((j, i) => (
-                            <div key={i} className="intel-item">
-                              <div className="intel-headline">{j.title} <span style={{ color: "#aaa", fontWeight: 400 }}>· {j.dept}</span></div>
-                              <div className="intel-meta">{j.signal}</div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Competitors */}
-                        <div className="intel-section">
-                          <div className="intel-label"><div className="intel-dot" />Likely Competitors in Eval</div>
-                          <div className="intel-item">
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                              {prepData.competitors?.map((c, i) => (
-                                <span key={i} className="tag tag-ind" style={{ fontSize: "11px" }}>{c}</span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Key Contacts */}
-                        <div className="intel-section">
-                          <div className="intel-label"><div className="intel-dot" />Key Contacts</div>
-                          {prepData.contacts?.map((c, i) => (
-                            <div key={i} className="intel-item">
-                              <div className="intel-contact">
-                                <div className="intel-avatar">{c.initials}</div>
-                                <div className="intel-contact-info">
-                                  <div className="intel-contact-name">{c.name}</div>
-                                  <div className="intel-contact-title">{c.title}</div>
-                                  <div className="intel-contact-signal">{c.linkedinSignal}</div>
-                                  <div style={{ fontSize: "11px", color: "#8B6F47", marginTop: "2px", fontWeight: 500 }}>
-                                    → {c.talkingPoint}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-
-                    {!prepData && !prepLoading && (
-                      <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
-                        <div style={{ fontSize: "28px", marginBottom: "10px" }}>◎</div>
-                        <div style={{ fontSize: "13px" }}>Enter a company name to generate<br />AI-powered call prep intelligence</div>
-                      </div>
-                    )}
+                    ))}
                   </>
+                )}
+                {rightTab === "prep" && !prepBrief && (
+                  <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
+                    <div style={{ fontSize: 13 }}>No prep brief available.<br />Complete Pre-Call Prep first.</div>
+                  </div>
                 )}
 
                 {/* NOTES TAB */}
                 {rightTab === "notes" && (
                   <>
-                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: "10px" }}>
-                      Call Notes
-                    </div>
-                    <textarea
-                      ref={notesRef}
-                      className="notes-area"
-                      placeholder="Type notes here as you go... Use [Tab] to add a timestamp."
-                      value={notes}
-                      onChange={e => setNotes(e.target.value)}
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: 10 }}>Call Notes</div>
+                    <textarea style={{ width: "100%", minHeight: 280, padding: 10, border: "1px solid #E8E6DF", borderRadius: 8, fontSize: 13, fontFamily: "DM Sans", background: "#fff", resize: "vertical" }}
+                      placeholder="Free-form notes... press Tab to add a timestamp"
                       onKeyDown={e => {
                         if (e.key === "Tab") {
                           e.preventDefault();
                           const ts = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                          const pos = e.target.selectionStart;
-                          const before = notes.slice(0, pos);
-                          const after = notes.slice(pos);
-                          setNotes(before + `\n[${ts}] ` + after);
+                          const el = e.target;
+                          const before = el.value.slice(0, el.selectionStart);
+                          const after = el.value.slice(el.selectionStart);
+                          el.value = before + `\n[${ts}] ` + after;
                         }
                       }}
-                      style={{ minHeight: "300px" }}
                     />
-                    <div className="notes-meta">Press Tab to insert a timestamp · Notes are included in the post-call summary</div>
-
+                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 6 }}>Tab = timestamp · Notes feed into post-call summary</div>
                     <div className="divider" />
-
-                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: "10px" }}>
-                      Current Stage: {tree.stages[activeStage]?.name}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#777", lineHeight: 1.6 }}>
-                      Decisions logged this call: {Object.keys(treeState).length} of {tree.stages.reduce((s, st) => s + st.nodes.length, 0)} gates
-                    </div>
-                    {Object.entries(treeState).map(([k, v]) => (
-                      <div key={k} style={{ fontSize: "11px", color: "#555", padding: "6px 0", borderBottom: "1px solid #F0EDE6" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#aaa", marginBottom: 10 }}>Gates Logged</div>
+                    {Object.keys(gateAnswers).length === 0 && <div style={{ fontSize: 12, color: "#bbb" }}>No gates answered yet</div>}
+                    {Object.entries(gateAnswers).map(([k, v]) => (
+                      <div key={k} style={{ fontSize: 11, color: "#555", padding: "5px 0", borderBottom: "1px solid #F0EDE6" }}>
                         <span style={{ color: "#aaa" }}>{k}</span> → {v}
                       </div>
                     ))}
                   </>
                 )}
-
-                {/* POST-CALL TAB */}
-                {rightTab === "post" && (
-                  <>
-                    {postLoading && (
-                      <div>
-                        <div style={{ fontSize: "13px", color: "#777", marginBottom: "14px" }}>Generating call summary and follow-up email...</div>
-                        <div className="loading-pulse">
-                          {[85, 60, 75, 50, 90, 40, 70].map((w, i) => (
-                            <div key={i} className="pulse-line" style={{ width: `${w}%`, animationDelay: `${i * 0.15}s` }} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {!postCall && !postLoading && (
-                      <div style={{ textAlign: "center", padding: "40px 20px", color: "#bbb" }}>
-                        <div style={{ fontSize: "28px", marginBottom: "10px" }}>◇</div>
-                        <div style={{ fontSize: "13px" }}>Post-call summary and follow-up<br />email will appear here when you<br />end the call session.</div>
-                        <button className="btn btn-secondary btn-sm" style={{ marginTop: "16px" }} onClick={runPostCall}>
-                          Generate Now
-                        </button>
-                      </div>
-                    )}
-
-                    {postCall && !postLoading && (
-                      <>
-                        <div className="post-call-section">
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                            <div className="post-call-label">Call Summary</div>
-                            <button className="copy-btn" onClick={() => copyText(postCall.summary, "summary")}>
-                              {copied === "summary" ? "Copied ✓" : "Copy"}
-                            </button>
-                          </div>
-                          <div className="post-call-content">{postCall.summary}</div>
-                        </div>
-
-                        <div className="post-call-section">
-                          <div className="post-call-label">Next Steps</div>
-                          <div className="post-call-content">
-                            {postCall.nextSteps?.map((s, i) => `${i + 1}. ${s}`).join("\n")}
-                          </div>
-                        </div>
-
-                        <div className="post-call-section">
-                          <div className="post-call-label">Deal Risk</div>
-                          <div className="post-call-content">{postCall.dealRisk}</div>
-                        </div>
-
-                        <div className="post-call-section">
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                            <div className="post-call-label">Follow-Up Email</div>
-                            <button className="copy-btn" onClick={() => copyText(`Subject: ${postCall.emailSubject}\n\n${postCall.emailBody}`, "email")}>
-                              {copied === "email" ? "Copied ✓" : "Copy Email"}
-                            </button>
-                          </div>
-                          <div className="post-call-content" style={{ fontSize: "12px" }}>
-                            <div style={{ fontWeight: 600, marginBottom: "8px", color: "#1a1a18" }}>Subject: {postCall.emailSubject}</div>
-                            {postCall.emailBody}
-                          </div>
-                        </div>
-
-                        <div className="actions-row" style={{ marginTop: "16px" }}>
-                          <button className="btn btn-secondary btn-sm" onClick={() => { setPostCall(null); runPostCall(); }}>
-                            Regenerate
-                          </button>
-                          <button className="btn btn-primary btn-sm" onClick={() => { setStep(2); setSelectedCohort(null); }}>
-                            New Call
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── PHASE 3: POST-CALL ROUTE ── */}
+        {phase === 3 && (
+          <div className="page">
+            <div className="page-title" style={{ fontFamily: "Lora, serif" }}>Post-Call Route</div>
+            <div className="page-sub">AI synthesis of your RIVER capture — deal routing, next steps, CRM note, and follow-up email.</div>
+
+            {postLoading && (
+              <div className="card">
+                <div style={{ fontSize: 13, color: "#777", marginBottom: 14 }}>Synthesizing your RIVER capture and generating deal route...</div>
+                <div className="loading-pulse">
+                  {[80, 55, 90, 45, 70, 60, 85].map((w, i) => (
+                    <div key={i} className="pulse-line" style={{ width: `${w}%`, animationDelay: `${i * 0.12}s` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {postCall && !postLoading && (
+              <>
+                <div className="summary-grid">
+                  <div className="summary-stat"><div className="summary-num" style={{ fontFamily: "Lora, serif" }}>{confidence}%</div><div className="summary-label">Deal Confidence</div></div>
+                  <div className="summary-stat"><div className="summary-num" style={{ fontFamily: "Lora, serif", fontSize: 16, paddingTop: 4 }}>{routeLabel}</div><div className="summary-label">Deal Route</div></div>
+                  <div className="summary-stat"><div className="summary-num" style={{ fontFamily: "Lora, serif" }}>{prep.acvEstimate || "—"}</div><div className="summary-label">Deal Size</div></div>
+                </div>
+
+                {/* Routing decision */}
+                <div className={`routing-card ${routeClass}`}>
+                  <div className="route-label">Deal Route</div>
+                  <div className="route-title" style={{ fontFamily: "Lora, serif" }}>{routeLabel}</div>
+                  <div className="route-desc">{postCall.dealRouteReason}</div>
+                  {postCall.dealRisk && <div style={{ marginTop: 8, fontSize: 12, color: "#555" }}>⚠ Top risk: {postCall.dealRisk}</div>}
+                </div>
+
+                {/* RIVER Scorecard */}
+                <div className="card">
+                  <div className="card-header">
+                    <div className="card-title" style={{ fontFamily: "Lora, serif" }}>RIVER Scorecard</div>
+                    <div className="card-badge badge-prep">Post-Call</div>
+                  </div>
+                  {postCall.riverScorecard && RIVER_STAGES.map((stage, i) => {
+                    const keys = ["reality", "impact", "vision", "entryPoints", "route"];
+                    return (
+                      <div key={i} className="hypothesis-card">
+                        <div className="hypothesis-label">{stage.letter} — {stage.label}</div>
+                        <div className="hypothesis-text">{postCall.riverScorecard[keys[i]]}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Next steps */}
+                <div className="post-section">
+                  <div className="post-label">Recommended Next Steps</div>
+                  <div className="post-content">
+                    {postCall.nextSteps?.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+                  </div>
+                </div>
+
+                {/* CRM Note */}
+                <div className="post-section">
+                  <div className="post-label">
+                    CRM-Ready Deal Note
+                    <button className="copy-btn" onClick={() => copyText(postCall.crmNote, "crm")}>
+                      {copied === "crm" ? "Copied ✓" : "Copy"}
+                    </button>
+                  </div>
+                  <div className="post-content">{postCall.crmNote}</div>
+                </div>
+
+                {/* Call summary */}
+                <div className="post-section">
+                  <div className="post-label">
+                    Call Summary
+                    <button className="copy-btn" onClick={() => copyText(postCall.callSummary, "summary")}>
+                      {copied === "summary" ? "Copied ✓" : "Copy"}
+                    </button>
+                  </div>
+                  <div className="post-content">{postCall.callSummary}</div>
+                </div>
+
+                {/* Follow-up email */}
+                <div className="post-section">
+                  <div className="post-label">
+                    Follow-Up Email
+                    <button className="copy-btn" onClick={() => copyText(`Subject: ${postCall.emailSubject}\n\n${postCall.emailBody}`, "email")}>
+                      {copied === "email" ? "Copied ✓" : "Copy Email"}
+                    </button>
+                  </div>
+                  <div className="post-content" style={{ fontSize: 12 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 10, color: "#1a1a18" }}>Subject: {postCall.emailSubject}</div>
+                    {postCall.emailBody}
+                  </div>
+                </div>
+
+                <div className="actions-row">
+                  <button className="btn btn-secondary" onClick={() => setPhase(2)}>← Back to Call</button>
+                  <button className="btn btn-gold" onClick={() => { setPostCall(null); setPostLoading(true); generatePostCall(prep, riverData, gateAnswers, confidence).then(r => { setPostCall(r); setPostLoading(false); }); }}>
+                    Regenerate
+                  </button>
+                  <button className="btn btn-primary" onClick={() => {
+                    setPhase(1); setPrepBrief(null); setGateAnswers({}); setRiverData({});
+                    setPostCall(null); setPrep({ company: "", industry: "", contactRole: "", acvEstimate: "", leadSource: "", knownContext: "" });
+                  }}>
+                    New Call
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
