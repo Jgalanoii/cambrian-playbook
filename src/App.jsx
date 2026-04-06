@@ -401,8 +401,7 @@ export default function App() {
   const [selectedAccount, setSelectedAccount] = useState(null);
 
   // Prep
-  const [prep, setPrep] = useState({company:"",industry:"",contactRole:"",acvEstimate:"",leadSource:"",knownContext:""});
-  const [prepBrief, setPrepBrief] = useState(null);
+const [prep, setPrep] = useState({company:"",industry:"",contactRole:"",acvEstimate:"",leadSource:"",knownContext:"",companyUrl:""});  const [prepBrief, setPrepBrief] = useState(null);
   const [prepLoading, setPrepLoading] = useState(false);
 
   // In-call
@@ -488,6 +487,62 @@ export default function App() {
   };
 
   const runPrep = async () => {
+  if (!prep.company || !prep.industry) return;
+  setPrepLoading(true);
+  setPrepBrief(null);
+
+  const companyRef = prep.companyUrl
+    ? `Company website: ${prep.companyUrl}`
+    : `Company name: ${prep.company}`;
+
+  const brief = await callAI(`You are a senior B2B sales strategist for a digital rewards and incentives company. Your job is to research a prospect and generate a pre-call intelligence brief using the RIVER framework.
+
+${companyRef}
+Industry: ${prep.industry}
+Contact role: ${prep.contactRole || "Unknown"}
+Deal size estimate: ${prep.acvEstimate || "Unknown"}
+Lead source: ${prep.leadSource || "Unknown"}
+Additional context: ${prep.knownContext || "None"}
+Target outcomes: ${selectedOutcomes.join(", ") || "Unknown"}
+Cohort: ${selectedCohort?.name || "Unknown"}
+
+IMPORTANT: Use the web_search tool to research this company before generating the brief. Search for:
+1. Recent news, press releases, M&A activity, funding, or leadership changes
+2. Active job postings that signal growth or investment areas
+3. Their current technology stack or vendor relationships relevant to rewards/incentives/HR
+4. Key executives in HR, Total Rewards, Operations, or Finance
+5. Any recent LinkedIn activity or public statements from leadership
+
+Use what you find to make the brief specific and grounded in real, current information — not generic assumptions.
+
+Return ONLY valid JSON after your research:
+{
+  "companySnapshot": "2-3 sentence company overview with specific current details — revenue, employee count, recent news",
+  "riverHypothesis": {
+    "reality": "Based on research: how are they likely handling this problem today — be specific",
+    "impact": "Based on research: what is this likely costing them — reference any signals found",
+    "vision": "Based on research: what success likely looks like for this buyer given their current priorities",
+    "entryPoints": "Based on research: who likely makes this decision, org structure, any named executives found",
+    "route": "Based on research: fastest likely path to close given company stage and signals"
+  },
+  "solutionHypothesis": "Which specific product or solution angle resonates most for this company and why — 2 sentences grounded in what you found",
+  "openingAngle": "One sharp, specific opening question referencing something real found in research",
+  "watchOuts": ["Specific watch-out based on research 1", "Specific watch-out 2", "Specific watch-out 3"],
+  "keyContacts": [
+    {"name": "Real or likely name if found", "title": "Title", "initials": "XX", "angle": "Specific engagement angle based on their role and any signals found"},
+    {"name": "Real or likely name if found", "title": "Title", "initials": "XX", "angle": "Specific engagement angle"}
+  ],
+  "competitors": ["Likely competitor 1", "Likely competitor 2"],
+  "recentSignals": [
+    "Specific signal found: e.g. Posted 14 HR tech roles in Q1 2025 — signals investment in people ops infrastructure",
+    "Specific signal found: e.g. CEO quoted in WSJ on reducing operational costs — cost efficiency angle",
+    "Specific signal found: e.g. Acquired [company] in March — integration complexity creates rewards gap"
+  ]
+}`, true);
+
+  setPrepBrief(brief);
+  setPrepLoading(false);
+};
     if (!prep.company||!prep.industry) return;
     setPrepLoading(true);
     const brief = await callAI(`You are a senior B2B sales strategist for a digital rewards/incentives company. Generate a pre-call intelligence brief.
@@ -531,7 +586,39 @@ Return ONLY valid JSON:
       return `${s.label}: ${gates} | ${disc}`;
     }).join("\n");
 
-    const result = await callAI(`You are a senior sales coach reviewing a discovery call using the Cambrian Catalyst RIVER framework.
+    async function callAI(prompt, useWebSearch = false) {
+  const body = {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2000,
+    messages: [{ role: "user", content: prompt }],
+  };
+
+  if (useWebSearch) {
+    body.tools = [{ type: "web_search_20250305", name: "web_search" }];
+  }
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  const text = data.content
+    ?.filter(b => b.type === "text")
+    .map(b => b.text || "")
+    .join("") || "";
+  try {
+    return JSON.parse(text.replace(/```json|```/g, "").trim());
+  } catch {
+    return null;
+  }
+}
 
 Company: ${prep.company} | Industry: ${prep.industry} | Contact: ${prep.contactRole||"Unknown"} | ACV: ${prep.acvEstimate||"Unknown"} | Confidence: ${confidence}%
 Cohort: ${selectedCohort?.name||"Unknown"} | Outcomes: ${selectedOutcomes.join(", ")||"Unknown"}
@@ -759,6 +846,7 @@ Return ONLY valid JSON:
                   {key:"contactRole",label:"Primary Contact Role",req:true,placeholder:"e.g. VP Total Rewards"},
                   {key:"acvEstimate",label:"Estimated ACV",placeholder:"e.g. $85,000"},
                   {key:"leadSource",label:"Lead Source",placeholder:"e.g. Trade Show"},
+                  {key:"companyUrl",label:"Company Website or URL",placeholder:"e.g. wastemgmt.com or https://www.wastemgmt.com"},
                 ].map(f=>(
                   <div className="field-row" key={f.key}>
                     <div className="field-label">{f.label} {f.req&&<span className="req">*</span>}</div>
