@@ -434,90 +434,85 @@ function extractJSON(text){
   }catch{return null;}
 }
 
-// ── WEB SEARCH — correct single-request pattern ────────────────────────────────
-// The Anthropic web_search tool is fully server-side and self-contained.
-// ONE request is all you need: the API executes the search internally,
-// feeds results back to Claude, and Claude's final text is in the response.
-// The response content will contain tool_use + tool_result blocks internally,
-// followed by Claude's synthesized text block(s). Just read the text blocks.
-async function runSearch(query){
+// ── RESEARCH WITH WEB SEARCH — single call, Claude does all searching ──────────
+// Pass web_search tool and let Claude decide what to search. One call returns
+// a complete research summary. This is the pattern that reliably works.
+async function researchCompany(company, companyUrl){
   try{
     const resp = await fetch(API_URL,{
       method:"POST",
       headers:getHeaders(),
       body:JSON.stringify({
         model: API_MODEL,
-        max_tokens: 2000,
-        tools:[{type:"web_search_20250305", name:"web_search", max_uses:3}],
+        max_tokens: 3000,
+        tools:[{type:"web_search_20250305", name:"web_search", max_uses:5}],
         messages:[{
           role:"user",
-          content:`Search the web and find detailed information about: ${query}\n\nProvide a thorough summary of everything you find. Include specific facts, names, numbers, dates, and any notable details. Be concrete and specific — no vague generalities.`
+          content:`Research the company "${company}" (website: ${companyUrl}) and provide a detailed company profile. Find and report:
+
+1. COMPANY BASICS: Is it public or private? Approximate number of employees? Annual revenue or ARR if available? Year founded? Headquarters location? What industry/industries do they serve?
+
+2. WHAT THEY DO: What is their core product or service? Who are their customers? What problem do they solve?
+
+3. RECENT NEWS: Any news from 2024-2025? New products, expansions, leadership changes, awards?
+
+4. FUNDING & OWNERSHIP: VC-backed, PE-backed, or bootstrapped? Any known investors or funding rounds?
+
+5. HIRING SIGNALS: Are they actively hiring? What kinds of roles? What does this suggest about their priorities?
+
+6. KEY LEADERSHIP: Who are the CEO and other key executives?
+
+Search the web to find this information from their website, LinkedIn, Crunchbase, news articles, and press releases. Report only what you actually find — be specific with numbers and facts.`
         }],
       }),
     });
 
     const data = await resp.json();
 
-    // Log for debugging
     if(data.error){
-      console.error("Search API error:", data.error);
-      return "";
+      console.warn("Research API error:", JSON.stringify(data.error));
+      return null;
     }
+    if(!data?.content) return null;
 
-    if(!data?.content) return "";
-
-    // The API returns all blocks in one response — text blocks contain the summary
+    // Extract the text summary Claude produced after searching
     const text = data.content
       .filter(b => b.type === "text")
       .map(b => b.text || "")
       .join("\n")
       .trim();
 
-    return text.slice(0, 5000);
+    return text || null;
 
   }catch(e){
-    console.error("runSearch error:", query, e);
-    return "";
+    console.error("researchCompany error:", e);
+    return null;
   }
-}
-
-// ── PROSPECT RESEARCH — 5 focused searches, batched to avoid rate limits ───────
-async function researchProspect(company, companyUrl){
-  const co = company;
-
-  // 5 high-signal searches. Run in two small batches to stay under rate limits.
-  const batch1 = [
-    {label:"Recent News & Strategy",
-     query:`${co} news strategy 2025`},
-    {label:"Funding & Investors",
-     query:`${co} funding investors venture capital Series raised`},
-    {label:"M&A & Partnerships",
-     query:`${co} acquisition merger partnership deal 2024 2025`},
-  ];
-  const batch2 = [
-    {label:"Hiring Signals & Jobs",
-     query:`${co} hiring jobs careers open roles 2025`},
-    {label:"Products & Customer Wins",
-     query:`${co} products customers case study growth 2025`},
-  ];
-
-  // Run batch 1, then batch 2 (sequential batches, parallel within each)
-  const results1 = await Promise.all(
-    batch1.map(async s => ({label:s.label, content: await runSearch(s.query)}))
-  );
-  const results2 = await Promise.all(
-    batch2.map(async s => ({label:s.label, content: await runSearch(s.query)}))
-  );
-
-  return [...results1, ...results2];
 }
 
 // ── RESEARCH SELLER ORG ────────────────────────────────────────────────────────
 async function researchSeller(sellerUrl, sellerDocs){
-  if(sellerDocs&&sellerDocs.length>0) return null; // docs are primary — skip web search
+  if(sellerDocs && sellerDocs.length>0) return null;
   try{
-    return await runSearch(`${sellerUrl} products solutions services offerings`);
-  }catch{return null;}
+    const resp = await fetch(API_URL,{
+      method:"POST",
+      headers:getHeaders(),
+      body:JSON.stringify({
+        model: API_MODEL,
+        max_tokens: 1000,
+        tools:[{type:"web_search_20250305", name:"web_search", max_uses:2}],
+        messages:[{
+          role:"user",
+          content:`Look up ${sellerUrl} and briefly describe: what products or services do they sell, who are their target customers, and what are their key value propositions? Be concise — 3-5 sentences.`
+        }],
+      }),
+    });
+    const data = await resp.json();
+    if(!data?.content) return null;
+    return data.content.filter(b=>b.type==="text").map(b=>b.text||"").join("").trim() || null;
+  }catch(e){
+    return null;
+  }
 }
 
 // ── PLAIN AI CALL (no web search) — for JSON generation ───────────────────────
@@ -963,137 +958,92 @@ export default function App(){
     setSelectedAccount(member);
     setBrief(null);
     setBriefLoading(true);
-    setBriefStatus(`Starting deep research on ${member.company}...`);
+    setBriefStatus(`Researching ${member.company}...`);
     setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
     const companyRef = member.company_url || member.company;
 
-    // ── Phase 1: 10 parallel targeted searches ────────────────────────────────
-    setBriefStatus(`Searching for ${member.company}...`);
-
-    const [searchResults, sellerRes] = await Promise.all([
-      researchProspect(member.company, companyRef),
+    // ── Phase 1: Research prospect + seller in parallel ────────────────────────
+    setBriefStatus(`Looking up ${member.company}...`);
+    const [prospectResearch, sellerRes] = await Promise.all([
+      researchCompany(member.company, companyRef),
       researchSeller(sellerUrl, sellerDocs),
     ]);
 
     // ── Phase 2: Synthesize into RIVER brief ──────────────────────────────────
-    setBriefStatus("Synthesizing research into RIVER brief...");
+    setBriefStatus("Building RIVER brief...");
 
     const sellerContext = [
       sellerDocs.length>0
-        ? `INTERNAL SELLER DOCS (use as primary source for positioning and value props):\n${sellerDocs.map(d=>`[${d.label}] "${d.name}":\n${d.content.slice(0,1800)}`).join("\n\n")}`
+        ? `INTERNAL SELLER DOCS:\n${sellerDocs.map(d=>`[${d.label}] "${d.name}":\n${d.content.slice(0,1800)}`).join("\n\n")}`
         : sellerRes
-          ? `SELLER WEB RESEARCH (${sellerUrl}):\n${sellerRes}`
+          ? `SELLER (${sellerUrl}):\n${sellerRes}`
           : `SELLER URL: ${sellerUrl}`,
       products.filter(p=>p.name.trim()).length>0
-        ? `\nPRODUCT & SOLUTION CATALOG (curate the best fit for this prospect — these are the specific offerings available):\n${products.filter(p=>p.name.trim()).map((p,i)=>`${i+1}. ${p.name}${p.description?`: ${p.description}`:""}`).join("\n")}`
+        ? `\nPRODUCT CATALOG:\n${products.filter(p=>p.name.trim()).map((p,i)=>`${i+1}. ${p.name}${p.description?`: ${p.description}`:""}`).join("\n")}`
         : "",
     ].filter(Boolean).join("\n\n");
 
-    const prospectContext = searchResults
-      .map(s=>`=== ${s.label.toUpperCase()} ===\n${s.content||"No data found."}`)
-      .join("\n\n");
+    const researchContext = prospectResearch
+      ? `RESEARCH FINDINGS:\n${prospectResearch}`
+      : `No research data available. Use your training knowledge about ${member.company}.`;
 
-    const result = await callAI(`You are a senior B2B sales strategist and deal intelligence analyst. You have just completed deep research on a prospect across 10 targeted searches. Synthesize everything into an atomic-level pre-call RIVER brief.
+    const result = await callAI(`You are a senior B2B sales strategist. Build a pre-call RIVER brief for this prospect.
 
-━━━ PROSPECT ━━━
-Company: ${member.company} | URL: ${companyRef} | Industry: ${member.ind}
-ACV: ${member.acv>0?`$${member.acv.toLocaleString()}`:"Unknown"} | Lead: ${member.src} | Need: ${member.outcome}
-Cohort: ${selectedCohort?.name||""} | Target Outcomes: ${selectedOutcomes.join(", ")||"Unknown"}
+PROSPECT: ${member.company} | URL: ${companyRef} | Industry: ${member.ind}
+ACV: ${member.acv>0?`$${member.acv.toLocaleString()}`:"Unknown"} | Lead: ${member.src}
+Need: ${member.outcome} | Cohort: ${selectedCohort?.name||""} | Outcomes: ${selectedOutcomes.join(", ")||""}
 
-━━━ DEEP RESEARCH FINDINGS ━━━
-${prospectContext}
+${researchContext}
 
-━━━ SELLER CONTEXT ━━━
 ${sellerContext}
 
-━━━ SYNTHESIS INSTRUCTIONS ━━━
-Use ONLY facts found in the research. Reference real names, dates, dollar amounts, and publication sources. If a section had no findings, say so explicitly — never invent.
-
-FUNDING & INVESTORS: Look for VC/PE backers, funding rounds (Series A/B/C etc), known investors, Crunchbase data, SEC filings, cap table signals, board members with investor affiliations. If public company, note market cap and recent stock signals.
-
-HIRING SIGNALS: Go deep — cluster the job titles into strategic themes. 15 open DevOps roles = tech infrastructure investment. 20 open Account Executive roles = aggressive growth. 8 open HR/People Ops roles = workforce scaling. 5 open Finance/Accounting roles = pre-IPO or audit prep. Interpret what the hiring pattern *means* for their priorities.
-
-SELLER OPPORTUNITY: Based on ALL the research, write 2-3 sentences on exactly why YOUR selling org is well-positioned to help this specific company right now — tie it to their stated priorities, funding stage, hiring pattern, and growth signals. This is the "why you, why now" that opens doors.
+Using the research above, fill in this JSON. Use real facts from research wherever possible. For fields where no data was found, make a reasonable inference based on the company type and industry — do NOT leave fields empty.
 
 Return ONLY valid JSON, no markdown:
 {
-  "companySnapshot": "3-4 sentence executive overview — scale, stage, recent strategic direction, key numbers found",
-  "sellerSnapshot": "1-2 sentence summary of seller's most relevant offerings for this specific prospect",
-  "fundingProfile": "Full funding summary: stage (Seed/A/B/C/PE-backed/Public), total raised if found, most recent round, valuation if known, notable investors. If public: market cap, recent performance. If nothing found: say so.",
-  "investorProfile": [
-    "Investor name — type (VC/PE/Angel/Strategic) — known portfolio relevance or thesis",
-    "Investor name — type — relevance",
-    "Investor name — type — relevance"
-  ],
+  "companySnapshot": "3-4 sentences: what they do, size, stage, who they serve, any notable recent facts",
+  "sellerSnapshot": "1-2 sentences on the seller's most relevant offerings for this prospect",
+  "fundingProfile": "Funding stage and investors if found, otherwise infer from company size/type",
+  "investorProfile": ["Investor or owner type with context"],
   "leadershipTeam": [
-    {"name": "Real name from research", "title": "Exact title", "initials": "AB", "background": "Key background or quote found", "angle": "Specific engagement angle for this role"},
-    {"name": "Real name from research", "title": "Exact title", "initials": "CD", "background": "Key background", "angle": "Engagement angle"},
-    {"name": "Real name from research", "title": "Exact title", "initials": "EF", "background": "Key background", "angle": "Engagement angle"}
+    {"name": "CEO or key exec name if found", "title": "Title", "initials": "AB", "background": "Brief background", "angle": "Sales engagement angle"}
   ],
-  "strategicTheme": "2-3 sentence synthesis of the company's current strategic direction — what are they building toward, what pressures are they navigating, what does all the evidence point to",
-  "growthSignals": [
-    "Specific growth signal with source or evidence",
-    "Specific growth signal",
-    "Specific growth signal",
-    "Specific growth signal"
-  ],
-  "sellerOpportunity": "2-3 sentences on exactly why YOUR selling org can help this company right now — tie to their funding stage, growth signals, hiring patterns, and stated priorities. This is your 'why you why now' narrative.",
+  "strategicTheme": "2-3 sentences on their current strategic direction based on research",
+  "sellerOpportunity": "2-3 sentences on exactly why the seller is well-positioned to help this prospect right now",
   "solutionMapping": [
-    {"product": "Exact product name from the catalog (or from seller research if no catalog)", "fit": "Specific reason this product fits this prospect — grounded in research findings, their stage, and their priorities"},
-    {"product": "Exact product name from catalog", "fit": "Specific fit rationale tied to research"},
-    {"product": "Exact product name from catalog", "fit": "Specific fit rationale tied to research"}
+    {"product": "Best-fit product from seller catalog or seller website", "fit": "Specific reason grounded in research"},
+    {"product": "Second best-fit product", "fit": "Specific fit reason"},
+    {"product": "Third option if applicable", "fit": "Fit reason"}
   ],
   "riverHypothesis": {
-    "reality": "Current operational reality — specific, grounded in research",
-    "impact": "Cost of inaction — real numbers or signals found",
-    "vision": "What success looks like tied to their stated priorities",
-    "entryPoints": "Decision-makers — real names from research or most likely by role given stage/size",
-    "route": "Fastest path to close grounded in their stage and buying signals"
+    "reality": "Current state — how are they handling the problem today",
+    "impact": "Cost of inaction — what this is costing them",
+    "vision": "What success looks like for them",
+    "entryPoints": "Who makes this decision at this company",
+    "route": "Fastest path to close"
   },
-  "openingAngle": "One sharp specific question referencing a real finding — NOT generic. Should make them say 'how did you know that?'",
-  "watchOuts": [
-    "Specific risk grounded in research",
-    "Specific risk grounded in research",
-    "Specific risk grounded in research"
-  ],
+  "openingAngle": "One sharp, specific opening question for the call",
+  "watchOuts": ["Risk 1", "Risk 2", "Risk 3"],
   "keyContacts": [
-    {"name": "Real name or most likely title", "title": "Full title", "initials": "AB", "angle": "Specific engagement angle"},
-    {"name": "Real name or most likely title", "title": "Full title", "initials": "CD", "angle": "Specific engagement angle"}
+    {"name": "Most likely buyer name or title", "title": "Full title", "initials": "AB", "angle": "Engagement angle"},
+    {"name": "Second contact", "title": "Title", "initials": "CD", "angle": "Engagement angle"}
   ],
-  "competitors": ["Competitor 1", "Competitor 2", "Competitor 3"],
-  "recentHeadlines": [
-    "Headline with source and date if available",
-    "Headline with source and date",
-    "Headline with source and date",
-    "Headline with source and date"
-  ],
-  "maActivity": "Specific M&A or partnership activity — names, dates, deal sizes if found. Or: 'No M&A activity found in research.'",
-  "productLaunches": [
-    "Specific product/feature with date",
-    "Specific product/feature with date"
-  ],
-  "customerWins": [
-    "Named customer or contract win with detail",
-    "Named customer or growth milestone"
-  ],
-  "hiringSignals": [
-    "Role cluster + count if findable + strategic interpretation",
-    "Role cluster + strategic interpretation",
-    "Role cluster + strategic interpretation",
-    "Role cluster + strategic interpretation"
-  ],
-  "recentSignals": [
-    "Most actionable buying signal from all research",
-    "Second buying signal",
-    "Third buying signal"
-  ]
+  "competitors": ["Competitor 1", "Competitor 2"],
+  "recentHeadlines": ["Headline or notable fact 1", "Headline or notable fact 2", "Headline or notable fact 3"],
+  "maActivity": "Any M&A or partnership activity found, or best inference",
+  "productLaunches": ["Recent product or feature if found"],
+  "customerWins": ["Notable customer or segment if found"],
+  "growthSignals": ["Growth signal 1", "Growth signal 2"],
+  "hiringSignals": ["Hiring pattern and what it signals strategically"],
+  "recentSignals": ["Top buying signal", "Second signal", "Third signal"]
 }`);
 
     setBrief(result && typeof result==="object" ? result : {
       ...BLANK_BRIEF,
-      companySnapshot:`Research complete for ${member.company}. Edit any field below before your call.`,
+      companySnapshot:`${member.company} — ${member.ind}. ${member.outcome}. Edit any field below before your call.`,
+      strategicTheme:"",sellerOpportunity:"",fundingProfile:"",
     });
     setBriefLoading(false);
     setBriefStatus("");
@@ -1507,27 +1457,27 @@ Return ONLY valid JSON:
               <div className="load-box">
                 <div className="load-status">
                   <div className="load-spin"/>
-                  {briefStatus||"Running deep research..."}
+                  {briefStatus||"Researching..."}
                 </div>
-                <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
+                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14,padding:"8px 0"}}>
                   {[
-                    {label:"Recent News & Strategy",      color:"#1B3A6B"},
-                    {label:"Funding & Investors",          color:"#6B2E6B"},
-                    {label:"M&A & Partnerships",           color:"#6B3A7A"},
-                    {label:"Hiring Signals & Jobs",        color:"#B25A00"},
-                    {label:"Products & Customer Wins",     color:"#2E6B2E"},
+                    {label:"Company profile — size, revenue, employees, stage"},
+                    {label:"Recent news, product launches, and partnerships"},
+                    {label:"Funding, investors, and ownership structure"},
+                    {label:"Hiring signals and workforce priorities"},
+                    {label:"Building RIVER brief and solution mapping"},
                   ].map((r,i)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:7,height:7,borderRadius:"50%",background:r.color,flexShrink:0,animation:`blink ${1+i*0.15}s ease-in-out infinite`,animationDelay:`${i*0.2}s`}}/>
-                      <div style={{fontSize:11,color:"#555",minWidth:200}}>{r.label}</div>
-                      <div style={{flex:1,height:4,background:"#F0EDE6",borderRadius:2,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:"100%",background:r.color,opacity:0.4,borderRadius:2,animation:`shimmer 2s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
-                      </div>
+                      <div style={{width:6,height:6,borderRadius:"50%",background:"#8B6F47",flexShrink:0,animation:`blink ${1.2+i*0.2}s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
+                      <div style={{fontSize:11,color:"#555"}}>{r.label}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{fontSize:11,color:"#aaa",textAlign:"center"}}>
-                  Researching {selectedAccount?.company}...
+                <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden"}}>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s ease-in-out infinite",borderRadius:2}}/>
+                </div>
+                <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:10}}>
+                  This takes about 20–30 seconds...
                 </div>
               </div>
             )}
