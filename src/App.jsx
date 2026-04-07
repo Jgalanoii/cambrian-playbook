@@ -347,16 +347,15 @@ const RIVER_STAGES = [
 
 const BLANK_BRIEF = {
   companySnapshot:"",sellerSnapshot:"",
+  revenue:"",publicPrivate:"",
+  keyExecutives:[],recentHeadlines:[],
+  openRoles:{summary:"",roles:[]},
   solutionMapping:[{product:"",fit:""},{product:"",fit:""},{product:"",fit:""}],
   riverHypothesis:{reality:"",impact:"",vision:"",entryPoints:"",route:""},
   openingAngle:"",watchOuts:["","",""],
   keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
   competitors:[],recentSignals:["","",""],
-  // Intelligence fields
-  recentHeadlines:[],maActivity:"",productLaunches:[],customerWins:[],hiringSignals:[],
-  // New deep-research fields
-  fundingProfile:"",investorProfile:[],leadershipTeam:[],
-  strategicTheme:"",growthSignals:[],sellerOpportunity:"",
+  fundingProfile:"",leadershipTeam:[],strategicTheme:"",growthSignals:[],sellerOpportunity:"",
 };
 
 const RKEYS = ["reality","impact","vision","entryPoints","route"];
@@ -434,107 +433,125 @@ function extractJSON(text){
   }catch{return null;}
 }
 
-// ── WEB SEARCH — correct single-request pattern ────────────────────────────────
-// The Anthropic web_search tool is fully server-side and self-contained.
-// ONE request is all you need: the API executes the search internally,
-// feeds results back to Claude, and Claude's final text is in the response.
-// The response content will contain tool_use + tool_result blocks internally,
-// followed by Claude's synthesized text block(s). Just read the text blocks.
-// ── RESEARCH: single web-search call, Claude handles everything server-side ────
-async function researchCompany(company, companyUrl){
+// ── SINGLE-CALL BRIEF GENERATION: web search + synthesis in one request ────────
+// Claude searches the web AND returns structured JSON in a single API call.
+// This avoids the two-step coordination problem entirely.
+// ── STEP 1: Research via web search — plain text summary ──────────────────────
+async function webSearch(query){
+  const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  if(!key||key.length<20) return {error:"API key missing"};
   try{
-    const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if(!key||key.length<20){
-      return "ERROR: VITE_ANTHROPIC_API_KEY missing or invalid. Vercel: Project > Settings > Environment Variables > add key (starts with sk-ant-) > Redeploy.";
-    }
-    const resp = await fetch("https://api.anthropic.com/v1/messages",{
+    const r = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "x-api-key":key,
-        "anthropic-version":"2023-06-01",
-        "anthropic-dangerous-direct-browser-access":"true"
-      },
+      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({
         model:"claude-sonnet-4-20250514",
-        max_tokens:3000,
+        max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:5}],
-        messages:[{role:"user",content:`Research "${company}" (website: ${companyUrl}). Search and report:
-1. BASICS: Public or private? Employee count? Revenue/ARR? Founded? HQ? Industries served?
-2. PRODUCT: Core product/service, target customers, problem solved
-3. NEWS: Notable news 2024-2025 — launches, expansions, leadership, awards
-4. FUNDING: VC/PE/bootstrapped/public? Investors, rounds, valuations?
-5. HIRING: Active roles? Departments growing? What does this signal?
-6. LEADERSHIP: CEO and key executives?
-Search website, LinkedIn, Crunchbase, press releases, news. Report only real facts with specifics.`}],
+        messages:[{role:"user",content:query}],
       }),
     });
-    const data = await resp.json();
-    if(data.error){
-      console.error("researchCompany API error:",data.error);
-      return "API Error "+data.error.type+": "+data.error.message;
-    }
-    if(!data?.content) return "Error: empty API response";
-    const text=data.content.filter(b=>b.type==="text").map(b=>b.text||"").join("\n").trim();
-    console.log("Research OK:",company,"chars:",text.length);
-    return text||"No research content returned.";
-  }catch(e){
-    console.error("researchCompany error:",e);
-    return "Fetch error: "+e.message;
-  }
+    const d = await r.json();
+    if(d.error) return {error:d.error.type+": "+d.error.message};
+    const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    return {text};
+  }catch(e){return {error:e.message};}
 }
 
-async function researchSeller(sellerUrl,sellerDocs){
-  if(sellerDocs&&sellerDocs.length>0) return null;
-  try{
-    const resp = await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
-        "anthropic-version":"2023-06-01",
-        "anthropic-dangerous-direct-browser-access":"true"
-      },
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:800,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
-        messages:[{role:"user",content:`Describe ${sellerUrl}: their products/services, target customers, key value propositions. 3-5 sentences.`}],
-      }),
-    });
-    const data = await resp.json();
-    if(!data?.content) return null;
-    return data.content.filter(b=>b.type==="text").map(b=>b.text||"").join("").trim()||null;
-  }catch(e){return null;}
-}
-
-
-// ── PLAIN AI CALL — JSON synthesis, no web search ─────────────────────────────
+// ── STEP 2: Synthesize research into JSON — no web search ──────────────────────
 async function callAI(prompt){
+  const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
   try{
-    const resp = await fetch("https://api.anthropic.com/v1/messages",{
+    const r = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
-        "anthropic-version":"2023-06-01",
-        "anthropic-dangerous-direct-browser-access":"true"
-      },
+      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,messages:[{role:"user",content:prompt}]}),
     });
-    const data = await resp.json();
-    if(data.error){console.error("callAI error:",data.error);return null;}
-    const text=data.content?.filter(b=>b.type==="text").map(b=>b.text||"").join("")||"";
-    try{
-      const clean=text.replace(/```json[\s\S]*?```|```[\s\S]*?```/g,"").trim();
-      return JSON.parse(clean);
-    }catch{
-      const m=text.match(/\{[\s\S]*\}/);
-      return m?JSON.parse(m[0]):null;
+    const d = await r.json();
+    if(d.error){console.error("callAI:",d.error);return null;}
+    const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    // Try to extract JSON
+    const clean=text.replace(/^[\s\S]*?(?=\{)/,"");
+    try{return JSON.parse(clean);}catch{
+      const m=text.match(/\{[\s\S]*\}/s);
+      try{return m?JSON.parse(m[0]):null;}catch{return null;}
     }
-  }catch(e){console.error("callAI error:",e);return null;}
+  }catch(e){console.error("callAI:",e);return null;}
 }
 
+// ── GENERATE BRIEF: research then synthesize ───────────────────────────────────
+async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes){
+  const co = member.company;
+  const url = member.company_url||co;
+  const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
+
+  if(!key||key.length<20){
+    return {_error:"VITE_ANTHROPIC_API_KEY missing — Vercel: Settings → Env Vars → add key → Redeploy",...BLANK_BRIEF,companySnapshot:co+" — API key missing."};
+  }
+
+  // ── Phase 1: web research ────────────────────────────────────────────────────
+  const researchQuery = `Search the web and find the following information about the company "${co}" (website: ${url}):
+
+1. Annual revenue or ARR (be specific — e.g. "$16B revenue" or "~$500M ARR")
+2. Public or privately held? If public, stock ticker and market cap. If private, ownership type (PE-backed, VC-backed, founder-owned, etc.)
+3. Number of employees (approximate is fine — e.g. "~270,000 employees")
+4. Headquarters city and country
+5. Year founded
+6. Key executives: CEO name and title, plus CFO, CHRO, CPO, COO if findable
+7. Recent headlines from 2024-2025 — any notable news, acquisitions, product launches, leadership changes, contracts won
+8. Current open job postings — search their careers page or LinkedIn. List specific role titles and the departments they're in.
+
+Be specific. Use real numbers and real names from your search results. Report what you actually find.`;
+
+  const research = await webSearch(researchQuery);
+
+  const researchText = research.text||"";
+  const researchError = research.error||"";
+
+  console.log("Research result chars:", researchText.length, "error:", researchError);
+
+  // ── Phase 2: seller context ──────────────────────────────────────────────────
+  const sellerCtx = sellerDocs.length>0
+    ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,800)).join("; ")
+    : "Seller: "+sellerUrl;
+  const prodCtx = products.filter(p=>p.name.trim()).length>0
+    ? "Products available: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" — "+p.description:"")).join("; ")
+    : "";
+
+  // ── Phase 3: synthesize into JSON ────────────────────────────────────────────
+  const prompt = `You are a B2B sales strategist building a pre-call brief. Use the research below to fill in the JSON.
+
+PROSPECT: ${co} | ${member.ind} | ${url}
+ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Need: ${member.outcome}
+${sellerCtx}
+${prodCtx}
+Cohort: ${selectedCohort?.name||""} | Outcomes: ${selectedOutcomes.join(", ")||""}
+
+RESEARCH FINDINGS:
+${researchText||"No web research available — use your training knowledge about "+co+"."}
+${researchError?"Research error: "+researchError:""}
+
+Instructions: Fill in every field using the research above. For fields where research has data, use it exactly. For gaps, make a confident inference based on company type and industry. Never leave a field empty or say "not found" or "unknown".
+
+Return ONLY a JSON object — no markdown fences, no explanation, just the raw JSON:
+{"companySnapshot":"Rich 4-5 sentence profile with specific revenue, employee count, ownership, customers, and one notable recent fact","revenue":"Specific revenue or ARR figure (e.g. $16B annual revenue, or ~$400M ARR)","publicPrivate":"Public (NYSE/NASDAQ: ticker) or Private (PE-backed/VC-backed/founder-owned) — be specific","keyExecutives":[{"name":"CEO full name","title":"Chief Executive Officer","initials":"AB","angle":"Sales angle for this exec"},{"name":"Name","title":"Title","initials":"CD","angle":"Angle"},{"name":"Name","title":"Title","initials":"EF","angle":"Angle"}],"recentHeadlines":[{"headline":"Specific headline with approximate date","relevance":"Why this matters for the sales conversation"},{"headline":"Headline","relevance":"Relevance"},{"headline":"Headline","relevance":"Relevance"}],"openRoles":{"summary":"2-3 sentence overview of their hiring activity and what it signals","roles":[{"title":"Specific job title","dept":"Department","signal":"Strategic meaning"},{"title":"Job title","dept":"Dept","signal":"Signal"},{"title":"Job title","dept":"Dept","signal":"Signal"},{"title":"Job title","dept":"Dept","signal":"Signal"},{"title":"Job title","dept":"Dept","signal":"Signal"}]},"sellerSnapshot":"1-2 sentences on seller most relevant offerings","fundingProfile":"Funding or ownership details","leadershipTeam":[{"name":"Name","title":"Title","initials":"AB","background":"Background","angle":"Angle"}],"strategicTheme":"2-3 sentences on strategic direction","sellerOpportunity":"2-3 sentences why seller is uniquely positioned NOW","solutionMapping":[{"product":"Product name","fit":"Why it fits"},{"product":"Product","fit":"Why"},{"product":"Product","fit":"Why"}],"riverHypothesis":{"reality":"Current state","impact":"Cost of inaction","vision":"Success looks like","entryPoints":"Decision makers","route":"Path to close"},"openingAngle":"Sharp specific opening question from research","watchOuts":["Risk 1","Risk 2","Risk 3"],"keyContacts":[{"name":"Name","title":"Title","initials":"AB","angle":"Angle"},{"name":"Name","title":"Title","initials":"CD","angle":"Angle"}],"competitors":["Competitor 1","Competitor 2"],"growthSignals":["Signal 1","Signal 2","Signal 3"],"recentSignals":["Buying signal 1","Signal 2","Signal 3"]}`;
+
+  const result = await callAI(prompt);
+
+  if(!result){
+    // JSON synthesis failed — show raw research in snapshot
+    return {
+      ...BLANK_BRIEF,
+      _error: researchError?"Research error: "+researchError:"JSON synthesis failed — see console (F12)",
+      companySnapshot: researchText?researchText.slice(0,800):co+" — "+member.ind+". Research failed. Edit fields manually.",
+      revenue:"", publicPrivate:"", keyExecutives:[], recentHeadlines:[],
+      openRoles:{summary:"",roles:[]},
+    };
+  }
+
+  if(researchError) result._error = "Research partial: "+researchError;
+  return result;
+}
 
 
 // ── EXCEL EXPORT ──────────────────────────────────────────────────────────────
@@ -965,91 +982,14 @@ export default function App(){
     setBrief(null);
     setBriefLoading(true);
     setBriefError("");
-    setBriefStatus("Researching "+member.company+"...");
+    setBriefStatus("Searching "+member.company+"...");
     setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
-    const companyRef=member.company_url||member.company;
+    const result = await generateBrief(member,sellerUrl,sellerDocs,products,selectedCohort,selectedOutcomes);
 
-    const[prospectResearch,sellerRes]=await Promise.all([
-      researchCompany(member.company,companyRef),
-      researchSeller(sellerUrl,sellerDocs),
-    ]);
-
-    const researchFailed=!prospectResearch||
-      prospectResearch.startsWith("ERROR:")||
-      prospectResearch.startsWith("API Error")||
-      prospectResearch.startsWith("Fetch error:");
-
-    if(researchFailed) setBriefError(prospectResearch||"Research failed — open browser console (F12) for details.");
-
-    setBriefStatus("Building RIVER brief...");
-
-    const sellerCtx=[
-      sellerDocs.length>0
-        ?"INTERNAL SELLER DOCS:\n"+sellerDocs.map(d=>"["+d.label+"] "+d.name+":\n"+d.content.slice(0,1800)).join("\n\n")
-        :sellerRes?"SELLER ("+sellerUrl+"):\n"+sellerRes:"SELLER: "+sellerUrl,
-      products.filter(p=>p.name.trim()).length>0
-        ?"\nPRODUCT CATALOG:\n"+products.filter(p=>p.name.trim()).map((p,i)=>(i+1)+". "+p.name+(p.description?": "+p.description:"")).join("\n")
-        :"",
-    ].filter(Boolean).join("\n\n");
-
-    const researchCtx=(!researchFailed&&prospectResearch)
-      ?"RESEARCH FINDINGS:\n"+prospectResearch
-      :"No live research available. Use your training knowledge about "+member.company+" ("+member.ind+").";
-
-    const jsonSchema=`{
-  "companySnapshot": "3-4 sentences: what they do, size/stage, who they serve, notable recent facts",
-  "sellerSnapshot": "1-2 sentences on seller's most relevant offerings for this prospect",
-  "fundingProfile": "Funding stage, investors, amounts if found — otherwise infer from type/size",
-  "investorProfile": ["Investor or ownership type with context"],
-  "leadershipTeam": [{"name":"Name or likely title","title":"Full title","initials":"AB","background":"Background","angle":"Sales angle"}],
-  "strategicTheme": "2-3 sentences on current strategic direction",
-  "sellerOpportunity": "2-3 sentences: why seller is uniquely positioned to help this prospect NOW",
-  "solutionMapping": [
-    {"product":"Best-fit product from seller","fit":"Why this fits based on research"},
-    {"product":"Second-best fit","fit":"Why"},
-    {"product":"Third option","fit":"Why"}
-  ],
-  "riverHypothesis": {
-    "reality": "How they handle the problem today",
-    "impact": "What this is costing them",
-    "vision": "What success looks like",
-    "entryPoints": "Who makes this decision",
-    "route": "Fastest path to close"
-  },
-  "openingAngle": "One sharp specific opening question referencing something real from research",
-  "watchOuts": ["Risk 1","Risk 2","Risk 3"],
-  "keyContacts": [
-    {"name":"Name or likely title","title":"Full title","initials":"AB","angle":"Angle"},
-    {"name":"Second contact","title":"Title","initials":"CD","angle":"Angle"}
-  ],
-  "competitors": ["Competitor 1","Competitor 2"],
-  "recentHeadlines": ["Headline or fact 1","Headline 2","Headline 3"],
-  "maActivity": "M&A or partnership activity, or reasonable inference",
-  "productLaunches": ["Recent launch if found"],
-  "customerWins": ["Notable customer or segment"],
-  "growthSignals": ["Growth signal 1","Growth signal 2"],
-  "hiringSignals": ["Hiring pattern and what it signals strategically"],
-  "recentSignals": ["Top buying signal","Signal 2","Signal 3"]
-}`;
-
-    const result=await callAI("You are a senior B2B sales strategist. Build a pre-call RIVER brief for this prospect.\n\n"+
-      "PROSPECT: "+member.company+" | Industry: "+member.ind+" | URL: "+companyRef+"\n"+
-      "ACV: "+(member.acv>0?"$"+member.acv.toLocaleString():"Unknown")+" | Lead: "+member.src+"\n"+
-      "Need: "+member.outcome+" | Cohort: "+(selectedCohort?.name||"")+" | Outcomes: "+selectedOutcomes.join(", ")+"\n\n"+
-      researchCtx+"\n\n"+
-      sellerCtx+"\n\n"+
-      "Generate a complete RIVER brief using the research. Use real facts. Make reasonable inferences for gaps — never leave empty or say not found.\n\n"+
-      "Return ONLY valid JSON, no markdown:\n"+jsonSchema
-    );
-
-    setBrief(result&&typeof result==="object"?result:{
-      ...BLANK_BRIEF,
-      companySnapshot:member.company+" — "+member.ind+". "+member.outcome+". Edit any field below.",
-      recentHeadlines:[],maActivity:"",productLaunches:[],customerWins:[],
-      growthSignals:[],hiringSignals:[],strategicTheme:"",sellerOpportunity:"",fundingProfile:"",
-    });
+    if(result._error) setBriefError(result._error);
+    setBrief(result);
     setBriefLoading(false);
     setBriefStatus("");
   };
@@ -1454,7 +1394,7 @@ Return ONLY valid JSON:
           <div className="page">
             <div className="page-title">RIVER Brief{selectedAccount?` — ${selectedAccount.company}`:""}</div>
             <div className="page-sub">
-              {briefLoading?"Running parallel searches — headlines, M&A, products, customers, hiring...":"All fields are editable — click any text to refine before your call."}
+              {briefLoading?"Searching the web for live company intelligence...":"All fields are editable — click any text to refine before your call."}
             </div>
 
             {/* Loading — research progress */}
@@ -1521,189 +1461,112 @@ Return ONLY valid JSON:
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">◎</div>
-                    <div><div className="bb-title">Company Snapshot</div><div className="bb-sub">Live research summary — click to edit</div></div>
+                    <div><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to edit</div></div>
                   </div>
                   <div className="bb-body">
                     <EF value={brief.companySnapshot||""} onChange={v=>patchBrief(b=>{b.companySnapshot=v;})}/>
+
+                    {/* Revenue + Public/Private row */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}}>
+                      <div>
+                        <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
+                          <span style={{background:"#2E6B2E",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>
+                          Annual Revenue / ARR
+                        </div>
+                        <EF value={brief.revenue||""} onChange={v=>patchBrief(b=>{b.revenue=v;})} single placeholder="e.g. $16B annual revenue"/>
+                      </div>
+                      <div>
+                        <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
+                          <span style={{background:"#1B3A6B",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>
+                          Public / Private
+                        </div>
+                        <EF value={brief.publicPrivate||""} onChange={v=>patchBrief(b=>{b.publicPrivate=v;})} single placeholder="e.g. Public (NYSE: ARMK) or PE-backed"/>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Live Intelligence Panel */}
-                <div className="bb">
-                  <div className="bb-hdr">
-                    <div className="bb-icon" style={{fontSize:9}}>📡</div>
-                    <div>
-                      <div className="bb-title">Live Intelligence</div>
-                      <div className="bb-sub">10-source deep research — Headlines · M&A · Products · Customers · Funding · Investors · Leadership · Hiring</div>
+                {/* Key Executives */}
+                {(brief.keyExecutives||[]).filter(e=>e?.name).length>0&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:10}}>👤</div>
+                      <div><div className="bb-title">Key Executives</div><div className="bb-sub">Click angles to edit</div></div>
+                    </div>
+                    <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+                      {(brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
+                        <div key={i} className="contact-row" style={{margin:0}}>
+                          <div className="contact-av" style={{background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"?"}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:600,color:"#1a1a18"}}>{ex.name}</div>
+                            <div style={{fontSize:10,color:"#777",marginBottom:3}}>{ex.title}</div>
+                            <EF value={ex.angle||""} onChange={v=>patchBrief(b=>{if(!b.keyExecutives)b.keyExecutives=[];b.keyExecutives[i]={...b.keyExecutives[i],angle:v};})} single placeholder="Engagement angle..."/>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="bb-body" style={{padding:"12px 16px 16px"}}>
+                )}
 
-                    {/* Strategic Theme — top of the panel, synthesized narrative */}
-                    {brief.strategicTheme&&(
-                      <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:9,padding:"11px 13px",marginBottom:16}}>
-                        <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:5}}>Strategic Theme</div>
-                        <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;})}/>
-                      </div>
-                    )}
-
-                    {/* Seller Opportunity — "why you why now" */}
-                    {brief.sellerOpportunity&&(
-                      <div style={{background:"#EEF5EE",border:"1.5px solid #2E6B2E",borderRadius:9,padding:"11px 13px",marginBottom:16}}>
-                        <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#2E6B2E",marginBottom:5}}>Why You · Why Now</div>
-                        <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;})}/>
-                      </div>
-                    )}
-
-                    {/* 2-col grid: left = company news, right = funding/investors */}
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
-
-                      {/* Left col: Headlines */}
-                      <div>
-                        {(brief.recentHeadlines||[]).filter(Boolean).length>0&&(
-                          <div style={{marginBottom:12}}>
-                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{background:"#1B3A6B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>NEWS</span>Headlines
-                            </div>
-                            {(brief.recentHeadlines||[]).filter(Boolean).map((h,i)=>(
-                              <div key={i} className="signal-row" style={{marginBottom:5}}>
-                                <div className="sig-dot" style={{background:"#1B3A6B"}}/>
-                                <div style={{flex:1}}><EF value={h||""} onChange={v=>patchBrief(b=>{if(!b.recentHeadlines)b.recentHeadlines=[];b.recentHeadlines[i]=v;})} single/></div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* M&A */}
-                        {brief.maActivity&&brief.maActivity.length>10&&!brief.maActivity.toLowerCase().includes("no m&a")&&(
-                          <div style={{marginBottom:12}}>
-                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{background:"#6B3A7A",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>M&A</span>M&A &amp; Deals
-                            </div>
-                            <div style={{background:"#F8F4FC",border:"1px solid #E8DEF0",borderRadius:7,padding:"8px 10px"}}>
-                              <EF value={brief.maActivity||""} onChange={v=>patchBrief(b=>{b.maActivity=v;})}/>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Products */}
-                        {(brief.productLaunches||[]).filter(Boolean).length>0&&(
-                          <div style={{marginBottom:12}}>
-                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{background:"#2E6B2E",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>PRODUCT</span>Launches
-                            </div>
-                            {(brief.productLaunches||[]).filter(Boolean).map((p,i)=>(
-                              <div key={i} className="signal-row" style={{marginBottom:5}}>
-                                <div className="sig-dot" style={{background:"#2E6B2E"}}/>
-                                <div style={{flex:1}}><EF value={p||""} onChange={v=>patchBrief(b=>{if(!b.productLaunches)b.productLaunches=[];b.productLaunches[i]=v;})} single/></div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Customer Wins */}
-                        {(brief.customerWins||[]).filter(Boolean).length>0&&(
-                          <div>
-                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{background:"#8B6F47",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>WINS</span>Customer Wins
-                            </div>
-                            {(brief.customerWins||[]).filter(Boolean).map((w,i)=>(
-                              <div key={i} className="signal-row" style={{marginBottom:5}}>
-                                <div className="sig-dot" style={{background:"#8B6F47"}}/>
-                                <div style={{flex:1}}><EF value={w||""} onChange={v=>patchBrief(b=>{if(!b.customerWins)b.customerWins=[];b.customerWins[i]=v;})} single/></div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right col: Funding + Investors + Growth */}
-                      <div>
-                        {/* Funding Profile */}
-                        {brief.fundingProfile&&brief.fundingProfile.length>10&&(
-                          <div style={{marginBottom:12}}>
-                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{background:"#6B2E6B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>FUNDING</span>Funding Profile
-                            </div>
-                            <div style={{background:"#FAF0FA",border:"1px solid #E0D0E0",borderRadius:7,padding:"8px 10px"}}>
-                              <EF value={brief.fundingProfile||""} onChange={v=>patchBrief(b=>{b.fundingProfile=v;})}/>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Investors */}
-                        {(brief.investorProfile||[]).filter(Boolean).length>0&&(
-                          <div style={{marginBottom:12}}>
-                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{background:"#4A3A8B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>INVESTORS</span>Cap Table
-                            </div>
-                            {(brief.investorProfile||[]).filter(Boolean).map((inv,i)=>(
-                              <div key={i} className="signal-row" style={{marginBottom:5}}>
-                                <div className="sig-dot" style={{background:"#4A3A8B"}}/>
-                                <div style={{flex:1}}><EF value={inv||""} onChange={v=>patchBrief(b=>{if(!b.investorProfile)b.investorProfile=[];b.investorProfile[i]=v;})} single/></div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Growth Signals */}
-                        {(brief.growthSignals||[]).filter(Boolean).length>0&&(
-                          <div style={{marginBottom:12}}>
-                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{background:"#3A6B6B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>GROWTH</span>Growth Signals
-                            </div>
-                            {(brief.growthSignals||[]).filter(Boolean).map((g,i)=>(
-                              <div key={i} className="signal-row" style={{marginBottom:5}}>
-                                <div className="sig-dot" style={{background:"#3A6B6B"}}/>
-                                <div style={{flex:1}}><EF value={g||""} onChange={v=>patchBrief(b=>{if(!b.growthSignals)b.growthSignals=[];b.growthSignals[i]=v;})} single/></div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Buying Signals */}
-                        {(brief.recentSignals||[]).filter(Boolean).length>0&&(
-                          <div>
-                            <div className="field-label" style={{marginBottom:7}}>Top Buying Signals</div>
-                            {(brief.recentSignals||[]).filter(Boolean).map((s,i)=>(
-                              <div key={i} className="signal-row" style={{marginBottom:5}}>
-                                <div className="sig-dot"/>
-                                <div style={{flex:1}}><EF value={s||""} onChange={v=>patchBrief(b=>{b.recentSignals[i]=v;})} single/></div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                {/* Recent Headlines */}
+                {(brief.recentHeadlines||[]).filter(h=>h?.headline||typeof h==="string").length>0&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:10}}>📰</div>
+                      <div><div className="bb-title">Recent Headlines</div><div className="bb-sub">Notable news from 2024–2025</div></div>
                     </div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {(brief.recentHeadlines||[]).filter(h=>h?.headline||typeof h==="string").map((h,i)=>{
+                        const headline = typeof h==="string"?h:(h.headline||"");
+                        const relevance = typeof h==="object"?h.relevance:"";
+                        return(
+                          <div key={i} style={{padding:"8px 10px",background:"#FAFAF8",border:"1px solid #E8E6DF",borderRadius:7}}>
+                            <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
+                              <div style={{width:5,height:5,borderRadius:"50%",background:"#1B3A6B",flexShrink:0,marginTop:5}}/>
+                              <div style={{flex:1}}>
+                                <div style={{fontSize:12,fontWeight:500,color:"#1a1a18",marginBottom:relevance?3:0}}>{headline}</div>
+                                {relevance&&<div style={{fontSize:10,color:"#8B6F47",fontStyle:"italic"}}>{relevance}</div>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-                    {/* Hiring Signals — full width, interpreted */}
-                    {(brief.hiringSignals||[]).filter(Boolean).length>0&&(
-                      <div style={{borderTop:"1px solid #E8E6DF",paddingTop:12,marginTop:4}}>
-                        <div className="field-label" style={{marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                          <span style={{background:"#B25A00",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>HIRING</span>
-                          Job Postings &amp; Hiring Signals
-                          <span style={{fontSize:9,color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0}}>— open roles reveal strategic priorities</span>
+                {/* Open Positions */}
+                {brief.openRoles&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:10}}>💼</div>
+                      <div><div className="bb-title">Open Positions</div><div className="bb-sub">Current hiring signals strategic priorities</div></div>
+                    </div>
+                    <div className="bb-body">
+                      {brief.openRoles.summary&&(
+                        <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:8,padding:"10px 12px",marginBottom:12}}>
+                          <EF value={brief.openRoles.summary||""} onChange={v=>patchBrief(b=>{if(!b.openRoles)b.openRoles={};b.openRoles.summary=v;})}/>
                         </div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"5px 12px"}}>
-                          {(brief.hiringSignals||[]).filter(Boolean).map((h,i)=>(
-                            <div key={i} className="signal-row">
-                              <div className="sig-dot" style={{background:"#B25A00"}}/>
-                              <div style={{flex:1}}><EF value={h||""} onChange={v=>patchBrief(b=>{if(!b.hiringSignals)b.hiringSignals=[];b.hiringSignals[i]=v;})} single/></div>
+                      )}
+                      {(brief.openRoles.roles||[]).filter(r=>r?.title).length>0&&(
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {(brief.openRoles.roles||[]).filter(r=>r?.title).map((role,i)=>(
+                            <div key={i} style={{display:"flex",gap:10,padding:"8px 10px",background:"#FAFAF8",border:"1px solid #E8E6DF",borderRadius:7,alignItems:"flex-start"}}>
+                              <div style={{background:"#1a1a18",color:"#8B6F47",borderRadius:4,padding:"2px 7px",fontSize:9,fontWeight:700,whiteSpace:"nowrap",marginTop:2,flexShrink:0}}>{role.dept||"Open"}</div>
+                              <div style={{flex:1}}>
+                                <div style={{fontSize:12,fontWeight:600,color:"#1a1a18",marginBottom:2}}>{role.title}</div>
+                                {role.signal&&<div style={{fontSize:11,color:"#8B6F47",fontStyle:"italic"}}>{role.signal}</div>}
+                              </div>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Empty state */}
-                    {!brief.strategicTheme&&!(brief.recentHeadlines||[]).filter(Boolean).length&&
-                     !(brief.fundingProfile)&&!(brief.hiringSignals||[]).filter(Boolean).length&&(
-                      <div style={{fontSize:12,color:"#bbb",fontStyle:"italic",textAlign:"center",padding:"16px 0"}}>
-                        No intelligence found — edit fields manually or regenerate.
-                      </div>
-                    )}
+                      )}
+                      {(!brief.openRoles.roles||!brief.openRoles.roles.filter(r=>r?.title).length)&&(
+                        <div style={{fontSize:12,color:"#aaa",fontStyle:"italic"}}>No open roles found — click to regenerate or edit manually.</div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Leadership Team — separate block */}
                 {(brief.leadershipTeam||[]).filter(l=>l?.name).length>0&&(
