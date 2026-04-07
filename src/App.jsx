@@ -434,121 +434,82 @@ function extractJSON(text){
   }catch{return null;}
 }
 
-// ── SINGLE WEB SEARCH — proper agentic loop ────────────────────────────────────
-// The Anthropic web_search tool works as a 2-turn agentic loop:
-//   Turn 1: model decides to call web_search → returns tool_use block(s)
-//   Turn 2: we echo back tool_result(s) → model reads results and returns text
-// A single-turn call will NEVER return search content — only tool_use intent.
+// ── WEB SEARCH — correct single-request pattern ────────────────────────────────
+// The Anthropic web_search tool is fully server-side and self-contained.
+// ONE request is all you need: the API executes the search internally,
+// feeds results back to Claude, and Claude's final text is in the response.
+// The response content will contain tool_use + tool_result blocks internally,
+// followed by Claude's synthesized text block(s). Just read the text blocks.
 async function runSearch(query){
   try{
-    const messages = [{
-      role:"user",
-      content:`Search the web for: ${query}\n\nSummarize everything you find in detail. Include specific facts, names, numbers, dates, quotes, and sources. Be thorough and specific.`
-    }];
-
-    // Turn 1 — model issues search query
-    const resp1 = await fetch(API_URL,{
+    const resp = await fetch(API_URL,{
       method:"POST",
       headers:getHeaders(),
       body:JSON.stringify({
-        model:API_MODEL,
-        max_tokens:1000,
-        tools:[{type:"web_search_20250305",name:"web_search"}],
-        messages,
+        model: API_MODEL,
+        max_tokens: 2000,
+        tools:[{type:"web_search_20250305", name:"web_search", max_uses:3}],
+        messages:[{
+          role:"user",
+          content:`Search the web and find detailed information about: ${query}\n\nProvide a thorough summary of everything you find. Include specific facts, names, numbers, dates, and any notable details. Be concrete and specific — no vague generalities.`
+        }],
       }),
     });
-    const data1 = await resp1.json();
-    if(!data1?.content) return "";
 
-    // Check if model returned tool_use blocks (it wants to search)
-    const toolUseBlocks = data1.content.filter(b=>b.type==="tool_use");
+    const data = await resp.json();
 
-    if(toolUseBlocks.length===0){
-      // Model responded directly without searching (e.g. hit stop)
-      return data1.content.filter(b=>b.type==="text").map(b=>b.text||"").join("").slice(0,4000);
+    // Log for debugging
+    if(data.error){
+      console.error("Search API error:", data.error);
+      return "";
     }
 
-    // Turn 2 — feed tool_results back so model can read search output
-    const turn2Messages = [
-      ...messages,
-      {role:"assistant", content:data1.content},
-      {
-        role:"user",
-        content: toolUseBlocks.map(tb=>({
-          type:"tool_result",
-          tool_use_id: tb.id,
-          // The search engine fills this server-side; we send empty content to trigger result retrieval
-          content: "",
-        }))
-      }
-    ];
+    if(!data?.content) return "";
 
-    const resp2 = await fetch(API_URL,{
-      method:"POST",
-      headers:getHeaders(),
-      body:JSON.stringify({
-        model:API_MODEL,
-        max_tokens:2000,
-        tools:[{type:"web_search_20250305",name:"web_search"}],
-        messages:turn2Messages,
-      }),
-    });
-    const data2 = await resp2.json();
-    if(!data2?.content) return "";
+    // The API returns all blocks in one response — text blocks contain the summary
+    const text = data.content
+      .filter(b => b.type === "text")
+      .map(b => b.text || "")
+      .join("\n")
+      .trim();
 
-    // Extract all text from turn 2 response
-    let out = "";
-    for(const block of data2.content){
-      if(block.type==="text") out += block.text + "\n";
-      // Handle any nested tool_result content that came back
-      if(block.type==="tool_result"){
-        const inner = Array.isArray(block.content)?block.content:[];
-        for(const ib of inner) if(ib.type==="text") out += ib.text + "\n";
-      }
-    }
+    return text.slice(0, 5000);
 
-    return out.trim().slice(0,5000);
   }catch(e){
-    console.error("Search error for query:", query, e);
+    console.error("runSearch error:", query, e);
     return "";
   }
 }
 
-// ── PARALLEL PROSPECT RESEARCH — 10 targeted searches run concurrently ────────
+// ── PROSPECT RESEARCH — 5 focused searches, batched to avoid rate limits ───────
 async function researchProspect(company, companyUrl){
-  const co = company; // shorthand
+  const co = company;
 
-  const allSearches = [
-    // Company news & strategy
-    {label:"Recent News & Headlines",
-     query:`${co} news 2025`},
-    {label:"M&A & Strategic Activity",
-     query:`${co} acquisition merger partnership deal 2024 2025`},
-    {label:"New Products & Launches",
-     query:`${co} new product launch announcement 2024 2025`},
-    {label:"Customer Wins & Case Studies",
-     query:`${co} customer win case study contract growth`},
-    {label:"Business Strategy & Leadership",
-     query:`${co} CEO strategy priorities roadmap 2024 2025`},
-    // Funding & investors
+  // 5 high-signal searches. Run in two small batches to stay under rate limits.
+  const batch1 = [
+    {label:"Recent News & Strategy",
+     query:`${co} news strategy 2025`},
     {label:"Funding & Investors",
-     query:`${co} funding raised venture capital investment Series round`},
-    {label:"Investors & Board",
-     query:`${co} investors board directors PE private equity backed`},
-    // Hiring
-    {label:"Job Postings & Hiring",
-     query:`${co} jobs hiring careers open roles 2025`},
-    {label:"Hiring Signals & Workforce",
-     query:`${co} headcount hiring layoffs workforce growth`},
-    // Press coverage
-    {label:"Press & Analyst Coverage",
-     query:`${co} Business Insider Forbes TechCrunch analyst coverage 2025`},
+     query:`${co} funding investors venture capital Series raised`},
+    {label:"M&A & Partnerships",
+     query:`${co} acquisition merger partnership deal 2024 2025`},
+  ];
+  const batch2 = [
+    {label:"Hiring Signals & Jobs",
+     query:`${co} hiring jobs careers open roles 2025`},
+    {label:"Products & Customer Wins",
+     query:`${co} products customers case study growth 2025`},
   ];
 
-  const results = await Promise.all(
-    allSearches.map(async s => ({label: s.label, content: await runSearch(s.query)}))
+  // Run batch 1, then batch 2 (sequential batches, parallel within each)
+  const results1 = await Promise.all(
+    batch1.map(async s => ({label:s.label, content: await runSearch(s.query)}))
   );
-  return results;
+  const results2 = await Promise.all(
+    batch2.map(async s => ({label:s.label, content: await runSearch(s.query)}))
+  );
+
+  return [...results1, ...results2];
 }
 
 // ── RESEARCH SELLER ORG ────────────────────────────────────────────────────────
@@ -1009,7 +970,7 @@ export default function App(){
     const companyRef = member.company_url || member.company;
 
     // ── Phase 1: 10 parallel targeted searches ────────────────────────────────
-    setBriefStatus(`Running 10 targeted searches on ${member.company}...`);
+    setBriefStatus(`Searching for ${member.company}...`);
 
     const [searchResults, sellerRes] = await Promise.all([
       researchProspect(member.company, companyRef),
@@ -1548,30 +1509,25 @@ Return ONLY valid JSON:
                   <div className="load-spin"/>
                   {briefStatus||"Running deep research..."}
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 16px",marginBottom:14}}>
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
                   {[
-                    {label:"Recent Headlines & News",      color:"#1B3A6B"},
+                    {label:"Recent News & Strategy",      color:"#1B3A6B"},
                     {label:"Funding & Investors",          color:"#6B2E6B"},
                     {label:"M&A & Partnerships",           color:"#6B3A7A"},
-                    {label:"Investors & Cap Table",        color:"#4A3A8B"},
-                    {label:"New Products & Launches",      color:"#2E6B2E"},
-                    {label:"Job Postings — Indeed/Careers",color:"#B25A00"},
-                    {label:"Customer Wins & Case Studies", color:"#8B6F47"},
-                    {label:"Hiring Signals & Workforce",   color:"#8B4A00"},
-                    {label:"Business Strategy & Outlook",  color:"#3A6B6B"},
-                    {label:"Press & Analyst Coverage",     color:"#6B3A3A"},
+                    {label:"Hiring Signals & Jobs",        color:"#B25A00"},
+                    {label:"Products & Customer Wins",     color:"#2E6B2E"},
                   ].map((r,i)=>(
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:7}}>
-                      <div style={{width:7,height:7,borderRadius:"50%",background:r.color,flexShrink:0,animation:`blink ${1+i*0.1}s ease-in-out infinite`,animationDelay:`${i*0.15}s`}}/>
-                      <div style={{fontSize:10,color:"#666"}}>{r.label}</div>
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:7,height:7,borderRadius:"50%",background:r.color,flexShrink:0,animation:`blink ${1+i*0.15}s ease-in-out infinite`,animationDelay:`${i*0.2}s`}}/>
+                      <div style={{fontSize:11,color:"#555",minWidth:200}}>{r.label}</div>
+                      <div style={{flex:1,height:4,background:"#F0EDE6",borderRadius:2,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:"100%",background:r.color,opacity:0.4,borderRadius:2,animation:`shimmer 2s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div style={{height:4,background:"#F0EDE6",borderRadius:2,overflow:"hidden",marginBottom:10}}>
-                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2s ease-in-out infinite",borderRadius:2}}/>
-                </div>
                 <div style={{fontSize:11,color:"#aaa",textAlign:"center"}}>
-                  10 targeted searches running in parallel on {selectedAccount?.company}...
+                  Researching {selectedAccount?.company}...
                 </div>
               </div>
             )}
