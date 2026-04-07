@@ -48,6 +48,47 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .btn-lg { padding: 12px 22px; font-size: 14px; }
 .btn-sm { padding: 5px 11px; font-size: 11px; }
 .actions-row { display: flex; gap: 10px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
+
+/* PRODUCT CATALOG */
+.prod-entry { display: flex; gap: 10px; padding: 10px 12px; background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 8px; margin-bottom: 7px; align-items: flex-start; }
+.prod-num { width: 22px; height: 22px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.prod-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.prod-name-input { font-size: 12px; font-weight: 600; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #1a1a18; outline: none; }
+.prod-name-input:focus { border-color: #8B6F47; }
+.prod-desc-input { font-size: 11px; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #555; outline: none; resize: vertical; min-height: 48px; }
+.prod-desc-input:focus { border-color: #8B6F47; }
+.prod-remove { font-size: 11px; color: #ccc; cursor: pointer; background: none; border: none; padding: 2px 4px; line-height: 1; align-self: flex-start; flex-shrink: 0; margin-top: 1px; }
+.prod-remove:hover { color: #9B2C2C; }
+.prod-chip { display: inline-flex; align-items: center; gap: 5px; background: #F0EDE6; color: #7A5C30; padding: 3px 9px; border-radius: 10px; font-size: 10px; font-weight: 600; margin: 2px; }
+.prod-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; }
+
+/* COHORT CHARTS & DRILL-DOWN */
+.cohort-chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.pie-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 16px; }
+.pie-title { font-family: 'Lora', serif; font-size: 12px; font-weight: 500; margin-bottom: 10px; color: #1a1a18; }
+.pie-wrap { display: flex; align-items: center; gap: 14px; }
+.pie-legend { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #555; }
+.pie-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend-val { margin-left: auto; font-weight: 700; color: #1a1a18; font-size: 10px; }
+.cohort-drill { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+.cohort-drill-hdr { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+.cohort-drill-hdr:hover { background: #FAFAF8; }
+.cohort-drill-hdr.open { border-bottom-color: #E8E6DF; }
+.cohort-drill-left { display: flex; align-items: center; gap: 10px; }
+.cohort-drill-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cohort-drill-name { font-family: 'Lora', serif; font-size: 13px; font-weight: 500; }
+.cohort-drill-meta { font-size: 11px; color: #999; margin-top: 1px; }
+.cohort-drill-right { display: flex; align-items: center; gap: 12px; }
+.cohort-drill-acv { font-family: 'Lora', serif; font-size: 14px; color: #8B6F47; }
+.cohort-drill-toggle { font-size: 10px; color: #aaa; font-weight: 700; }
+.cohort-drill-body { padding: 0 16px 14px; }
+.cohort-member-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+.cohort-member-table th { background: #F5F3EE; padding: 5px 9px; text-align: left; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; color: #777; white-space: nowrap; }
+.cohort-member-table td { padding: 6px 9px; border-top: 1px solid #F0EDE6; color: #333; vertical-align: top; }
+.cohort-member-table tr:hover td { background: #FAF8F4; }
+.cohort-member-table tr { cursor: pointer; }
+.outcome-badge { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #F5EEF5; color: #6B3A7A; white-space: nowrap; }
 .card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 14px; }
 .card-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; margin-bottom: 13px; }
 .field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
@@ -126,6 +167,7 @@ input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; ba
 .pulse-wrap { display: flex; flex-direction: column; gap: 7px; }
 .pulse-line { height: 10px; background: #F0EDE6; border-radius: 5px; animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 0%{opacity:1}50%{opacity:0.4}100%{opacity:1} }
+@keyframes shimmer { 0%{background-position:200% 0}100%{background-position:-200% 0} }
 
 /* IN-CALL LAYOUT */
 .call-layout { display: flex; flex: 1; height: calc(100vh - 56px); overflow: hidden; }
@@ -309,7 +351,12 @@ const BLANK_BRIEF = {
   riverHypothesis:{reality:"",impact:"",vision:"",entryPoints:"",route:""},
   openingAngle:"",watchOuts:["","",""],
   keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
-  competitors:[],recentSignals:["","",""]
+  competitors:[],recentSignals:["","",""],
+  // Intelligence fields
+  recentHeadlines:[],maActivity:"",productLaunches:[],customerWins:[],hiringSignals:[],
+  // New deep-research fields
+  fundingProfile:"",investorProfile:[],leadershipTeam:[],
+  strategicTheme:"",growthSignals:[],sellerOpportunity:"",
 };
 
 const RKEYS = ["reality","impact","vision","entryPoints","route"];
@@ -367,70 +414,123 @@ function calcConfidence(gateAnswers,riverData){
 }
 function confColor(s){return s>=75?"#2E6B2E":s>=50?"#BA7517":"#9B2C2C";}
 
-// ── CORE AI CALL — handles tool-use loop properly ─────────────────────────────
-// When web_search is enabled, the API may return tool_use blocks. We must feed
-// the tool results back in a second turn so the model can produce its final text.
+// ── API CONSTANTS ─────────────────────────────────────────────────────────────
+const API_URL = "https://api.anthropic.com/v1/messages";
+const API_MODEL = "claude-sonnet-4-20250514";
+const getHeaders = () => ({
+  "Content-Type":"application/json",
+  "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
+  "anthropic-version":"2023-06-01",
+  "anthropic-dangerous-direct-browser-access":"true",
+});
 
-async function callAI(userPrompt, useWebSearch=false){
-  const API="https://api.anthropic.com/v1/messages";
-  const KEY=import.meta.env.VITE_ANTHROPIC_API_KEY;
-  const HEADERS={"Content-Type":"application/json","x-api-key":KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
-  const MODEL="claude-sonnet-4-20250514";
-
-  const extractJSON = text => {
-    try{
-      const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
-      // Try full string first, then find first { ... } block
-      try{return JSON.parse(clean);}catch{
-        const m=clean.match(/\{[\s\S]*\}/);
-        return m?JSON.parse(m[0]):null;
-      }
-    }catch{return null;}
-  };
-
-  let messages=[{role:"user",content:userPrompt}];
-  const tools=useWebSearch?[{type:"web_search_20250305",name:"web_search"}]:undefined;
-
-  // Up to 5 turns to resolve tool calls
-  for(let turn=0;turn<5;turn++){
-    const body={model:MODEL,max_tokens:2000,messages};
-    if(tools)body.tools=tools;
-
-    let resp;
-    try{
-      const r=await fetch(API,{method:"POST",headers:HEADERS,body:JSON.stringify(body)});
-      resp=await r.json();
-    }catch(e){console.error("API fetch error",e);break;}
-
-    if(!resp||!resp.content)break;
-
-    // Collect all text blocks from this response
-    const textBlocks=resp.content.filter(b=>b.type==="text");
-    const toolUseBlocks=resp.content.filter(b=>b.type==="tool_use");
-
-    // If no tool calls, we have a final answer — extract JSON from text
-    if(toolUseBlocks.length===0||resp.stop_reason==="end_turn"){
-      const fullText=textBlocks.map(b=>b.text||"").join("");
-      if(fullText.trim()){
-        const parsed=extractJSON(fullText);
-        if(parsed)return parsed;
-      }
-      break;
+function extractJSON(text){
+  try{
+    const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+    try{return JSON.parse(clean);}catch{
+      const m=clean.match(/\{[\s\S]*\}/);
+      return m?JSON.parse(m[0]):null;
     }
+  }catch{return null;}
+}
 
-    // There are tool_use blocks — add assistant turn then feed tool results
-    messages=[...messages,{role:"assistant",content:resp.content}];
-
-    const toolResults=await Promise.all(toolUseBlocks.map(async tb=>{
-      // For web_search, the API executes the search server-side and returns results
-      // in the next turn. We just need to pass back a placeholder tool_result.
-      return{type:"tool_result",tool_use_id:tb.id,content:"[Search completed by API]"};
-    }));
-
-    messages=[...messages,{role:"user",content:toolResults}];
+// ── SINGLE WEB SEARCH — runs one query, returns extracted text results ─────────
+// The Anthropic web_search tool is server-side: the API executes the search and
+// returns tool_result blocks containing the actual page content in the response.
+// We do NOT need to feed results back — they arrive inline in resp.content.
+async function runSearch(query){
+  try{
+    const resp = await fetch(API_URL,{
+      method:"POST",
+      headers:getHeaders(),
+      body:JSON.stringify({
+        model:API_MODEL,
+        max_tokens:1500,
+        tools:[{type:"web_search_20250305",name:"web_search"}],
+        messages:[{role:"user",content:`Search for: ${query}\n\nReturn a detailed summary of everything you find. Include specific facts, names, numbers, dates, and quotes. Be thorough.`}],
+      }),
+    });
+    const data = await resp.json();
+    if(!data?.content) return "";
+    // Extract all text from both text blocks and tool_result content blocks
+    let out = "";
+    for(const block of data.content){
+      if(block.type==="text") out += block.text + "\n";
+      if(block.type==="tool_result"){
+        const inner = Array.isArray(block.content)?block.content:[];
+        for(const ib of inner) if(ib.type==="text") out += ib.text + "\n";
+      }
+      // web_search results sometimes come as tool_use input or as nested content
+      if(block.type==="tool_use"&&block.name==="web_search") out += `[Searched: ${block.input?.query||query}]\n`;
+    }
+    return out.slice(0,4000); // cap per search
+  }catch(e){
+    console.error("Search error:",e);
+    return "";
   }
+}
 
-  return null;
+// ── PARALLEL PROSPECT RESEARCH — 10 targeted searches run concurrently ────────
+async function researchProspect(company, companyUrl){
+  // Batch 1: Company intelligence (5 searches)
+  const batch1 = [
+    {label:"Recent News & Headlines",
+     query:`"${company}" news announcement press release 2024 2025 site:businessinsider.com OR site:reuters.com OR site:bloomberg.com OR site:wsj.com OR site:techcrunch.com OR site:forbes.com`},
+    {label:"M&A & Strategic Activity",
+     query:`"${company}" acquisition merger partnership deal strategic alliance joint venture 2024 2025`},
+    {label:"New Products & Launches",
+     query:`"${company}" new product launch feature release announcement expansion 2024 2025`},
+    {label:"Customer Wins & Case Studies",
+     query:`"${company}" customer win contract award case study partnership growth milestone 2024 2025`},
+    {label:"Business Strategy & Leadership",
+     query:`"${company}" CEO strategy earnings investor day priorities roadmap transformation 2024 2025`},
+  ];
+
+  // Batch 2: Funding + people + hiring (5 searches)
+  const batch2 = [
+    {label:"Funding & Investors",
+     query:`"${company}" funding round raised investment venture capital private equity investor Crunchbase PitchBook valuation`},
+    {label:"Investors & Cap Table",
+     query:`"${company}" investors board directors VC PE sponsor Carta filing SEC 13F shareholder ownership stake`},
+    {label:"Job Postings — Indeed & Careers",
+     query:`"${company}" jobs hiring careers site:indeed.com OR site:linkedin.com/jobs OR site:glassdoor.com OR site:${companyUrl}/careers open roles 2024 2025`},
+    {label:"Hiring Signals & Workforce",
+     query:`"${company}" hiring headcount layoffs workforce expansion reduction org restructure 2024 2025`},
+    {label:"Press & Analyst Coverage",
+     query:`"${company}" analyst report coverage rating outlook Business Insider Fortune Inc Crunchbase Pitchbook 2024 2025`},
+  ];
+
+  // Run all 10 in parallel
+  const allSearches = [...batch1, ...batch2];
+  const results = await Promise.all(
+    allSearches.map(async s => ({label: s.label, content: await runSearch(s.query)}))
+  );
+  return results;
+}
+
+// ── RESEARCH SELLER ORG ────────────────────────────────────────────────────────
+async function researchSeller(sellerUrl, sellerDocs){
+  if(sellerDocs&&sellerDocs.length>0) return null; // docs are primary — skip web search
+  try{
+    return await runSearch(`${sellerUrl} products solutions services offerings`);
+  }catch{return null;}
+}
+
+// ── PLAIN AI CALL (no web search) — for JSON generation ───────────────────────
+async function callAI(prompt){
+  try{
+    const resp = await fetch(API_URL,{
+      method:"POST",
+      headers:getHeaders(),
+      body:JSON.stringify({model:API_MODEL,max_tokens:2500,messages:[{role:"user",content:prompt}]}),
+    });
+    const data = await resp.json();
+    const text = data.content?.filter(b=>b.type==="text").map(b=>b.text||"").join("")||"";
+    return extractJSON(text);
+  }catch(e){
+    console.error("callAI error:",e);
+    return null;
+  }
 }
 
 // ── EXCEL EXPORT ──────────────────────────────────────────────────────────────
@@ -457,7 +557,27 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
       ["Cohort",cohort?.name||""],["Target Outcomes",outcomes.join(", ")],
       ["Selling Org",sellerUrl||""],["Deal Confidence",`${confidence}%`],
       ["",""],["COMPANY SNAPSHOT",""],["",brief?.companySnapshot||""],
-      ["",""],["SELLER SNAPSHOT",""],["",brief?.sellerSnapshot||""],
+      ["",""],["STRATEGIC THEME",""],["",brief?.strategicTheme||""],
+      ["",""],["WHY YOU · WHY NOW (Seller Opportunity)",""],["",brief?.sellerOpportunity||""],
+      ["",""],["FUNDING PROFILE",""],["",brief?.fundingProfile||""],
+      ["",""],["INVESTORS & CAP TABLE",""],
+      ...(brief?.investorProfile||[]).filter(Boolean).map((inv,i)=>[`Investor ${i+1}`,inv]),
+      ["",""],["LEADERSHIP TEAM","","",""],
+      ["Name","Title","Background","Engagement Angle"],
+      ...(brief?.leadershipTeam||[]).filter(l=>l?.name).map(l=>[l.name||"",l.title||"",l.background||"",l.angle||""]),
+      ["",""],["RECENT HEADLINES",""],
+      ...(brief?.recentHeadlines||[]).filter(Boolean).map((h,i)=>[`Headline ${i+1}`,h]),
+      ["",""],["M&A & STRATEGIC ACTIVITY",""],["",brief?.maActivity||""],
+      ["",""],["NEW PRODUCTS & LAUNCHES",""],
+      ...(brief?.productLaunches||[]).filter(Boolean).map((p,i)=>[`Launch ${i+1}`,p]),
+      ["",""],["CUSTOMER WINS & GROWTH",""],
+      ...(brief?.customerWins||[]).filter(Boolean).map((w,i)=>[`Win ${i+1}`,w]),
+      ["",""],["GROWTH SIGNALS",""],
+      ...(brief?.growthSignals||[]).filter(Boolean).map((g,i)=>[`Signal ${i+1}`,g]),
+      ["",""],["HIRING SIGNALS",""],
+      ...(brief?.hiringSignals||[]).filter(Boolean).map((h,i)=>[`Signal ${i+1}`,h]),
+      ["",""],["TOP BUYING SIGNALS",""],
+      ...(brief?.recentSignals||[]).filter(Boolean).map((s,i)=>[`Signal ${i+1}`,s]),
     ]},
     {name:"RIVER Brief",rows:[
       ["RIVER BRIEF — PRE-CALL HYPOTHESIS",""],["",""],
@@ -523,6 +643,146 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
   URL.revokeObjectURL(url);
 }
 
+// ── PIE CHART COMPONENT ───────────────────────────────────────────────────────
+
+function PieChart({data, size=120}){
+  // data: [{label, value, color}]
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if(!total) return null;
+  const r = size/2 - 4;
+  const cx = size/2, cy = size/2;
+  let angle = -Math.PI/2;
+  const slices = data.map(d=>{
+    const pct = d.value/total;
+    const a0 = angle, a1 = angle + pct*2*Math.PI;
+    angle = a1;
+    return {...d, pct, a0, a1};
+  });
+  const arc = (a0,a1,r)=>{
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const large = a1-a0>Math.PI?1:0;
+    return `M${cx},${cy} L${x0},${y0} A${r},${r},0,${large},1,${x1},${y1} Z`;
+  };
+  return(
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{flexShrink:0}}>
+      {slices.map((s,i)=>(
+        <path key={i} d={arc(s.a0,s.a1,r)} fill={s.color} stroke="#fff" strokeWidth={1.5}/>
+      ))}
+      <circle cx={cx} cy={cy} r={r*0.42} fill="#fff"/>
+    </svg>
+  );
+}
+
+// ── COHORT DRILL-DOWN COMPONENT ───────────────────────────────────────────────
+
+function CohortDrillDown({cohort, selected, onSelect, onPickAccount}){
+  const [open, setOpen] = useState(selected);
+  useEffect(()=>{if(selected)setOpen(true);},[selected]);
+
+  const inds = [...new Set(cohort.members.map(m=>m.ind))];
+  const srcs = [...new Set(cohort.members.map(m=>m.src))];
+  const indCounts = inds.map(ind=>({label:ind, value:cohort.members.filter(m=>m.ind===ind).length}));
+  const srcCounts = srcs.map(src=>({label:src, value:cohort.members.filter(m=>m.src===src).length}));
+  const IND_COLORS = ["#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#8B6F47","#4A6B8E","#6B4A6B"];
+  const SRC_COLORS = ["#2E6B2E","#8B6F47","#1B3A6B","#6B3A3A","#3A6B6B","#6B6B3A"];
+
+  return(
+    <div className={`cohort-drill ${selected?"":""}`}>
+      <div className={`cohort-drill-hdr ${open?"open":""}`}
+        onClick={()=>{setOpen(o=>!o);onSelect();}}>
+        <div className="cohort-drill-left">
+          <div className="cohort-drill-dot" style={{background:cohort.color}}/>
+          <div>
+            <div className="cohort-drill-name">{cohort.name}</div>
+            <div className="cohort-drill-meta">{cohort.size} accounts · {cohort.pct}% of base · {cohort.topInd.slice(0,2).join(", ")}</div>
+          </div>
+        </div>
+        <div className="cohort-drill-right">
+          <div className="cohort-drill-acv">{cohort.avgACV>0?`$${(cohort.avgACV/1000).toFixed(0)}K avg`:""}</div>
+          <div className="cohort-drill-toggle">{open?"▲ Collapse":"▼ Drill Down"}</div>
+        </div>
+      </div>
+
+      {open&&(
+        <div className="cohort-drill-body">
+          {/* Mini charts */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,margin:"12px 0"}}>
+            <div className="pie-card">
+              <div className="pie-title">By Industry</div>
+              <div className="pie-wrap">
+                <PieChart size={90} data={indCounts.slice(0,7).map((d,i)=>({...d,color:IND_COLORS[i%IND_COLORS.length]}))}/>
+                <div className="pie-legend">
+                  {indCounts.slice(0,5).map((d,i)=>(
+                    <div key={i} className="pie-legend-item">
+                      <div className="pie-legend-dot" style={{background:IND_COLORS[i%IND_COLORS.length]}}/>
+                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:90}}>{d.label}</span>
+                      <span className="pie-legend-val">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="pie-card">
+              <div className="pie-title">By Lead Source</div>
+              <div className="pie-wrap">
+                <PieChart size={90} data={srcCounts.slice(0,6).map((d,i)=>({...d,color:SRC_COLORS[i%SRC_COLORS.length]}))}/>
+                <div className="pie-legend">
+                  {srcCounts.slice(0,5).map((d,i)=>(
+                    <div key={i} className="pie-legend-item">
+                      <div className="pie-legend-dot" style={{background:SRC_COLORS[i%SRC_COLORS.length]}}/>
+                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:90}}>{d.label}</span>
+                      <span className="pie-legend-val">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ACV distribution bar */}
+          <div style={{marginBottom:12}}>
+            <div className="field-label" style={{marginBottom:6}}>ACV Distribution</div>
+            <div style={{display:"flex",gap:2,height:20,borderRadius:4,overflow:"hidden"}}>
+              {cohort.members.filter(m=>m.acv>0).sort((a,b)=>a.acv-b.acv).map((m,i,arr)=>(
+                <div key={i} title={`${m.company}: $${m.acv.toLocaleString()}`}
+                  style={{flex:1,background:cohort.color,opacity:0.3+0.7*(i/Math.max(arr.length-1,1)),cursor:"pointer"}}
+                  onClick={()=>onPickAccount&&onPickAccount(m)}/>
+              ))}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#aaa",marginTop:3}}>
+              <span>Min: ${cohort.members.filter(m=>m.acv>0).length?Math.min(...cohort.members.filter(m=>m.acv>0).map(m=>m.acv)).toLocaleString():"—"}</span>
+              <span>Avg: ${cohort.avgACV>0?cohort.avgACV.toLocaleString():"—"}</span>
+              <span>Max: ${cohort.members.filter(m=>m.acv>0).length?Math.max(...cohort.members.filter(m=>m.acv>0).map(m=>m.acv)).toLocaleString():"—"}</span>
+            </div>
+          </div>
+
+          {/* Account table */}
+          <table className="cohort-member-table">
+            <thead>
+              <tr>
+                <th>Company</th><th>Industry</th><th>ACV</th><th>Lead Source</th><th>Outcome</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {cohort.members.sort((a,b)=>b.acv-a.acv).map((m,i)=>(
+                <tr key={i} onClick={()=>onPickAccount&&onPickAccount(m)}>
+                  <td style={{fontWeight:600,color:"#1a1a18"}}>{m.company}</td>
+                  <td>{m.ind}</td>
+                  <td style={{color:"#8B6F47",fontWeight:600,whiteSpace:"nowrap"}}>{m.acv>0?`$${m.acv.toLocaleString()}`:"—"}</td>
+                  <td>{m.src}</td>
+                  <td><span className="outcome-badge">{m.outcome.slice(0,40)}{m.outcome.length>40?"...":""}</span></td>
+                  <td style={{textAlign:"right"}}><span style={{fontSize:10,color:"#8B6F47",fontWeight:600}}>Research →</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── EDITABLE FIELD ────────────────────────────────────────────────────────────
 
 function EF({value,onChange,single=false,placeholder="Click to edit..."}){
@@ -576,8 +836,11 @@ export default function App(){
   const[copied,setCopied]=useState("");
   const[sellerDocs,setSellerDocs]=useState([]); // [{name, label, content}]
   const[docDrag,setDocDrag]=useState(false);
+  const[products,setProducts]=useState([]); // [{id, name, description, category}]
+  const[prodDocDrag,setProdDocDrag]=useState(false);
   const fileRef=useRef();
   const docRef=useRef();
+  const prodDocRef=useRef();
   const confidence=calcConfidence(gateAnswers,riverData);
 
   // ── Deep-clone updater for brief ──
@@ -634,6 +897,31 @@ export default function App(){
     });
   };
 
+  // ── Product/solution catalog management ──────────────────────────────────────
+  const addProduct = () => setProducts(prev=>[...prev,{id:Date.now(),name:"",description:"",category:""}]);
+  const removeProduct = id => setProducts(prev=>prev.filter(p=>p.id!==id));
+  const updateProduct = (id,field,val) => setProducts(prev=>prev.map(p=>p.id===id?{...p,[field]:val}:p));
+
+  const parseProductDoc = async file => {
+    const doc = await readDocFile(file);
+    if(!doc.content) return;
+    const text = doc.content;
+    // Try splitting on numbered list, "Product:" headers, or double-newlines
+    const sections = text.split(/(?=\n\d+[\.\)]\s|\nProduct:|\nSolution:|\nService:|\n#{1,3}\s)/i)
+      .map(s=>s.trim()).filter(s=>s.length>15).slice(0,16);
+    if(sections.length>1){
+      const newProds = sections.map((s,i)=>{
+        const lines = s.split("\n").filter(Boolean);
+        const name = lines[0].replace(/^\d+[\.\)]\s*/,"").replace(/^#+\s*/,"").replace(/^(Product|Solution|Service):\s*/i,"").slice(0,80).trim();
+        const description = lines.slice(1).join(" ").replace(/\s+/g," ").slice(0,300).trim();
+        return {id:Date.now()+i, name, description, category:""};
+      }).filter(p=>p.name.length>2);
+      setProducts(prev=>[...prev,...newProds].slice(0,20));
+    } else {
+      setProducts(prev=>[...prev,{id:Date.now(),name:doc.name.replace(/\.[^.]+$/,"").replace(/[-_]/g," "),description:text.slice(0,400),category:""}].slice(0,20));
+    }
+  };
+
   const parseCSV=text=>{
     const lines=text.trim().split(/\r?\n/);
     const hdrs=lines[0].split(",").map(h=>h.trim().replace(/^"|"$/g,""));
@@ -668,57 +956,137 @@ export default function App(){
   const goToOutcomes=()=>{if(selectedCohort){setSelectedOutcomes(selectedCohort.topOut.slice(0,2));setStep(3);}};
 
   const pickAccount=async member=>{
-    // 1. Set loading state and navigate to step 5 immediately
     setSelectedAccount(member);
     setBrief(null);
     setBriefLoading(true);
-    setBriefStatus(`Researching ${member.company}...`);
+    setBriefStatus(`Starting deep research on ${member.company}...`);
     setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
-    const companyRef=member.company_url||member.company;
+    const companyRef = member.company_url || member.company;
 
-    // 2. Call AI with web search — tool loop handled inside callAI
-    const result=await callAI(
-      `You are a senior B2B sales strategist. Research the prospect company and the selling organization, then generate a comprehensive pre-call RIVER brief.
+    // ── Phase 1: 10 parallel targeted searches ────────────────────────────────
+    setBriefStatus(`Running 10 targeted searches on ${member.company}...`);
 
-PROSPECT: ${member.company} | Website: ${companyRef} | Industry: ${member.ind} | ACV: ${member.acv>0?`$${member.acv.toLocaleString()}`:"Unknown"} | Lead: ${member.src} | Need: ${member.outcome} | Cohort: ${selectedCohort?.name||""} | Target Outcomes: ${selectedOutcomes.join(", ")||"Unknown"}
-SELLING ORG WEBSITE: ${sellerUrl}
-${sellerDocs.length>0?`
-INTERNAL SELLER DOCUMENTATION (provided by the rep — use this as the primary source of truth for products, positioning, case studies, and value props; supplement with web research):
-${sellerDocs.map((d,i)=>`--- ${d.label}: "${d.name}" ---\n${d.content.slice(0,3000)}`).join("\n\n")}
-`:""}
-Use web_search to research both the prospect and the selling org. Find real job postings, leadership, recent news, products, and buying signals.${sellerDocs.length>0?" Prioritize the internal documentation for seller product/solution details — use web research to validate and supplement.":""}
+    const [searchResults, sellerRes] = await Promise.all([
+      researchProspect(member.company, companyRef),
+      researchSeller(sellerUrl, sellerDocs),
+    ]);
 
-Return ONLY valid JSON — no markdown, no explanation, no code fences:
+    // ── Phase 2: Synthesize into RIVER brief ──────────────────────────────────
+    setBriefStatus("Synthesizing research into RIVER brief...");
+
+    const sellerContext = [
+      sellerDocs.length>0
+        ? `INTERNAL SELLER DOCS (use as primary source for positioning and value props):\n${sellerDocs.map(d=>`[${d.label}] "${d.name}":\n${d.content.slice(0,1800)}`).join("\n\n")}`
+        : sellerRes
+          ? `SELLER WEB RESEARCH (${sellerUrl}):\n${sellerRes}`
+          : `SELLER URL: ${sellerUrl}`,
+      products.filter(p=>p.name.trim()).length>0
+        ? `\nPRODUCT & SOLUTION CATALOG (curate the best fit for this prospect — these are the specific offerings available):\n${products.filter(p=>p.name.trim()).map((p,i)=>`${i+1}. ${p.name}${p.description?`: ${p.description}`:""}`).join("\n")}`
+        : "",
+    ].filter(Boolean).join("\n\n");
+
+    const prospectContext = searchResults
+      .map(s=>`=== ${s.label.toUpperCase()} ===\n${s.content||"No data found."}`)
+      .join("\n\n");
+
+    const result = await callAI(`You are a senior B2B sales strategist and deal intelligence analyst. You have just completed deep research on a prospect across 10 targeted searches. Synthesize everything into an atomic-level pre-call RIVER brief.
+
+━━━ PROSPECT ━━━
+Company: ${member.company} | URL: ${companyRef} | Industry: ${member.ind}
+ACV: ${member.acv>0?`$${member.acv.toLocaleString()}`:"Unknown"} | Lead: ${member.src} | Need: ${member.outcome}
+Cohort: ${selectedCohort?.name||""} | Target Outcomes: ${selectedOutcomes.join(", ")||"Unknown"}
+
+━━━ DEEP RESEARCH FINDINGS ━━━
+${prospectContext}
+
+━━━ SELLER CONTEXT ━━━
+${sellerContext}
+
+━━━ SYNTHESIS INSTRUCTIONS ━━━
+Use ONLY facts found in the research. Reference real names, dates, dollar amounts, and publication sources. If a section had no findings, say so explicitly — never invent.
+
+FUNDING & INVESTORS: Look for VC/PE backers, funding rounds (Series A/B/C etc), known investors, Crunchbase data, SEC filings, cap table signals, board members with investor affiliations. If public company, note market cap and recent stock signals.
+
+HIRING SIGNALS: Go deep — cluster the job titles into strategic themes. 15 open DevOps roles = tech infrastructure investment. 20 open Account Executive roles = aggressive growth. 8 open HR/People Ops roles = workforce scaling. 5 open Finance/Accounting roles = pre-IPO or audit prep. Interpret what the hiring pattern *means* for their priorities.
+
+SELLER OPPORTUNITY: Based on ALL the research, write 2-3 sentences on exactly why YOUR selling org is well-positioned to help this specific company right now — tie it to their stated priorities, funding stage, hiring pattern, and growth signals. This is the "why you, why now" that opens doors.
+
+Return ONLY valid JSON, no markdown:
 {
-  "companySnapshot": "2-3 sentence overview with specific current details found",
-  "sellerSnapshot": "1-2 sentence summary of the selling org relevant offerings",
+  "companySnapshot": "3-4 sentence executive overview — scale, stage, recent strategic direction, key numbers found",
+  "sellerSnapshot": "1-2 sentence summary of seller's most relevant offerings for this specific prospect",
+  "fundingProfile": "Full funding summary: stage (Seed/A/B/C/PE-backed/Public), total raised if found, most recent round, valuation if known, notable investors. If public: market cap, recent performance. If nothing found: say so.",
+  "investorProfile": [
+    "Investor name — type (VC/PE/Angel/Strategic) — known portfolio relevance or thesis",
+    "Investor name — type — relevance",
+    "Investor name — type — relevance"
+  ],
+  "leadershipTeam": [
+    {"name": "Real name from research", "title": "Exact title", "initials": "AB", "background": "Key background or quote found", "angle": "Specific engagement angle for this role"},
+    {"name": "Real name from research", "title": "Exact title", "initials": "CD", "background": "Key background", "angle": "Engagement angle"},
+    {"name": "Real name from research", "title": "Exact title", "initials": "EF", "background": "Key background", "angle": "Engagement angle"}
+  ],
+  "strategicTheme": "2-3 sentence synthesis of the company's current strategic direction — what are they building toward, what pressures are they navigating, what does all the evidence point to",
+  "growthSignals": [
+    "Specific growth signal with source or evidence",
+    "Specific growth signal",
+    "Specific growth signal",
+    "Specific growth signal"
+  ],
+  "sellerOpportunity": "2-3 sentences on exactly why YOUR selling org can help this company right now — tie to their funding stage, growth signals, hiring patterns, and stated priorities. This is your 'why you why now' narrative.",
   "solutionMapping": [
-    {"product": "Specific product name from seller site", "fit": "Why this maps to this specific prospect"},
-    {"product": "Specific product name", "fit": "Why this maps"},
-    {"product": "Specific product name", "fit": "Why this maps"}
+    {"product": "Exact product name from the catalog (or from seller research if no catalog)", "fit": "Specific reason this product fits this prospect — grounded in research findings, their stage, and their priorities"},
+    {"product": "Exact product name from catalog", "fit": "Specific fit rationale tied to research"},
+    {"product": "Exact product name from catalog", "fit": "Specific fit rationale tied to research"}
   ],
   "riverHypothesis": {
-    "reality": "Specific current state based on research",
-    "impact": "Specific cost or impact based on research signals",
-    "vision": "What success looks like given their current priorities",
-    "entryPoints": "Who makes this decision — named executives if found",
-    "route": "Fastest likely path to close"
+    "reality": "Current operational reality — specific, grounded in research",
+    "impact": "Cost of inaction — real numbers or signals found",
+    "vision": "What success looks like tied to their stated priorities",
+    "entryPoints": "Decision-makers — real names from research or most likely by role given stage/size",
+    "route": "Fastest path to close grounded in their stage and buying signals"
   },
-  "openingAngle": "One sharp specific opening question referencing something real from research",
-  "watchOuts": ["Specific watch-out 1", "Specific watch-out 2", "Specific watch-out 3"],
-  "keyContacts": [
-    {"name": "Real name if found or likely title", "title": "Title", "initials": "AB", "angle": "Specific engagement angle"},
-    {"name": "Real name if found or likely title", "title": "Title", "initials": "CD", "angle": "Specific engagement angle"}
+  "openingAngle": "One sharp specific question referencing a real finding — NOT generic. Should make them say 'how did you know that?'",
+  "watchOuts": [
+    "Specific risk grounded in research",
+    "Specific risk grounded in research",
+    "Specific risk grounded in research"
   ],
-  "competitors": ["Competitor 1", "Competitor 2"],
-  "recentSignals": ["Signal 1 with relevance to the sale", "Signal 2", "Signal 3"]
-}`,
-      true
-    );
+  "keyContacts": [
+    {"name": "Real name or most likely title", "title": "Full title", "initials": "AB", "angle": "Specific engagement angle"},
+    {"name": "Real name or most likely title", "title": "Full title", "initials": "CD", "angle": "Specific engagement angle"}
+  ],
+  "competitors": ["Competitor 1", "Competitor 2", "Competitor 3"],
+  "recentHeadlines": [
+    "Headline with source and date if available",
+    "Headline with source and date",
+    "Headline with source and date",
+    "Headline with source and date"
+  ],
+  "maActivity": "Specific M&A or partnership activity — names, dates, deal sizes if found. Or: 'No M&A activity found in research.'",
+  "productLaunches": [
+    "Specific product/feature with date",
+    "Specific product/feature with date"
+  ],
+  "customerWins": [
+    "Named customer or contract win with detail",
+    "Named customer or growth milestone"
+  ],
+  "hiringSignals": [
+    "Role cluster + count if findable + strategic interpretation",
+    "Role cluster + strategic interpretation",
+    "Role cluster + strategic interpretation",
+    "Role cluster + strategic interpretation"
+  ],
+  "recentSignals": [
+    "Most actionable buying signal from all research",
+    "Second buying signal",
+    "Third buying signal"
+  ]
+}`);
 
-    // 3. Always set brief — use result if valid, otherwise set blank editable template
     setBrief(result && typeof result==="object" ? result : {
       ...BLANK_BRIEF,
       companySnapshot:`Research complete for ${member.company}. Edit any field below before your call.`,
@@ -805,6 +1173,11 @@ Return ONLY valid JSON:
         {step>0&&sellerUrl&&(
           <div className="session-bar">
             <span>Selling org:</span><span className="session-url">{sellerUrl}</span>
+            {products.filter(p=>p.name.trim()).length>0&&(
+              <span style={{fontSize:10,color:"#8B6F47",fontWeight:600}}>
+                {products.filter(p=>p.name.trim()).length} product{products.filter(p=>p.name.trim()).length>1?"s":""} loaded
+              </span>
+            )}
             {sellerDocs.length>0&&(
               <>{sellerDocs.map((d,i)=>(
                 <div key={i} className="session-doc-chip">📄 {d.label}</div>
@@ -887,6 +1260,66 @@ Return ONLY valid JSON:
                 )}
               </div>
 
+              {/* Divider */}
+              <div style={{height:1,background:"#E8E6DF",margin:"20px 0 16px"}}/>
+
+              {/* Product / Solution Catalog */}
+              <div className="field-row" style={{marginBottom:0}}>
+                <div className="field-label" style={{marginBottom:8}}>
+                  Products &amp; Solutions Catalog
+                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — drives curated recommendations)</span>
+                </div>
+                <div style={{fontSize:11,color:"#777",marginBottom:10,lineHeight:1.5}}>
+                  Add your products or services so Claude can recommend the right fit for each prospect based on live research. Upload a product sheet or add them manually.
+                </div>
+
+                {/* Upload product doc */}
+                <div
+                  className={`doc-upload-zone ${prodDocDrag?"drag":""}`}
+                  style={{marginBottom:10}}
+                  onDragOver={e=>{e.preventDefault();setProdDocDrag(true);}}
+                  onDragLeave={()=>setProdDocDrag(false)}
+                  onDrop={e=>{e.preventDefault();setProdDocDrag(false);Array.from(e.dataTransfer.files).forEach(parseProductDoc);}}
+                  onClick={()=>prodDocRef.current.click()}>
+                  <div className="doc-upload-icon">📋</div>
+                  <div className="doc-upload-text">
+                    <div className="doc-upload-title">Import product sheet</div>
+                    <div className="doc-upload-hint">Upload a product overview, solution brief, or pricing sheet — Claude extracts each product automatically</div>
+                  </div>
+                  <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();prodDocRef.current.click();}}>Upload</button>
+                  <input ref={prodDocRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.csv" multiple style={{display:"none"}}
+                    onChange={e=>{Array.from(e.target.files).forEach(parseProductDoc);e.target.value="";}}/>
+                </div>
+
+                {/* Manual product entries */}
+                {products.map((p,i)=>(
+                  <div key={p.id} className="prod-entry">
+                    <div className="prod-num">{i+1}</div>
+                    <div className="prod-fields">
+                      <input className="prod-name-input" type="text" placeholder="Product / Solution name..."
+                        value={p.name} onChange={e=>updateProduct(p.id,"name",e.target.value)}/>
+                      <textarea className="prod-desc-input" placeholder="Brief description, key use cases, differentiators, ideal customer profile..."
+                        value={p.description} onChange={e=>updateProduct(p.id,"description",e.target.value)} rows={2}/>
+                    </div>
+                    <button className="prod-remove" onClick={()=>removeProduct(p.id)} title="Remove">✕</button>
+                  </div>
+                ))}
+
+                <button className="btn btn-secondary btn-sm" style={{marginTop:6}} onClick={addProduct}>
+                  + Add Product / Solution
+                </button>
+
+                {products.filter(p=>p.name.trim()).length>0&&(
+                  <div style={{fontSize:11,color:"#2E6B2E",marginTop:8,display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+                    <span>✓</span>
+                    {products.filter(p=>p.name.trim()).map((p,i)=>(
+                      <span key={i} className="prod-chip"><span className="prod-chip-dot"/>{p.name}</span>
+                    ))}
+                    <span style={{color:"#aaa"}}>— Claude will match these to each prospect</span>
+                  </div>
+                )}
+              </div>
+
               <div style={{height:1,background:"#E8E6DF",margin:"20px 0"}}/>
               <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
                 onClick={()=>{if(sellerInput.trim()){setSellerUrl(sellerInput.trim());setStep(1);}}}
@@ -949,26 +1382,65 @@ Return ONLY valid JSON:
         {step===2&&(
           <div className="page">
             <div className="page-title">Cohort Analysis</div>
-            <div className="page-sub">{rows.length} accounts segmented into {cohorts.length} cohorts by deal size, industry, and lead source.</div>
+            <div className="page-sub">{rows.length} accounts segmented into {cohorts.length} cohorts by deal size, industry, and lead source. Click any cohort to drill down — or click an account to start research.</div>
+
+            {/* Summary stats */}
             <div className="summary-grid">
               <div className="stat-card"><div className="stat-num">{rows.length}</div><div className="stat-label">Accounts</div></div>
               <div className="stat-card"><div className="stat-num">{cohorts.length}</div><div className="stat-label">Cohorts</div></div>
               <div className="stat-card"><div className="stat-num">${Math.round(rows.reduce((s,r)=>s+parseACV(mapping.acv?r[mapping.acv]:"0"),0)/1000)}K</div><div className="stat-label">Total ACV</div></div>
             </div>
-            <div className="cohort-grid">
-              {cohorts.map(c=>(
-                <div key={c.id} className={`cohort-card ${selectedCohort?.id===c.id?"selected":""}`} onClick={()=>setSelectedCohort(c)}>
-                  <div className="cohort-name"><span className="cohort-dot" style={{background:c.color}}/>{c.name}</div>
-                  <div className="cohort-size">{c.size} accounts · {c.pct}% of base</div>
-                  <div className="tag-row">{c.topInd.map(t=><span key={t} className="tag tag-ind">{t}</span>)}{c.avgACV>0&&<span className="tag tag-size">${(c.avgACV/1000).toFixed(0)}K avg</span>}</div>
-                  <div className="tag-row">{c.topSrc.map(t=><span key={t} className="tag tag-src">{t}</span>)}{c.topOut.map(t=><span key={t} className="tag tag-out">{t}</span>)}</div>
-                  <div className="cohort-stat">Avg ACV: <strong>${c.avgACV>0?c.avgACV.toLocaleString():"Unknown"}</strong></div>
+
+            {/* Overall pie charts */}
+            <div className="cohort-chart-wrap">
+              <div className="pie-card">
+                <div className="pie-title">ACV by Cohort</div>
+                <div className="pie-wrap">
+                  <PieChart size={100} data={cohorts.map(c=>({label:c.name,value:c.avgACV*c.size,color:c.color}))}/>
+                  <div className="pie-legend">
+                    {cohorts.map((c,i)=>(
+                      <div key={i} className="pie-legend-item">
+                        <div className="pie-legend-dot" style={{background:c.color}}/>
+                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{c.name}</span>
+                        <span className="pie-legend-val">{c.avgACV>0?`$${(c.avgACV/1000).toFixed(0)}K`:""}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              </div>
+              <div className="pie-card">
+                <div className="pie-title">Accounts by Cohort</div>
+                <div className="pie-wrap">
+                  <PieChart size={100} data={cohorts.map(c=>({label:c.name,value:c.size,color:c.color}))}/>
+                  <div className="pie-legend">
+                    {cohorts.map((c,i)=>(
+                      <div key={i} className="pie-legend-item">
+                        <div className="pie-legend-dot" style={{background:c.color}}/>
+                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{c.name}</span>
+                        <span className="pie-legend-val">{c.size} · {c.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Drill-down cohort cards */}
+            {cohorts.map(c=>(
+              <CohortDrillDown
+                key={c.id}
+                cohort={c}
+                selected={selectedCohort?.id===c.id}
+                onSelect={()=>setSelectedCohort(c)}
+                onPickAccount={m=>{setSelectedCohort(c);pickAccount(m);}}
+              />
+            ))}
+
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(1)}>← Back</button>
-              <button className="btn btn-primary btn-lg" onClick={goToOutcomes} disabled={!selectedCohort}>Map Outcomes →</button>
+              <button className="btn btn-primary btn-lg" onClick={goToOutcomes} disabled={!selectedCohort}>
+                Map Outcomes → {selectedCohort?`(${selectedCohort.name})`:""}
+              </button>
             </div>
           </div>
         )}
@@ -978,7 +1450,7 @@ Return ONLY valid JSON:
           <div className="page">
             <div className="page-title">Outcome Mapping</div>
             <div className="page-sub">Select desired outcomes for <strong>{selectedCohort.name}</strong>. These inform RIVER talk tracks and solution mapping.</div>
-            <div className="notice"><strong>Outcome-agnostic · Industry-agnostic.</strong> Outcomes customize language and priority signals — not the underlying RIVER motion.</div>
+            <div className="notice"><strong>Industry-agnostic · Revenue-focused.</strong> We drive big outcomes — growth, retention, efficiency, and transformation — regardless of vertical. Select the outcomes most relevant to this cohort to sharpen talk tracks and solution mapping.</div>
             <div className="outcome-grid">
               {OUTCOMES.map(o=>(
                 <div key={o.id} className={`outcome-tile ${selectedOutcomes.includes(o.title)?"selected":""}`}
@@ -1023,23 +1495,40 @@ Return ONLY valid JSON:
           <div className="page">
             <div className="page-title">RIVER Brief{selectedAccount?` — ${selectedAccount.company}`:""}</div>
             <div className="page-sub">
-              {briefLoading?"Researching company and mapping solutions — typically 15–25 seconds...":"All fields are editable — click any text to refine before your call."}
+              {briefLoading?"Running parallel searches — headlines, M&A, products, customers, hiring...":"All fields are editable — click any text to refine before your call."}
             </div>
 
-            {/* Loading skeleton */}
+            {/* Loading — research progress */}
             {briefLoading&&(
               <div className="load-box">
                 <div className="load-status">
                   <div className="load-spin"/>
-                  {briefStatus||"Generating RIVER brief..."}
+                  {briefStatus||"Running deep research..."}
                 </div>
-                <div className="pulse-wrap">
-                  {[82,58,91,47,72,61,86,52,76,42,67,38].map((w,i)=>(
-                    <div key={i} className="pulse-line" style={{width:`${w}%`,animationDelay:`${i*0.09}s`}}/>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 16px",marginBottom:14}}>
+                  {[
+                    {label:"Recent Headlines & News",      color:"#1B3A6B"},
+                    {label:"Funding & Investors",          color:"#6B2E6B"},
+                    {label:"M&A & Partnerships",           color:"#6B3A7A"},
+                    {label:"Investors & Cap Table",        color:"#4A3A8B"},
+                    {label:"New Products & Launches",      color:"#2E6B2E"},
+                    {label:"Job Postings — Indeed/Careers",color:"#B25A00"},
+                    {label:"Customer Wins & Case Studies", color:"#8B6F47"},
+                    {label:"Hiring Signals & Workforce",   color:"#8B4A00"},
+                    {label:"Business Strategy & Outlook",  color:"#3A6B6B"},
+                    {label:"Press & Analyst Coverage",     color:"#6B3A3A"},
+                  ].map((r,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:7}}>
+                      <div style={{width:7,height:7,borderRadius:"50%",background:r.color,flexShrink:0,animation:`blink ${1+i*0.1}s ease-in-out infinite`,animationDelay:`${i*0.15}s`}}/>
+                      <div style={{fontSize:10,color:"#666"}}>{r.label}</div>
+                    </div>
                   ))}
                 </div>
-                <div style={{fontSize:11,color:"#aaa",marginTop:14,textAlign:"center"}}>
-                  Searching {selectedAccount?.company_url||selectedAccount?.company} + {sellerUrl}...
+                <div style={{height:4,background:"#F0EDE6",borderRadius:2,overflow:"hidden",marginBottom:10}}>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2s ease-in-out infinite",borderRadius:2}}/>
+                </div>
+                <div style={{fontSize:11,color:"#aaa",textAlign:"center"}}>
+                  10 targeted searches running in parallel on {selectedAccount?.company}...
                 </div>
               </div>
             )}
@@ -1066,25 +1555,212 @@ Return ONLY valid JSON:
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">◎</div>
-                    <div><div className="bb-title">Company Snapshot</div><div className="bb-sub">Live research — click to edit</div></div>
+                    <div><div className="bb-title">Company Snapshot</div><div className="bb-sub">Live research summary — click to edit</div></div>
                   </div>
                   <div className="bb-body">
                     <EF value={brief.companySnapshot||""} onChange={v=>patchBrief(b=>{b.companySnapshot=v;})}/>
-                    {(brief.recentSignals||[]).filter(Boolean).length>0&&(
-                      <>
-                        <div className="field-label" style={{margin:"12px 0 8px"}}>Live Research Signals</div>
-                        {(brief.recentSignals||[]).map((s,i)=>(
-                          <div key={i} className="signal-row">
-                            <div className="sig-dot"/>
-                            <div style={{flex:1}}>
-                              <EF value={s||""} onChange={v=>patchBrief(b=>{b.recentSignals[i]=v;})} single/>
+                  </div>
+                </div>
+
+                {/* Live Intelligence Panel */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon" style={{fontSize:9}}>📡</div>
+                    <div>
+                      <div className="bb-title">Live Intelligence</div>
+                      <div className="bb-sub">10-source deep research — Headlines · M&A · Products · Customers · Funding · Investors · Leadership · Hiring</div>
+                    </div>
+                  </div>
+                  <div className="bb-body" style={{padding:"12px 16px 16px"}}>
+
+                    {/* Strategic Theme — top of the panel, synthesized narrative */}
+                    {brief.strategicTheme&&(
+                      <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:9,padding:"11px 13px",marginBottom:16}}>
+                        <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:5}}>Strategic Theme</div>
+                        <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;})}/>
+                      </div>
+                    )}
+
+                    {/* Seller Opportunity — "why you why now" */}
+                    {brief.sellerOpportunity&&(
+                      <div style={{background:"#EEF5EE",border:"1.5px solid #2E6B2E",borderRadius:9,padding:"11px 13px",marginBottom:16}}>
+                        <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#2E6B2E",marginBottom:5}}>Why You · Why Now</div>
+                        <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;})}/>
+                      </div>
+                    )}
+
+                    {/* 2-col grid: left = company news, right = funding/investors */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+
+                      {/* Left col: Headlines */}
+                      <div>
+                        {(brief.recentHeadlines||[]).filter(Boolean).length>0&&(
+                          <div style={{marginBottom:12}}>
+                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{background:"#1B3A6B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>NEWS</span>Headlines
+                            </div>
+                            {(brief.recentHeadlines||[]).filter(Boolean).map((h,i)=>(
+                              <div key={i} className="signal-row" style={{marginBottom:5}}>
+                                <div className="sig-dot" style={{background:"#1B3A6B"}}/>
+                                <div style={{flex:1}}><EF value={h||""} onChange={v=>patchBrief(b=>{if(!b.recentHeadlines)b.recentHeadlines=[];b.recentHeadlines[i]=v;})} single/></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* M&A */}
+                        {brief.maActivity&&brief.maActivity.length>10&&!brief.maActivity.toLowerCase().includes("no m&a")&&(
+                          <div style={{marginBottom:12}}>
+                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{background:"#6B3A7A",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>M&A</span>M&A &amp; Deals
+                            </div>
+                            <div style={{background:"#F8F4FC",border:"1px solid #E8DEF0",borderRadius:7,padding:"8px 10px"}}>
+                              <EF value={brief.maActivity||""} onChange={v=>patchBrief(b=>{b.maActivity=v;})}/>
                             </div>
                           </div>
-                        ))}
-                      </>
+                        )}
+
+                        {/* Products */}
+                        {(brief.productLaunches||[]).filter(Boolean).length>0&&(
+                          <div style={{marginBottom:12}}>
+                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{background:"#2E6B2E",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>PRODUCT</span>Launches
+                            </div>
+                            {(brief.productLaunches||[]).filter(Boolean).map((p,i)=>(
+                              <div key={i} className="signal-row" style={{marginBottom:5}}>
+                                <div className="sig-dot" style={{background:"#2E6B2E"}}/>
+                                <div style={{flex:1}}><EF value={p||""} onChange={v=>patchBrief(b=>{if(!b.productLaunches)b.productLaunches=[];b.productLaunches[i]=v;})} single/></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Customer Wins */}
+                        {(brief.customerWins||[]).filter(Boolean).length>0&&(
+                          <div>
+                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{background:"#8B6F47",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>WINS</span>Customer Wins
+                            </div>
+                            {(brief.customerWins||[]).filter(Boolean).map((w,i)=>(
+                              <div key={i} className="signal-row" style={{marginBottom:5}}>
+                                <div className="sig-dot" style={{background:"#8B6F47"}}/>
+                                <div style={{flex:1}}><EF value={w||""} onChange={v=>patchBrief(b=>{if(!b.customerWins)b.customerWins=[];b.customerWins[i]=v;})} single/></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right col: Funding + Investors + Growth */}
+                      <div>
+                        {/* Funding Profile */}
+                        {brief.fundingProfile&&brief.fundingProfile.length>10&&(
+                          <div style={{marginBottom:12}}>
+                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{background:"#6B2E6B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>FUNDING</span>Funding Profile
+                            </div>
+                            <div style={{background:"#FAF0FA",border:"1px solid #E0D0E0",borderRadius:7,padding:"8px 10px"}}>
+                              <EF value={brief.fundingProfile||""} onChange={v=>patchBrief(b=>{b.fundingProfile=v;})}/>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Investors */}
+                        {(brief.investorProfile||[]).filter(Boolean).length>0&&(
+                          <div style={{marginBottom:12}}>
+                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{background:"#4A3A8B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>INVESTORS</span>Cap Table
+                            </div>
+                            {(brief.investorProfile||[]).filter(Boolean).map((inv,i)=>(
+                              <div key={i} className="signal-row" style={{marginBottom:5}}>
+                                <div className="sig-dot" style={{background:"#4A3A8B"}}/>
+                                <div style={{flex:1}}><EF value={inv||""} onChange={v=>patchBrief(b=>{if(!b.investorProfile)b.investorProfile=[];b.investorProfile[i]=v;})} single/></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Growth Signals */}
+                        {(brief.growthSignals||[]).filter(Boolean).length>0&&(
+                          <div style={{marginBottom:12}}>
+                            <div className="field-label" style={{marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{background:"#3A6B6B",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>GROWTH</span>Growth Signals
+                            </div>
+                            {(brief.growthSignals||[]).filter(Boolean).map((g,i)=>(
+                              <div key={i} className="signal-row" style={{marginBottom:5}}>
+                                <div className="sig-dot" style={{background:"#3A6B6B"}}/>
+                                <div style={{flex:1}}><EF value={g||""} onChange={v=>patchBrief(b=>{if(!b.growthSignals)b.growthSignals=[];b.growthSignals[i]=v;})} single/></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Buying Signals */}
+                        {(brief.recentSignals||[]).filter(Boolean).length>0&&(
+                          <div>
+                            <div className="field-label" style={{marginBottom:7}}>Top Buying Signals</div>
+                            {(brief.recentSignals||[]).filter(Boolean).map((s,i)=>(
+                              <div key={i} className="signal-row" style={{marginBottom:5}}>
+                                <div className="sig-dot"/>
+                                <div style={{flex:1}}><EF value={s||""} onChange={v=>patchBrief(b=>{b.recentSignals[i]=v;})} single/></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Hiring Signals — full width, interpreted */}
+                    {(brief.hiringSignals||[]).filter(Boolean).length>0&&(
+                      <div style={{borderTop:"1px solid #E8E6DF",paddingTop:12,marginTop:4}}>
+                        <div className="field-label" style={{marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{background:"#B25A00",color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>HIRING</span>
+                          Job Postings &amp; Hiring Signals
+                          <span style={{fontSize:9,color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0}}>— open roles reveal strategic priorities</span>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"5px 12px"}}>
+                          {(brief.hiringSignals||[]).filter(Boolean).map((h,i)=>(
+                            <div key={i} className="signal-row">
+                              <div className="sig-dot" style={{background:"#B25A00"}}/>
+                              <div style={{flex:1}}><EF value={h||""} onChange={v=>patchBrief(b=>{if(!b.hiringSignals)b.hiringSignals=[];b.hiringSignals[i]=v;})} single/></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Empty state */}
+                    {!brief.strategicTheme&&!(brief.recentHeadlines||[]).filter(Boolean).length&&
+                     !(brief.fundingProfile)&&!(brief.hiringSignals||[]).filter(Boolean).length&&(
+                      <div style={{fontSize:12,color:"#bbb",fontStyle:"italic",textAlign:"center",padding:"16px 0"}}>
+                        No intelligence found — edit fields manually or regenerate.
+                      </div>
                     )}
                   </div>
                 </div>
+
+                {/* Leadership Team — separate block */}
+                {(brief.leadershipTeam||[]).filter(l=>l?.name).length>0&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon">👤</div>
+                      <div><div className="bb-title">Leadership Team</div><div className="bb-sub">Real names from research — click angles to edit</div></div>
+                    </div>
+                    <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+                      {(brief.leadershipTeam||[]).filter(l=>l?.name).map((l,i)=>(
+                        <div key={i} className="contact-row" style={{margin:0}}>
+                          <div className="contact-av" style={{background:"#1a1a18",color:"#8B6F47",fontSize:11,fontWeight:700}}>{l.initials||"?"}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:600,color:"#1a1a18"}}>{l.name}</div>
+                            <div style={{fontSize:10,color:"#777",marginBottom:3}}>{l.title}</div>
+                            {l.background&&<div style={{fontSize:10,color:"#aaa",fontStyle:"italic",marginBottom:3,lineHeight:1.4}}>{l.background}</div>}
+                            <EF value={l.angle||""} onChange={v=>patchBrief(b=>{if(!b.leadershipTeam)b.leadershipTeam=[];b.leadershipTeam[i]={...b.leadershipTeam[i],angle:v};})} single placeholder="Engagement angle..."/>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Solution Mapping */}
                 <div className="bb">
