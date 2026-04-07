@@ -434,74 +434,117 @@ function extractJSON(text){
   }catch{return null;}
 }
 
-// ── SINGLE WEB SEARCH — runs one query, returns extracted text results ─────────
-// The Anthropic web_search tool is server-side: the API executes the search and
-// returns tool_result blocks containing the actual page content in the response.
-// We do NOT need to feed results back — they arrive inline in resp.content.
+// ── SINGLE WEB SEARCH — proper agentic loop ────────────────────────────────────
+// The Anthropic web_search tool works as a 2-turn agentic loop:
+//   Turn 1: model decides to call web_search → returns tool_use block(s)
+//   Turn 2: we echo back tool_result(s) → model reads results and returns text
+// A single-turn call will NEVER return search content — only tool_use intent.
 async function runSearch(query){
   try{
-    const resp = await fetch(API_URL,{
+    const messages = [{
+      role:"user",
+      content:`Search the web for: ${query}\n\nSummarize everything you find in detail. Include specific facts, names, numbers, dates, quotes, and sources. Be thorough and specific.`
+    }];
+
+    // Turn 1 — model issues search query
+    const resp1 = await fetch(API_URL,{
       method:"POST",
       headers:getHeaders(),
       body:JSON.stringify({
         model:API_MODEL,
-        max_tokens:1500,
+        max_tokens:1000,
         tools:[{type:"web_search_20250305",name:"web_search"}],
-        messages:[{role:"user",content:`Search for: ${query}\n\nReturn a detailed summary of everything you find. Include specific facts, names, numbers, dates, and quotes. Be thorough.`}],
+        messages,
       }),
     });
-    const data = await resp.json();
-    if(!data?.content) return "";
-    // Extract all text from both text blocks and tool_result content blocks
+    const data1 = await resp1.json();
+    if(!data1?.content) return "";
+
+    // Check if model returned tool_use blocks (it wants to search)
+    const toolUseBlocks = data1.content.filter(b=>b.type==="tool_use");
+
+    if(toolUseBlocks.length===0){
+      // Model responded directly without searching (e.g. hit stop)
+      return data1.content.filter(b=>b.type==="text").map(b=>b.text||"").join("").slice(0,4000);
+    }
+
+    // Turn 2 — feed tool_results back so model can read search output
+    const turn2Messages = [
+      ...messages,
+      {role:"assistant", content:data1.content},
+      {
+        role:"user",
+        content: toolUseBlocks.map(tb=>({
+          type:"tool_result",
+          tool_use_id: tb.id,
+          // The search engine fills this server-side; we send empty content to trigger result retrieval
+          content: "",
+        }))
+      }
+    ];
+
+    const resp2 = await fetch(API_URL,{
+      method:"POST",
+      headers:getHeaders(),
+      body:JSON.stringify({
+        model:API_MODEL,
+        max_tokens:2000,
+        tools:[{type:"web_search_20250305",name:"web_search"}],
+        messages:turn2Messages,
+      }),
+    });
+    const data2 = await resp2.json();
+    if(!data2?.content) return "";
+
+    // Extract all text from turn 2 response
     let out = "";
-    for(const block of data.content){
+    for(const block of data2.content){
       if(block.type==="text") out += block.text + "\n";
+      // Handle any nested tool_result content that came back
       if(block.type==="tool_result"){
         const inner = Array.isArray(block.content)?block.content:[];
         for(const ib of inner) if(ib.type==="text") out += ib.text + "\n";
       }
-      // web_search results sometimes come as tool_use input or as nested content
-      if(block.type==="tool_use"&&block.name==="web_search") out += `[Searched: ${block.input?.query||query}]\n`;
     }
-    return out.slice(0,4000); // cap per search
+
+    return out.trim().slice(0,5000);
   }catch(e){
-    console.error("Search error:",e);
+    console.error("Search error for query:", query, e);
     return "";
   }
 }
 
 // ── PARALLEL PROSPECT RESEARCH — 10 targeted searches run concurrently ────────
 async function researchProspect(company, companyUrl){
-  // Batch 1: Company intelligence (5 searches)
-  const batch1 = [
+  const co = company; // shorthand
+
+  const allSearches = [
+    // Company news & strategy
     {label:"Recent News & Headlines",
-     query:`"${company}" news announcement press release 2024 2025 site:businessinsider.com OR site:reuters.com OR site:bloomberg.com OR site:wsj.com OR site:techcrunch.com OR site:forbes.com`},
+     query:`${co} news 2025`},
     {label:"M&A & Strategic Activity",
-     query:`"${company}" acquisition merger partnership deal strategic alliance joint venture 2024 2025`},
+     query:`${co} acquisition merger partnership deal 2024 2025`},
     {label:"New Products & Launches",
-     query:`"${company}" new product launch feature release announcement expansion 2024 2025`},
+     query:`${co} new product launch announcement 2024 2025`},
     {label:"Customer Wins & Case Studies",
-     query:`"${company}" customer win contract award case study partnership growth milestone 2024 2025`},
+     query:`${co} customer win case study contract growth`},
     {label:"Business Strategy & Leadership",
-     query:`"${company}" CEO strategy earnings investor day priorities roadmap transformation 2024 2025`},
-  ];
-
-  // Batch 2: Funding + people + hiring (5 searches)
-  const batch2 = [
+     query:`${co} CEO strategy priorities roadmap 2024 2025`},
+    // Funding & investors
     {label:"Funding & Investors",
-     query:`"${company}" funding round raised investment venture capital private equity investor Crunchbase PitchBook valuation`},
-    {label:"Investors & Cap Table",
-     query:`"${company}" investors board directors VC PE sponsor Carta filing SEC 13F shareholder ownership stake`},
-    {label:"Job Postings — Indeed & Careers",
-     query:`"${company}" jobs hiring careers site:indeed.com OR site:linkedin.com/jobs OR site:glassdoor.com OR site:${companyUrl}/careers open roles 2024 2025`},
+     query:`${co} funding raised venture capital investment Series round`},
+    {label:"Investors & Board",
+     query:`${co} investors board directors PE private equity backed`},
+    // Hiring
+    {label:"Job Postings & Hiring",
+     query:`${co} jobs hiring careers open roles 2025`},
     {label:"Hiring Signals & Workforce",
-     query:`"${company}" hiring headcount layoffs workforce expansion reduction org restructure 2024 2025`},
+     query:`${co} headcount hiring layoffs workforce growth`},
+    // Press coverage
     {label:"Press & Analyst Coverage",
-     query:`"${company}" analyst report coverage rating outlook Business Insider Fortune Inc Crunchbase Pitchbook 2024 2025`},
+     query:`${co} Business Insider Forbes TechCrunch analyst coverage 2025`},
   ];
 
-  // Run all 10 in parallel
-  const allSearches = [...batch1, ...batch2];
   const results = await Promise.all(
     allSearches.map(async s => ({label: s.label, content: await runSearch(s.query)}))
   );
