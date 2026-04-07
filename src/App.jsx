@@ -434,103 +434,108 @@ function extractJSON(text){
   }catch{return null;}
 }
 
-// ── RESEARCH WITH WEB SEARCH — single call, Claude does all searching ──────────
-// Pass web_search tool and let Claude decide what to search. One call returns
-// a complete research summary. This is the pattern that reliably works.
+// ── WEB SEARCH — correct single-request pattern ────────────────────────────────
+// The Anthropic web_search tool is fully server-side and self-contained.
+// ONE request is all you need: the API executes the search internally,
+// feeds results back to Claude, and Claude's final text is in the response.
+// The response content will contain tool_use + tool_result blocks internally,
+// followed by Claude's synthesized text block(s). Just read the text blocks.
+// ── RESEARCH: single web-search call, Claude handles everything server-side ────
 async function researchCompany(company, companyUrl){
   try{
-    const resp = await fetch(API_URL,{
-      method:"POST",
-      headers:getHeaders(),
-      body:JSON.stringify({
-        model: API_MODEL,
-        max_tokens: 3000,
-        tools:[{type:"web_search_20250305", name:"web_search", max_uses:5}],
-        messages:[{
-          role:"user",
-          content:`Research the company "${company}" (website: ${companyUrl}) and provide a detailed company profile. Find and report:
-
-1. COMPANY BASICS: Is it public or private? Approximate number of employees? Annual revenue or ARR if available? Year founded? Headquarters location? What industry/industries do they serve?
-
-2. WHAT THEY DO: What is their core product or service? Who are their customers? What problem do they solve?
-
-3. RECENT NEWS: Any news from 2024-2025? New products, expansions, leadership changes, awards?
-
-4. FUNDING & OWNERSHIP: VC-backed, PE-backed, or bootstrapped? Any known investors or funding rounds?
-
-5. HIRING SIGNALS: Are they actively hiring? What kinds of roles? What does this suggest about their priorities?
-
-6. KEY LEADERSHIP: Who are the CEO and other key executives?
-
-Search the web to find this information from their website, LinkedIn, Crunchbase, news articles, and press releases. Report only what you actually find — be specific with numbers and facts.`
-        }],
-      }),
-    });
-
-    const data = await resp.json();
-
-    if(data.error){
-      console.warn("Research API error:", JSON.stringify(data.error));
-      return null;
+    const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
+    if(!key||key.length<20){
+      return "ERROR: VITE_ANTHROPIC_API_KEY missing or invalid. Vercel: Project > Settings > Environment Variables > add key (starts with sk-ant-) > Redeploy.";
     }
-    if(!data?.content) return null;
-
-    // Extract the text summary Claude produced after searching
-    const text = data.content
-      .filter(b => b.type === "text")
-      .map(b => b.text || "")
-      .join("\n")
-      .trim();
-
-    return text || null;
-
+    const resp = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key":key,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:3000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:5}],
+        messages:[{role:"user",content:`Research "${company}" (website: ${companyUrl}). Search and report:
+1. BASICS: Public or private? Employee count? Revenue/ARR? Founded? HQ? Industries served?
+2. PRODUCT: Core product/service, target customers, problem solved
+3. NEWS: Notable news 2024-2025 — launches, expansions, leadership, awards
+4. FUNDING: VC/PE/bootstrapped/public? Investors, rounds, valuations?
+5. HIRING: Active roles? Departments growing? What does this signal?
+6. LEADERSHIP: CEO and key executives?
+Search website, LinkedIn, Crunchbase, press releases, news. Report only real facts with specifics.`}],
+      }),
+    });
+    const data = await resp.json();
+    if(data.error){
+      console.error("researchCompany API error:",data.error);
+      return "API Error "+data.error.type+": "+data.error.message;
+    }
+    if(!data?.content) return "Error: empty API response";
+    const text=data.content.filter(b=>b.type==="text").map(b=>b.text||"").join("\n").trim();
+    console.log("Research OK:",company,"chars:",text.length);
+    return text||"No research content returned.";
   }catch(e){
-    console.error("researchCompany error:", e);
-    return null;
+    console.error("researchCompany error:",e);
+    return "Fetch error: "+e.message;
   }
 }
 
-// ── RESEARCH SELLER ORG ────────────────────────────────────────────────────────
-async function researchSeller(sellerUrl, sellerDocs){
-  if(sellerDocs && sellerDocs.length>0) return null;
+async function researchSeller(sellerUrl,sellerDocs){
+  if(sellerDocs&&sellerDocs.length>0) return null;
   try{
-    const resp = await fetch(API_URL,{
+    const resp = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
-      headers:getHeaders(),
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
       body:JSON.stringify({
-        model: API_MODEL,
-        max_tokens: 1000,
-        tools:[{type:"web_search_20250305", name:"web_search", max_uses:2}],
-        messages:[{
-          role:"user",
-          content:`Look up ${sellerUrl} and briefly describe: what products or services do they sell, who are their target customers, and what are their key value propositions? Be concise — 3-5 sentences.`
-        }],
+        model:"claude-sonnet-4-20250514",
+        max_tokens:800,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        messages:[{role:"user",content:`Describe ${sellerUrl}: their products/services, target customers, key value propositions. 3-5 sentences.`}],
       }),
     });
     const data = await resp.json();
     if(!data?.content) return null;
-    return data.content.filter(b=>b.type==="text").map(b=>b.text||"").join("").trim() || null;
-  }catch(e){
-    return null;
-  }
+    return data.content.filter(b=>b.type==="text").map(b=>b.text||"").join("").trim()||null;
+  }catch(e){return null;}
 }
 
-// ── PLAIN AI CALL (no web search) — for JSON generation ───────────────────────
+
+// ── PLAIN AI CALL — JSON synthesis, no web search ─────────────────────────────
 async function callAI(prompt){
   try{
-    const resp = await fetch(API_URL,{
+    const resp = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
-      headers:getHeaders(),
-      body:JSON.stringify({model:API_MODEL,max_tokens:2500,messages:[{role:"user",content:prompt}]}),
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,messages:[{role:"user",content:prompt}]}),
     });
     const data = await resp.json();
-    const text = data.content?.filter(b=>b.type==="text").map(b=>b.text||"").join("")||"";
-    return extractJSON(text);
-  }catch(e){
-    console.error("callAI error:",e);
-    return null;
-  }
+    if(data.error){console.error("callAI error:",data.error);return null;}
+    const text=data.content?.filter(b=>b.type==="text").map(b=>b.text||"").join("")||"";
+    try{
+      const clean=text.replace(/```json[\s\S]*?```|```[\s\S]*?```/g,"").trim();
+      return JSON.parse(clean);
+    }catch{
+      const m=text.match(/\{[\s\S]*\}/);
+      return m?JSON.parse(m[0]):null;
+    }
+  }catch(e){console.error("callAI error:",e);return null;}
 }
+
+
 
 // ── EXCEL EXPORT ──────────────────────────────────────────────────────────────
 
@@ -822,6 +827,7 @@ export default function App(){
   const[brief,setBrief]=useState(null);
   const[briefLoading,setBriefLoading]=useState(false);
   const[briefStatus,setBriefStatus]=useState("");
+  const[briefError,setBriefError]=useState("");
   const[contactRole,setContactRole]=useState("");
 
   const[activeRiver,setActiveRiver]=useState(0);
@@ -958,92 +964,91 @@ export default function App(){
     setSelectedAccount(member);
     setBrief(null);
     setBriefLoading(true);
-    setBriefStatus(`Researching ${member.company}...`);
+    setBriefError("");
+    setBriefStatus("Researching "+member.company+"...");
     setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
-    const companyRef = member.company_url || member.company;
+    const companyRef=member.company_url||member.company;
 
-    // ── Phase 1: Research prospect + seller in parallel ────────────────────────
-    setBriefStatus(`Looking up ${member.company}...`);
-    const [prospectResearch, sellerRes] = await Promise.all([
-      researchCompany(member.company, companyRef),
-      researchSeller(sellerUrl, sellerDocs),
+    const[prospectResearch,sellerRes]=await Promise.all([
+      researchCompany(member.company,companyRef),
+      researchSeller(sellerUrl,sellerDocs),
     ]);
 
-    // ── Phase 2: Synthesize into RIVER brief ──────────────────────────────────
+    const researchFailed=!prospectResearch||
+      prospectResearch.startsWith("ERROR:")||
+      prospectResearch.startsWith("API Error")||
+      prospectResearch.startsWith("Fetch error:");
+
+    if(researchFailed) setBriefError(prospectResearch||"Research failed — open browser console (F12) for details.");
+
     setBriefStatus("Building RIVER brief...");
 
-    const sellerContext = [
+    const sellerCtx=[
       sellerDocs.length>0
-        ? `INTERNAL SELLER DOCS:\n${sellerDocs.map(d=>`[${d.label}] "${d.name}":\n${d.content.slice(0,1800)}`).join("\n\n")}`
-        : sellerRes
-          ? `SELLER (${sellerUrl}):\n${sellerRes}`
-          : `SELLER URL: ${sellerUrl}`,
+        ?"INTERNAL SELLER DOCS:\n"+sellerDocs.map(d=>"["+d.label+"] "+d.name+":\n"+d.content.slice(0,1800)).join("\n\n")
+        :sellerRes?"SELLER ("+sellerUrl+"):\n"+sellerRes:"SELLER: "+sellerUrl,
       products.filter(p=>p.name.trim()).length>0
-        ? `\nPRODUCT CATALOG:\n${products.filter(p=>p.name.trim()).map((p,i)=>`${i+1}. ${p.name}${p.description?`: ${p.description}`:""}`).join("\n")}`
-        : "",
+        ?"\nPRODUCT CATALOG:\n"+products.filter(p=>p.name.trim()).map((p,i)=>(i+1)+". "+p.name+(p.description?": "+p.description:"")).join("\n")
+        :"",
     ].filter(Boolean).join("\n\n");
 
-    const researchContext = prospectResearch
-      ? `RESEARCH FINDINGS:\n${prospectResearch}`
-      : `No research data available. Use your training knowledge about ${member.company}.`;
+    const researchCtx=(!researchFailed&&prospectResearch)
+      ?"RESEARCH FINDINGS:\n"+prospectResearch
+      :"No live research available. Use your training knowledge about "+member.company+" ("+member.ind+").";
 
-    const result = await callAI(`You are a senior B2B sales strategist. Build a pre-call RIVER brief for this prospect.
-
-PROSPECT: ${member.company} | URL: ${companyRef} | Industry: ${member.ind}
-ACV: ${member.acv>0?`$${member.acv.toLocaleString()}`:"Unknown"} | Lead: ${member.src}
-Need: ${member.outcome} | Cohort: ${selectedCohort?.name||""} | Outcomes: ${selectedOutcomes.join(", ")||""}
-
-${researchContext}
-
-${sellerContext}
-
-Using the research above, fill in this JSON. Use real facts from research wherever possible. For fields where no data was found, make a reasonable inference based on the company type and industry — do NOT leave fields empty.
-
-Return ONLY valid JSON, no markdown:
-{
-  "companySnapshot": "3-4 sentences: what they do, size, stage, who they serve, any notable recent facts",
-  "sellerSnapshot": "1-2 sentences on the seller's most relevant offerings for this prospect",
-  "fundingProfile": "Funding stage and investors if found, otherwise infer from company size/type",
-  "investorProfile": ["Investor or owner type with context"],
-  "leadershipTeam": [
-    {"name": "CEO or key exec name if found", "title": "Title", "initials": "AB", "background": "Brief background", "angle": "Sales engagement angle"}
-  ],
-  "strategicTheme": "2-3 sentences on their current strategic direction based on research",
-  "sellerOpportunity": "2-3 sentences on exactly why the seller is well-positioned to help this prospect right now",
+    const jsonSchema=`{
+  "companySnapshot": "3-4 sentences: what they do, size/stage, who they serve, notable recent facts",
+  "sellerSnapshot": "1-2 sentences on seller's most relevant offerings for this prospect",
+  "fundingProfile": "Funding stage, investors, amounts if found — otherwise infer from type/size",
+  "investorProfile": ["Investor or ownership type with context"],
+  "leadershipTeam": [{"name":"Name or likely title","title":"Full title","initials":"AB","background":"Background","angle":"Sales angle"}],
+  "strategicTheme": "2-3 sentences on current strategic direction",
+  "sellerOpportunity": "2-3 sentences: why seller is uniquely positioned to help this prospect NOW",
   "solutionMapping": [
-    {"product": "Best-fit product from seller catalog or seller website", "fit": "Specific reason grounded in research"},
-    {"product": "Second best-fit product", "fit": "Specific fit reason"},
-    {"product": "Third option if applicable", "fit": "Fit reason"}
+    {"product":"Best-fit product from seller","fit":"Why this fits based on research"},
+    {"product":"Second-best fit","fit":"Why"},
+    {"product":"Third option","fit":"Why"}
   ],
   "riverHypothesis": {
-    "reality": "Current state — how are they handling the problem today",
-    "impact": "Cost of inaction — what this is costing them",
-    "vision": "What success looks like for them",
-    "entryPoints": "Who makes this decision at this company",
+    "reality": "How they handle the problem today",
+    "impact": "What this is costing them",
+    "vision": "What success looks like",
+    "entryPoints": "Who makes this decision",
     "route": "Fastest path to close"
   },
-  "openingAngle": "One sharp, specific opening question for the call",
-  "watchOuts": ["Risk 1", "Risk 2", "Risk 3"],
+  "openingAngle": "One sharp specific opening question referencing something real from research",
+  "watchOuts": ["Risk 1","Risk 2","Risk 3"],
   "keyContacts": [
-    {"name": "Most likely buyer name or title", "title": "Full title", "initials": "AB", "angle": "Engagement angle"},
-    {"name": "Second contact", "title": "Title", "initials": "CD", "angle": "Engagement angle"}
+    {"name":"Name or likely title","title":"Full title","initials":"AB","angle":"Angle"},
+    {"name":"Second contact","title":"Title","initials":"CD","angle":"Angle"}
   ],
-  "competitors": ["Competitor 1", "Competitor 2"],
-  "recentHeadlines": ["Headline or notable fact 1", "Headline or notable fact 2", "Headline or notable fact 3"],
-  "maActivity": "Any M&A or partnership activity found, or best inference",
-  "productLaunches": ["Recent product or feature if found"],
-  "customerWins": ["Notable customer or segment if found"],
-  "growthSignals": ["Growth signal 1", "Growth signal 2"],
+  "competitors": ["Competitor 1","Competitor 2"],
+  "recentHeadlines": ["Headline or fact 1","Headline 2","Headline 3"],
+  "maActivity": "M&A or partnership activity, or reasonable inference",
+  "productLaunches": ["Recent launch if found"],
+  "customerWins": ["Notable customer or segment"],
+  "growthSignals": ["Growth signal 1","Growth signal 2"],
   "hiringSignals": ["Hiring pattern and what it signals strategically"],
-  "recentSignals": ["Top buying signal", "Second signal", "Third signal"]
-}`);
+  "recentSignals": ["Top buying signal","Signal 2","Signal 3"]
+}`;
 
-    setBrief(result && typeof result==="object" ? result : {
+    const result=await callAI("You are a senior B2B sales strategist. Build a pre-call RIVER brief for this prospect.\n\n"+
+      "PROSPECT: "+member.company+" | Industry: "+member.ind+" | URL: "+companyRef+"\n"+
+      "ACV: "+(member.acv>0?"$"+member.acv.toLocaleString():"Unknown")+" | Lead: "+member.src+"\n"+
+      "Need: "+member.outcome+" | Cohort: "+(selectedCohort?.name||"")+" | Outcomes: "+selectedOutcomes.join(", ")+"\n\n"+
+      researchCtx+"\n\n"+
+      sellerCtx+"\n\n"+
+      "Generate a complete RIVER brief using the research. Use real facts. Make reasonable inferences for gaps — never leave empty or say not found.\n\n"+
+      "Return ONLY valid JSON, no markdown:\n"+jsonSchema
+    );
+
+    setBrief(result&&typeof result==="object"?result:{
       ...BLANK_BRIEF,
-      companySnapshot:`${member.company} — ${member.ind}. ${member.outcome}. Edit any field below before your call.`,
-      strategicTheme:"",sellerOpportunity:"",fundingProfile:"",
+      companySnapshot:member.company+" — "+member.ind+". "+member.outcome+". Edit any field below.",
+      recentHeadlines:[],maActivity:"",productLaunches:[],customerWins:[],
+      growthSignals:[],hiringSignals:[],strategicTheme:"",sellerOpportunity:"",fundingProfile:"",
     });
     setBriefLoading(false);
     setBriefStatus("");
@@ -1459,32 +1464,44 @@ Return ONLY valid JSON:
                   <div className="load-spin"/>
                   {briefStatus||"Researching..."}
                 </div>
-                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14,padding:"8px 0"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
                   {[
-                    {label:"Company profile — size, revenue, employees, stage"},
-                    {label:"Recent news, product launches, and partnerships"},
-                    {label:"Funding, investors, and ownership structure"},
-                    {label:"Hiring signals and workforce priorities"},
-                    {label:"Building RIVER brief and solution mapping"},
+                    "Company profile — size, revenue, employees, stage",
+                    "Recent news, product launches, announcements",
+                    "Funding, investors, and ownership",
+                    "Hiring signals and strategic priorities",
+                    "Building RIVER brief and solution mapping",
                   ].map((r,i)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:6,height:6,borderRadius:"50%",background:"#8B6F47",flexShrink:0,animation:`blink ${1.2+i*0.2}s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
-                      <div style={{fontSize:11,color:"#555"}}>{r.label}</div>
+                      <div style={{fontSize:11,color:"#555"}}>{r}</div>
                     </div>
                   ))}
                 </div>
                 <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden"}}>
-                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s ease-in-out infinite",borderRadius:2}}/>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
                 </div>
                 <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:10}}>
-                  This takes about 20–30 seconds...
+                  Searching {selectedAccount?.company}... (20–40 seconds)
                 </div>
               </div>
-            )}
+            ))}
 
             {/* Brief content — renders as soon as brief is set (not null) */}
             {brief&&(
               <>
+                {briefError&&(
+                  <div style={{background:"#FDE8E8",border:"1.5px solid #9B2C2C",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#9B2C2C",marginBottom:8}}>⚠ Research Error — Action Required</div>
+                    <div style={{fontSize:11,color:"#7A2020",fontFamily:"monospace",background:"rgba(0,0,0,0.05)",padding:"8px 10px",borderRadius:6,marginBottom:10,wordBreak:"break-word",lineHeight:1.5}}>{briefError}</div>
+                    <div style={{fontSize:10,color:"#7A2020",lineHeight:2}}>
+                      <strong>Fix:</strong> Vercel → Project → Settings → Environment Variables<br/>
+                      Add <code style={{background:"#f5c6c6",padding:"1px 6px",borderRadius:3}}>VITE_ANTHROPIC_API_KEY</code> = sk-ant-... key → <strong>Redeploy</strong><br/>
+                      Check browser DevTools (F12) Console for detailed error.<br/>
+                      <em style={{color:"#aaa"}}>Brief below uses Claude training knowledge only — no live research.</em>
+                    </div>
+                  </div>
+                )}
                 {/* Action bar */}
                 <div className="card">
                   <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
