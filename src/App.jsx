@@ -717,36 +717,25 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
 function PasswordGate({ onAuth }) {
   const [pw, setPw] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  // Check if already authenticated via cookie
+  // Password is baked into the bundle via Vite env var
+  // Set VITE_APP_PASSWORD in Vercel environment variables
+  const CORRECT = import.meta.env.VITE_APP_PASSWORD || "cambrian2024";
+
+  // Check sessionStorage for existing auth
   useEffect(() => {
-    const cookies = document.cookie.split(";").map(c => c.trim());
-    const auth = cookies.find(c => c.startsWith("cambrian_auth="));
-    if (auth) onAuth();
+    if (sessionStorage.getItem("cambrian_auth") === "1") onAuth();
   }, []);
 
-  const submit = async () => {
+  const submit = () => {
     if (!pw.trim()) return;
-    setLoading(true);
-    setError("");
-    try {
-      const r = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pw }),
-      });
-      const d = await r.json();
-      if (d.ok) {
-        onAuth();
-      } else {
-        setError("Incorrect password. Try again.");
-        setPw("");
-      }
-    } catch(e) {
-      setError("Connection error. Try again.");
+    if (pw.trim() === CORRECT) {
+      sessionStorage.setItem("cambrian_auth", "1");
+      onAuth();
+    } else {
+      setError("Incorrect password. Try again.");
+      setPw("");
     }
-    setLoading(false);
   };
 
   return (
@@ -760,7 +749,7 @@ function PasswordGate({ onAuth }) {
           type="password"
           placeholder="Enter password"
           value={pw}
-          onChange={e => setPw(e.target.value)}
+          onChange={e => { setPw(e.target.value); setError(""); }}
           onKeyDown={e => e.key === "Enter" && submit()}
           autoFocus
         />
@@ -769,9 +758,9 @@ function PasswordGate({ onAuth }) {
           className="btn btn-primary btn-lg"
           style={{ width: "100%", justifyContent: "center" }}
           onClick={submit}
-          disabled={loading || !pw.trim()}
+          disabled={!pw.trim()}
         >
-          {loading ? "Checking..." : "Enter →"}
+          Enter →
         </button>
       </div>
     </div>
