@@ -89,6 +89,14 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .cohort-member-table tr:hover td { background: #FAF8F4; }
 .cohort-member-table tr { cursor: pointer; }
 .outcome-badge { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #F5EEF5; color: #6B3A7A; white-space: nowrap; }
+.pw-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #FAFAF8; }
+.pw-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 16px; padding: 40px; width: 100%; max-width: 380px; text-align: center; }
+.pw-logo { font-family: 'Lora', serif; font-size: 22px; color: #1a1a18; margin-bottom: 4px; }
+.pw-logo span { color: #8B6F47; }
+.pw-sub { font-size: 13px; color: #999; margin-bottom: 28px; }
+.pw-input { width: 100%; padding: 11px 14px; border: 1.5px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; text-align: center; letter-spacing: 2px; margin-bottom: 12px; }
+.pw-input:focus { border-color: #8B6F47; }
+.pw-error { font-size: 12px; color: #9B2C2C; margin-bottom: 10px; min-height: 18px; }
 .card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 14px; }
 .card-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; margin-bottom: 13px; }
 .field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
@@ -704,6 +712,72 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
   URL.revokeObjectURL(url);
 }
 
+// ── PASSWORD GATE ────────────────────────────────────────────────────────────
+
+function PasswordGate({ onAuth }) {
+  const [pw, setPw] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Check if already authenticated via cookie
+  useEffect(() => {
+    const cookies = document.cookie.split(";").map(c => c.trim());
+    const auth = cookies.find(c => c.startsWith("cambrian_auth="));
+    if (auth) onAuth();
+  }, []);
+
+  const submit = async () => {
+    if (!pw.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      const r = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        onAuth();
+      } else {
+        setError("Incorrect password. Try again.");
+        setPw("");
+      }
+    } catch(e) {
+      setError("Connection error. Try again.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="pw-gate">
+      <style>{FONTS}</style>
+      <div className="pw-card">
+        <div className="pw-logo">Cambrian <span>Catalyst</span></div>
+        <div className="pw-sub">Revenue Playbook Engine · Private Beta</div>
+        <input
+          className="pw-input"
+          type="password"
+          placeholder="Enter password"
+          value={pw}
+          onChange={e => setPw(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          autoFocus
+        />
+        <div className="pw-error">{error}</div>
+        <button
+          className="btn btn-primary btn-lg"
+          style={{ width: "100%", justifyContent: "center" }}
+          onClick={submit}
+          disabled={loading || !pw.trim()}
+        >
+          {loading ? "Checking..." : "Enter →"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── PIE CHART COMPONENT ───────────────────────────────────────────────────────
 
 function PieChart({data, size=120}){
@@ -867,6 +941,7 @@ function EF({value,onChange,single=false,placeholder="Click to edit..."}){
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 
 export default function App(){
+  const[authed,setAuthed]=useState(false);
   const[step,setStep]=useState(0);
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
@@ -1090,6 +1165,8 @@ Return ONLY valid JSON:
   const STEPS=["Session","Import","Cohorts","Outcomes","Account","Brief","In-Call","Post-Call"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
+
+  if(!authed) return <PasswordGate onAuth={()=>setAuthed(true)}/>;
 
   return(
     <>
