@@ -590,28 +590,26 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
 
   // Single API call: Claude searches the web AND synthesizes the brief in one shot
   // No sequential round-trips — search results feed directly into output
+  // Keep field values SHORT — 1 sentence max per field, 2-3 items per array
   const prompt =
-    `You are a senior B2B sales strategist. Search for "${co}" (domain: ${url}) then immediately write a pre-call brief as JSON.\n\n`+
-    `SELLER:\n${sellerCtx}${prodCtx}\n`+
-    `COHORT: ${selectedCohort?.name||""} | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | OUTCOMES: ${(selectedOutcomes||[]).join(", ")||"Not set"} | INDUSTRY: ${member.ind||""}\n\n`+
-    `Search for recent news, hiring, leadership, products, strategy. Then output ONLY raw JSON (no markdown, start with {):\n`+
-    `{"companySnapshot":"3 sentences: what they do, scale, one recent fact",`+
-    `"revenue":"e.g. $2.4B ARR","publicPrivate":"e.g. Public (NYSE:X)","employeeCount":"e.g. ~12,000","headquarters":"City, State","founded":"Year",`+
-    `"keyExecutives":[{"name":"","title":"CEO","initials":"","background":"","angle":"What drives their decisions and what makes them a hero"}],`+
-    `"recentHeadlines":[{"headline":"headline + date","relevance":"why it matters for the sale"}],`+
-    `"openRoles":{"summary":"what hiring signals about priorities","roles":[{"title":"","dept":"","signal":"strategic meaning"}]},`+
+    `Search for "${co}" (domain: ${url}). Then return ONLY a JSON object — no markdown, start with {.\n\n`+
+    `SELLER: ${sellerCtx}${prodCtx}\n`+
+    `CONTEXT: ${selectedCohort?.name||""} cohort | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Industry: ${member.ind||""}\n\n`+
+    `Rules: ASCII punctuation only. Max 1 sentence per string field. Max 3 items per array. Under 3000 tokens total.\n\n`+
+    `{"companySnapshot":"1-2 sentences: what they do and scale",`+
+    `"revenue":"$X","publicPrivate":"Public (NYSE:X) or Private","employeeCount":"~X,000","headquarters":"City, State","founded":"YYYY",`+
+    `"keyExecutives":[{"name":"","title":"","initials":"AB","background":"1 sentence","angle":"what drives them"}],`+
+    `"recentHeadlines":[{"headline":"title + date","relevance":"1 sentence why it matters"}],`+
+    `"openRoles":{"summary":"1 sentence on hiring theme","roles":[{"title":"","dept":"","signal":""}]},`+
     `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"","source":""}},`+
-    `"sellerSnapshot":"1-2 sentences on best-fit offerings",`+
-    `"fundingProfile":"stage + investors if found",`+
-    `"strategicTheme":"2 sentences on current direction",`+
-    `"sellerOpportunity":"2 sentences: why seller is well-positioned right now",`+
-    `"solutionMapping":[{"product":"best-fit product","fit":"specific reason"}],`+
-    `"openingAngle":"One sharp reframe — statement not question — that makes them say they never thought of it that way",`+
-    `"watchOuts":["risk 1","risk 2"],`+
+    `"sellerSnapshot":"1 sentence on fit","fundingProfile":"stage + lead investor",`+
+    `"strategicTheme":"1-2 sentences","sellerOpportunity":"1-2 sentences on why now",`+
+    `"solutionMapping":[{"product":"","fit":"1 sentence"}],`+
+    `"openingAngle":"1 sentence reframe — statement not question",`+
+    `"watchOuts":["",""],`+
     `"keyContacts":[{"name":"","title":"","initials":"","angle":""}],`+
-    `"competitors":["competitor 1","competitor 2"],`+
-    `"recentSignals":["top buying signal","second","third"],`+
-    `"growthSignals":["signal 1","signal 2"]}`;
+    `"competitors":["",""],`+
+    `"recentSignals":["","",""],"growthSignals":["",""]}`;
 
   try{
     const r = await fetch("/api/claude",{
@@ -619,7 +617,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         model:"claude-haiku-4-5-20251001",
-        max_tokens:3000,
+        max_tokens:4500,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[
           {role:"user",content:prompt},
