@@ -359,7 +359,6 @@ const BLANK_BRIEF = {
   keyExecutives:[],recentHeadlines:[],
   openRoles:{summary:"",roles:[]},
   solutionMapping:[{product:"",fit:""},{product:"",fit:""},{product:"",fit:""}],
-  riverHypothesis:{reality:"",impact:"",vision:"",entryPoints:"",route:""},
   openingAngle:"",watchOuts:["","",""],
   keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
   competitors:[],recentSignals:["","",""],
@@ -637,13 +636,6 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
       {product:"",fit:""},
       {product:"",fit:""}
     ],
-    riverHypothesis:{
-      reality:"Gap CURRENT STATE: specific and untenable (not vague — give hours/dollars/risk)",
-      impact:"Gap IMPACT: quantified cost of inaction",
-      vision:"Gap FUTURE STATE: what success looks like to them",
-      entryPoints:"Decision-maker names or likely titles; budget vs influence vs user",
-      route:"Challenger TAKE CONTROL: fastest path to committed next step"
-    },
     openingAngle:"Cuban POWER MOMENT: the insight that makes everything click. Format: Most [industry] companies assume [X]. What we find is [Y reframe]. Is that showing up for you?",
     watchOuts:["Risk 1","Risk 2","Risk 3"],
     keyContacts:[
@@ -2001,37 +1993,6 @@ Return ONLY valid JSON:
                         </div>
                       </div>
                     ))}
-                  </div>
-                </div>
-
-                {/* RIVER Hypothesis — key fix: direct field access, no dot-path */}
-                <div className="bb">
-                  <div className="bb-hdr">
-                    <div className="bb-icon" style={{fontSize:8,letterSpacing:0}}>RVIR</div>
-                    <div><div className="bb-title">RIVER Hypothesis</div><div className="bb-sub">Pre-call — click any stage to edit</div></div>
-                  </div>
-                  <div className="bb-body">
-                    {RIVER_STAGES.map((stage,i)=>{
-                      const fk=RKEYS[i]; // "reality" | "impact" | "vision" | "entryPoints" | "route"
-                      const val=(brief.riverHypothesis||{})[fk]||"";
-                      return(
-                        <div key={fk} style={{marginBottom:14}}>
-                          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
-                            <div className="r-icon">{stage.letter}</div>
-                            <span style={{fontSize:11,fontFamily:"Lora,serif",fontWeight:500}}>{stage.label}</span>
-                            <span style={{fontSize:10,color:"#aaa",marginLeft:2}}>— {stage.sub}</span>
-                          </div>
-                          <EF
-                            value={val}
-                            placeholder={`Add ${stage.label} hypothesis...`}
-                            onChange={v=>patchBrief(b=>{
-                              if(!b.riverHypothesis)b.riverHypothesis={};
-                              b.riverHypothesis[fk]=v;
-                            })}
-                          />
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
 
