@@ -1126,6 +1126,8 @@ export default function App(){
   const[drag,setDrag]=useState(false);
   const[importMode,setImportMode]=useState("csv"); // "csv" | "quick"
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
+  const[fitScores,setFitScores]=useState({}); // {company: {score, label, reason, color}}
+  const[fitScoring,setFitScoring]=useState(false);
   const[cohorts,setCohorts]=useState([]);
   const[selectedCohort,setSelectedCohort]=useState(null);
   const[selectedOutcomes,setSelectedOutcomes]=useState([]);
@@ -1267,7 +1269,48 @@ export default function App(){
   };
   const onFile=file=>{if(!file)return;setFileName(file.name);const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);};
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);},[]);
-  const goToCohorts=()=>{const b=buildCohorts(rows,mapping);setCohorts(b);setSelectedCohort(b[0]||null);setStep(2);};
+  // ── FIT SCORING — batch evaluates all accounts against seller profile ────
+  const scoreFit = async(members, sellerCtx) => {
+    if(!members?.length) return;
+    setFitScoring(true);
+    const companies = members.slice(0,30).map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.acv>0?"$"+m.acv.toLocaleString():"Unknown ACV"}|${m.company_url||""}`).join("\n");
+    const prompt =
+      `You are a B2B sales strategist evaluating whether companies are good targets for a seller.\n\n`+
+      `SELLER PROFILE:\n${sellerCtx}\n\n`+
+      `SCORING CRITERIA:\n`+
+      `1. Product/industry fit — do the seller's offerings make sense for this company's business?\n`+
+      `2. Size fit — does this company's scale match the seller's typical customer profile?\n`+
+      `3. Similar customers — would this company fit the seller's existing customer base?\n\n`+
+      `Rate each company 0-100. Be strict — a restaurant tech company should score Walmart LOW, McDonald's HIGH.\n\n`+
+      `COMPANIES TO SCORE (format: Name|Industry|ACV|URL):\n${companies}\n\n`+
+      `Return ONLY raw JSON, start with {:\n`+
+      `{"scores":[{"company":"exact company name","score":85,"label":"Strong Fit","reason":"1 sentence why"},{"company":"","score":40,"label":"Poor Fit","reason":""}]}`;
+
+    const result = await callAI(prompt);
+    if(result?.scores){
+      const map = {};
+      result.scores.forEach(s=>{
+        const color = s.score>=75?"#2E6B2E":s.score>=50?"#BA7517":"#9B2C2C";
+        const bg    = s.score>=75?"#EEF5EE":s.score>=50?"#FEF6E4":"#FDE8E8";
+        map[s.company] = {...s, color, bg};
+      });
+      setFitScores(map);
+    }
+    setFitScoring(false);
+  };
+
+  const goToCohorts=()=>{
+    const b=buildCohorts(rows,mapping);
+    setCohorts(b);
+    setSelectedCohort(b[0]||null);
+    setStep(2);
+    // Score all members in background
+    const allMembers=b.flatMap(c=>c.members);
+    const sellerCtx=sellerDocs.length>0
+      ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
+      : sellerUrl+(productPageUrl?" | "+productPageUrl:"");
+    scoreFit(allMembers, sellerCtx);
+  };
 
   const goToQuickBrief=()=>{
     const entries=quickEntries.filter(e=>e.name.trim());
@@ -1289,6 +1332,11 @@ export default function App(){
     setSelectedCohort(cohort);
     setSelectedOutcomes([]);
     setStep(4); // Skip straight to account selection
+    // Score in background
+    const sellerCtx2=sellerDocs.length>0
+      ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
+      : sellerUrl+(productPageUrl?" | "+productPageUrl:"");
+    scoreFit(cohort.members, sellerCtx2);
   };
   const goToOutcomes=()=>{if(selectedCohort){setSelectedOutcomes(selectedCohort.topOut.slice(0,2));setStep(3);}};
 
@@ -1866,7 +1914,11 @@ Return ONLY valid JSON:
             <div className="page-sub">Click an account to generate your RIVER brief. Accounts with a domain (<code>company_url</code> in your CSV) get live web research — accounts without one rely on training knowledge only and may miss rebrands.</div>
             <div className="notice"><strong>Auto-research on click:</strong> Claude searches both your org's site and the prospect's site, maps your products to their needs, and builds the RIVER hypothesis. Typically takes 15–25 seconds.</div>
             <div className="account-list">
-              {selectedCohort.members.map((m,i)=>(
+              {[...selectedCohort.members].sort((a,b)=>{
+                const sa=fitScores[a.company]?.score??50;
+                const sb=fitScores[b.company]?.score??50;
+                return sb-sa;
+              }).map((m,i)=>(
                 <div key={i} className={`account-item ${selectedAccount===m?"selected":""} ${!m.company_url?"no-url":""}`} onClick={()=>pickAccount(m)}>
                   <div style={{flex:1}}>
                     <div className="account-name">{m.company}</div>
@@ -1876,10 +1928,40 @@ Return ONLY valid JSON:
                       : <div style={{fontSize:10,color:"#c0392b",marginTop:2,fontWeight:600}}>⚠ No domain — research may be inaccurate. Add company_url to your CSV.</div>
                     }
                   </div>
-                  <div className="account-acv">{m.acv>0?"$"+m.acv.toLocaleString():"—"}</div>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
+                    {m.acv>0&&<div className="account-acv">{"$"+m.acv.toLocaleString()}</div>}
+                    {fitScores[m.company]?(
+                      <div title={fitScores[m.company].reason} style={{
+                        fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                        background:fitScores[m.company].bg,
+                        color:fitScores[m.company].color,
+                        border:"1px solid "+fitScores[m.company].color+"44",
+                        cursor:"help",whiteSpace:"nowrap"
+                      }}>
+                        {fitScores[m.company].score}% · {fitScores[m.company].label}
+                      </div>
+                    ):fitScoring?(
+                      <div style={{fontSize:11,color:"#aaa"}}>Scoring...</div>
+                    ):null}
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* Fit scoring legend */}
+            {(Object.keys(fitScores).length>0||fitScoring)&&(
+              <div style={{display:"flex",gap:16,alignItems:"center",margin:"12px 0",flexWrap:"wrap"}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.4px"}}>Fit Score</div>
+                {[["#2E6B2E","#EEF5EE","75-100: Strong Fit"],["#BA7517","#FEF6E4","50-74: Potential Fit"],["#9B2C2C","#FDE8E8","0-49: Poor Fit"]].map(([c,bg,label])=>(
+                  <div key={label} style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:c}}/>
+                    <span style={{color:"#555"}}>{label}</span>
+                  </div>
+                ))}
+                {fitScoring&&<div style={{fontSize:12,color:"#8B6F47"}}>⏳ Evaluating fit...</div>}
+              </div>
+            )}
+
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(3)}>← Back</button>
             </div>
