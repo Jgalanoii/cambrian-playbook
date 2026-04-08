@@ -4,13 +4,13 @@ const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,w
 
 const css = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; }
+body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; font-size: 15px; }
 .app { min-height: 100vh; display: flex; flex-direction: column; }
 .header { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; flex-shrink: 0; }
 .logo { font-family: 'Lora', serif; font-size: 16px; color: #1a1a18; white-space: nowrap; }
 .logo span { color: #8B6F47; }
 .stepper { display: flex; align-items: center; overflow-x: auto; }
-.step-item { display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 10px; font-weight: 600; color: #bbb; letter-spacing: 0.4px; text-transform: uppercase; cursor: default; white-space: nowrap; }
+.step-item { display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 11px; font-weight: 600; color: #bbb; letter-spacing: 0.4px; text-transform: uppercase; cursor: default; white-space: nowrap; }
 .step-item.active { color: #1a1a18; }
 .step-item.done { color: #8B6F47; cursor: pointer; }
 .step-num { width: 19px; height: 19px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
@@ -21,8 +21,8 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .live-dot { width: 5px; height: 5px; border-radius: 50%; background: #2E6B2E; animation: blink 1.2s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
 .page { max-width: 880px; margin: 0 auto; padding: 36px 28px 72px; width: 100%; }
-.page-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 500; margin-bottom: 6px; }
-.page-sub { font-size: 13px; color: #777; line-height: 1.65; margin-bottom: 28px; max-width: 580px; }
+.page-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 500; margin-bottom: 6px; }
+.page-sub { font-size: 14px; color: #777; line-height: 1.65; margin-bottom: 28px; max-width: 580px; }
 .setup-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 14px; padding: 32px; max-width: 520px; margin: 60px auto 0; }
 .setup-logo { font-family: 'Lora', serif; font-size: 22px; color: #1a1a18; margin-bottom: 4px; text-align: center; }
 .setup-logo span { color: #8B6F47; }
@@ -33,7 +33,7 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .upload-zone:hover, .upload-zone.drag { border-color: #8B6F47; background: #FAF8F4; }
 .upload-label { font-family: 'Lora', serif; font-size: 15px; color: #1a1a18; margin-bottom: 5px; }
 .upload-hint { font-size: 12px; color: #999; margin-bottom: 16px; }
-.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; line-height: 1; white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; line-height: 1; white-space: nowrap; }
 .btn:disabled { opacity: 0.4; cursor: default; }
 .btn-primary { background: #1a1a18; color: #fff; }
 .btn-primary:hover:not(:disabled) { background: #333; }
@@ -100,7 +100,7 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 14px; }
 .card-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; margin-bottom: 13px; }
 .field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-.field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
+.field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
 .req { color: #8B6F47; }
 .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 input[type=text], select, textarea { width: 100%; padding: 8px 11px; border: 1px solid #E8E6DF; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #1a1a18; background: #FAFAF8; outline: none; transition: border-color 0.15s; resize: vertical; -webkit-appearance: none; }
@@ -131,7 +131,7 @@ input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; ba
 .account-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
 .account-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 14px; cursor: pointer; transition: all 0.15s; }
 .account-item:hover, .account-item.selected { border-color: #8B6F47; background: #FAF8F4; }
-.account-name { font-size: 13px; font-weight: 500; color: #1a1a18; }
+.account-name { font-size: 14px; font-weight: 500; color: #1a1a18; }
 .account-meta { font-size: 11px; color: #999; margin-top: 2px; }
 .account-acv { font-size: 12px; font-weight: 600; color: #8B6F47; }
 .outcome-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
@@ -156,8 +156,8 @@ input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; ba
 .bb { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
 .bb-hdr { display: flex; align-items: center; gap: 9px; padding: 11px 16px; background: #F8F6F1; border-bottom: 1px solid #E8E6DF; }
 .bb-icon { width: 26px; height: 26px; border-radius: 6px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 11px; font-weight: 600; color: #8B6F47; flex-shrink: 0; }
-.bb-title { font-family: 'Lora', serif; font-size: 13px; font-weight: 500; }
-.bb-sub { font-size: 10px; color: #777; margin-top: 1px; }
+.bb-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; }
+.bb-sub { font-size: 11px; color: #777; margin-top: 1px; }
 .bb-body { padding: 14px 16px; }
 
 .solution-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
@@ -2131,28 +2131,58 @@ Return ONLY valid JSON:
 
             {riverHypo&&(
               <>
-                {/* RIVER fields */}
+                {/* RIVER fields — Quick Summary + Expand */}
                 {[
-                  {key:"reality",  label:"R — Reality",     icon:"📍", sub:"Current state — what's happening today"},
-                  {key:"impact",   label:"I — Impact",      icon:"💥", sub:"Cost of inaction"},
-                  {key:"vision",   label:"V — Vision",      icon:"🔭", sub:"What success looks like for them"},
-                  {key:"entryPoints",label:"E — Entry Points",icon:"🚪",sub:"Who owns this decision"},
-                  {key:"route",    label:"R — Route",       icon:"🗺", sub:"Fastest path to close"},
-                ].map(({key,label,icon,sub})=>(
-                  <div key={key} className="bb" style={{marginBottom:10}}>
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:14}}>{icon}</div>
-                      <div><div className="bb-title">{label}</div><div className="bb-sub">{sub}</div></div>
+                  {key:"reality",    label:"R — Reality",      icon:"📍", sub:"Current state", color:"#1B3A6B"},
+                  {key:"impact",     label:"I — Impact",       icon:"💥", sub:"Cost of inaction", color:"#9B2C2C"},
+                  {key:"vision",     label:"V — Vision",       icon:"🔭", sub:"What success looks like", color:"#2E6B2E"},
+                  {key:"entryPoints",label:"E — Entry Points", icon:"🚪", sub:"Decision-makers", color:"#6B3A7A"},
+                  {key:"route",      label:"R — Route",        icon:"🗺", sub:"Fastest path to close", color:"#8B6F47"},
+                ].map(({key,label,icon,sub,color})=>{
+                  const full = riverHypo[key]||"";
+                  // Quick summary = first 1-2 sentences (up to 160 chars or first period)
+                  const sentEnd = full.search(/[.!?]\s/);
+                  const summary = sentEnd>0&&sentEnd<180 ? full.slice(0,sentEnd+1) : full.slice(0,160)+(full.length>160?"...":"");
+                  const needsExpand = full.length > summary.length+2;
+                  const [expanded, setExpanded] = useState(false);
+                  return(
+                    <div key={key} className="bb" style={{marginBottom:10,borderLeft:`3px solid ${color}`,borderRadius:10}}>
+                      <div className="bb-hdr" style={{paddingBottom:6}}>
+                        <div style={{fontSize:18,lineHeight:1}}>{icon}</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:600,color:"#1a1a18"}}>{label}</div>
+                          <div style={{fontSize:11,color:"#999",marginTop:1}}>{sub}</div>
+                        </div>
+                        {needsExpand&&(
+                          <button
+                            onClick={()=>setExpanded(e=>!e)}
+                            style={{fontSize:11,color:color,fontWeight:600,background:"none",border:"none",cursor:"pointer",padding:"2px 8px",borderRadius:6,background:color+"18",flexShrink:0}}
+                          >
+                            {expanded?"Collapse ▲":"Expand ▼"}
+                          </button>
+                        )}
+                      </div>
+                      <div className="bb-body" style={{paddingTop:0}}>
+                        {!expanded?(
+                          <div style={{fontSize:14,color:"#333",lineHeight:1.6,fontStyle:"normal"}}>
+                            {summary}
+                            {needsExpand&&(
+                              <button onClick={()=>setExpanded(true)} style={{fontSize:11,color:color,fontWeight:600,background:"none",border:"none",cursor:"pointer",marginLeft:6}}>
+                                read more
+                              </button>
+                            )}
+                          </div>
+                        ):(
+                          <EF
+                            value={full}
+                            onChange={v=>setRiverHypo(prev=>({...prev,[key]:v}))}
+                            placeholder={`Click to edit ${label}...`}
+                          />
+                        )}
+                      </div>
                     </div>
-                    <div className="bb-body">
-                      <EF
-                        value={riverHypo[key]||""}
-                        onChange={v=>setRiverHypo(prev=>({...prev,[key]:v}))}
-                        placeholder={`Click to edit ${label}...`}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Opening Angle */}
                 <div className="bb" style={{marginBottom:10}}>
