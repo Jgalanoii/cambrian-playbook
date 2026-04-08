@@ -48,6 +48,8 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .btn-lg { padding: 12px 22px; font-size: 16px; }
 .btn-sm { padding: 5px 11px; font-size: 13px; }
 .actions-row { display: flex; gap: 10px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
+.footer { text-align: center; padding: 24px 28px; font-size: 12px; color: #bbb; border-top: 1px solid #E8E6DF; margin-top: auto; background: #fff; }
+.footer a { color: #bbb; text-decoration: none; }
 
 /* PRODUCT CATALOG */
 .prod-entry { display: flex; gap: 10px; padding: 10px 12px; background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 8px; margin-bottom: 7px; align-items: flex-start; }
@@ -268,16 +270,40 @@ const OUTCOMES = [
 ];
 
 const SAMPLE_ROWS = [
-  {company:"Walmart Inc",industry:"Large Employer",acv:"$285,000",lead_source:"Direct Outreach",close_date:"2024-02-14",product:"Employee Rewards Platform",outcome:"reduce turnover across hourly workforce",company_url:"walmart.com"},
-  {company:"Target Corporation",industry:"Large Employer",acv:"$195,000",lead_source:"Trade Show",close_date:"2024-03-22",product:"Incentive Engine",outcome:"increase safety and wellness program participation",company_url:"target.com"},
-  {company:"Aramark Corporation",industry:"Large Employer",acv:"$210,000",lead_source:"Referral",close_date:"2024-01-18",product:"Employee Rewards Platform",outcome:"drive engagement across distributed hourly workforce",company_url:"aramark.com"},
-  {company:"Personify Health",industry:"Health & Wellness SaaS",acv:"$95,000",lead_source:"Referral",close_date:"2024-01-30",product:"Wellness Incentive Engine",outcome:"increase member activation and sustained engagement",company_url:"personifyhealth.com"},
-  {company:"Virgin Pulse",industry:"Health & Wellness SaaS",acv:"$120,000",lead_source:"Trade Show",close_date:"2024-03-15",product:"Digital Rewards API",outcome:"power reward fulfillment for employer wellness challenges",company_url:"virginpulse.com"},
-  {company:"Rippling",industry:"HR Platform & SaaS",acv:"$225,000",lead_source:"Referral",close_date:"2024-01-12",product:"Employee Rewards Platform",outcome:"embed rewards natively into HR workflow",company_url:"rippling.com"},
-  {company:"Lattice",industry:"HR Platform & SaaS",acv:"$148,000",lead_source:"Trade Show",close_date:"2024-03-01",product:"Digital Rewards API",outcome:"power performance-based reward fulfillment",company_url:"lattice.com"},
-  {company:"Deel",industry:"HR Platform & SaaS",acv:"$310,000",lead_source:"Referral",close_date:"2024-01-25",product:"Employee Rewards Platform",outcome:"deliver compliant digital rewards globally",company_url:"deel.com"},
-  {company:"Qualtrics",industry:"Market Research",acv:"$135,000",lead_source:"Referral",close_date:"2024-01-08",product:"Survey Reward Engine",outcome:"increase survey completion rates",company_url:"qualtrics.com"},
-  {company:"University of Michigan",industry:"University & Higher Ed",acv:"$52,000",lead_source:"Direct Outreach",close_date:"2024-03-10",product:"Research Participant Rewards",outcome:"streamline research incentive disbursement",company_url:"umich.edu"},
+  // ── QSR (Quick Service Restaurant) ──────────────────────────────────────
+  {company:"McDonald's Corporation",     industry:"QSR",          acv:"$340,000",  lead_source:"Conference",      close_date:"2026-06-30", product:"Employee Rewards Platform",    outcome:"Reduce crew turnover and improve shift fill rates",               company_url:"mcdonalds.com"},
+  {company:"Chick-fil-A",               industry:"QSR",          acv:"$185,000",  lead_source:"Referral",        close_date:"2026-05-15", product:"Franchisee Incentive Program", outcome:"Increase franchisee performance and brand consistency",            company_url:"chick-fil-a.com"},
+  {company:"Chipotle Mexican Grill",    industry:"QSR",          acv:"$220,000",  lead_source:"Direct Outreach", close_date:"2026-07-31", product:"Employee Recognition Suite",   outcome:"Improve retention of restaurant managers and crew leads",          company_url:"chipotle.com"},
+  {company:"Yum! Brands",              industry:"QSR",          acv:"$410,000",  lead_source:"Partner Referral",close_date:"2026-08-15", product:"Multi-Brand Rewards Platform", outcome:"Unify incentive programs across KFC, Pizza Hut, Taco Bell",       company_url:"yum.com"},
+  {company:"Darden Restaurants",       industry:"QSR",          acv:"$160,000",  lead_source:"Inbound",         close_date:"2026-06-15", product:"Hourly Worker Recognition",    outcome:"Reduce time-to-hire and improve employee NPS scores",             company_url:"darden.com"},
+
+  // ── Blue Chip / Large Enterprise ─────────────────────────────────────────
+  {company:"Johnson & Johnson",         industry:"Healthcare / Blue Chip", acv:"$525,000",  lead_source:"Direct Outreach", close_date:"2026-09-30", product:"Global Rewards & Recognition", outcome:"Modernize legacy employee rewards across 140 countries",       company_url:"jnj.com"},
+  {company:"FedEx Corporation",         industry:"Logistics / Blue Chip",  acv:"$390,000",  lead_source:"Conference",      close_date:"2026-07-31", product:"Driver & Team Incentives",     outcome:"Improve on-time performance and reduce driver attrition",     company_url:"fedex.com"},
+  {company:"General Mills",             industry:"CPG / Blue Chip",        acv:"$210,000",  lead_source:"Referral",        close_date:"2026-05-31", product:"Sales Incentive Platform",     outcome:"Drive distributor engagement and sales rep performance",       company_url:"generalmills.com"},
+  {company:"Aramark Corporation",       industry:"Food Services / Blue Chip",acv:"0", lead_source:"Direct Outreach",close_date:"2026-08-30", product:"Workforce Rewards Suite",     outcome:"Reduce turnover across 270,000 hourly food service employees", company_url:"aramark.com"},
+  {company:"Sodexo",                    industry:"Facilities / Blue Chip",  acv:"$355,000",  lead_source:"Partner Referral",close_date:"2026-10-31", product:"Employee Recognition Platform", outcome:"Improve engagement scores and reduce absenteeism globally",  company_url:"sodexo.com"},
+
+  // ── FinTech ───────────────────────────────────────────────────────────────
+  {company:"Stripe",                    industry:"FinTech / Payments",     acv:"$145,000",  lead_source:"Inbound",         close_date:"2026-04-30", product:"Sales & Engineering Rewards",  outcome:"Retain top engineering and GTM talent in a competitive market",  company_url:"stripe.com"},
+  {company:"Marqeta",                   industry:"FinTech / Issuer",       acv:"$98,000",   lead_source:"Direct Outreach", close_date:"2026-05-15", product:"Customer Incentive Program",   outcome:"Increase card activation and transaction volume with rewards",   company_url:"marqeta.com"},
+  {company:"Brex",                      industry:"FinTech / Corporate Spend",acv:"0", lead_source:"Conference",      close_date:"2026-06-30", product:"Partner & Channel Rewards",    outcome:"Drive referral and reseller channel growth with incentives",     company_url:"brex.com"},
+  {company:"Klarna",                    industry:"FinTech / BNPL",         acv:"$175,000",  lead_source:"Referral",        close_date:"2026-07-15", product:"Consumer Loyalty Platform",    outcome:"Increase repeat purchase rate and reduce churn among shoppers",   company_url:"klarna.com"},
+  {company:"Plaid",                     industry:"FinTech / Infrastructure",acv:"0", lead_source:"Inbound",         close_date:"2026-05-31", product:"Developer & Partner Rewards",  outcome:"Grow API usage and deepen bank partnership engagement",          company_url:"plaid.com"},
+
+  // ── Series A / B ──────────────────────────────────────────────────────────
+  {company:"Ramp",                      industry:"FinTech / Series C (prev B)",acv:"0",lead_source:"Conference",   close_date:"2026-04-30", product:"Sales Team Incentives",        outcome:"Accelerate pipeline growth and SDR ramp time",                  company_url:"ramp.com"},
+  {company:"Lattice",                   industry:"HR Tech / Series D",     acv:"$58,000",   lead_source:"Inbound",         close_date:"2026-05-15", product:"Manager Excellence Rewards",   outcome:"Increase platform adoption and reduce HR software churn",         company_url:"lattice.com"},
+  {company:"Rippling",                  industry:"HR / Workforce Tech",    acv:"$92,000",   lead_source:"Direct Outreach", close_date:"2026-06-15", product:"Employee Milestone Program",   outcome:"Improve onboarding completion and 90-day retention rates",       company_url:"rippling.com"},
+  {company:"Persona",                   industry:"Identity / Series B",    acv:"$44,000",   lead_source:"Referral",        close_date:"2026-05-31", product:"Go-To-Market Incentives",      outcome:"Drive partner referrals and accelerate enterprise sales cycles",  company_url:"withpersona.com"},
+  {company:"Finix",                     industry:"Payments Infra / Series B",acv:"0", lead_source:"Conference",      close_date:"2026-07-31", product:"Customer Milestone Rewards",   outcome:"Increase payment volume activation among platform customers",    company_url:"finix.io"},
+
+  // ── Hospitality & Universities ────────────────────────────────────────────
+  {company:"Marriott International",    industry:"Hospitality",            acv:"$285,000",  lead_source:"Direct Outreach", close_date:"2026-08-31", product:"Associate Recognition Platform",outcome:"Reduce hotel staff turnover and improve guest satisfaction scores",company_url:"marriott.com"},
+  {company:"Hyatt Hotels Corporation",  industry:"Hospitality",            acv:"$198,000",  lead_source:"Referral",        close_date:"2026-07-15", product:"Property Incentive Program",   outcome:"Drive upsell performance and front desk engagement",             company_url:"hyatt.com"},
+  {company:"University of Washington",  industry:"Higher Education",       acv:"$78,000",   lead_source:"Inbound",         close_date:"2026-05-31", product:"Staff Recognition Suite",      outcome:"Improve staff retention and engagement across 30,000 employees", company_url:"uw.edu"},
+  {company:"Ohio State University",     industry:"Higher Education",       acv:"$92,000",   lead_source:"Direct Outreach", close_date:"2026-06-30", product:"Faculty & Staff Rewards",      outcome:"Modernize recognition programs and reduce administrative burden", company_url:"osu.edu"},
+  {company:"Purdue University",         industry:"Higher Education",       acv:"$67,000",   lead_source:"Conference",      close_date:"2026-07-31", product:"Student & Staff Incentives",   outcome:"Drive research participation and improve employee satisfaction",  company_url:"purdue.edu"},
 ];
 
 const RIVER_STAGES = [
@@ -588,7 +614,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description:"")).join("; ")
     : "";
-  const dealCtx = `${selectedCohort?.name||""} cohort | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Industry: ${member.ind||""} | Outcomes: ${(selectedOutcomes||[]).join(", ")||"Not set"}`;
+  const dealCtx = `${selectedCohort?.name||""} cohort | Industry: ${member.ind||""} | Industry: ${member.ind||""} | Outcomes: ${(selectedOutcomes||[]).join(", ")||"Not set"}`;
 
   const schema =
     `{"companySnapshot":"3-4 sentences: what they do, revenue scale, employee count, HQ, recent strategic direction",`+
@@ -1124,7 +1150,7 @@ export default function App(){
   const[productPageUrl,setProductPageUrl]=useState("");
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
-  const[mapping,setMapping]=useState({company:"",industry:"",acv:"",lead_source:"",close_date:"",product:"",outcome:"",company_url:""});
+  const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:""});
   const[fileName,setFileName]=useState("");
   const[drag,setDrag]=useState(false);
   const[importMode,setImportMode]=useState("csv"); // "csv" | "quick"
@@ -1324,7 +1350,7 @@ export default function App(){
       company_url:e.url.trim(),
       industry:"",acv:"0",lead_source:"Quick Entry",outcome:"",
     }));
-    const syntheticMapping={company:"company",industry:"industry",acv:"acv",lead_source:"lead_source",company_url:"company_url",outcome:"outcome",close_date:"",product:""};
+    const syntheticMapping={company:"company",industry:"industry",acv:"0",lead_source:"lead_source",company_url:"company_url",outcome:"outcome",close_date:"",product:""};
     setRows(syntheticRows);
     setMapping(syntheticMapping);
     setHeaders(["company","company_url","industry","acv","lead_source","outcome"]);
@@ -1801,7 +1827,7 @@ Return ONLY valid JSON:
                 <div className="card">
                   <div className="card-title">Map Your Fields</div>
                   <div className="field-grid-2">
-                    {[{key:"company",label:"Company / Account",req:true},{key:"industry",label:"Industry / Vertical",req:true},{key:"acv",label:"Deal Size / ACV",req:true},{key:"lead_source",label:"Lead Source",req:true},{key:"company_url",label:"Company Website URL"},{key:"close_date",label:"Close Date"},{key:"product",label:"Product / Solution"},{key:"outcome",label:"Customer Outcome"},].map(f=>(
+                    {[{key:"company",label:"Company / Account",req:true},{key:"industry",label:"Industry / Vertical",req:true},{key:"lead_source",label:"Lead Source",req:true},{key:"company_url",label:"Company Website URL"},{key:"close_date",label:"Close Date"},{key:"product",label:"Product / Solution"},{key:"outcome",label:"Customer Outcome"},].map(f=>(
                       <div className="field-row" key={f.key}>
                         <div className="field-label">{f.label} {f.req&&<span className="req">*</span>}</div>
                         <select value={mapping[f.key]} onChange={e=>setMapping(m=>({...m,[f.key]:e.target.value}))}>
@@ -1939,7 +1965,7 @@ Return ONLY valid JSON:
                     }
                   </div>
                   <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
-                    {m.acv>0&&<div className="account-acv">{"$"+m.acv.toLocaleString()}</div>}
+
                     {fitScores[m.company]?(
                       <div title={fitScores[m.company].reason} style={{
                         fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
@@ -2686,6 +2712,9 @@ Return ONLY valid JSON:
         )}
 
       </div>
+      <footer className="footer">
+        © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved
+      </footer>
     </>
   );
 }
