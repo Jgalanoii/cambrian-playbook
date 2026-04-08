@@ -578,96 +578,86 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const co  = member.company;
   const url = member.company_url || co;
 
-  onStatus("Researching " + co + "...");
-
-  // Seller context (sync — no await)
   const sellerCtx = sellerDocs.length>0
     ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join("\n")
-    : "Seller: "+sellerUrl+(productPageUrl ? " | Product page: "+productPageUrl : "");
+    : "Seller: "+sellerUrl+(productPageUrl?" | Product page: "+productPageUrl:"");
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description:"")).join("; ")
     : "";
+  const dealCtx = `${selectedCohort?.name||""} cohort | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Industry: ${member.ind||""} | Outcomes: ${(selectedOutcomes||[]).join(", ")||"Not set"}`;
 
-  // Single API call: Claude searches the web AND synthesizes the brief in one shot
-  // No sequential round-trips — search results feed directly into output
-  // Keep field values SHORT — 1 sentence max per field, 2-3 items per array
-  // ── SALES FRAMEWORKS BAKED INTO SYNTHESIS ─────────────────────────────────
-  // Gap Selling (Keenan): current state specific + untenable, impact in $$/time/risk
-  // Challenger Sale (Dixon): Teach something new, Tailor to exec, Take Control of next step
-  // Carnegie: frame everything in THEIR interests — make them the hero
-  // Cuban: find the power moment, sell the outcome not the product
-  // Jobs: rule of three, vision of a better world, connect the dots
-
-  const prompt =
-    `You are a senior B2B sales strategist and deal intelligence analyst. Search for "${co}" (domain: ${url}), then synthesize everything into a rich pre-call brief.\n\n`+
-    `SELLER CONTEXT:\n${sellerCtx}${prodCtx}\n\n`+
-    `DEAL CONTEXT: ${selectedCohort?.name||""} cohort | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Industry: ${member.ind||""} | Outcomes: ${(selectedOutcomes||[]).join(", ")||"Not set"}\n\n`+
-    `SYNTHESIS RULES:\n`+
-    `- Use ONLY facts found in research. Reference real names, dates, numbers. If not found, say so.\n`+
-    `- ASCII punctuation only — no em-dashes, no curly quotes, use hyphens.\n`+
-    `- Apply Gap Selling: make current state specific and untenable, quantify impact in dollars/time/risk.\n`+
-    `- Apply Challenger Sale: each exec angle should teach something they don't know about their own situation.\n`+
-    `- Apply Carnegie: frame seller opportunity in terms of THEIR interests, not your features.\n`+
-    `- Hiring signals are critical — interpret what open roles reveal about strategic priorities.\n\n`+
-    `Return ONLY raw JSON, no markdown, start with {:\n`+
-    `{"companySnapshot":"3-4 sentences: what they do, revenue scale, employee count, HQ, recent strategic direction, one specific recent fact from research",`+
-    `"revenue":"e.g. $2.4B ARR (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT) or Private (PE-backed, Thoma Bravo)","employeeCount":"e.g. ~47,000 globally","headquarters":"City, State","founded":"Year",`+
+  const schema =
+    `{"companySnapshot":"3-4 sentences: what they do, revenue scale, employee count, HQ, recent strategic direction",`+
+    `"revenue":"e.g. $2.4B ARR (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT)","employeeCount":"e.g. ~47,000","headquarters":"City, State","founded":"Year",`+
     `"keyExecutives":[`+
-    `{"name":"Real name from research","title":"CEO or President","initials":"AB","background":"Prior company or role + one known strategic priority or public statement","angle":"Executive Perspective (Challenger): what they care about most professionally, what makes them a hero to their board, what specific gap in their business keeps them up at night"},`+
-    `{"name":"Real name from research","title":"CHRO or CPO or Chief People Officer","initials":"CD","background":"Their people/HR focus and any known initiatives","angle":"Executive Perspective (Carnegie): frame success in their terms — retention rate improvement, culture transformation, HR tech ROI, or workforce productivity"},`+
-    `{"name":"Real name from research","title":"CFO or COO or CTO","initials":"EF","background":"Financial or operational background and priorities","angle":"Executive Perspective (Gap Selling): quantify the cost of the current gap — what inaction costs them in dollars, risk, or competitive position"}],`+
-    `"recentHeadlines":[`+
-    `{"headline":"Specific headline with publication and date","relevance":"Challenger teach moment: what this signals about their priorities or pain"},`+
-    `{"headline":"Specific headline with date","relevance":"Why this matters for the sale"},`+
-    `{"headline":"Specific headline with date","relevance":"Buying signal or risk indicator"},`+
-    `{"headline":"Specific headline with date","relevance":"Strategic context"}],`+
-    `"openRoles":{"summary":"Gap Selling interpretation: what the hiring pattern reveals about current pain and future direction — be specific about role clusters and what they signal","roles":[{"title":"Role title","dept":"Department","signal":"Strategic meaning of this hire"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
-    `"publicSentiment":{"bbbRating":"e.g. A+ or NR","standoutReview":{"text":"Most relevant employee or customer review found","source":"Glassdoor/BBB/Reddit/LinkedIn"}},`+
-    `"sellerSnapshot":"2-3 sentences on the seller's most relevant offerings for this specific prospect — tie to their stage, size, and signals",`+
-    `"fundingProfile":"Full funding picture: stage (Seed/Series A-D/PE-backed/Public), total raised if known, lead investors, most recent round with date and amount",`+
-    `"strategicTheme":"2-3 sentences synthesizing their current strategic direction — what are they building toward, what pressures are they navigating, what does all the evidence point to",`+
-    `"sellerOpportunity":"2-3 sentences on exactly why the seller is well-positioned right now — tie to their funding stage, growth signals, hiring patterns, and stated priorities. This is the why-you-why-now that opens doors.",`+
-    `"solutionMapping":[{"product":"Specific product or solution from seller","fit":"Specific reason grounded in research — tie to a real signal or pain found"},{"product":"Second best-fit offering","fit":"Specific fit rationale"},{"product":"Third option if applicable","fit":"Fit rationale"}],`+
-    `"openingAngle":"Cuban power moment: one sharp statement (not a question) that references something real from research and makes them say they never thought of it that way. Format: Most [industry] companies [assumption]. What the data shows is [reframe]. Is that showing up for you?",`+
-    `"watchOuts":["Specific risk grounded in research","Specific competitive or timing risk","Specific stakeholder or budget risk"],`+
-    `"keyContacts":[{"name":"Real name or most likely title","title":"Full title","initials":"AB","angle":"Specific engagement angle for this person"},{"name":"Second contact","title":"Full title","initials":"CD","angle":"Engagement angle"}],`+
-    `"competitors":["Most likely competitor 1","Competitor 2","Competitor 3"],`+
-    `"recentSignals":["Most actionable buying signal from all research","Second signal","Third signal"],`+
-    `"growthSignals":["Specific growth indicator with evidence","Second growth signal","Third signal"]}`;
+    `{"name":"Real name","title":"CEO","initials":"AB","background":"Prior role + known priority","angle":"Executive Perspective: what they care about most, what makes them a hero to their board, what specific gap keeps them up at night"},`+
+    `{"name":"Real name","title":"CHRO or CPO","initials":"CD","background":"People/HR focus","angle":"Executive Perspective: success in their terms - retention, culture, HR tech ROI, workforce productivity"},`+
+    `{"name":"Real name","title":"CFO or COO","initials":"EF","background":"Financial/operational focus","angle":"Executive Perspective: how they evaluate spend - ROI lens, risk reduction, efficiency gains"}],`+
+    `"recentHeadlines":[{"headline":"Headline + date","relevance":"Why this matters for the sale"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
+    `"openRoles":{"summary":"What the hiring pattern reveals about strategic priorities and current pain","roles":[{"title":"","dept":"","signal":"Strategic meaning"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
+    `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"Most relevant review","source":""}},`+
+    `"sellerSnapshot":"2-3 sentences on sellers most relevant offerings for this prospect",`+
+    `"fundingProfile":"Funding stage, total raised, lead investors, most recent round",`+
+    `"strategicTheme":"2-3 sentences on their current strategic direction",`+
+    `"sellerOpportunity":"2-3 sentences: why the seller is well-positioned right now - the why-you-why-now that opens doors",`+
+    `"solutionMapping":[{"product":"Specific offering","fit":"Specific reason tied to their signals"},{"product":"","fit":""},{"product":"","fit":""}],`+
+    `"openingAngle":"Sharp statement not a question referencing something real. Format: Most [industry] companies [assumption]. What the data shows is [reframe]. Is that showing up for you?",`+
+    `"watchOuts":["Specific risk","Competitive risk","Budget or stakeholder risk"],`+
+    `"keyContacts":[{"name":"Real name or title","title":"Full title","initials":"AB","angle":"Engagement angle"},{"name":"","title":"","initials":"CD","angle":""}],`+
+    `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
+    `"recentSignals":["Top buying signal","Second signal","Third signal"],`+
+    `"growthSignals":["Growth indicator with evidence","Second signal","Third signal"]}`;
 
-  try{
-    const r = await fetch("/api/claude",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-haiku-4-5-20251001",
-        max_tokens:4500,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
-        messages:[
-          {role:"user",content:prompt},
-          {role:"assistant",content:"{"},
-        ],
-      }),
-    });
-    const d = await r.json();
-    if(d.error){
-      console.error("generateBrief error:",d.error);
-      return {...BLANK_BRIEF,_error:"API error: "+d.error.message,companySnapshot:co+" — "+member.ind};
-    }
-    const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    const text="{"+raw;
-    console.log("brief chars:",text.length,"preview:",text.slice(0,80));
-    const parsed=safeParseJSON(text);
-    if(parsed) return parsed;
-    return {...BLANK_BRIEF,_error:"JSON parse failed — raw research shown. Try Regenerate.",companySnapshot:co+" — "+member.ind+". Edit fields below."};
-  }catch(e){
-    console.error("generateBrief fetch error:",e);
-    return {...BLANK_BRIEF,_error:e.message,companySnapshot:co+" — "+member.ind};
-  }
+  // Phase 1: Training-knowledge brief - no web search, shows in ~6-8s
+  onStatus("Building brief for "+co+"...");
+  const phase1Prompt =
+    `You are a senior B2B sales strategist. Using your training knowledge about "${co}", build a rich pre-call brief.\n`+
+    `Apply Gap Selling (quantify the gap), Challenger Sale (teach something new), Carnegie (their interests not yours).\n`+
+    `ASCII punctuation only. Be specific - use real facts. Return ONLY raw JSON, start with {:\n`+
+    `SELLER:\n${sellerCtx}${prodCtx}\nDEAL: ${dealCtx}\n\n`+schema;
+
+  // Phase 2: Live enrichment - fires in parallel, merges when ready
+  const phase2Prompt =
+    `Search for the most recent 2024-2025 news about "${co}" (domain: ${url}).\n`+
+    `Find: headlines, M&A, hiring signals, leadership changes, funding news.\n`+
+    `Return ONLY raw JSON, start with {:\n`+
+    `{"recentHeadlines":[{"headline":"Specific headline + source + date","relevance":"Why this matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
+    `"openRoles":{"summary":"What hiring reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
+    `"fundingProfile":"Latest funding info found",`+
+    `"recentSignals":["Most actionable buying signal","Second","Third"],`+
+    `"growthSignals":["Growth signal with evidence","Second","Third"],`+
+    `"companySnapshot":"Updated 3-4 sentence snapshot with any new facts found"}`;
+
+  // Fire both simultaneously
+  const phase1Promise = callAI(phase1Prompt);
+  const phase2Promise = (async()=>{
+    try{
+      const r = await fetch("/api/claude",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:2000,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+          messages:[{role:"user",content:phase2Prompt},{role:"assistant",content:"{"}],
+        }),
+      });
+      const d=await r.json();
+      if(d.error)return null;
+      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      return safeParseJSON("{"+raw);
+    }catch(e){console.warn("Phase 2 failed:",e.message);return null;}
+  })();
+
+  // Await phase 1 only - user sees brief immediately
+  const phase1Result = await phase1Promise;
+  const brief = (phase1Result&&typeof phase1Result==="object")
+    ? phase1Result
+    : {...BLANK_BRIEF,companySnapshot:co+" - "+member.ind+". Edit fields below.",_error:"Brief generation failed - try Regenerate."};
+
+  onStatus("");
+  return {_brief:brief,_phase2Promise:phase2Promise};
 }
 
-
-// ── EXCEL EXPORT ──────────────────────────────────────────────────────────────
 
 function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outcomes,sellerUrl,confidence){
   const ts=new Date().toISOString().slice(0,10);
@@ -1261,19 +1251,34 @@ export default function App(){
     setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
-    const result = await generateBrief(
+    const {_brief,_phase2Promise} = await generateBrief(
       member, sellerUrl, sellerDocs, products,
       selectedCohort, selectedOutcomes, productPageUrl,
       (msg)=>setBriefStatus(msg)
     );
 
-    if(result._error) setBriefError(result._error);
-    setBrief(result);
+    if(_brief._error) setBriefError(_brief._error);
+    setBrief(_brief);
     setBriefLoading(false);
     setBriefStatus("");
-    // ── Kick off RIVER hypothesis build in background ──────────────────────
-    // Don't await — let it build while rep reads the brief
-    buildRiverHypo(result, member);
+
+    buildRiverHypo(_brief, member);
+
+    _phase2Promise.then(enrichment=>{
+      if(!enrichment) return;
+      setBrief(prev=>{
+        if(!prev) return prev;
+        const next={...prev};
+        if(enrichment.recentHeadlines?.some(h=>h?.headline)) next.recentHeadlines=enrichment.recentHeadlines;
+        if(enrichment.openRoles?.summary) next.openRoles=enrichment.openRoles;
+        if(enrichment.fundingProfile) next.fundingProfile=enrichment.fundingProfile;
+        if(enrichment.recentSignals?.some(s=>s)) next.recentSignals=enrichment.recentSignals;
+        if(enrichment.growthSignals?.some(s=>s)) next.growthSignals=enrichment.growthSignals;
+        if(enrichment.companySnapshot?.length>50) next.companySnapshot=enrichment.companySnapshot;
+        return next;
+      });
+      console.log("Brief enriched with live research");
+    }).catch(e=>console.warn("Enrichment failed:",e.message));
   };
 
   // ── BUILD RIVER HYPOTHESIS (background, after brief) ─────────────────────
