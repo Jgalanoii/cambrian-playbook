@@ -478,7 +478,7 @@ async function callAI(prompt){
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:5000,
-          system:"You are a JSON-only API. You output raw JSON objects only. Never include markdown fences, explanations, or any text outside the JSON object. Start your response with { and end with }.",
+          system:"Output only a raw JSON object. No markdown. No ```json. No ``` fences. No explanation. No text before or after. Your entire response must start with { and end with }. Any character before { or after } will break the parser.",
           messages:[{role:"user",content:prompt}],
         }),
       });
@@ -495,18 +495,17 @@ async function callAI(prompt){
       const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
       console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
       if(!text) return null;
-      // Try 1: direct parse
-      try{return JSON.parse(text);}catch{}
-      // Try 2: strip markdown fences
-      const fence = String.fromCharCode(96,96,96);
-      const clean = text.replace(new RegExp("^"+fence+"json\\s*",""),"").replace(new RegExp("^"+fence+"\\s*",""),"").replace(new RegExp(fence+"\\s*$"),"").trim();
-      try{return JSON.parse(clean);}catch{}
-      // Try 3: find first { to last }
+      // Always extract first { to last } — most robust for large responses
       const first = text.indexOf("{");
       const last  = text.lastIndexOf("}");
       if(first>=0 && last>first){
-        try{return JSON.parse(text.slice(first,last+1));}catch(e){
-          console.error("JSON parse failed:", e.message, "\nText sample:", text.slice(0,500));
+        const candidate = text.slice(first, last+1);
+        try{return JSON.parse(candidate);}catch(e){
+          // If that fails, try cleaning non-whitespace control chars then re-parse
+          const cleaned = candidate.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
+          try{return JSON.parse(cleaned);}catch(e2){
+            console.error("JSON parse failed:", e2.message, "position hint:", e2.message.match(/\d+/)?.[0]);
+          }
         }
       }
       return null;
@@ -525,7 +524,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   // ── Phase 1: Single web search for recent news + open roles ──────────────
   onStatus("Searching for recent news & open roles...");
   const recentIntel = hasUrl ? await fetchRecentIntel(co, url) : "";
-  if(hasUrl) await sleep(3000);
+
 
   const researchBlock = recentIntel
     ? "RECENT NEWS & OPEN ROLES (live web search):\n"+recentIntel
@@ -549,73 +548,56 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   // Carnegie: frame everything in terms of THEIR interests, not yours
 
   const schema = JSON.stringify({
-    companySnapshot:"4-5 rich sentences. Specific revenue ($XB), employee count (~XXX,000), public/private, HQ, what they do, who they serve, one recent notable fact. Write like a sharp analyst who did their homework.",
-    revenue:"Exact figure e.g. $18.8B annual revenue (FY2025)",
-    publicPrivate:"Public (NYSE: ARMK) or Private (PE-backed by X, founded YYYY)",
-    employeeCount:"Exact or approximate e.g. ~270,000 employees globally",
+    companySnapshot:"4-5 sentences: revenue, employees, public/private, HQ, what they do, one recent fact",
+    revenue:"e.g. $18.8B (FY2025)",
+    publicPrivate:"e.g. Public (NYSE:ARMK) or Private (PE-backed)",
+    employeeCount:"e.g. ~270,000 globally",
     headquarters:"City, State",
     founded:"Year",
     keyExecutives:[
-      {name:"Full name",title:"CEO",initials:"AB",
-       background:"What shaped them — prior companies, known priorities, public quotes",
-       angle:"Carnegie angle: what does THIS person care about most professionally? Frame the conversation around their world, not the product"},
-      {name:"Full name",title:"CHRO or CPO",initials:"CD",
-       background:"Background and known focus areas",
-       angle:"Carnegie angle: what keeps them up at night? What would make them a hero internally?"},
-      {name:"Full name",title:"CFO or COO",initials:"EF",
-       background:"Background",
-       angle:"Carnegie angle: their specific lens — ROI, risk, operational efficiency?"}
+      {name:"",title:"CEO",initials:"",background:"Prior roles, known priorities",angle:"Carnegie: what they care about most — frame around their world"},
+      {name:"",title:"CHRO or CPO",initials:"",background:"",angle:"Carnegie: what makes them a hero internally"},
+      {name:"",title:"CFO or COO",initials:"",background:"",angle:"Carnegie: their ROI/risk lens"}
     ],
     recentHeadlines:[
-      {headline:"Specific headline with month/year",
-       relevance:"Challenger angle: how does this create a teaching moment or reframe their thinking?"},
-      {headline:"Headline 2",relevance:"Sales relevance"},
-      {headline:"Headline 3",relevance:"Sales relevance"}
+      {headline:"Headline + month/year",relevance:"Challenger: teaching moment or reframe"},
+      {headline:"",relevance:""},
+      {headline:"",relevance:""}
     ],
     openRoles:{
-      summary:"Gap Selling angle: what does their hiring pattern reveal about their current-state problems and where they want to go? Cluster roles into strategic themes — e.g. 15 open data roles = data infrastructure investment = potential opening for X.",
+      summary:"Gap: what hiring signals about current pain and future direction",
       roles:[
-        {title:"Specific job title",dept:"Department",signal:"What this hire signals about their priorities and pain"},
-        {title:"Title",dept:"Dept",signal:"Signal"},
-        {title:"Title",dept:"Dept",signal:"Signal"},
-        {title:"Title",dept:"Dept",signal:"Signal"}
+        {title:"",dept:"",signal:"Strategic meaning"},
+        {title:"",dept:"",signal:""},
+        {title:"",dept:"",signal:""}
       ]
     },
-    publicSentiment:{
-      bbbRating:"A+ or B or NR",
-      bbbAccredited:true,
-      standoutReview:{text:"Specific quote from a real review",source:"Glassdoor or Reddit",sentiment:"positive or negative"},
-      onlineSentiment:"What employees and customers are actually saying — themes, not generalities",
-      sentimentSummary:"Carnegie angle: how can the rep use this to show genuine understanding of the company's world?"
-    },
-    sellerSnapshot:"1-2 sentences. Challenger angle: what unique insight can the seller bring that reframes how the prospect thinks about their problem?",
-    fundingProfile:"Ownership, investors, funding history or public market status",
-    strategicTheme:"Gap Selling angle: what is their current state, what future state are they driving toward, and what is standing in the gap? 2-3 sentences grounded in research.",
-    sellerOpportunity:"Challenger angle: why is NOW the right time, and what insight can the seller teach this specific company that they probably don't already know? 2-3 sentences. Make it sharp.",
+    publicSentiment:{bbbRating:"",bbbAccredited:true,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:"Carnegie: how rep uses this to show they know the company"},
+    sellerSnapshot:"Challenger: unique insight seller brings",
+    fundingProfile:"",
+    strategicTheme:"Gap: current state → gap → future state in 2-3 sentences",
+    sellerOpportunity:"Jobs: vision of their better world. Why NOW. Make change feel inevitable.",
     solutionMapping:[
-      {product:"Exact product name",
-       fit:"Gap Selling fit: which specific gap does this product close? Tie to their current state pain and future state vision."},
-      {product:"Second product",fit:"Gap fit"},
-      {product:"Third product",fit:"Gap fit"}
+      {product:"",fit:"Gap: which gap this closes"},
+      {product:"",fit:""},
+      {product:"",fit:""}
     ],
     riverHypothesis:{
-      reality:"Gap Selling CURRENT STATE: be specific. Not 'they have manual processes' but 'their team spends X hours per week on Y, causing Z.' What is the untenable situation that makes change necessary?",
-      impact:"Gap Selling IMPACT: quantify the cost of inaction. Revenue lost, time wasted, risk exposure, competitive disadvantage. This is where urgency lives.",
-      vision:"Gap Selling FUTURE STATE: what does success look like in their words? What does the world look like when the gap is closed?",
-      entryPoints:"Real decision-maker names if found, or most likely titles given their stage. Note who controls budget vs. who influences vs. who uses.",
-      route:"Challenger TAKE CONTROL: what is the fastest path to a committed next step? Don't wait — recommend one."
+      reality:"Gap CURRENT STATE: specific and untenable (not vague — give hours/dollars/risk)",
+      impact:"Gap IMPACT: quantified cost of inaction",
+      vision:"Gap FUTURE STATE: what success looks like to them",
+      entryPoints:"Decision-maker names or likely titles; budget vs influence vs user",
+      route:"Challenger TAKE CONTROL: fastest path to committed next step"
     },
-    openingAngle:"Cuban POWER MOMENT + Challenger TEACH: the one insight that makes everything click. NOT a generic discovery question — a reframe that makes them say 'I never thought of it that way.' Ground it in something specific from the research. Format: 'Most [industry] companies we talk to assume [X]. What we consistently find is [Y reframe]. Is that pattern showing up for you?' Make it feel like you already know their world.",
-    watchOuts:["Specific risk 1 — competitor, internal politics, or deal blocker","Risk 2","Risk 3"],
+    openingAngle:"Cuban POWER MOMENT: the insight that makes everything click. Format: Most [industry] companies assume [X]. What we find is [Y reframe]. Is that showing up for you?",
+    watchOuts:["Risk 1","Risk 2","Risk 3"],
     keyContacts:[
-      {name:"Name or likely title",title:"Full title",initials:"AB",
-       angle:"Carnegie: frame the outreach entirely around what THEY care about. Reference something specific to their role and the company's situation."},
-      {name:"Name",title:"Title",initials:"CD",
-       angle:"Carnegie: their specific motivation and how to make them the hero of this story"}
+      {name:"",title:"",initials:"",angle:"Carnegie: outreach framed around their specific situation"},
+      {name:"",title:"",initials:"",angle:""}
     ],
-    competitors:["Competitor 1","Competitor 2"],
-    growthSignals:["Specific signal with evidence","Signal 2","Signal 3"],
-    recentSignals:["Top buying signal — most actionable","Signal 2","Signal 3"],
+    competitors:["",""],
+    growthSignals:["","",""],
+    recentSignals:["","",""],
   });
 
   const prompt =
