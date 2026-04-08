@@ -437,92 +437,30 @@ function extractJSON(text){
 // ── SINGLE-CALL BRIEF GENERATION: web search + synthesis in one request ────────
 // Claude searches the web AND returns structured JSON in a single API call.
 // This avoids the two-step coordination problem entirely.
-// ── WEB SEARCH HELPER ────────────────────────────────────────────────────────
-// One focused query → returns plain text summary. Short prompt = Claude searches.
-async function ws(question){
-  // Key is handled server-side via /api/claude proxy
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  for(let attempt=0; attempt<3; attempt++){
-    try{
-      const r = await fetch("/api/claude",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1000,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
-          messages:[{role:"user",content:question}],
-        }),
-      });
-      const d = await r.json();
-      if(d.error){
-        if(d.error.type==="rate_limit_error"){
-          console.warn("ws rate limit, waiting 8s...");
-          await sleep(8000);
-          continue;
-        }
-        console.warn("ws error:",d.error.message);
-        return "";
-      }
-      return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,1200);
-    }catch(e){console.warn("ws fetch error:",e.message);return "";}
-  }
-  return "";
+// ── WEB SEARCH: recent news + jobs only (1 call, max 3 searches) ──────────────
+async function fetchRecentIntel(co, url){
+  try{
+    const r = await fetch("/api/claude",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:2000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+        messages:[{role:"user",content:
+          `Search the web for TWO things about "${co}":
+1. Most recent news from 2024-2025: any major announcements, acquisitions, leadership changes, product launches, or contracts. Include dates.
+2. Current open job postings: search "${co} careers jobs 2025" and list 4-6 specific open role titles and departments.
+Be specific and concise.`
+        }],
+      }),
+    });
+    const d = await r.json();
+    if(d.error){console.warn("fetchRecentIntel error:",d.error.message);return "";}
+    return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,2000);
+  }catch(e){console.warn("fetchRecentIntel error:",e.message);return "";}
 }
 
-// ── SEQUENTIAL TARGETED RESEARCH ─────────────────────────────────────────────
-// Six short, focused searches. Each one is simple enough that Claude will
-// always choose to search rather than guess. Run sequentially to avoid
-// rate limits; each call is fast (<5s).
-async function researchCompany(co, url, onStatus){
-  const results = {};
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-  // 1. Financials
-  onStatus("Looking up financials...");
-  results.financials = await ws(
-    `What is ${co}'s annual revenue, number of employees, and are they public or private? ` +
-    `Search macrotrends.net, macroaxis.com, or wisesheets.io for "${co} revenue employees". Give me the exact numbers.`
-  );
-  await sleep(6000);
-
-  // 2. Executives
-  onStatus("Finding key executives...");
-  results.executives = await ws(
-    `Who are the current CEO, CFO, CHRO, COO, and CPO of ${co}? ` +
-    `Search "${co} executives leadership team" on LinkedIn and their website ${url}. List names and exact titles.`
-  );
-  await sleep(6000);
-
-  // 3. Recent news
-  onStatus("Searching recent news...");
-  results.news = await ws(
-    `Search for "${co}" news from 2024 and 2025. ` +
-    `Look on businesswire.com, prnewswire.com, Reuters, Bloomberg, and Google News. ` +
-    `What are the 3-4 most important recent developments? Include dates.`
-  );
-  await sleep(6000);
-
-  // 4. Open jobs merged with ownership
-  onStatus("Checking open roles & ownership...");
-  results.funding = await ws(
-    `Is ${co} publicly traded or privately held? Stock ticker if public, PE/VC firm if private. ` +
-    `Also search "${co} jobs hiring 2025" — list specific job titles and departments being hired.`
-  );
-  await sleep(6000);
-
-  // 5. Strategy + sentiment merged
-  onStatus("Analyzing strategy & sentiment...");
-  results.strategy = await ws(
-    `Search for two things about ${co}: ` +
-    `(1) Current strategic priorities, CEO quotes, recent product launches or acquisitions in 2024-2025. ` +
-    `(2) BBB Better Business Bureau rating at bbb.org, and any standout Glassdoor or Reddit sentiment.`
-  );
-  await sleep(8000);
-
-  onStatus("Building RIVER brief...");
-  return results;
-}
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 async function callAI(prompt){
@@ -576,27 +514,17 @@ async function callAI(prompt){
 async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, onStatus){
   const co  = member.company;
   const url = member.company_url || co;
-  const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // Key validation happens server-side in /api/claude
+  // ── Phase 1: Single web search for recent news + open roles ──────────────
+  onStatus("Searching for recent news & open roles...");
+  const recentIntel = await fetchRecentIntel(co, url);
+  await sleep(3000);
 
-  // ── Phase 1: Sequential targeted research ─────────────────────────────────
-  const R = await researchCompany(co, url, onStatus||((s)=>{}));
-
-  // Build a rich research brief to pass into synthesis
-  // Cap each section to keep total prompt under ~6K chars
-  const trim = (s,n) => s ? s.slice(0,n) : "";
-  const researchBlock = [
-    R.financials ? "FINANCIALS:\n"+trim(R.financials,800)   : "",
-    R.executives ? "EXECUTIVES:\n"+trim(R.executives,800)   : "",
-    R.news       ? "RECENT NEWS:\n"+trim(R.news,800)        : "",
-    R.funding    ? "FUNDING:\n"+trim(R.funding,600)         : "",
-    R.jobs       ? "OPEN ROLES:\n"+trim(R.jobs,800)         : "",
-    R.strategy   ? "STRATEGY:\n"+trim(R.strategy,600)       : "",
-    R.sentiment  ? "PUBLIC SENTIMENT:\n"+trim(R.sentiment,600) : "",
-  ].filter(Boolean).join("\n\n---\n\n");
-
-  const hasResearch = researchBlock.length > 100;
+  const researchBlock = recentIntel
+    ? "RECENT NEWS & OPEN ROLES (live web search):\n"+recentIntel
+    : "";
+  const hasResearch = recentIntel.length > 50;
 
   // ── Phase 2: Seller and product context ───────────────────────────────────
   const sellerCtx = sellerDocs.length>0
@@ -632,34 +560,32 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   });
 
   const prompt =
-    "You are a senior B2B sales strategist. Use the research to fill in every field of the JSON brief.\n\n" +
+    "You are a senior B2B sales strategist with deep knowledge of major companies. Build a complete pre-call brief.\n\n" +
     "PROSPECT: " + co + " | " + member.ind + " | " + url + "\n" +
     "ACV: " + (member.acv>0 ? "$"+member.acv.toLocaleString() : "Unknown") +
     " | Need: " + member.outcome + "\n" +
     (selectedCohort ? "Cohort: "+selectedCohort.name+" | " : "") +
     "Outcomes: " + selectedOutcomes.join(", ") + "\n" +
     sellerCtx + "\n" + (prodCtx ? prodCtx+"\n" : "") +
-    "\n== RESEARCH ==\n" +
-    (hasResearch ? researchBlock.slice(0,6000) : "No live research — use training knowledge about "+co+".") +
+    "\n== LIVE WEB SEARCH RESULTS ==\n" +
+    (hasResearch ? researchBlock.slice(0,3000) : "No live search results.") +
     "\n\n== INSTRUCTIONS ==\n" +
-    "Fill in every field using the research above. Use exact numbers and real names. Make confident inferences for gaps — never say not found or leave empty. " +
-    "Return ONLY the raw JSON object. No markdown fences, no explanation, no text before or after the JSON:\n\n" +
+    "You have strong training knowledge about " + co + " — use it confidently for: revenue, employees, executives, HQ, founded, ownership, competitors, BBB rating, strategic direction. " +
+    "Use the live web search results above for recent news and open roles. " +
+    "Never say not found or unknown — make confident, specific inferences based on what you know. " +
+    "Return ONLY the raw JSON object. No markdown, no explanation, start with { end with }:\n\n" +
     schema;
+
   onStatus("Building RIVER brief...");
-  await new Promise(r => setTimeout(r, 4000)); // let rate limit window reset
   const result = await callAI(prompt);
 
   if(!result){
-    const fallbackSnapshot = hasResearch
-      ? [R.financials,R.executives,R.news].filter(Boolean).join(" | ").slice(0,600)
-      : co+" — "+member.ind+". Research unavailable. Edit fields manually.";
     return {
-      ...BLANK_BRIEF, _error:"JSON synthesis failed — research text shown in snapshot.",
-      companySnapshot:fallbackSnapshot,
-      revenue: R.financials ? R.financials.slice(0,100) : "",
-      publicPrivate:"", employeeCount:"", headquarters:"", founded:"",
-      keyExecutives:[], recentHeadlines:[], openRoles:{summary:R.jobs||"",roles:[]},
-      publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:R.sentiment||"",sentimentSummary:""},
+      ...BLANK_BRIEF, _error:"JSON synthesis failed — check console (F12) for details.",
+      companySnapshot: recentIntel ? recentIntel.slice(0,600) : co+" — "+member.ind+". Edit fields manually.",
+      revenue:"", publicPrivate:"", employeeCount:"", headquarters:"", founded:"",
+      keyExecutives:[], recentHeadlines:[], openRoles:{summary:"",roles:[]},
+      publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:""},
     };
   }
 
@@ -1095,7 +1021,7 @@ export default function App(){
     setBrief(null);
     setBriefLoading(true);
     setBriefError("");
-    setBriefStatus("Starting research on "+member.company+"...");
+    setBriefStatus("Researching "+member.company+"...");
     setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
@@ -1523,12 +1449,9 @@ Return ONLY valid JSON:
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
                   {[
-                    "Company profile — size, revenue, employees, stage",
-                    "Recent news, product launches, announcements",
-                    "Funding, investors, and ownership",
-                    "Hiring signals and strategic priorities",
-                    "Building RIVER brief and solution mapping",
-                    "Checking BBB, reviews, and online sentiment...",
+                    "Searching for recent news & open roles...",
+                    "Building company profile from training knowledge...",
+                    "Mapping solutions and RIVER hypothesis...",
                   ].map((r,i)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:6,height:6,borderRadius:"50%",background:"#8B6F47",flexShrink:0,animation:`blink ${1.2+i*0.2}s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
