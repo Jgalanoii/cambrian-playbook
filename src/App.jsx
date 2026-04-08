@@ -604,7 +604,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
       entryPoints:"Real decision-maker names if found, or most likely titles given their stage. Note who controls budget vs. who influences vs. who uses.",
       route:"Challenger TAKE CONTROL: what is the fastest path to a committed next step? Don't wait — recommend one."
     },
-    openingAngle:"Challenger TEACH move: one sharp insight that reframes their thinking — something they probably haven't considered. NOT a question about their pain. A statement that makes them say 'I never thought of it that way.' Then a question to validate. Example format: 'Most [their industry] companies think [assumption]. What we've found is [reframe]. Is that resonating with what you're seeing?'",
+    openingAngle:"Cuban POWER MOMENT + Challenger TEACH: the one insight that makes everything click. NOT a generic discovery question — a reframe that makes them say 'I never thought of it that way.' Ground it in something specific from the research. Format: 'Most [industry] companies we talk to assume [X]. What we consistently find is [Y reframe]. Is that pattern showing up for you?' Make it feel like you already know their world.",
     watchOuts:["Specific risk 1 — competitor, internal politics, or deal blocker","Risk 2","Risk 3"],
     keyContacts:[
       {name:"Name or likely title",title:"Full title",initials:"AB",
@@ -618,11 +618,12 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   });
 
   const prompt =
-    "You are a master B2B sales strategist trained in Gap Selling, The Challenger Sale, and Carnegie's human relations principles.\n\n" +
-    "Build a pre-call RIVER brief for this prospect that embeds all three frameworks:\n" +
-    "- GAP SELLING (Keenan): Diagnose the current state with specifics. Quantify the impact. Define the future state they want. The gap IS the sale.\n" +
-    "- CHALLENGER SALE (Dixon/Adamson): Teach them something they don't know. Reframe their assumptions. Take control with a clear recommended next step. Relationship builders finish last.\n" +
-    "- CARNEGIE: Every exec angle, every opening line, every recommendation must be framed in terms of THEIR interests — what they care about, what makes them a hero, what keeps them up at night. Never sell the product. Sell the outcome they personally want.\n\n" +
+    "You are a master B2B sales strategist. Build a pre-call RIVER brief using these five frameworks:\\n\\n" +
+    "1. GAP SELLING (Keenan): Diagnose current state with specifics. Quantify impact — cost of inaction in dollars, time, or risk. Define the future state. The gap IS the sale.\\n" +
+    "2. CHALLENGER SALE (Dixon/Adamson): Teach something they don't know. Reframe assumptions. Create constructive tension. Take control — recommend a clear next step. Relationship builders finish last.\\n" +
+    "3. CARNEGIE: Frame everything in terms of THEIR interests. Make them the hero. See it from their point of view. Never sell the product — sell the outcome they personally want.\\n" +
+    "4. MARK CUBAN: Selling is helping, not convincing. Find the power moment that makes everything click. Sell the outcome not the product. Put the customer in a position to succeed. Be direct, fast, and real.\\n" +
+    "5. JOBS + WOMEN LEADERS (Blakely, Nooyi, Barra): Use the rule of three. Sell a vision of a better world, not features. Connect the dots they haven't connected. Be transparent. Frame with a bigger purpose. Resilience and specificity win.\\n\\n" +
     "PROSPECT: " + co + " | " + member.ind + " | " + url + "\n" +
     "ACV: " + (member.acv>0 ? "$"+member.acv.toLocaleString() : "Unknown") +
     " | Need: " + member.outcome + "\n" +
@@ -634,10 +635,12 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "\n\n== RULES ==\n" +
     "Use your training knowledge confidently for facts about major companies. Use live research for recent news and open roles. " +
     "Every field must be specific — no vague generalities. Quantify where possible. Never say not found or leave empty. " +
-    "The opening angle must be a Challenger reframe, not a discovery question. " +
-    "The RIVER hypothesis must diagnose the gap with real specifics, not surface-level pain. " +
-    "Exec angles must be Carnegie — about their world, not the product. " +
-    "Return ONLY raw JSON, no markdown, start with { end with }:\n\n" +
+    "Opening angle = Cuban power moment + Challenger reframe. Not a question. A statement that makes everything click. " +
+    "RIVER hypothesis = Gap Selling. Current state must be specific and untenable. Impact must be quantified. Vision must be vivid. " +
+    "Exec angles = Carnegie. Frame everything around what THEY care about and what makes them a hero internally. " +
+    "Seller opportunity = Jobs. Paint a vision of a better world, not a feature list. Make change feel inevitable. " +
+    "Rule of three = Jobs. Where possible structure insights in threes for memorability. " +
+    "Return ONLY raw JSON, no markdown, start with { end with }:\\n\\n" +
     schema;
 
   onStatus("Building RIVER brief...");
