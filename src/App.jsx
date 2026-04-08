@@ -521,26 +521,28 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const hasUrl = url.length > 3;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // ── Phase 1: Single web search for recent news + open roles ──────────────
-  onStatus("Searching for recent news & open roles...");
-  const recentIntel = hasUrl ? await fetchRecentIntel(co, url) : "";
+  // ── Phase 1: Kick off web search + build seller context IN PARALLEL ─────────
+  onStatus("🔍 Pulling intel on " + co + "...");
 
+  // Build seller context immediately (sync — no await needed)
+  const sellerCtx = sellerDocs.length>0
+    ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join(" | ")
+    : "Seller: "+sellerUrl;
+  const productPageCtx = productPageUrl
+    ? "\nProduct/Solution page: "+productPageUrl+" — reference this URL when mapping solutions."
+    : "";
+  const prodCtx = products.filter(p=>p.name.trim()).length>0
+    ? "Products: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" ("+p.description+")":"")).join("; ")
+    : "";
+
+  // Fire web search simultaneously — await result just before we need it
+  const intelPromise = hasUrl ? fetchRecentIntel(co, url) : Promise.resolve("");
+  const recentIntel = await intelPromise;
 
   const researchBlock = recentIntel
     ? "RECENT NEWS & OPEN ROLES (live web search):\n"+recentIntel
     : "";
   const hasResearch = recentIntel.length > 50;
-
-  // ── Phase 2: Seller and product context ───────────────────────────────────
-  const sellerCtx = sellerDocs.length>0
-    ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join(" | ")
-    : "Seller: "+sellerUrl;
-  const productPageCtx = productPageUrl
-    ? "\nProduct/Solution page: "+productPageUrl+" — reference this URL when mapping solutions to the prospect."
-    : "";
-  const prodCtx = products.filter(p=>p.name.trim()).length>0
-    ? "Products available: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" ("+p.description+")":"")).join("; ")
-    : "";
 
   // ── THREE-FRAMEWORK SYNTHESIS ──────────────────────────────────────────────
   // Gap Selling (Keenan): quantify the gap — current state → impact → future state
@@ -630,7 +632,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "Return ONLY raw JSON, no markdown, start with { end with }:\\n\\n" +
     schema;
 
-  onStatus("Building RIVER brief...");
+  onStatus("🧠 Synthesizing your RIVER brief...");
   const result = await callAI(prompt);
 
   if(!result){
@@ -761,7 +763,68 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
   URL.revokeObjectURL(url);
 }
 
-// ── PASSWORD GATE ────────────────────────────────────────────────────────────
+// ── BRIEF LOADER ─────────────────────────────────────────────────────────────
+const LOADER_QUIPS = [
+  "Bribing the hamsters to run faster...",
+  "Enhance. Enhance. Enhance.",
+  "Triangulating your path to yes...",
+  "Asking the data nicely...",
+  "Connecting dots you didn't know existed...",
+  "Warming up the closing engine...",
+  "Reading their annual report so you don't have to...",
+  "Finding the gap. Sharpening the angle.",
+  "Keenan would be proud. Probably.",
+  "Building your map to success...",
+  "Running OSINT. (Not really. Kind of.)",
+  "Teaching Claude about their fiscal year...",
+  "Calculating the cost of their inaction...",
+  "Channeling Challenger energy...",
+  "Making Carnegie proud, one exec angle at a time...",
+  "Cuban says selling is helping. We're helping.",
+  "Activating the RIVER hypothesis...",
+  "Cross-referencing 10 sources. Simultaneously. No big deal.",
+  "Your prospect doesn't know this is happening. Good.",
+  "Identifying the gap. Quantifying the impact. Closing the deal.",
+];
+
+function BriefLoader({ company, status }) {
+  const [quip, setQuip] = useState(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setQuip(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
+        setFade(true);
+      }, 300);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="load-box">
+      <div className="load-status">
+        <div className="load-spin"/>
+        <span>{status || "Starting..."}</span>
+      </div>
+      <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden",margin:"14px 0"}}>
+        <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
+      </div>
+      <div style={{
+        fontSize:12,color:"#8B6F47",textAlign:"center",fontStyle:"italic",
+        transition:"opacity 0.3s",opacity:fade?1:0,minHeight:20,
+      }}>
+        {quip}
+      </div>
+      <div style={{fontSize:10,color:"#bbb",textAlign:"center",marginTop:8}}>
+        Researching {company}...
+      </div>
+    </div>
+  );
+}
+
+// ── PASSWORD GATE ─────────────────────────────────────────────────────────────
 
 function PasswordGate({ onAuth }) {
   const [pw, setPw] = useState("");
@@ -1586,36 +1649,11 @@ Return ONLY valid JSON:
           <div className="page">
             <div className="page-title">RIVER Brief{selectedAccount?` — ${selectedAccount.company}`:""}</div>
             <div className="page-sub">
-              {briefLoading?"Searching the web for live company intelligence...":"All fields are editable — click any text to refine before your call."}
+              {briefLoading?"Hang tight — live research in progress.":"All fields are editable — click any text to refine before your call."}
             </div>
 
             {/* Loading — research progress */}
-            {briefLoading&&(
-              <div className="load-box">
-                <div className="load-status">
-                  <div className="load-spin"/>
-                  {briefStatus||"Starting research..."}
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
-                  {[
-                    "Searching for recent news & open roles...",
-                    "Building company profile from training knowledge...",
-                    "Mapping solutions and RIVER hypothesis...",
-                  ].map((r,i)=>(
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:6,height:6,borderRadius:"50%",background:"#8B6F47",flexShrink:0,animation:`blink ${1.2+i*0.2}s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
-                      <div style={{fontSize:11,color:"#555"}}>{r}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden"}}>
-                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
-                </div>
-                <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:10}}>
-                  Searching {selectedAccount?.company}... (20–40 seconds)
-                </div>
-              </div>
-            )}
+            {briefLoading&&<BriefLoader company={selectedAccount?.company} status={briefStatus}/>}
 
             {/* Brief content — renders as soon as brief is set (not null) */}
             {brief&&(
