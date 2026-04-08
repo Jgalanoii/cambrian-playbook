@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');`;
 
@@ -1088,6 +1088,31 @@ function EF({value,onChange,single=false,placeholder="Click to edit..."}){
 
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 
+// ── ERROR BOUNDARY — catches render errors so blank page never happens ────────
+class ErrorBoundary extends React.Component {
+  constructor(props){super(props);this.state={hasError:false,error:null};}
+  static getDerivedStateFromError(e){return{hasError:true,error:e};}
+  componentDidCatch(e,info){console.error("Render error:",e,info);}
+  render(){
+    if(this.state.hasError){
+      return(
+        <div style={{padding:40,maxWidth:600,margin:"60px auto",fontFamily:"DM Sans,sans-serif"}}>
+          <div style={{background:"#FDE8E8",border:"1px solid #9B2C2C",borderRadius:12,padding:24}}>
+            <div style={{fontSize:16,fontWeight:700,color:"#9B2C2C",marginBottom:8}}>Render Error</div>
+            <div style={{fontSize:13,color:"#555",marginBottom:16}}>{this.state.error?.message||"Unknown error"}</div>
+            <button onClick={()=>this.setState({hasError:false,error:null})}
+              style={{background:"#1a1a18",color:"#fff",border:"none",padding:"8px 16px",borderRadius:8,cursor:"pointer",fontSize:13}}>
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+
 export default function App(){
   const[authed,setAuthed]=useState(false);
   const[step,setStep]=useState(0);
@@ -2014,7 +2039,7 @@ Return ONLY valid JSON:
                   </div>
                   <div className="bb-body">
                     {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
-                      <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<(brief.solutionMapping.filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
+                      <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
                         <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                           <div style={{background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
                             {item.product}
@@ -2065,7 +2090,7 @@ Return ONLY valid JSON:
                     </div>
                     <div className="bb-body">
                       {(brief.keyContacts||[]).filter(c=>c?.name||c?.title).map((c,i)=>(
-                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<(brief.keyContacts.filter(x=>x?.name||x?.title).length-1)?"1px solid #F0EDE6":"none"}}>
+                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.keyContacts||[]).filter(x=>x?.name||x?.title).length-1)?"1px solid #F0EDE6":"none"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
                             <div style={{width:30,height:30,borderRadius:"50%",background:"#2E6B2E",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                               {c.initials||"?"}
@@ -2123,7 +2148,7 @@ Return ONLY valid JSON:
 
         {/* ── STEP 6: RIVER HYPOTHESIS ── */}
         {step===6&&(
-          <div className="page">
+          <ErrorBoundary><div className="page">
             <div className="page-title">RIVER Hypothesis — {selectedAccount?.company||"Account"}</div>
             <div className="page-sub">
               {riverHypoLoading
@@ -2232,7 +2257,7 @@ Return ONLY valid JSON:
                 Start In-Call →
               </button>
             </div>
-          </div>
+          </div></ErrorBoundary>
         )}
 
         {/* ── STEP 7: IN-CALL NAVIGATOR ── */}
