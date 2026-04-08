@@ -445,24 +445,31 @@ function extractJSON(text){
 // Claude searches the web AND returns structured JSON in a single API call.
 // This avoids the two-step coordination problem entirely.
 // ── WEB SEARCH: recent news + jobs only (1 call, max 3 searches) ──────────────
-async function fetchRecentIntel(co, url){
-  try{
-    const r = await fetch("/api/claude",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-haiku-4-5-20251001",
-        max_tokens:1000,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
-        messages:[{role:"user",content:
-          `Search for the most recent news about the company at domain "${url}" from 2024-2025. List 3-4 key headlines with dates. Include their current brand name if they have rebranded. Be concise.`
-        }],
-      }),
-    });
-    const d = await r.json();
-    if(d.error){console.warn("fetchRecentIntel error:",d.error.message);return "";}
-    return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,1200);
-  }catch(e){console.warn("fetchRecentIntel error:",e.message);return "";}
+// ── SAFE JSON PARSER ─────────────────────────────────────────────────────────
+function safeParseJSON(text){
+  try{return JSON.parse(text);}catch{}
+  const s=text.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
+  try{return JSON.parse(s);}catch{}
+  let out="",inStr=false,esc=false;
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    if(esc){out+=ch;esc=false;continue;}
+    if(ch==="\\"){out+=ch;esc=true;continue;}
+    if(inStr){
+      if(ch==="\n"){out+="\\n";continue;}
+      if(ch==="\r"){out+="\\r";continue;}
+      if(ch==='"'){
+        let j=i+1;
+        while(j<s.length){if("\n\r \t".includes(s[j])){j++;continue;}if(s[j]==="\\"){j+=2;continue;}break;}
+        const nxt=j<s.length?s[j]:"";
+        if(nxt===","||nxt==="}"||nxt==="]"||nxt===":"||nxt===""){inStr=false;out+=ch;}
+        else out+='\\"';
+        continue;
+      }
+      out+=ch;
+    }else{if(ch==='"'){inStr=true;out+=ch;}else out+=ch;}
+  }
+  try{return JSON.parse(out);}catch(e){console.error("JSON repair failed:",e.message);return null;}
 }
 
 
@@ -569,135 +576,72 @@ async function callAI(prompt){
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
 async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus){
   const co  = member.company;
-  const url = member.company_url || "";
-  const hasUrl = url.length > 3;
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const url = member.company_url || co;
 
-  // ── Phase 1: Kick off web search + build seller context IN PARALLEL ─────────
-  onStatus("🔍 Pulling intel on " + co + "...");
+  onStatus("Researching " + co + "...");
 
-  // Build seller context immediately (sync — no await needed)
+  // Seller context (sync — no await)
   const sellerCtx = sellerDocs.length>0
-    ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join(" | ")
-    : "Seller: "+sellerUrl;
-  const productPageCtx = productPageUrl
-    ? "\nProduct/Solution page: "+productPageUrl+" — reference this URL when mapping solutions."
-    : "";
+    ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join("\n")
+    : "Seller: "+sellerUrl+(productPageUrl ? " | Product page: "+productPageUrl : "");
   const prodCtx = products.filter(p=>p.name.trim()).length>0
-    ? "Products: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" ("+p.description+")":"")).join("; ")
+    ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description:"")).join("; ")
     : "";
 
-  // Fire web search simultaneously — await result just before we need it
-  const intelPromise = hasUrl ? fetchRecentIntel(co, url) : Promise.resolve("");
-  const recentIntel = await intelPromise;
-
-  const researchBlock = recentIntel
-    ? "RECENT NEWS & OPEN ROLES (live web search):\n"+recentIntel
-    : "";
-  const hasResearch = recentIntel.length > 50;
-
-  // ── THREE-FRAMEWORK SYNTHESIS ──────────────────────────────────────────────
-  // Gap Selling (Keenan): quantify the gap — current state → impact → future state
-  // Challenger Sale (Dixon/Adamson): teach something they didn't know, tailor to each exec, take control
-  // Carnegie: frame everything in terms of THEIR interests, not yours
-
-  const schema = JSON.stringify({
-    companySnapshot:"4-5 sentences: revenue, employees, public/private, HQ, what they do, one recent fact",
-    revenue:"e.g. $18.8B (FY2025)",
-    publicPrivate:"e.g. Public (NYSE:ARMK) or Private (PE-backed)",
-    employeeCount:"e.g. ~270,000 globally",
-    headquarters:"City, State",
-    founded:"Year",
-    keyExecutives:[
-      {name:"",title:"CEO",initials:"",background:"Prior roles, known priorities",angle:"Executive Perspective: what this person cares about most professionally and what drives their decisions"},
-      {name:"",title:"CHRO or CPO",initials:"",background:"",angle:"Executive Perspective: what success looks like for them personally — what makes them a hero to their team"},
-      {name:"",title:"CFO or COO",initials:"",background:"",angle:"Executive Perspective: how they evaluate decisions — ROI, risk reduction, or operational impact"}
-    ],
-    recentHeadlines:[
-      {headline:"Headline + month/year",relevance:"Challenger: teaching moment or reframe"},
-      {headline:"",relevance:""},
-      {headline:"",relevance:""}
-    ],
-    openRoles:{
-      summary:"Gap: what hiring signals about current pain and future direction",
-      roles:[
-        {title:"",dept:"",signal:"Strategic meaning"},
-        {title:"",dept:"",signal:""},
-        {title:"",dept:"",signal:""}
-      ]
-    },
-    publicSentiment:{bbbRating:"",bbbAccredited:true,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:"How a well-prepared seller uses this to demonstrate genuine understanding of the company"},
-    sellerSnapshot:"Challenger: unique insight seller brings",
-    fundingProfile:"",
-    strategicTheme:"Gap: current state → gap → future state in 2-3 sentences",
-    sellerOpportunity:"Jobs: vision of their better world. Why NOW. Make change feel inevitable.",
-    solutionMapping:[
-      {product:"",fit:"Gap: which gap this closes"},
-      {product:"",fit:""},
-      {product:"",fit:""}
-    ],
-    openingAngle:"Cuban POWER MOMENT: the insight that makes everything click. Format: Most [industry] companies assume [X]. What we find is [Y reframe]. Is that showing up for you?",
-    watchOuts:["Risk 1","Risk 2","Risk 3"],
-    keyContacts:[
-      {name:"",title:"",initials:"",angle:"Engagement angle: how to open a conversation framed around their specific priorities"},
-      {name:"",title:"",initials:"",angle:""}
-    ],
-    competitors:["",""],
-    growthSignals:["","",""],
-    recentSignals:["","",""],
-  });
-
+  // Single API call: Claude searches the web AND synthesizes the brief in one shot
+  // No sequential round-trips — search results feed directly into output
   const prompt =
-    "You are a master B2B sales strategist. Build a pre-call RIVER brief using these five frameworks:\\n\\n" +
-    "1. GAP SELLING (Keenan): Diagnose current state with specifics. Quantify impact — cost of inaction in dollars, time, or risk. Define the future state. The gap IS the sale.\\n" +
-    "2. CHALLENGER SALE (Dixon/Adamson): Teach something they don't know. Reframe assumptions. Create constructive tension. Take control — recommend a clear next step. Relationship builders finish last.\\n" +
-    "3. HUMAN RELATIONS: Frame everything in terms of THEIR interests. Make them the hero. See it from their point of view. See things from their angle before you speak. Never sell the product — sell the outcome they personally want.\\n" +
-    "4. MARK CUBAN: Selling is helping, not convincing. Find the power moment that makes everything click. Sell the outcome not the product. Put the customer in a position to succeed. Be direct, fast, and real.\\n" +
-    "5. JOBS + WOMEN LEADERS (Blakely, Nooyi, Barra): Use the rule of three. Sell a vision of a better world, not features. Connect the dots they haven't connected. Be transparent. Frame with a bigger purpose. Resilience and specificity win.\\n\\n" +
-    "PROSPECT: " + co + " | domain: " + (hasUrl ? url : "NOT PROVIDED — use company name to infer") + " | " + member.ind + "\n" +
-    (hasUrl
-      ? "IMPORTANT: Search by domain '" + url + "' not just company name — the company may have rebranded. Use the domain to confirm their current legal/brand name.\n"
-      : "WARNING: No domain provided. Research by company name '" + co + "' only — verify if they have rebranded before the call.\n"
-    ) +
-    "ACV: " + (member.acv>0 ? "$"+member.acv.toLocaleString() : "Unknown") +
-    " | Need: " + member.outcome + "\n" +
-    (selectedCohort ? "Cohort: "+selectedCohort.name+" | " : "") +
-    "Outcomes: " + selectedOutcomes.join(", ") + "\n" +
-    sellerCtx + (productPageCtx ? productPageCtx+"\n" : "") + "\n" + (prodCtx ? prodCtx+"\n" : "") +
-    "\n== LIVE RESEARCH ==\n" +
-    (hasResearch ? researchBlock.slice(0,1500) : "No live search — use training knowledge about "+co+".") +
-    "\n\n== RULES ==\n" +
-    "Use your training knowledge confidently for facts about major companies. Use live research for recent news and open roles. " +
-    "Be concise — each field should be 1-3 sentences max unless it is an array. Total response must stay under 3000 tokens. " +
-    "CRITICAL: Use only plain ASCII punctuation. No em-dashes, no curly quotes, no ellipsis characters. Use hyphens (-) not dashes. " +
-    "BREVITY: Keep each field to 2-3 sentences max. Arrays max 4 items. Total response must stay under 4000 tokens. " +
-    "Every field must be specific — no vague generalities. Quantify where possible. Never say not found or leave empty. " +
-    "Opening angle = Cuban power moment + Challenger reframe. Not a question. A statement that makes everything click. " +
-    "RIVER hypothesis = Gap Selling. Current state must be specific and untenable. Impact must be quantified. Vision must be vivid. " +
-    "Exec angles = Executive Perspectives. Frame everything around what THEY care about and what makes them a hero internally. " +
-    "Seller opportunity = Jobs. Paint a vision of a better world, not a feature list. Make change feel inevitable. " +
-    "Rule of three = Jobs. Where possible structure insights in threes for memorability. " +
-    "Return ONLY raw JSON, no markdown, start with { end with }:\\n\\n" +
-    schema;
+    `You are a senior B2B sales strategist. Search for "${co}" (domain: ${url}) then immediately write a pre-call brief as JSON.\n\n`+
+    `SELLER:\n${sellerCtx}${prodCtx}\n`+
+    `COHORT: ${selectedCohort?.name||""} | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | OUTCOMES: ${(selectedOutcomes||[]).join(", ")||"Not set"} | INDUSTRY: ${member.ind||""}\n\n`+
+    `Search for recent news, hiring, leadership, products, strategy. Then output ONLY raw JSON (no markdown, start with {):\n`+
+    `{"companySnapshot":"3 sentences: what they do, scale, one recent fact",`+
+    `"revenue":"e.g. $2.4B ARR","publicPrivate":"e.g. Public (NYSE:X)","employeeCount":"e.g. ~12,000","headquarters":"City, State","founded":"Year",`+
+    `"keyExecutives":[{"name":"","title":"CEO","initials":"","background":"","angle":"What drives their decisions and what makes them a hero"}],`+
+    `"recentHeadlines":[{"headline":"headline + date","relevance":"why it matters for the sale"}],`+
+    `"openRoles":{"summary":"what hiring signals about priorities","roles":[{"title":"","dept":"","signal":"strategic meaning"}]},`+
+    `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"","source":""}},`+
+    `"sellerSnapshot":"1-2 sentences on best-fit offerings",`+
+    `"fundingProfile":"stage + investors if found",`+
+    `"strategicTheme":"2 sentences on current direction",`+
+    `"sellerOpportunity":"2 sentences: why seller is well-positioned right now",`+
+    `"solutionMapping":[{"product":"best-fit product","fit":"specific reason"}],`+
+    `"openingAngle":"One sharp reframe — statement not question — that makes them say they never thought of it that way",`+
+    `"watchOuts":["risk 1","risk 2"],`+
+    `"keyContacts":[{"name":"","title":"","initials":"","angle":""}],`+
+    `"competitors":["competitor 1","competitor 2"],`+
+    `"recentSignals":["top buying signal","second","third"],`+
+    `"growthSignals":["signal 1","signal 2"]}`;
 
-  onStatus("🧠 Synthesizing your RIVER brief...");
-  const result = await callAI(prompt);
-
-  if(!result){
-    // Clean up raw research text for display — strip markdown, truncate
-    const cleanIntel = recentIntel
-      ? recentIntel.replace(/##\s*/g,"").replace(/\*\*/g,"").replace(/\n{3,}/g,"\n\n").trim().slice(0,500)
-      : "";
-    return {
-      ...BLANK_BRIEF, _error:"JSON synthesis failed — raw research shown. Try Regenerate.",
-      companySnapshot: cleanIntel || co+" — "+member.ind+". Click Regenerate to try again.",
-      revenue:"", publicPrivate:"", employeeCount:"", headquarters:"", founded:"",
-      keyExecutives:[], recentHeadlines:[], openRoles:{summary:"",roles:[]},
-      publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:""},
-    };
+  try{
+    const r = await fetch("/api/claude",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:3000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        messages:[
+          {role:"user",content:prompt},
+          {role:"assistant",content:"{"},
+        ],
+      }),
+    });
+    const d = await r.json();
+    if(d.error){
+      console.error("generateBrief error:",d.error);
+      return {...BLANK_BRIEF,_error:"API error: "+d.error.message,companySnapshot:co+" — "+member.ind};
+    }
+    const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    const text="{"+raw;
+    console.log("brief chars:",text.length,"preview:",text.slice(0,80));
+    const parsed=safeParseJSON(text);
+    if(parsed) return parsed;
+    return {...BLANK_BRIEF,_error:"JSON parse failed — raw research shown. Try Regenerate.",companySnapshot:co+" — "+member.ind+". Edit fields below."};
+  }catch(e){
+    console.error("generateBrief fetch error:",e);
+    return {...BLANK_BRIEF,_error:e.message,companySnapshot:co+" — "+member.ind};
   }
-
-  return result;
 }
 
 
