@@ -471,7 +471,7 @@ async function callAI(prompt){
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
+          model:"claude-haiku-4-5-20251001",
           max_tokens:5000,
           system:"You are a JSON-only API. You output raw JSON objects only. Never include markdown fences, explanations, or any text outside the JSON object. Start your response with { and end with }.",
           messages:[{role:"user",content:prompt}],
@@ -580,9 +580,13 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const result = await callAI(prompt);
 
   if(!result){
+    // Clean up raw research text for display — strip markdown, truncate
+    const cleanIntel = recentIntel
+      ? recentIntel.replace(/##\s*/g,"").replace(/\*\*/g,"").replace(/\n{3,}/g,"\n\n").trim().slice(0,500)
+      : "";
     return {
-      ...BLANK_BRIEF, _error:"JSON synthesis failed — check console (F12) for details.",
-      companySnapshot: recentIntel ? recentIntel.slice(0,600) : co+" — "+member.ind+". Edit fields manually.",
+      ...BLANK_BRIEF, _error:"JSON synthesis failed — raw research shown. Try Regenerate.",
+      companySnapshot: cleanIntel || co+" — "+member.ind+". Click Regenerate to try again.",
       revenue:"", publicPrivate:"", employeeCount:"", headquarters:"", founded:"",
       keyExecutives:[], recentHeadlines:[], openRoles:{summary:"",roles:[]},
       publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:""},
