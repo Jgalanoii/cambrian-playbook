@@ -720,7 +720,7 @@ function PasswordGate({ onAuth }) {
 
   // Password is baked into the bundle via Vite env var
   // Set VITE_APP_PASSWORD in Vercel environment variables
-  const CORRECT = import.meta.env.VITE_APP_PASSWORD || "cambrian2024";
+  const CORRECT = "Crow2026";
 
   // Check sessionStorage for existing auth
   useEffect(() => {
