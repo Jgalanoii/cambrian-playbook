@@ -21,8 +21,8 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .live-dot { width: 5px; height: 5px; border-radius: 50%; background: #2E6B2E; animation: blink 1.2s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
 .page { max-width: 880px; margin: 0 auto; padding: 36px 28px 72px; width: 100%; }
-.page-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 500; margin-bottom: 6px; }
-.page-sub { font-size: 14px; color: #777; line-height: 1.65; margin-bottom: 28px; max-width: 580px; }
+.page-title { font-family: 'Lora', serif; font-size: 28px; font-weight: 500; margin-bottom: 6px; }
+.page-sub { font-size: 15px; color: #777; line-height: 1.65; margin-bottom: 28px; max-width: 580px; }
 .setup-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 14px; padding: 32px; max-width: 520px; margin: 60px auto 0; }
 .setup-logo { font-family: 'Lora', serif; font-size: 22px; color: #1a1a18; margin-bottom: 4px; text-align: center; }
 .setup-logo span { color: #8B6F47; }
@@ -100,7 +100,7 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 14px; }
 .card-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; margin-bottom: 13px; }
 .field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-.field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
+.field-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
 .req { color: #8B6F47; }
 .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 input[type=text], select, textarea { width: 100%; padding: 8px 11px; border: 1px solid #E8E6DF; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #1a1a18; background: #FAFAF8; outline: none; transition: border-color 0.15s; resize: vertical; -webkit-appearance: none; }
@@ -156,8 +156,8 @@ input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; ba
 .bb { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
 .bb-hdr { display: flex; align-items: center; gap: 9px; padding: 11px 16px; background: #F8F6F1; border-bottom: 1px solid #E8E6DF; }
 .bb-icon { width: 26px; height: 26px; border-radius: 6px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 11px; font-weight: 600; color: #8B6F47; flex-shrink: 0; }
-.bb-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; }
-.bb-sub { font-size: 11px; color: #777; margin-top: 1px; }
+.bb-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; }
+.bb-sub { font-size: 12px; color: #777; margin-top: 1px; }
 .bb-body { padding: 14px 16px; }
 
 .solution-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
@@ -476,7 +476,7 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:3500,
+          max_tokens:5000,
           system:"You are a JSON API. Output only valid JSON.",
           messages:[
             {role:"user",content:prompt},
@@ -670,6 +670,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "Use your training knowledge confidently for facts about major companies. Use live research for recent news and open roles. " +
     "Be concise — each field should be 1-3 sentences max unless it is an array. Total response must stay under 3000 tokens. " +
     "CRITICAL: Use only plain ASCII punctuation. No em-dashes, no curly quotes, no ellipsis characters. Use hyphens (-) not dashes. " +
+    "BREVITY: Keep each field to 2-3 sentences max. Arrays max 4 items. Total response must stay under 4000 tokens. " +
     "Every field must be specific — no vague generalities. Quantify where possible. Never say not found or leave empty. " +
     "Opening angle = Cuban power moment + Challenger reframe. Not a question. A statement that makes everything click. " +
     "RIVER hypothesis = Gap Selling. Current state must be specific and untenable. Impact must be quantified. Vision must be vivid. " +
