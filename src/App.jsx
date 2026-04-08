@@ -509,23 +509,45 @@ async function callAI(prompt){
       // Try 1: direct parse
       try{return JSON.parse(candidate);}catch{}
 
-      // Try 2: sanitize — replace unicode punctuation with ASCII equivalents
+      // Try 2: sanitize unicode + control chars
       const sanitized = candidate
-        .replace(/[\u2018\u2019]/g,"'")   // curly single quotes → '
-        .replace(/[\u201C\u201D]/g,'"')   // curly double quotes → "
-        .replace(/[\u2013\u2014]/g,"-")   // en/em dashes → -
-        .replace(/[\u2026]/g,"...")         // ellipsis → ...
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,""); // control chars
+        .replace(/[\u2018\u2019]/g,"'")
+        .replace(/[\u201C\u201D]/g,'"')
+        .replace(/[\u2013\u2014]/g,"-")
+        .replace(/[\u2026]/g,"...")
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
+        .replace(/([^\\])\n/g,"$1\\n")
+        .replace(/([^\\])\r/g,"$1\\r")
+        .replace(/([^\\])\t/g,"$1\\t");
       try{return JSON.parse(sanitized);}catch{}
 
-      // Try 3: repair unescaped newlines/tabs inside strings
-      const repaired = sanitized
-        .replace(/([^\\])\n/g, '$1\\n')
-        .replace(/([^\\])\r/g, '$1\\r')
-        .replace(/([^\\])\t/g, '$1\\t');
-      try{return JSON.parse(repaired);}catch(e){
-        console.error("JSON parse failed after repair:", e.message, "at pos:", e.message.match(/\d+/)?.[0]);
-        console.log("Sample around error:", candidate.slice(Math.max(0,(parseInt(e.message.match(/\d+/)?.[0]||0)-100)), parseInt(e.message.match(/\d+/)?.[0]||0)+100));
+      // Try 3: character-by-character repair — escape interior unescaped double quotes
+      const repairJSON = s => {
+        let out="", inStr=false, esc=false;
+        for(let i=0;i<s.length;i++){
+          const ch=s[i];
+          if(esc){out+=ch;esc=false;continue;}
+          if(ch==="\\"){out+=ch;esc=true;continue;}
+          if(ch==='"'){
+            if(!inStr){inStr=true;out+=ch;}
+            else{
+              // Peek ahead past whitespace to determine if this is a closing quote
+              let j=i+1;
+              while(j<s.length&&" \n\r\t".includes(s[j]))j++;
+              const nxt=s[j];
+              if(nxt===":"||nxt===","||nxt==="}"||nxt==="]"||j>=s.length){
+                inStr=false;out+=ch; // legitimate closing quote
+              }else{
+                out+='\\"'; // interior quote — escape it
+              }
+            }
+          }else{out+=ch;}
+        }
+        return out;
+      };
+      try{return JSON.parse(repairJSON(sanitized));}catch(e){
+        console.error("JSON repair failed:",e.message,"pos:",e.message.match(/\d+/)?.[0]);
+        console.log("Sample:",sanitized.slice(Math.max(0,parseInt(e.message.match(/\d+/)?.[0]||0)-80),parseInt(e.message.match(/\d+/)?.[0]||0)+80));
       }
 
       return null;
