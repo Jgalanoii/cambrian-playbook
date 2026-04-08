@@ -591,28 +591,49 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   // Single API call: Claude searches the web AND synthesizes the brief in one shot
   // No sequential round-trips — search results feed directly into output
   // Keep field values SHORT — 1 sentence max per field, 2-3 items per array
+  // ── SALES FRAMEWORKS BAKED INTO SYNTHESIS ─────────────────────────────────
+  // Gap Selling (Keenan): current state specific + untenable, impact in $$/time/risk
+  // Challenger Sale (Dixon): Teach something new, Tailor to exec, Take Control of next step
+  // Carnegie: frame everything in THEIR interests — make them the hero
+  // Cuban: find the power moment, sell the outcome not the product
+  // Jobs: rule of three, vision of a better world, connect the dots
+
   const prompt =
-    `Search for "${co}" (domain: ${url}). Then return ONLY a JSON object — no markdown, start with {.\n\n`+
-    `SELLER: ${sellerCtx}${prodCtx}\n`+
-    `CONTEXT: ${selectedCohort?.name||""} cohort | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Industry: ${member.ind||""}\n\n`+
-    `Rules: ASCII punctuation only. Max 1 sentence per string field. Max 3 items per array. Under 3000 tokens total.\n\n`+
-    `{"companySnapshot":"1-2 sentences: what they do and scale",`+
-    `"revenue":"$X","publicPrivate":"Public (NYSE:X) or Private","employeeCount":"~X,000","headquarters":"City, State","founded":"YYYY",`+
+    `You are a senior B2B sales strategist and deal intelligence analyst. Search for "${co}" (domain: ${url}), then synthesize everything into a rich pre-call brief.\n\n`+
+    `SELLER CONTEXT:\n${sellerCtx}${prodCtx}\n\n`+
+    `DEAL CONTEXT: ${selectedCohort?.name||""} cohort | ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Industry: ${member.ind||""} | Outcomes: ${(selectedOutcomes||[]).join(", ")||"Not set"}\n\n`+
+    `SYNTHESIS RULES:\n`+
+    `- Use ONLY facts found in research. Reference real names, dates, numbers. If not found, say so.\n`+
+    `- ASCII punctuation only — no em-dashes, no curly quotes, use hyphens.\n`+
+    `- Apply Gap Selling: make current state specific and untenable, quantify impact in dollars/time/risk.\n`+
+    `- Apply Challenger Sale: each exec angle should teach something they don't know about their own situation.\n`+
+    `- Apply Carnegie: frame seller opportunity in terms of THEIR interests, not your features.\n`+
+    `- Hiring signals are critical — interpret what open roles reveal about strategic priorities.\n\n`+
+    `Return ONLY raw JSON, no markdown, start with {:\n`+
+    `{"companySnapshot":"3-4 sentences: what they do, revenue scale, employee count, HQ, recent strategic direction, one specific recent fact from research",`+
+    `"revenue":"e.g. $2.4B ARR (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT) or Private (PE-backed, Thoma Bravo)","employeeCount":"e.g. ~47,000 globally","headquarters":"City, State","founded":"Year",`+
     `"keyExecutives":[`+
-    `{"name":"real name if findable","title":"CEO","initials":"AB","background":"prior role or known strategic priority","angle":"Executive Perspective: what personally drives them — their career ambition, what makes them a hero to their board, what keeps them up at night"},`+
-    `{"name":"real name if findable","title":"CHRO or CPO or VP People","initials":"CD","background":"their HR/people focus","angle":"Executive Perspective: what success looks like for them — retention, culture wins, HR tech modernization, or workforce ROI"},`+
-    `{"name":"real name if findable","title":"CFO or COO","initials":"EF","background":"financial or operational focus","angle":"Executive Perspective: how they evaluate spend — ROI lens, risk reduction, operational efficiency"}],`+
-    `"recentHeadlines":[{"headline":"title + date","relevance":"1 sentence why it matters"}],`+
-    `"openRoles":{"summary":"1 sentence on hiring theme","roles":[{"title":"","dept":"","signal":""}]},`+
-    `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"","source":""}},`+
-    `"sellerSnapshot":"1 sentence on fit","fundingProfile":"stage + lead investor",`+
-    `"strategicTheme":"1-2 sentences","sellerOpportunity":"1-2 sentences on why now",`+
-    `"solutionMapping":[{"product":"","fit":"1 sentence"}],`+
-    `"openingAngle":"1 sentence reframe — statement not question",`+
-    `"watchOuts":["",""],`+
-    `"keyContacts":[{"name":"","title":"","initials":"","angle":""}],`+
-    `"competitors":["",""],`+
-    `"recentSignals":["","",""],"growthSignals":["",""]}`;
+    `{"name":"Real name from research","title":"CEO or President","initials":"AB","background":"Prior company or role + one known strategic priority or public statement","angle":"Executive Perspective (Challenger): what they care about most professionally, what makes them a hero to their board, what specific gap in their business keeps them up at night"},`+
+    `{"name":"Real name from research","title":"CHRO or CPO or Chief People Officer","initials":"CD","background":"Their people/HR focus and any known initiatives","angle":"Executive Perspective (Carnegie): frame success in their terms — retention rate improvement, culture transformation, HR tech ROI, or workforce productivity"},`+
+    `{"name":"Real name from research","title":"CFO or COO or CTO","initials":"EF","background":"Financial or operational background and priorities","angle":"Executive Perspective (Gap Selling): quantify the cost of the current gap — what inaction costs them in dollars, risk, or competitive position"}],`+
+    `"recentHeadlines":[`+
+    `{"headline":"Specific headline with publication and date","relevance":"Challenger teach moment: what this signals about their priorities or pain"},`+
+    `{"headline":"Specific headline with date","relevance":"Why this matters for the sale"},`+
+    `{"headline":"Specific headline with date","relevance":"Buying signal or risk indicator"},`+
+    `{"headline":"Specific headline with date","relevance":"Strategic context"}],`+
+    `"openRoles":{"summary":"Gap Selling interpretation: what the hiring pattern reveals about current pain and future direction — be specific about role clusters and what they signal","roles":[{"title":"Role title","dept":"Department","signal":"Strategic meaning of this hire"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
+    `"publicSentiment":{"bbbRating":"e.g. A+ or NR","standoutReview":{"text":"Most relevant employee or customer review found","source":"Glassdoor/BBB/Reddit/LinkedIn"}},`+
+    `"sellerSnapshot":"2-3 sentences on the seller's most relevant offerings for this specific prospect — tie to their stage, size, and signals",`+
+    `"fundingProfile":"Full funding picture: stage (Seed/Series A-D/PE-backed/Public), total raised if known, lead investors, most recent round with date and amount",`+
+    `"strategicTheme":"2-3 sentences synthesizing their current strategic direction — what are they building toward, what pressures are they navigating, what does all the evidence point to",`+
+    `"sellerOpportunity":"2-3 sentences on exactly why the seller is well-positioned right now — tie to their funding stage, growth signals, hiring patterns, and stated priorities. This is the why-you-why-now that opens doors.",`+
+    `"solutionMapping":[{"product":"Specific product or solution from seller","fit":"Specific reason grounded in research — tie to a real signal or pain found"},{"product":"Second best-fit offering","fit":"Specific fit rationale"},{"product":"Third option if applicable","fit":"Fit rationale"}],`+
+    `"openingAngle":"Cuban power moment: one sharp statement (not a question) that references something real from research and makes them say they never thought of it that way. Format: Most [industry] companies [assumption]. What the data shows is [reframe]. Is that showing up for you?",`+
+    `"watchOuts":["Specific risk grounded in research","Specific competitive or timing risk","Specific stakeholder or budget risk"],`+
+    `"keyContacts":[{"name":"Real name or most likely title","title":"Full title","initials":"AB","angle":"Specific engagement angle for this person"},{"name":"Second contact","title":"Full title","initials":"CD","angle":"Engagement angle"}],`+
+    `"competitors":["Most likely competitor 1","Competitor 2","Competitor 3"],`+
+    `"recentSignals":["Most actionable buying signal from all research","Second signal","Third signal"],`+
+    `"growthSignals":["Specific growth indicator with evidence","Second growth signal","Third signal"]}`;
 
   try{
     const r = await fetch("/api/claude",{
