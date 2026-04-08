@@ -1293,7 +1293,7 @@ export default function App(){
 
   const loadSample=()=>{
     const hdrs=Object.keys(SAMPLE_ROWS[0]);
-    setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName("sample_crm_export.csv");
+    setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName("sample_25_accounts.csv");
     const m={};hdrs.forEach(h=>m[h]=h);setMapping(m);
   };
   const onFile=file=>{if(!file)return;setFileName(file.name);const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);};
@@ -1764,7 +1764,7 @@ Return ONLY valid JSON:
                 </div>
                 <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
                 <div style={{textAlign:"center",marginBottom:22}}>
-                  <button className="btn btn-secondary" onClick={loadSample}>Load Sample Data (10 accounts)</button>
+                  <button className="btn btn-secondary" onClick={loadSample}>Load Sample Data (25 accounts)</button>
                 </div>
               </>
             )}
