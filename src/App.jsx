@@ -1124,6 +1124,8 @@ export default function App(){
   const[mapping,setMapping]=useState({company:"",industry:"",acv:"",lead_source:"",close_date:"",product:"",outcome:"",company_url:""});
   const[fileName,setFileName]=useState("");
   const[drag,setDrag]=useState(false);
+  const[importMode,setImportMode]=useState("csv"); // "csv" | "quick"
+  const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
   const[cohorts,setCohorts]=useState([]);
   const[selectedCohort,setSelectedCohort]=useState(null);
   const[selectedOutcomes,setSelectedOutcomes]=useState([]);
@@ -1266,6 +1268,28 @@ export default function App(){
   const onFile=file=>{if(!file)return;setFileName(file.name);const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);};
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);},[]);
   const goToCohorts=()=>{const b=buildCohorts(rows,mapping);setCohorts(b);setSelectedCohort(b[0]||null);setStep(2);};
+
+  const goToQuickBrief=()=>{
+    const entries=quickEntries.filter(e=>e.name.trim());
+    if(!entries.length) return;
+    // Build synthetic rows + a single cohort
+    const syntheticRows=entries.map(e=>({
+      company:e.name.trim(),
+      company_url:e.url.trim(),
+      industry:"",acv:"0",lead_source:"Quick Entry",outcome:"",
+    }));
+    const syntheticMapping={company:"company",industry:"industry",acv:"acv",lead_source:"lead_source",company_url:"company_url",outcome:"outcome",close_date:"",product:""};
+    setRows(syntheticRows);
+    setMapping(syntheticMapping);
+    setHeaders(["company","company_url","industry","acv","lead_source","outcome"]);
+    // Build a single cohort with all entries
+    const cohort={id:"qe",name:"Quick Entry",color:"#8B6F47",size:entries.length,pct:100,avgACV:0,topInd:[],topSrc:["Quick Entry"],topOut:[],
+      members:entries.map(e=>({company:e.name.trim(),company_url:e.url.trim(),ind:"",acv:0,src:"Quick Entry",outcome:""}))};
+    setCohorts([cohort]);
+    setSelectedCohort(cohort);
+    setSelectedOutcomes([]);
+    setStep(4); // Skip straight to account selection
+  };
   const goToOutcomes=()=>{if(selectedCohort){setSelectedOutcomes(selectedCohort.topOut.slice(0,2));setStep(3);}};
 
   const pickAccount=async member=>{
@@ -1626,20 +1650,94 @@ Return ONLY valid JSON:
         {/* ── STEP 1: IMPORT ── */}
         {step===1&&(
           <div className="page">
-            <div className="page-title">Import Customer Data</div>
-            <div className="page-sub">Upload a CRM export CSV. Include a <strong>company_url</strong> column for best research results.</div>
-            <div className={`upload-zone ${drag?"drag":""}`}
-              onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={handleDrop}
-              onClick={()=>fileRef.current.click()}>
-              <div className="upload-label">{fileName||"Drop your CSV file here"}</div>
-              <div className="upload-hint">{rows.length>0?`${rows.length} records loaded`:"Salesforce · HubSpot · Custom CRM"}</div>
-              <button className="btn btn-secondary" onClick={e=>{e.stopPropagation();fileRef.current.click();}}>Browse File</button>
-              <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>onFile(e.target.files[0])}/>
+            <div className="page-title">Add Your Accounts</div>
+            <div className="page-sub">Upload a CRM export, or type in companies directly — great for conferences, warm intros, or quick meeting prep.</div>
+
+            {/* Mode switcher */}
+            <div style={{display:"flex",gap:0,marginBottom:24,background:"#F0EDE6",borderRadius:10,padding:3,width:"fit-content"}}>
+              {[["csv","📂  Upload CSV"],["quick","⚡  Quick Entry"]].map(([mode,label])=>(
+                <button key={mode} onClick={()=>setImportMode(mode)}
+                  style={{padding:"8px 20px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
+                    background:importMode===mode?"#fff":"transparent",
+                    color:importMode===mode?"#1a1a18":"#999",
+                    boxShadow:importMode===mode?"0 1px 3px rgba(0,0,0,0.1)":"none",
+                    transition:"all 0.15s"}}>
+                  {label}
+                </button>
+              ))}
             </div>
-            <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:11}}>— or —</div>
-            <div style={{textAlign:"center",marginBottom:22}}>
-              <button className="btn btn-secondary" onClick={loadSample}>Load Sample Data (10 accounts)</button>
-            </div>
+
+            {/* ── CSV Upload Mode ── */}
+            {importMode==="csv"&&(
+              <>
+                <div className={`upload-zone ${drag?"drag":""}`}
+                  onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={handleDrop}
+                  onClick={()=>fileRef.current.click()}>
+                  <div className="upload-label">{fileName||"Drop your CSV file here"}</div>
+                  <div className="upload-hint">{rows.length>0?`${rows.length} records loaded`:"Salesforce · HubSpot · Custom CRM"}</div>
+                  <button className="btn btn-secondary" onClick={e=>{e.stopPropagation();fileRef.current.click();}}>Browse File</button>
+                  <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>onFile(e.target.files[0])}/>
+                </div>
+                <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
+                <div style={{textAlign:"center",marginBottom:22}}>
+                  <button className="btn btn-secondary" onClick={loadSample}>Load Sample Data (10 accounts)</button>
+                </div>
+              </>
+            )}
+
+            {/* ── Quick Entry Mode ── */}
+            {importMode==="quick"&&(
+              <div>
+                <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",gap:10,alignItems:"flex-start"}}>
+                  <div style={{fontSize:18,flexShrink:0}}>💡</div>
+                  <div style={{fontSize:13,color:"#555",lineHeight:1.6}}>
+                    <strong>Website URLs give the best results.</strong> Paste any of: company website, LinkedIn company page, or just type the company name.
+                    Name-only entries use training knowledge — great for well-known companies.
+                  </div>
+                </div>
+
+                {quickEntries.map((entry,i)=>(
+                  <div key={i} style={{display:"flex",gap:10,marginBottom:10,alignItems:"center"}}>
+                    <div style={{width:28,height:28,borderRadius:"50%",background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      {i+1}
+                    </div>
+                    <input type="text" value={entry.name} placeholder="Company name"
+                      style={{flex:"0 0 200px",fontSize:14}}
+                      onChange={e=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,name:e.target.value}:x))}
+                      onKeyDown={e=>{if(e.key==="Enter"&&i===quickEntries.length-1)setQuickEntries(p=>[...p,{name:"",url:""}]);}}
+                    />
+                    <input type="text" value={entry.url} placeholder="website.com or linkedin.com/company/..."
+                      style={{flex:1,fontSize:14,color:"#555"}}
+                      onChange={e=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
+                      onKeyDown={e=>{if(e.key==="Enter"&&i===quickEntries.length-1)setQuickEntries(p=>[...p,{name:"",url:""}]);}}
+                    />
+                    {quickEntries.length>1&&(
+                      <button onClick={()=>setQuickEntries(p=>p.filter((_,j)=>j!==i))}
+                        style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:18,padding:"0 4px",flexShrink:0}}>×</button>
+                    )}
+                  </div>
+                ))}
+
+                <div style={{display:"flex",gap:10,marginTop:4}}>
+                  <button className="btn btn-secondary btn-sm"
+                    onClick={()=>setQuickEntries(p=>[...p,{name:"",url:""}])}>
+                    + Add Company
+                  </button>
+                  <button className="btn btn-secondary btn-sm"
+                    onClick={()=>setQuickEntries([{name:"",url:""}])}>
+                    Clear All
+                  </button>
+                </div>
+
+                <div className="actions-row" style={{marginTop:24}}>
+                  <button className="btn btn-primary btn-lg"
+                    onClick={goToQuickBrief}
+                    disabled={!quickEntries.some(e=>e.name.trim())}>
+                    Research {quickEntries.filter(e=>e.name.trim()).length||""} {quickEntries.filter(e=>e.name.trim()).length===1?"Company":"Companies"} →
+                  </button>
+                </div>
+              </div>
+            )}
             {rows.length>0&&(
               <>
                 <div className="card">
