@@ -509,12 +509,17 @@ async function callAI(prompt){
       // Try 1: direct parse
       try{return JSON.parse(candidate);}catch{}
 
-      // Try 2: strip control characters
-      const cleaned = candidate.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
-      try{return JSON.parse(cleaned);}catch{}
+      // Try 2: sanitize — replace unicode punctuation with ASCII equivalents
+      const sanitized = candidate
+        .replace(/[\u2018\u2019]/g,"'")   // curly single quotes → '
+        .replace(/[\u201C\u201D]/g,'"')   // curly double quotes → "
+        .replace(/[\u2013\u2014]/g,"-")   // en/em dashes → -
+        .replace(/[\u2026]/g,"...")         // ellipsis → ...
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,""); // control chars
+      try{return JSON.parse(sanitized);}catch{}
 
-      // Try 3: aggressive repair — replace unescaped newlines/tabs inside strings
-      const repaired = cleaned
+      // Try 3: repair unescaped newlines/tabs inside strings
+      const repaired = sanitized
         .replace(/([^\\])\n/g, '$1\\n')
         .replace(/([^\\])\r/g, '$1\\r')
         .replace(/([^\\])\t/g, '$1\\t');
@@ -639,6 +644,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "\n\n== RULES ==\n" +
     "Use your training knowledge confidently for facts about major companies. Use live research for recent news and open roles. " +
     "Be concise — each field should be 1-3 sentences max unless it is an array. Total response must stay under 3000 tokens. " +
+    "CRITICAL: Use only plain ASCII punctuation. No em-dashes, no curly quotes, no ellipsis characters. Use hyphens (-) not dashes. " +
     "Every field must be specific — no vague generalities. Quantify where possible. Never say not found or leave empty. " +
     "Opening angle = Cuban power moment + Challenger reframe. Not a question. A statement that makes everything click. " +
     "RIVER hypothesis = Gap Selling. Current state must be specific and untenable. Impact must be quantified. Vision must be vivid. " +
