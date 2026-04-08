@@ -573,7 +573,7 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
   const sheets=[
     {name:"Account Overview",rows:[
       ["ACCOUNT OVERVIEW",""],["",""],
-      ["Company",co],["Industry",account?.ind||""],["Deal Size (ACV)",account?.acv>0?`$${account.acv.toLocaleString()}`:""],
+      ["Company",co],["Industry",account?.ind||""],["Deal Size (ACV)",account?.acv>0?"$"+account.acv.toLocaleString():""],
       ["Lead Source",account?.src||""],["Website",account?.company_url||""],
       ["Cohort",cohort?.name||""],["Target Outcomes",outcomes.join(", ")],
       ["Selling Org",sellerUrl||""],["Deal Confidence",`${confidence}%`],
@@ -720,7 +720,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount}){
           </div>
         </div>
         <div className="cohort-drill-right">
-          <div className="cohort-drill-acv">{cohort.avgACV>0?`$${(cohort.avgACV/1000).toFixed(0)}K avg`:""}</div>
+          <div className="cohort-drill-acv">{cohort.avgACV>0?"$"+(cohort.avgACV/1000).toFixed(0)+"K avg":""}</div>
           <div className="cohort-drill-toggle">{open?"▲ Collapse":"▼ Drill Down"}</div>
         </div>
       </div>
@@ -790,7 +790,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount}){
                 <tr key={i} onClick={()=>onPickAccount&&onPickAccount(m)}>
                   <td style={{fontWeight:600,color:"#1a1a18"}}>{m.company}</td>
                   <td>{m.ind}</td>
-                  <td style={{color:"#8B6F47",fontWeight:600,whiteSpace:"nowrap"}}>{m.acv>0?`$${m.acv.toLocaleString()}`:"—"}</td>
+                  <td style={{color:"#8B6F47",fontWeight:600,whiteSpace:"nowrap"}}>{m.acv>0?"$"+m.acv.toLocaleString():"—"}</td>
                   <td>{m.src}</td>
                   <td><span className="outcome-badge">{m.outcome.slice(0,40)}{m.outcome.length>40?"...":""}</span></td>
                   <td style={{textAlign:"right"}}><span style={{fontSize:10,color:"#8B6F47",fontWeight:600}}>Research →</span></td>
@@ -1005,7 +1005,7 @@ export default function App(){
     const result=await callAI(
       `Senior sales coach reviewing a RIVER framework discovery call.
 
-Company: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?`$${selectedAccount.acv.toLocaleString()}`:"Unknown"} | Confidence: ${confidence}%
+Company: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%
 Cohort: ${selectedCohort?.name} | Outcomes: ${selectedOutcomes.join(", ")}
 Solutions: ${(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ")||"Unknown"}
 
@@ -1301,7 +1301,7 @@ Return ONLY valid JSON:
                       <div key={i} className="pie-legend-item">
                         <div className="pie-legend-dot" style={{background:c.color}}/>
                         <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{c.name}</span>
-                        <span className="pie-legend-val">{c.avgACV>0?`$${(c.avgACV/1000).toFixed(0)}K`:""}</span>
+                        <span className="pie-legend-val">{c.avgACV>0?"$"+(c.avgACV/1000).toFixed(0)+"K":""}</span>
                       </div>
                     ))}
                   </div>
@@ -1379,7 +1379,7 @@ Return ONLY valid JSON:
                     <div className="account-meta">{m.ind} · {m.src} · {m.outcome}</div>
                     {m.company_url&&<div style={{fontSize:10,color:"#aaa",marginTop:1}}>{m.company_url}</div>}
                   </div>
-                  <div className="account-acv">{m.acv>0?`$${m.acv.toLocaleString()}`:"—"}</div>
+                  <div className="account-acv">{m.acv>0?"$"+m.acv.toLocaleString():"—"}</div>
                 </div>
               ))}
             </div>
@@ -1908,7 +1908,7 @@ Return ONLY valid JSON:
                 <div className="summary-grid">
                   <div className="stat-card"><div className="stat-num" style={{color:confColor(confidence)}}>{confidence}%</div><div className="stat-label">Deal Confidence</div></div>
                   <div className="stat-card"><div className="stat-num" style={{fontSize:14,paddingTop:4}}>{routeLabel}</div><div className="stat-label">Deal Route</div></div>
-                  <div className="stat-card"><div className="stat-num">{selectedAccount?.acv>0?`$${selectedAccount.acv.toLocaleString()}`:"—"}</div><div className="stat-label">Deal Size</div></div>
+                  <div className="stat-card"><div className="stat-num">{selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"—"}</div><div className="stat-label">Deal Size</div></div>
                 </div>
                 <div className={`route-card ${routeClass}`}>
                   <div className="route-lbl">Deal Route</div>
