@@ -516,7 +516,7 @@ async function callAI(prompt){
 }
 
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
-async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, onStatus){
+async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus){
   const co  = member.company;
   const url = member.company_url || co;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -535,50 +535,109 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const sellerCtx = sellerDocs.length>0
     ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join(" | ")
     : "Seller: "+sellerUrl;
+  const productPageCtx = productPageUrl
+    ? "\nProduct/Solution page: "+productPageUrl+" — reference this URL when mapping solutions to the prospect."
+    : "";
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "Products available: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" ("+p.description+")":"")).join("; ")
     : "";
 
+  // ── THREE-FRAMEWORK SYNTHESIS ──────────────────────────────────────────────
+  // Gap Selling (Keenan): quantify the gap — current state → impact → future state
+  // Challenger Sale (Dixon/Adamson): teach something they didn't know, tailor to each exec, take control
+  // Carnegie: frame everything in terms of THEIR interests, not yours
+
   const schema = JSON.stringify({
-    companySnapshot:"4-5 rich sentences: what they do, exact revenue, employee count, public/private, HQ, core customers, one notable recent fact",
-    revenue:"Exact figure e.g. $18.8B annual revenue FY2025",
-    publicPrivate:"Public (NYSE: ARMK) or Private (PE-backed by X)",
-    employeeCount:"e.g. ~270,000 employees globally",
+    companySnapshot:"4-5 rich sentences. Specific revenue ($XB), employee count (~XXX,000), public/private, HQ, what they do, who they serve, one recent notable fact. Write like a sharp analyst who did their homework.",
+    revenue:"Exact figure e.g. $18.8B annual revenue (FY2025)",
+    publicPrivate:"Public (NYSE: ARMK) or Private (PE-backed by X, founded YYYY)",
+    employeeCount:"Exact or approximate e.g. ~270,000 employees globally",
     headquarters:"City, State",
     founded:"Year",
-    keyExecutives:[{name:"Full name",title:"CEO",initials:"AB",background:"Prior role or fact",angle:"Why they care about our solution"},{name:"Name",title:"CFO",initials:"CD",background:"Background",angle:"Angle"},{name:"Name",title:"CHRO",initials:"EF",background:"Background",angle:"Angle"}],
-    recentHeadlines:[{headline:"Specific headline with month/year",relevance:"Why this matters for the sale"},{headline:"Headline 2",relevance:"Relevance"},{headline:"Headline 3",relevance:"Relevance"}],
-    openRoles:{summary:"2-3 sentences on hiring volume and what it signals",roles:[{title:"Job title",dept:"Department",signal:"Strategic meaning"},{title:"Title",dept:"Dept",signal:"Signal"},{title:"Title",dept:"Dept",signal:"Signal"},{title:"Title",dept:"Dept",signal:"Signal"}]},
-    publicSentiment:{bbbRating:"A+ or B or NR",bbbAccredited:true,standoutReview:{text:"Specific quote from a real review",source:"Glassdoor or Reddit",sentiment:"positive or negative"},onlineSentiment:"2-3 sentence summary of online themes",sentimentSummary:"One sharp sentence the sales rep can use"},
-    sellerSnapshot:"1-2 sentences on most relevant seller offerings",
-    fundingProfile:"Ownership, investors, funding history",
-    strategicTheme:"2-3 sentences on current direction and pressures",
-    sellerOpportunity:"2-3 sentences: exactly why seller is positioned to help NOW",
-    solutionMapping:[{product:"Product name",fit:"Why it fits"},{product:"Product",fit:"Why"},{product:"Product",fit:"Why"}],
-    riverHypothesis:{reality:"Current state specific to research",impact:"Cost of problem",vision:"What success looks like",entryPoints:"Decision-maker names or likely titles",route:"Fastest path to close"},
-    openingAngle:"One sharp question referencing a real finding",
-    watchOuts:["Risk 1","Risk 2","Risk 3"],
-    keyContacts:[{name:"Name",title:"Title",initials:"AB",angle:"Angle"},{name:"Name",title:"Title",initials:"CD",angle:"Angle"}],
+    keyExecutives:[
+      {name:"Full name",title:"CEO",initials:"AB",
+       background:"What shaped them — prior companies, known priorities, public quotes",
+       angle:"Carnegie angle: what does THIS person care about most professionally? Frame the conversation around their world, not the product"},
+      {name:"Full name",title:"CHRO or CPO",initials:"CD",
+       background:"Background and known focus areas",
+       angle:"Carnegie angle: what keeps them up at night? What would make them a hero internally?"},
+      {name:"Full name",title:"CFO or COO",initials:"EF",
+       background:"Background",
+       angle:"Carnegie angle: their specific lens — ROI, risk, operational efficiency?"}
+    ],
+    recentHeadlines:[
+      {headline:"Specific headline with month/year",
+       relevance:"Challenger angle: how does this create a teaching moment or reframe their thinking?"},
+      {headline:"Headline 2",relevance:"Sales relevance"},
+      {headline:"Headline 3",relevance:"Sales relevance"}
+    ],
+    openRoles:{
+      summary:"Gap Selling angle: what does their hiring pattern reveal about their current-state problems and where they want to go? Cluster roles into strategic themes — e.g. 15 open data roles = data infrastructure investment = potential opening for X.",
+      roles:[
+        {title:"Specific job title",dept:"Department",signal:"What this hire signals about their priorities and pain"},
+        {title:"Title",dept:"Dept",signal:"Signal"},
+        {title:"Title",dept:"Dept",signal:"Signal"},
+        {title:"Title",dept:"Dept",signal:"Signal"}
+      ]
+    },
+    publicSentiment:{
+      bbbRating:"A+ or B or NR",
+      bbbAccredited:true,
+      standoutReview:{text:"Specific quote from a real review",source:"Glassdoor or Reddit",sentiment:"positive or negative"},
+      onlineSentiment:"What employees and customers are actually saying — themes, not generalities",
+      sentimentSummary:"Carnegie angle: how can the rep use this to show genuine understanding of the company's world?"
+    },
+    sellerSnapshot:"1-2 sentences. Challenger angle: what unique insight can the seller bring that reframes how the prospect thinks about their problem?",
+    fundingProfile:"Ownership, investors, funding history or public market status",
+    strategicTheme:"Gap Selling angle: what is their current state, what future state are they driving toward, and what is standing in the gap? 2-3 sentences grounded in research.",
+    sellerOpportunity:"Challenger angle: why is NOW the right time, and what insight can the seller teach this specific company that they probably don't already know? 2-3 sentences. Make it sharp.",
+    solutionMapping:[
+      {product:"Exact product name",
+       fit:"Gap Selling fit: which specific gap does this product close? Tie to their current state pain and future state vision."},
+      {product:"Second product",fit:"Gap fit"},
+      {product:"Third product",fit:"Gap fit"}
+    ],
+    riverHypothesis:{
+      reality:"Gap Selling CURRENT STATE: be specific. Not 'they have manual processes' but 'their team spends X hours per week on Y, causing Z.' What is the untenable situation that makes change necessary?",
+      impact:"Gap Selling IMPACT: quantify the cost of inaction. Revenue lost, time wasted, risk exposure, competitive disadvantage. This is where urgency lives.",
+      vision:"Gap Selling FUTURE STATE: what does success look like in their words? What does the world look like when the gap is closed?",
+      entryPoints:"Real decision-maker names if found, or most likely titles given their stage. Note who controls budget vs. who influences vs. who uses.",
+      route:"Challenger TAKE CONTROL: what is the fastest path to a committed next step? Don't wait — recommend one."
+    },
+    openingAngle:"Challenger TEACH move: one sharp insight that reframes their thinking — something they probably haven't considered. NOT a question about their pain. A statement that makes them say 'I never thought of it that way.' Then a question to validate. Example format: 'Most [their industry] companies think [assumption]. What we've found is [reframe]. Is that resonating with what you're seeing?'",
+    watchOuts:["Specific risk 1 — competitor, internal politics, or deal blocker","Risk 2","Risk 3"],
+    keyContacts:[
+      {name:"Name or likely title",title:"Full title",initials:"AB",
+       angle:"Carnegie: frame the outreach entirely around what THEY care about. Reference something specific to their role and the company's situation."},
+      {name:"Name",title:"Title",initials:"CD",
+       angle:"Carnegie: their specific motivation and how to make them the hero of this story"}
+    ],
     competitors:["Competitor 1","Competitor 2"],
-    growthSignals:["Signal 1","Signal 2","Signal 3"],
-    recentSignals:["Top buying signal","Signal 2","Signal 3"],
+    growthSignals:["Specific signal with evidence","Signal 2","Signal 3"],
+    recentSignals:["Top buying signal — most actionable","Signal 2","Signal 3"],
   });
 
   const prompt =
-    "You are a senior B2B sales strategist with deep knowledge of major companies. Build a complete pre-call brief.\n\n" +
+    "You are a master B2B sales strategist trained in Gap Selling, The Challenger Sale, and Carnegie's human relations principles.\n\n" +
+    "Build a pre-call RIVER brief for this prospect that embeds all three frameworks:\n" +
+    "- GAP SELLING (Keenan): Diagnose the current state with specifics. Quantify the impact. Define the future state they want. The gap IS the sale.\n" +
+    "- CHALLENGER SALE (Dixon/Adamson): Teach them something they don't know. Reframe their assumptions. Take control with a clear recommended next step. Relationship builders finish last.\n" +
+    "- CARNEGIE: Every exec angle, every opening line, every recommendation must be framed in terms of THEIR interests — what they care about, what makes them a hero, what keeps them up at night. Never sell the product. Sell the outcome they personally want.\n\n" +
     "PROSPECT: " + co + " | " + member.ind + " | " + url + "\n" +
     "ACV: " + (member.acv>0 ? "$"+member.acv.toLocaleString() : "Unknown") +
     " | Need: " + member.outcome + "\n" +
     (selectedCohort ? "Cohort: "+selectedCohort.name+" | " : "") +
     "Outcomes: " + selectedOutcomes.join(", ") + "\n" +
-    sellerCtx + "\n" + (prodCtx ? prodCtx+"\n" : "") +
-    "\n== LIVE WEB SEARCH RESULTS ==\n" +
-    (hasResearch ? researchBlock.slice(0,1500) : "No live search results.") +
-    "\n\n== INSTRUCTIONS ==\n" +
-    "You have strong training knowledge about " + co + " — use it confidently for: revenue, employees, executives, HQ, founded, ownership, competitors, BBB rating, strategic direction. " +
-    "Use the live web search results above for recent news and open roles. " +
-    "Never say not found or unknown — make confident, specific inferences based on what you know. " +
-    "Return ONLY the raw JSON object. No markdown, no explanation, start with { end with }:\n\n" +
+    sellerCtx + (productPageCtx ? productPageCtx+"\n" : "") + "\n" + (prodCtx ? prodCtx+"\n" : "") +
+    "\n== LIVE RESEARCH ==\n" +
+    (hasResearch ? researchBlock.slice(0,1500) : "No live search — use training knowledge about "+co+".") +
+    "\n\n== RULES ==\n" +
+    "Use your training knowledge confidently for facts about major companies. Use live research for recent news and open roles. " +
+    "Every field must be specific — no vague generalities. Quantify where possible. Never say not found or leave empty. " +
+    "The opening angle must be a Challenger reframe, not a discovery question. " +
+    "The RIVER hypothesis must diagnose the gap with real specifics, not surface-level pain. " +
+    "Exec angles must be Carnegie — about their world, not the product. " +
+    "Return ONLY raw JSON, no markdown, start with { end with }:\n\n" +
     schema;
 
   onStatus("Building RIVER brief...");
@@ -934,6 +993,7 @@ export default function App(){
   const[step,setStep]=useState(0);
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
+  const[productPageUrl,setProductPageUrl]=useState("");
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
   const[mapping,setMapping]=useState({company:"",industry:"",acv:"",lead_source:"",close_date:"",product:"",outcome:"",company_url:""});
@@ -1092,7 +1152,7 @@ export default function App(){
 
     const result = await generateBrief(
       member, sellerUrl, sellerDocs, products,
-      selectedCohort, selectedOutcomes,
+      selectedCohort, selectedOutcomes, productPageUrl,
       (msg)=>setBriefStatus(msg)
     );
 
@@ -1187,7 +1247,12 @@ Return ONLY valid JSON:
                 {products.filter(p=>p.name.trim()).length} product{products.filter(p=>p.name.trim()).length>1?"s":""} loaded
               </span>
             )}
-            {sellerDocs.length>0&&(
+            {productPageUrl&&(
+            <span style={{fontSize:10,color:"#8B6F47",display:"flex",alignItems:"center",gap:4}}>
+              🔗 {productPageUrl.replace(/^https?:\/\//,"").slice(0,30)}
+            </span>
+          )}
+          {sellerDocs.length>0&&(
               <>{sellerDocs.map((d,i)=>(
                 <div key={i} className="session-doc-chip">📄 {d.label}</div>
               ))}</>
@@ -1267,6 +1332,30 @@ Return ONLY valid JSON:
                     <span>✓</span> {sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Claude will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.
                   </div>
                 )}
+              </div>
+
+              {/* Product Page URL */}
+              <div className="field-row" style={{marginBottom:0}}>
+                <div className="field-label" style={{marginBottom:8}}>
+                  Product / Solution Page URL
+                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional)</span>
+                </div>
+                <div className="setup-url-bar">
+                  <div className="setup-url-label">Product URL</div>
+                  <input
+                    className="setup-url-input"
+                    type="text"
+                    placeholder="e.g. yourcompany.com/products"
+                    value={productPageUrl}
+                    onChange={e=>setProductPageUrl(e.target.value)}
+                  />
+                  {productPageUrl&&(
+                    <span style={{fontSize:10,color:"#8B6F47",cursor:"pointer",flexShrink:0}} onClick={()=>setProductPageUrl("")}>✕</span>
+                  )}
+                </div>
+                <div style={{fontSize:11,color:"#aaa",marginTop:4}}>
+                  Claude will pull product and solution details directly from this page to inform solution mapping.
+                </div>
               </div>
 
               {/* Divider */}
