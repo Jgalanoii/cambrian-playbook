@@ -509,39 +509,50 @@ async function callAI(prompt){
       // Try 1: direct parse
       try{return JSON.parse(candidate);}catch{}
 
-      // Try 2: sanitize unicode + control chars
+      // Try 2: unicode-only sanitize (NOT newlines — those get handled per-context below)
       const sanitized = candidate
         .replace(/[\u2018\u2019]/g,"'")
         .replace(/[\u201C\u201D]/g,'"')
         .replace(/[\u2013\u2014]/g,"-")
         .replace(/[\u2026]/g,"...")
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
-        .replace(/([^\\])\n/g,"$1\\n")
-        .replace(/([^\\])\r/g,"$1\\r")
-        .replace(/([^\\])\t/g,"$1\\t");
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
       try{return JSON.parse(sanitized);}catch{}
 
-      // Try 3: character-by-character repair — escape interior unescaped double quotes
+      // Try 3: full character-by-character JSON repair
+      // - Escapes unescaped double quotes INSIDE string values
+      // - Escapes raw newlines only inside strings (structural newlines left as-is)
+      // - Correct peek-ahead that skips escape sequences
       const repairJSON = s => {
         let out="", inStr=false, esc=false;
         for(let i=0;i<s.length;i++){
           const ch=s[i];
           if(esc){out+=ch;esc=false;continue;}
           if(ch==="\\"){out+=ch;esc=true;continue;}
-          if(ch==='"'){
-            if(!inStr){inStr=true;out+=ch;}
-            else{
-              // Peek ahead past whitespace to determine if this is a closing quote
+          if(inStr){
+            if(ch==="\n"){out+="\\n";continue;} // raw newline inside string → escape
+            if(ch==="\r"){out+="\\r";continue;}
+            if(ch==="\t"){out+="\\t";continue;}
+            if(ch==='"'){
+              // Peek ahead past whitespace+escape-seqs to classify this quote
               let j=i+1;
-              while(j<s.length&&" \n\r\t".includes(s[j]))j++;
-              const nxt=s[j];
-              if(nxt===":"||nxt===","||nxt==="}"||nxt==="]"||j>=s.length){
+              while(j<s.length){
+                if(s[j]==="\n"||s[j]==="\r"||s[j]===" "||s[j]==="\t"){j++;continue;}
+                if(s[j]==="\\"){j+=2;continue;} // skip escape sequence
+                break;
+              }
+              const nxt=j<s.length?s[j]:"";
+              if(nxt===","||nxt==="}"||nxt==="]"||nxt===":"||nxt===""){
                 inStr=false;out+=ch; // legitimate closing quote
               }else{
                 out+='\\"'; // interior quote — escape it
               }
+              continue;
             }
-          }else{out+=ch;}
+            out+=ch;
+          }else{
+            if(ch==='"'){inStr=true;out+=ch;continue;}
+            out+=ch;
+          }
         }
         return out;
       };
