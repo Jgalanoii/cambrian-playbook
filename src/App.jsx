@@ -456,7 +456,7 @@ async function fetchRecentIntel(co, url){
         max_tokens:1000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
         messages:[{role:"user",content:
-          `Search for the most recent news about "${co}" from 2024-2025. List 3-4 key headlines with dates. Be concise.`
+          `Search for the most recent news about the company at domain "${url}" from 2024-2025. List 3-4 key headlines with dates. Include their current brand name if they have rebranded. Be concise.`
         }],
       }),
     });
@@ -518,13 +518,14 @@ async function callAI(prompt){
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
 async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus){
   const co  = member.company;
-  const url = member.company_url || co;
+  const url = member.company_url || "";
+  const hasUrl = url.length > 3;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ── Phase 1: Single web search for recent news + open roles ──────────────
   onStatus("Searching for recent news & open roles...");
-  const recentIntel = await fetchRecentIntel(co, url);
-  await sleep(3000);
+  const recentIntel = hasUrl ? await fetchRecentIntel(co, url) : "";
+  if(hasUrl) await sleep(3000);
 
   const researchBlock = recentIntel
     ? "RECENT NEWS & OPEN ROLES (live web search):\n"+recentIntel
@@ -624,7 +625,11 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "3. CARNEGIE: Frame everything in terms of THEIR interests. Make them the hero. See it from their point of view. Never sell the product — sell the outcome they personally want.\\n" +
     "4. MARK CUBAN: Selling is helping, not convincing. Find the power moment that makes everything click. Sell the outcome not the product. Put the customer in a position to succeed. Be direct, fast, and real.\\n" +
     "5. JOBS + WOMEN LEADERS (Blakely, Nooyi, Barra): Use the rule of three. Sell a vision of a better world, not features. Connect the dots they haven't connected. Be transparent. Frame with a bigger purpose. Resilience and specificity win.\\n\\n" +
-    "PROSPECT: " + co + " | " + member.ind + " | " + url + "\n" +
+    "PROSPECT: " + co + " | domain: " + (hasUrl ? url : "NOT PROVIDED — use company name to infer") + " | " + member.ind + "\n" +
+    (hasUrl
+      ? "IMPORTANT: Search by domain '" + url + "' not just company name — the company may have rebranded. Use the domain to confirm their current legal/brand name.\n"
+      : "WARNING: No domain provided. Research by company name '" + co + "' only — verify if they have rebranded before the call.\n"
+    ) +
     "ACV: " + (member.acv>0 ? "$"+member.acv.toLocaleString() : "Unknown") +
     " | Need: " + member.outcome + "\n" +
     (selectedCohort ? "Cohort: "+selectedCohort.name+" | " : "") +
@@ -1571,15 +1576,18 @@ Return ONLY valid JSON:
         {step===4&&selectedCohort&&(
           <div className="page">
             <div className="page-title">Select Account</div>
-            <div className="page-sub">Click an account to begin. Claude will automatically research and generate your RIVER brief — no form to fill out.</div>
+            <div className="page-sub">Click an account to generate your RIVER brief. Accounts with a domain (<code>company_url</code> in your CSV) get live web research — accounts without one rely on training knowledge only and may miss rebrands.</div>
             <div className="notice"><strong>Auto-research on click:</strong> Claude searches both your org's site and the prospect's site, maps your products to their needs, and builds the RIVER hypothesis. Typically takes 15–25 seconds.</div>
             <div className="account-list">
               {selectedCohort.members.map((m,i)=>(
-                <div key={i} className={`account-item ${selectedAccount===m?"selected":""}`} onClick={()=>pickAccount(m)}>
-                  <div>
+                <div key={i} className={`account-item ${selectedAccount===m?"selected":""} ${!m.company_url?"no-url":""}`} onClick={()=>pickAccount(m)}>
+                  <div style={{flex:1}}>
                     <div className="account-name">{m.company}</div>
                     <div className="account-meta">{m.ind} · {m.src} · {m.outcome}</div>
-                    {m.company_url&&<div style={{fontSize:10,color:"#aaa",marginTop:1}}>{m.company_url}</div>}
+                    {m.company_url
+                      ? <div style={{fontSize:10,color:"#aaa",marginTop:1}}>🌐 {m.company_url}</div>
+                      : <div style={{fontSize:10,color:"#c0392b",marginTop:2,fontWeight:600}}>⚠ No domain — research may be inaccurate. Add company_url to your CSV.</div>
+                    }
                   </div>
                   <div className="account-acv">{m.acv>0?"$"+m.acv.toLocaleString():"—"}</div>
                 </div>
