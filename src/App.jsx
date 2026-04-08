@@ -356,6 +356,7 @@ const BLANK_BRIEF = {
   keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
   competitors:[],recentSignals:["","",""],
   fundingProfile:"",strategicTheme:"",growthSignals:[],sellerOpportunity:"",
+  publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:""},
 };
 
 const RKEYS = ["reality","impact","vision","entryPoints","route"];
@@ -510,6 +511,15 @@ async function researchCompany(co, url, onStatus){
     `Search for CEO quotes, earnings call summaries, and press releases about their direction.`
   );
 
+  // 7. Public sentiment
+  onStatus("Checking public sentiment...");
+  results.sentiment = await ws(
+    `Search for public reputation about "${co}": ` +
+    `(1) BBB Better Business Bureau letter grade at bbb.org. ` +
+    `(2) One standout review from Glassdoor, Trustpilot, or Google Reviews. ` +
+    `(3) Reddit, LinkedIn, or social media sentiment — specific themes people mention.`
+  );
+
   onStatus("Building RIVER brief...");
   return results;
 }
@@ -562,6 +572,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     R.funding    ? "FUNDING/OWNERSHIP:\n"+R.funding : "",
     R.jobs       ? "OPEN ROLES & HIRING:\n"+R.jobs  : "",
     R.strategy   ? "STRATEGY & DIRECTION:\n"+R.strategy : "",
+    R.sentiment  ? "PUBLIC SENTIMENT:\n"+R.sentiment : "",
   ].filter(Boolean).join("\n\n---\n\n");
 
   const hasResearch = researchBlock.length > 100;
@@ -627,7 +638,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     '"keyContacts":[{"name":"Name","title":"Title","initials":"AB","angle":"Angle"},{"name":"Name","title":"Title","initials":"CD","angle":"Angle"}],' +
     '"competitors":["Competitor 1","Competitor 2"],' +
     '"growthSignals":["Signal 1","Signal 2","Signal 3"],' +
-    '"recentSignals":["Top buying signal","Signal 2","Signal 3"]}';
+    '"recentSignals":["Top buying signal","Signal 2","Signal 3"],"publicSentiment":{"bbbRating":"e.g. A+ or NR","bbbAccredited":true,"standoutReview":{"text":"Specific quote from a real review","source":"Glassdoor or Reddit or BBB","sentiment":"positive or negative"},"onlineSentiment":"2-3 sentences on Reddit LinkedIn Glassdoor themes","sentimentSummary":"One actionable sentence for the sales rep}}';
 
   const result = await callAI(prompt);
 
@@ -641,6 +652,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
       revenue: R.financials ? R.financials.slice(0,100) : "",
       publicPrivate:"", employeeCount:"", headquarters:"", founded:"",
       keyExecutives:[], recentHeadlines:[], openRoles:{summary:R.jobs||"",roles:[]},
+      publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:R.sentiment||"",sentimentSummary:""},
     };
   }
 
@@ -1509,6 +1521,7 @@ Return ONLY valid JSON:
                     "Funding, investors, and ownership",
                     "Hiring signals and strategic priorities",
                     "Building RIVER brief and solution mapping",
+                    "Checking BBB, reviews, and online sentiment...",
                   ].map((r,i)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:6,height:6,borderRadius:"50%",background:"#8B6F47",flexShrink:0,animation:`blink ${1.2+i*0.2}s ease-in-out infinite`,animationDelay:`${i*0.3}s`}}/>
@@ -1671,6 +1684,57 @@ Return ONLY valid JSON:
                       )}
                       {(!brief.openRoles.roles||!brief.openRoles.roles.filter(r=>r?.title).length)&&(
                         <div style={{fontSize:12,color:"#aaa",fontStyle:"italic"}}>No open roles found — click to regenerate or edit manually.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Public Sentiment */}
+                {brief.publicSentiment&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:11}}>💬</div>
+                      <div><div className="bb-title">Public Sentiment</div><div className="bb-sub">BBB · reviews · Reddit / LinkedIn / social</div></div>
+                    </div>
+                    <div className="bb-body">
+                      <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",alignItems:"flex-start"}}>
+                        <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:8,padding:"12px 16px",textAlign:"center",minWidth:100,flexShrink:0}}>
+                          <div className="field-label" style={{marginBottom:6,display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                            <span style={{background:"#1B3A6B",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>BBB</span>Rating
+                          </div>
+                          <div style={{fontFamily:"Lora,serif",fontSize:28,fontWeight:600,lineHeight:1,color:
+                            !brief.publicSentiment.bbbRating?"#ccc":
+                            brief.publicSentiment.bbbRating.startsWith("A")?"#2E6B2E":
+                            brief.publicSentiment.bbbRating.startsWith("B")?"#BA7517":"#9B2C2C"}}>
+                            {brief.publicSentiment.bbbRating||"—"}
+                          </div>
+                          {brief.publicSentiment.bbbAccredited!==null&&(
+                            <div style={{fontSize:9,marginTop:5,fontWeight:700,color:brief.publicSentiment.bbbAccredited?"#2E6B2E":"#9B2C2C"}}>
+                              {brief.publicSentiment.bbbAccredited?"✓ Accredited":"✗ Not Accredited"}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{flex:1,minWidth:180}}>
+                          <div className="field-label" style={{marginBottom:5}}>Online Sentiment</div>
+                          <EF value={brief.publicSentiment.onlineSentiment||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.onlineSentiment=v;})} placeholder="What customers, employees, and communities are saying..."/>
+                        </div>
+                      </div>
+                      {brief.publicSentiment.standoutReview?.text&&(
+                        <div style={{marginBottom:12}}>
+                          <div className="field-label" style={{marginBottom:6}}>Standout Review</div>
+                          <div style={{background:brief.publicSentiment.standoutReview.sentiment==="positive"?"#EEF5EE":"#FDE8E8",borderLeft:"3px solid "+(brief.publicSentiment.standoutReview.sentiment==="positive"?"#2E6B2E":"#9B2C2C"),borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
+                            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:brief.publicSentiment.standoutReview.sentiment==="positive"?"#2E6B2E":"#9B2C2C"}}>
+                              {brief.publicSentiment.standoutReview.sentiment==="positive"?"👍 Positive":"👎 Negative"}{brief.publicSentiment.standoutReview.source?" · "+brief.publicSentiment.standoutReview.source:""}
+                            </div>
+                            <div style={{fontSize:12,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{brief.publicSentiment.standoutReview.text}"</div>
+                          </div>
+                        </div>
+                      )}
+                      {brief.publicSentiment.sentimentSummary&&(
+                        <div style={{background:"#F8F6F1",borderLeft:"3px solid #8B6F47",padding:"9px 12px",borderRadius:"0 7px 7px 0"}}>
+                          <div className="field-label" style={{marginBottom:4}}>Sales Angle</div>
+                          <EF value={brief.publicSentiment.sentimentSummary||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.sentimentSummary=v;})} single placeholder="How to reference this in your conversation..."/>
+                        </div>
                       )}
                     </div>
                   </div>
