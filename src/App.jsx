@@ -531,21 +531,34 @@ async function callAI(prompt){
     const r = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,messages:[{role:"user",content:prompt}]}),
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:5000,
+        system:"You are a JSON-only API. You output raw JSON objects only. Never include markdown fences, explanations, or any text outside the JSON object. Start your response with { and end with }.",
+        messages:[{role:"user",content:prompt}],
+      }),
     });
     const d = await r.json();
-    if(d.error){console.error("callAI:",d.error);return null;}
+    if(d.error){console.error("callAI error:",d.error);return null;}
     const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    // Extract JSON — strip any markdown, find the outermost { }
-    const stripped = text.replace(/^[\s\S]*?(?=\{)/,"").replace(/\}[^}]*$/,"}").trim();
-    try{return JSON.parse(stripped);}catch{
-      const m=text.match(/\{[\s\S]*\}/);
-      try{return m?JSON.parse(m[0]):null;}catch{
-        console.error("JSON parse failed. Text preview:",text.slice(0,300));
-        return null;
+    console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
+    if(!text) return null;
+    // Try 1: direct parse (system prompt should give us clean JSON)
+    try{return JSON.parse(text);}catch{}
+    // Try 2: strip any accidental markdown fences
+    const fence = String.fromCharCode(96,96,96);
+    const clean = text.replace(new RegExp("^"+fence+"json\\s*",""),"").replace(new RegExp("^"+fence+"\\s*",""),"").replace(new RegExp(fence+"\\s*$"),"").trim();
+    try{return JSON.parse(clean);}catch{}
+    // Try 3: find first { to last }
+    const first = text.indexOf("{");
+    const last  = text.lastIndexOf("}");
+    if(first>=0 && last>first){
+      try{return JSON.parse(text.slice(first,last+1));}catch(e){
+        console.error("JSON parse failed:", e.message, "\nText sample:", text.slice(0,500));
       }
     }
-  }catch(e){console.error("callAI:",e);return null;}
+    return null;
+  }catch(e){console.error("callAI fetch error:",e);return null;}
 }
 
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
@@ -565,14 +578,16 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const R = await researchCompany(co, url, onStatus||((s)=>{}));
 
   // Build a rich research brief to pass into synthesis
+  // Cap each section to keep total prompt under ~6K chars
+  const trim = (s,n) => s ? s.slice(0,n) : "";
   const researchBlock = [
-    R.financials ? "FINANCIALS:\n"+R.financials : "",
-    R.executives ? "EXECUTIVES:\n"+R.executives : "",
-    R.news       ? "RECENT NEWS:\n"+R.news       : "",
-    R.funding    ? "FUNDING/OWNERSHIP:\n"+R.funding : "",
-    R.jobs       ? "OPEN ROLES & HIRING:\n"+R.jobs  : "",
-    R.strategy   ? "STRATEGY & DIRECTION:\n"+R.strategy : "",
-    R.sentiment  ? "PUBLIC SENTIMENT:\n"+R.sentiment : "",
+    R.financials ? "FINANCIALS:\n"+trim(R.financials,800)   : "",
+    R.executives ? "EXECUTIVES:\n"+trim(R.executives,800)   : "",
+    R.news       ? "RECENT NEWS:\n"+trim(R.news,800)        : "",
+    R.funding    ? "FUNDING:\n"+trim(R.funding,600)         : "",
+    R.jobs       ? "OPEN ROLES:\n"+trim(R.jobs,800)         : "",
+    R.strategy   ? "STRATEGY:\n"+trim(R.strategy,600)       : "",
+    R.sentiment  ? "PUBLIC SENTIMENT:\n"+trim(R.sentiment,600) : "",
   ].filter(Boolean).join("\n\n---\n\n");
 
   const hasResearch = researchBlock.length > 100;
@@ -582,64 +597,48 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join(" | ")
     : "Seller: "+sellerUrl;
   const prodCtx = products.filter(p=>p.name.trim()).length>0
-    ? "Available products: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" ("+p.description+")":"")).join("; ")
+    ? "Products available: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" ("+p.description+")":"")).join("; ")
     : "";
 
-  // ── Phase 3: Synthesize into structured JSON ──────────────────────────────
-  const prompt =
-    "You are a senior B2B sales strategist. Use the research below to build a complete pre-call brief.\n\n" +
-    "PROSPECT: "+co+" | "+member.ind+" | "+url+"\n" +
-    "ACV: "+(member.acv>0?"$"+member.acv.toLocaleString():"Unknown")+" | Need: "+member.outcome+"\n" +
-    (selectedCohort?"Cohort: "+selectedCohort.name+" | ":"") +
-    "Outcomes: "+selectedOutcomes.join(", ")+"\n" +
-    sellerCtx+"\n" + (prodCtx?prodCtx+"\n":"") +
-    "\n== RESEARCH ==\n" +
-    (hasResearch ? researchBlock : "No live research — use your training knowledge about "+co+".") +
-    "\n\n== INSTRUCTIONS ==\n" +
-    "Fill in every JSON field. Use EXACT numbers and names from research. " +
-    "For any gaps, make confident inferences — never say not found or leave empty. " +
-    "Return ONLY raw JSON, no markdown, no code fences.\n\n" +
-    '{"companySnapshot":"4-5 rich sentences covering what they do, exact revenue ($XB), exact employee count (~XXX,000), public/private status, HQ, core customers, and one specific recent development",' +
-    '"revenue":"Exact figure e.g. $18.8B annual revenue (FY2025) or ~$400M ARR",' +
-    '"publicPrivate":"Public (NYSE: ARMK) or Private (PE-backed by X, founded YYYY)",' +
-    '"employeeCount":"Exact or approximate e.g. ~270,000 employees globally",' +
-    '"headquarters":"City, State/Country",' +
-    '"founded":"Year founded",' +
-    '"keyExecutives":[' +
-      '{"name":"Full name","title":"CEO","initials":"AB","background":"Prior experience or notable fact","angle":"Why they care about our solution"},' +
-      '{"name":"Full name","title":"CFO","initials":"CD","background":"Background","angle":"Angle"},' +
-      '{"name":"Full name","title":"CHRO or CPO","initials":"EF","background":"Background","angle":"Angle"}' +
-    '],' +
-    '"recentHeadlines":[' +
-      '{"headline":"Specific headline with month/year","relevance":"Why this matters for the sale"},' +
-      '{"headline":"Headline","relevance":"Relevance"},' +
-      '{"headline":"Headline","relevance":"Relevance"},' +
-      '{"headline":"Headline","relevance":"Relevance"}' +
-    '],' +
-    '"openRoles":{"summary":"2-3 sentences on hiring volume and what it signals strategically","roles":[' +
-      '{"title":"Specific job title","dept":"Department","signal":"What this hire signals"},' +
-      '{"title":"Job title","dept":"Dept","signal":"Signal"},' +
-      '{"title":"Job title","dept":"Dept","signal":"Signal"},' +
-      '{"title":"Job title","dept":"Dept","signal":"Signal"},' +
-      '{"title":"Job title","dept":"Dept","signal":"Signal"}' +
-    ']},' +
-    '"sellerSnapshot":"1-2 sentences on most relevant seller offerings for this prospect",' +
-    '"fundingProfile":"Ownership type, investors, funding history, or public market details",' +
-    '"strategicTheme":"2-3 sentences on current direction, what pressures they face, what they are building toward",' +
-    '"sellerOpportunity":"2-3 sentences: exactly why seller is positioned to help THIS company RIGHT NOW — tie to their specific situation",' +
-    '"solutionMapping":[' +
-      '{"product":"Exact product name","fit":"Specific reason grounded in research"},' +
-      '{"product":"Product","fit":"Reason"},' +
-      '{"product":"Product","fit":"Reason"}' +
-    '],' +
-    '"riverHypothesis":{"reality":"Current state specific to research","impact":"Cost of problem in real terms","vision":"What success looks like","entryPoints":"Real decision-maker names or most likely titles","route":"Fastest path based on their stage"},' +
-    '"openingAngle":"One sharp question that references a real finding — makes them say how did you know that",' +
-    '"watchOuts":["Specific risk 1","Risk 2","Risk 3"],' +
-    '"keyContacts":[{"name":"Name","title":"Title","initials":"AB","angle":"Angle"},{"name":"Name","title":"Title","initials":"CD","angle":"Angle"}],' +
-    '"competitors":["Competitor 1","Competitor 2"],' +
-    '"growthSignals":["Signal 1","Signal 2","Signal 3"],' +
-    '"recentSignals":["Top buying signal","Signal 2","Signal 3"],"publicSentiment":{"bbbRating":"e.g. A+ or NR","bbbAccredited":true,"standoutReview":{"text":"Specific quote from a real review","source":"Glassdoor or Reddit or BBB","sentiment":"positive or negative"},"onlineSentiment":"2-3 sentences on Reddit LinkedIn Glassdoor themes","sentimentSummary":"One actionable sentence for the sales rep}}';
+  const schema = JSON.stringify({
+    companySnapshot:"4-5 rich sentences: what they do, exact revenue, employee count, public/private, HQ, core customers, one notable recent fact",
+    revenue:"Exact figure e.g. $18.8B annual revenue FY2025",
+    publicPrivate:"Public (NYSE: ARMK) or Private (PE-backed by X)",
+    employeeCount:"e.g. ~270,000 employees globally",
+    headquarters:"City, State",
+    founded:"Year",
+    keyExecutives:[{name:"Full name",title:"CEO",initials:"AB",background:"Prior role or fact",angle:"Why they care about our solution"},{name:"Name",title:"CFO",initials:"CD",background:"Background",angle:"Angle"},{name:"Name",title:"CHRO",initials:"EF",background:"Background",angle:"Angle"}],
+    recentHeadlines:[{headline:"Specific headline with month/year",relevance:"Why this matters for the sale"},{headline:"Headline 2",relevance:"Relevance"},{headline:"Headline 3",relevance:"Relevance"}],
+    openRoles:{summary:"2-3 sentences on hiring volume and what it signals",roles:[{title:"Job title",dept:"Department",signal:"Strategic meaning"},{title:"Title",dept:"Dept",signal:"Signal"},{title:"Title",dept:"Dept",signal:"Signal"},{title:"Title",dept:"Dept",signal:"Signal"}]},
+    publicSentiment:{bbbRating:"A+ or B or NR",bbbAccredited:true,standoutReview:{text:"Specific quote from a real review",source:"Glassdoor or Reddit",sentiment:"positive or negative"},onlineSentiment:"2-3 sentence summary of online themes",sentimentSummary:"One sharp sentence the sales rep can use"},
+    sellerSnapshot:"1-2 sentences on most relevant seller offerings",
+    fundingProfile:"Ownership, investors, funding history",
+    strategicTheme:"2-3 sentences on current direction and pressures",
+    sellerOpportunity:"2-3 sentences: exactly why seller is positioned to help NOW",
+    solutionMapping:[{product:"Product name",fit:"Why it fits"},{product:"Product",fit:"Why"},{product:"Product",fit:"Why"}],
+    riverHypothesis:{reality:"Current state specific to research",impact:"Cost of problem",vision:"What success looks like",entryPoints:"Decision-maker names or likely titles",route:"Fastest path to close"},
+    openingAngle:"One sharp question referencing a real finding",
+    watchOuts:["Risk 1","Risk 2","Risk 3"],
+    keyContacts:[{name:"Name",title:"Title",initials:"AB",angle:"Angle"},{name:"Name",title:"Title",initials:"CD",angle:"Angle"}],
+    competitors:["Competitor 1","Competitor 2"],
+    growthSignals:["Signal 1","Signal 2","Signal 3"],
+    recentSignals:["Top buying signal","Signal 2","Signal 3"],
+  });
 
+  const prompt =
+    "You are a senior B2B sales strategist. Use the research to fill in every field of the JSON brief.\n\n" +
+    "PROSPECT: " + co + " | " + member.ind + " | " + url + "\n" +
+    "ACV: " + (member.acv>0 ? "$"+member.acv.toLocaleString() : "Unknown") +
+    " | Need: " + member.outcome + "\n" +
+    (selectedCohort ? "Cohort: "+selectedCohort.name+" | " : "") +
+    "Outcomes: " + selectedOutcomes.join(", ") + "\n" +
+    sellerCtx + "\n" + (prodCtx ? prodCtx+"\n" : "") +
+    "\n== RESEARCH ==\n" +
+    (hasResearch ? researchBlock.slice(0,6000) : "No live research — use training knowledge about "+co+".") +
+    "\n\n== INSTRUCTIONS ==\n" +
+    "Fill in every field using the research above. Use exact numbers and real names. Make confident inferences for gaps — never say not found or leave empty. " +
+    "Return ONLY the raw JSON object. No markdown fences, no explanation, no text before or after the JSON:\n\n" +
+    schema;
   const result = await callAI(prompt);
 
   if(!result){
