@@ -450,7 +450,9 @@ function extractJSON(text){
 function safeParseJSON(text){
   try{return JSON.parse(text);}catch{}
   const s=text.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
-  try{return JSON.parse(s);}catch{}
+  // Also strip trailing commas before arrays/objects close
+  const noTrailing = s.replace(/,\s*([}\]])/g,"$1");
+  try{return JSON.parse(noTrailing);}catch{}
   let out="",inStr=false,esc=false;
   for(let i=0;i<s.length;i++){
     const ch=s[i];
@@ -516,13 +518,14 @@ async function callAI(prompt){
       // Try 1: direct parse
       try{return JSON.parse(candidate);}catch{}
 
-      // Try 2: unicode-only sanitize (NOT newlines — those get handled per-context below)
+      // Try 2: unicode-only sanitize + trailing comma removal
       const sanitized = candidate
         .replace(/[\u2018\u2019]/g,"'")
         .replace(/[\u201C\u201D]/g,'"')
         .replace(/[\u2013\u2014]/g,"-")
         .replace(/[\u2026]/g,"...")
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
+        .replace(/,\s*([}\]])/g,"$1"); // strip trailing commas
       try{return JSON.parse(sanitized);}catch{}
 
       // Try 3: full character-by-character JSON repair
@@ -1372,7 +1375,14 @@ export default function App(){
         if(enrichment.fundingProfile) next.fundingProfile=enrichment.fundingProfile;
         if(enrichment.recentSignals?.some(s=>s)) next.recentSignals=enrichment.recentSignals;
         if(enrichment.growthSignals?.some(s=>s)) next.growthSignals=enrichment.growthSignals;
-        if(enrichment.companySnapshot?.length>50) next.companySnapshot=enrichment.companySnapshot;
+        // Only update companySnapshot if it looks like real data (not a search error)
+        const snapOk = enrichment.companySnapshot?.length>50 &&
+          !enrichment.companySnapshot.includes("Search failed") &&
+          !enrichment.companySnapshot.includes("cannot filter") &&
+          !enrichment.companySnapshot.includes("web search tool") &&
+          !enrichment.companySnapshot.includes("visit ") &&
+          !enrichment.companySnapshot.includes("check news");
+        if(snapOk) next.companySnapshot=enrichment.companySnapshot;
         return next;
       });
       console.log("Brief enriched with live research");
