@@ -598,7 +598,10 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `Rules: ASCII punctuation only. Max 1 sentence per string field. Max 3 items per array. Under 3000 tokens total.\n\n`+
     `{"companySnapshot":"1-2 sentences: what they do and scale",`+
     `"revenue":"$X","publicPrivate":"Public (NYSE:X) or Private","employeeCount":"~X,000","headquarters":"City, State","founded":"YYYY",`+
-    `"keyExecutives":[{"name":"","title":"","initials":"AB","background":"1 sentence","angle":"what drives them"}],`+
+    `"keyExecutives":[`+
+    `{"name":"real name if findable","title":"CEO","initials":"AB","background":"prior role or known strategic priority","angle":"Executive Perspective: what personally drives them — their career ambition, what makes them a hero to their board, what keeps them up at night"},`+
+    `{"name":"real name if findable","title":"CHRO or CPO or VP People","initials":"CD","background":"their HR/people focus","angle":"Executive Perspective: what success looks like for them — retention, culture wins, HR tech modernization, or workforce ROI"},`+
+    `{"name":"real name if findable","title":"CFO or COO","initials":"EF","background":"financial or operational focus","angle":"Executive Perspective: how they evaluate spend — ROI lens, risk reduction, operational efficiency"}],`+
     `"recentHeadlines":[{"headline":"title + date","relevance":"1 sentence why it matters"}],`+
     `"openRoles":{"summary":"1 sentence on hiring theme","roles":[{"title":"","dept":"","signal":""}]},`+
     `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"","source":""}},`+
@@ -1291,7 +1294,16 @@ export default function App(){
       });
 
     const result = await callAI(prompt);
-    setRiverHypo(result);
+    if(result){
+      setRiverHypo(result);
+    } else {
+      // callAI failed — set a placeholder so the page still renders
+      setRiverHypo({
+        reality:"Could not generate — click to edit manually.",
+        impact:"",vision:"",entryPoints:"",route:"",
+        openingAngle:"",talkTracks:[],
+      });
+    }
     setRiverHypoLoading(false);
   };
 
@@ -1816,10 +1828,11 @@ Return ONLY valid JSON:
                         <div key={i} className="contact-row" style={{margin:0}}>
                           <div className="contact-av" style={{background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"?"}</div>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:14,fontWeight:700,color:"#1a1a18"}}>{ex.name}</div>
-                            <div style={{fontSize:12,color:"#777",marginBottom:6}}>{ex.title}</div>
-                            <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Executive Perspective</div>
-                            <EF value={ex.angle||""} onChange={v=>patchBrief(b=>{if(!b.keyExecutives)b.keyExecutives=[];b.keyExecutives[i]={...b.keyExecutives[i],angle:v};})} single placeholder="What drives their decisions..."/>
+                            <div style={{fontSize:15,fontWeight:700,color:"#1a1a18"}}>{ex.name}</div>
+                            <div style={{fontSize:13,color:"#777",marginBottom:4}}>{ex.title}</div>
+                            {ex.background&&<div style={{fontSize:13,color:"#555",marginBottom:8,fontStyle:"italic"}}>{ex.background}</div>}
+                            <div style={{fontSize:12,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Executive Perspective</div>
+                            <EF value={ex.angle||""} onChange={v=>patchBrief(b=>{if(!b.keyExecutives)b.keyExecutives=[];b.keyExecutives[i]={...b.keyExecutives[i],angle:v};})} placeholder="What drives their decisions..."/>
                           </div>
                         </div>
                       ))}
@@ -2052,13 +2065,15 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 6: RIVER HYPOTHESIS ── */}
-        {step===6&&brief&&(
+        {step===6&&(
           <div className="page">
-            <div className="page-title">RIVER Hypothesis — {selectedAccount?.company}</div>
+            <div className="page-title">RIVER Hypothesis — {selectedAccount?.company||"Account"}</div>
             <div className="page-sub">
               {riverHypoLoading
-                ? "Building your hypothesis in the background..."
-                : "Your pre-call hypothesis is ready. Edit any field before going live."}
+                ? "Building your hypothesis — usually ready before you finish reading the brief..."
+                : riverHypo
+                  ? "Your pre-call hypothesis is ready. Edit any field before going live."
+                  : "Generate your RIVER hypothesis below."}
             </div>
 
             {riverHypoLoading&&(
