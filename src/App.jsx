@@ -478,8 +478,11 @@ async function callAI(prompt){
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:3500,
-          system:"Output only a raw JSON object. No markdown. No ```json. No ``` fences. No explanation. No text before or after. Your entire response must start with { and end with }. Any character before { or after } will break the parser.",
-          messages:[{role:"user",content:prompt}],
+          system:"You are a JSON API. Output only valid JSON.",
+          messages:[
+            {role:"user",content:prompt},
+            {role:"assistant",content:"{"},
+          ],
         }),
       });
       const d = await r.json();
@@ -492,16 +495,16 @@ async function callAI(prompt){
         console.error("callAI error:",d.error);
         return null;
       }
-      const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      // Prepend the "{" we used as assistant prefill, then find last }
+      const text = "{" + raw;
       console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
-      if(!text) return null;
+      if(!raw) return null;
 
-      // Extract from first { to last }
-      const first = text.indexOf("{");
-      const last  = text.lastIndexOf("}");
-      if(first<0 || last<=first) return null;
+      const last = text.lastIndexOf("}");
+      if(last<=0) return null;
 
-      const candidate = text.slice(first, last+1);
+      const candidate = text.slice(0, last+1);
 
       // Try 1: direct parse
       try{return JSON.parse(candidate);}catch{}
@@ -2416,4 +2419,3 @@ Return ONLY valid JSON:
     </>
   );
 }
-// v32 force redeploy
