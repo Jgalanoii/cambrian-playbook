@@ -445,19 +445,16 @@ async function fetchRecentIntel(co, url){
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         model:"claude-haiku-4-5-20251001",
-        max_tokens:2000,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+        max_tokens:1000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
         messages:[{role:"user",content:
-          `Search the web for TWO things about "${co}":
-1. Most recent news from 2024-2025: any major announcements, acquisitions, leadership changes, product launches, or contracts. Include dates.
-2. Current open job postings: search "${co} careers jobs 2025" and list 4-6 specific open role titles and departments.
-Be specific and concise.`
+          `Search for the most recent news about "${co}" from 2024-2025. List 3-4 key headlines with dates. Be concise.`
         }],
       }),
     });
     const d = await r.json();
     if(d.error){console.warn("fetchRecentIntel error:",d.error.message);return "";}
-    return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,2000);
+    return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,1200);
   }catch(e){console.warn("fetchRecentIntel error:",e.message);return "";}
 }
 
@@ -568,7 +565,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "Outcomes: " + selectedOutcomes.join(", ") + "\n" +
     sellerCtx + "\n" + (prodCtx ? prodCtx+"\n" : "") +
     "\n== LIVE WEB SEARCH RESULTS ==\n" +
-    (hasResearch ? researchBlock.slice(0,3000) : "No live search results.") +
+    (hasResearch ? researchBlock.slice(0,1500) : "No live search results.") +
     "\n\n== INSTRUCTIONS ==\n" +
     "You have strong training knowledge about " + co + " — use it confidently for: revenue, employees, executives, HQ, founded, ownership, competitors, BBB rating, strategic direction. " +
     "Use the live web search results above for recent news and open roles. " +
