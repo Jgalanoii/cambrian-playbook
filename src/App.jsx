@@ -1075,6 +1075,8 @@ export default function App(){
   const[briefLoading,setBriefLoading]=useState(false);
   const[briefStatus,setBriefStatus]=useState("");
   const[briefError,setBriefError]=useState("");
+  const[riverHypo,setRiverHypo]=useState(null);
+  const[riverHypoLoading,setRiverHypoLoading]=useState(false);
   const[contactRole,setContactRole]=useState("");
 
   const[activeRiver,setActiveRiver]=useState(0);
@@ -1226,6 +1228,52 @@ export default function App(){
     setBrief(result);
     setBriefLoading(false);
     setBriefStatus("");
+    // ── Kick off RIVER hypothesis build in background ──────────────────────
+    // Don't await — let it build while rep reads the brief
+    buildRiverHypo(result, member);
+  };
+
+  // ── BUILD RIVER HYPOTHESIS (background, after brief) ─────────────────────
+  const buildRiverHypo = async(briefData, member) => {
+    if(!briefData) return;
+    setRiverHypoLoading(true);
+    setRiverHypo(null);
+
+    const co = member.company;
+    const snapshot = briefData.companySnapshot || "";
+    const theme = briefData.strategicTheme || "";
+    const signals = (briefData.recentSignals||[]).join("; ");
+    const headlines = (briefData.recentHeadlines||[]).map(h=>h?.headline||h||"").filter(Boolean).join("; ");
+    const products_ctx = (briefData.solutionMapping||[]).filter(s=>s?.product).map(s=>`${s.product}: ${s.fit}`).join("\n");
+
+    const prompt =
+      "You are a senior B2B sales strategist building a RIVER discovery hypothesis.\n\n" +
+      "COMPANY: " + co + " | Industry: " + (member.ind||"") + " | ACV: " + (member.acv>0?"$"+member.acv.toLocaleString():"Unknown") + "\n" +
+      "COMPANY SNAPSHOT: " + snapshot.slice(0,400) + "\n" +
+      "STRATEGIC THEME: " + theme.slice(0,300) + "\n" +
+      "BUYING SIGNALS: " + signals.slice(0,200) + "\n" +
+      "RECENT NEWS: " + headlines.slice(0,300) + "\n" +
+      "SOLUTION FIT: " + products_ctx.slice(0,400) + "\n\n" +
+      "Build a sharp RIVER hypothesis. Be specific — use real company context. No vague generalities.\n" +
+      "Return ONLY raw JSON, no markdown:\n" +
+      JSON.stringify({
+        reality:"Current state — what problem are they experiencing today, specifically? Not vague — tie to their industry, size, and signals.",
+        impact:"Quantified cost of the problem — dollars, time, risk, or competitive disadvantage. Make it visceral.",
+        vision:"What success looks like for them when the problem is solved — in their language, not yours.",
+        entryPoints:"Who owns this decision? Names from the brief, or most likely titles given their org.",
+        route:"Fastest path to a committed next step — what sequence of actions closes this deal?",
+        openingAngle:"One sharp reframe that makes them say 'I never thought of it that way.' Not a question — a statement, then validate.",
+        talkTracks:[
+          {stage:"Opening",line:"First 30 seconds — reference something specific, create curiosity"},
+          {stage:"Discovery",line:"Best gap-finding question for their specific situation"},
+          {stage:"Impact",line:"How to quantify the cost of inaction in their terms"},
+          {stage:"Vision",line:"How to paint the future state in their language"},
+        ],
+      });
+
+    const result = await callAI(prompt);
+    setRiverHypo(result);
+    setRiverHypoLoading(false);
   };
 
   const runPostCall=async()=>{
@@ -1270,14 +1318,14 @@ Return ONLY valid JSON:
 
     setPostCall(result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:`Following up — ${selectedAccount?.company}`,emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"});
     setPostLoading(false);
-    setStep(7);
+    setStep(8);
   };
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   const doExport=()=>exportToExcel(brief,gateAnswers,riverData,postCall,selectedAccount,selectedCohort,selectedOutcomes,sellerUrl,confidence);
 
-  const STEPS=["Session","Import","Cohorts","Outcomes","Account","Brief","In-Call","Post-Call"];
+  const STEPS=["Session","Import","Cohorts","Outcomes","Account","Brief","Hypothesis","In-Call","Post-Call"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
@@ -1301,7 +1349,7 @@ Return ONLY valid JSON:
               </div>
             ))}
           </div>
-          <div>{step===6&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}</div>
+          <div>{step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}</div>
         </header>
 
         {/* SESSION BAR */}
@@ -1693,7 +1741,7 @@ Return ONLY valid JSON:
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
                       <button className="btn btn-navy" onClick={doExport}>↓ Export RIVER</button>
                       <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
-                      <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setRightTab("brief");setStep(6);}}>Start In-Call →</button>
+                      <button className="btn btn-green btn-lg" onClick={()=>{setStep(6);}}>Review Hypothesis →</button>
                     </div>
                   </div>
                 </div>
@@ -2014,8 +2062,123 @@ Return ONLY valid JSON:
           </div>
         )}
 
-        {/* ── STEP 6: IN-CALL NAVIGATOR ── */}
-        {step===6&&(
+        {/* ── STEP 6: RIVER HYPOTHESIS ── */}
+        {step===6&&brief&&(
+          <div className="page">
+            <div className="page-title">RIVER Hypothesis — {selectedAccount?.company}</div>
+            <div className="page-sub">
+              {riverHypoLoading
+                ? "Building your hypothesis in the background..."
+                : "Your pre-call hypothesis is ready. Edit any field before going live."}
+            </div>
+
+            {riverHypoLoading&&(
+              <div className="load-box" style={{marginBottom:20}}>
+                <div className="load-status">
+                  <div className="load-spin"/>
+                  Building RIVER hypothesis...
+                </div>
+                <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden",marginTop:12}}>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
+                </div>
+                <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:8}}>
+                  This usually finishes before you're done reading the brief
+                </div>
+              </div>
+            )}
+
+            {riverHypo&&(
+              <>
+                {/* RIVER fields */}
+                {[
+                  {key:"reality",  label:"R — Reality",     icon:"📍", sub:"Current state — what's happening today"},
+                  {key:"impact",   label:"I — Impact",      icon:"💥", sub:"Cost of inaction"},
+                  {key:"vision",   label:"V — Vision",      icon:"🔭", sub:"What success looks like for them"},
+                  {key:"entryPoints",label:"E — Entry Points",icon:"🚪",sub:"Who owns this decision"},
+                  {key:"route",    label:"R — Route",       icon:"🗺", sub:"Fastest path to close"},
+                ].map(({key,label,icon,sub})=>(
+                  <div key={key} className="bb" style={{marginBottom:10}}>
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>{icon}</div>
+                      <div><div className="bb-title">{label}</div><div className="bb-sub">{sub}</div></div>
+                    </div>
+                    <div className="bb-body">
+                      <EF
+                        value={riverHypo[key]||""}
+                        onChange={v=>setRiverHypo(prev=>({...prev,[key]:v}))}
+                        placeholder={`Click to edit ${label}...`}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {/* Opening Angle */}
+                <div className="bb" style={{marginBottom:10}}>
+                  <div className="bb-hdr">
+                    <div className="bb-icon" style={{fontSize:14}}>🎯</div>
+                    <div><div className="bb-title">Opening Angle</div><div className="bb-sub">The insight that makes everything click</div></div>
+                  </div>
+                  <div className="bb-body">
+                    <EF
+                      value={riverHypo.openingAngle||""}
+                      onChange={v=>setRiverHypo(prev=>({...prev,openingAngle:v}))}
+                      placeholder="Click to edit opening angle..."
+                    />
+                  </div>
+                </div>
+
+                {/* Talk Tracks */}
+                {(riverHypo.talkTracks||[]).length>0&&(
+                  <div className="bb" style={{marginBottom:10}}>
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>💬</div>
+                      <div><div className="bb-title">Talk Tracks</div><div className="bb-sub">Stage-by-stage language guides</div></div>
+                    </div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
+                      {(riverHypo.talkTracks||[]).map((t,i)=>(
+                        <div key={i} style={{borderLeft:"3px solid #8B6F47",paddingLeft:12}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>{t.stage}</div>
+                          <EF
+                            value={t.line||""}
+                            onChange={v=>setRiverHypo(prev=>{
+                              const tt=[...(prev.talkTracks||[])];
+                              tt[i]={...tt[i],line:v};
+                              return {...prev,talkTracks:tt};
+                            })}
+                            single
+                            placeholder="Click to edit..."
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!riverHypo&&!riverHypoLoading&&(
+              <div style={{background:"#FAF8F4",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:24,textAlign:"center",color:"#aaa",fontSize:13}}>
+                Hypothesis not yet generated.
+                <button className="btn btn-gold" style={{marginLeft:12}} onClick={()=>buildRiverHypo(brief,selectedAccount)}>
+                  Build Hypothesis
+                </button>
+              </div>
+            )}
+
+            <div className="actions-row">
+              <button className="btn btn-secondary" onClick={()=>setStep(5)}>← Back to Brief</button>
+              <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
+                ↻ Regenerate
+              </button>
+              <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setRightTab("brief");setStep(7);}}>
+                Start In-Call →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 7: IN-CALL NAVIGATOR ── */}
+        {step===7&&(
           <div className="call-layout">
             <div className="call-left">
               <div className="panel-hdr">
@@ -2194,8 +2357,8 @@ Return ONLY valid JSON:
           </div>
         )}
 
-        {/* ── STEP 7: POST-CALL ── */}
-        {step===7&&(
+        {/* ── STEP 8: POST-CALL ── */}
+        {step===8&&(
           <div className="page">
             <div className="page-title">Post-Call Route</div>
             <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, CRM note, and follow-up email.</div>
@@ -2238,7 +2401,7 @@ Return ONLY valid JSON:
                   </div>
                 </div>
                 <div className="actions-row">
-                  <button className="btn btn-secondary" onClick={()=>setStep(6)}>← Back to Call</button>
+                  <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Back to Call</button>
                   <button className="btn btn-navy" onClick={doExport}>↓ Export Full RIVER</button>
                   <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
                   <button className="btn btn-primary" onClick={()=>{setStep(4);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
