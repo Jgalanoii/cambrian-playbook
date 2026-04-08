@@ -1425,7 +1425,7 @@ Return ONLY valid JSON:
                   Searching {selectedAccount?.company}... (20–40 seconds)
                 </div>
               </div>
-            ))}
+            )}
 
             {/* Brief content — renders as soon as brief is set (not null) */}
             {brief&&(
