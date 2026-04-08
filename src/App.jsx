@@ -347,7 +347,7 @@ const RIVER_STAGES = [
 
 const BLANK_BRIEF = {
   companySnapshot:"",sellerSnapshot:"",
-  revenue:"",publicPrivate:"",
+  revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",
   keyExecutives:[],recentHeadlines:[],
   openRoles:{summary:"",roles:[]},
   solutionMapping:[{product:"",fit:""},{product:"",fit:""},{product:"",fit:""}],
@@ -355,7 +355,7 @@ const BLANK_BRIEF = {
   openingAngle:"",watchOuts:["","",""],
   keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
   competitors:[],recentSignals:["","",""],
-  fundingProfile:"",leadershipTeam:[],strategicTheme:"",growthSignals:[],sellerOpportunity:"",
+  fundingProfile:"",strategicTheme:"",growthSignals:[],sellerOpportunity:"",
 };
 
 const RKEYS = ["reality","impact","vision","entryPoints","route"];
@@ -436,120 +436,214 @@ function extractJSON(text){
 // ── SINGLE-CALL BRIEF GENERATION: web search + synthesis in one request ────────
 // Claude searches the web AND returns structured JSON in a single API call.
 // This avoids the two-step coordination problem entirely.
-// ── STEP 1: Research via web search — plain text summary ──────────────────────
-async function webSearch(query){
+// ── WEB SEARCH HELPER ────────────────────────────────────────────────────────
+// One focused query → returns plain text summary. Short prompt = Claude searches.
+async function ws(question){
   const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if(!key||key.length<20) return {error:"API key missing"};
+  if(!key||key.length<20) return "";
   try{
     const r = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({
         model:"claude-sonnet-4-20250514",
-        max_tokens:2000,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:5}],
-        messages:[{role:"user",content:query}],
+        max_tokens:1000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+        messages:[{role:"user",content:question}],
       }),
     });
     const d = await r.json();
-    if(d.error) return {error:d.error.type+": "+d.error.message};
-    const text = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-    return {text};
-  }catch(e){return {error:e.message};}
+    if(d.error){console.warn("ws error:",d.error.message);return "";}
+    return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,1200);
+  }catch(e){console.warn("ws fetch error:",e.message);return "";}
 }
 
-// ── STEP 2: Synthesize research into JSON — no web search ──────────────────────
+// ── SEQUENTIAL TARGETED RESEARCH ─────────────────────────────────────────────
+// Six short, focused searches. Each one is simple enough that Claude will
+// always choose to search rather than guess. Run sequentially to avoid
+// rate limits; each call is fast (<5s).
+async function researchCompany(co, url, onStatus){
+  const results = {};
+
+  // 1. Financials — go directly to financial data sites
+  onStatus("Looking up financials...");
+  results.financials = await ws(
+    `What is ${co}'s annual revenue, number of employees, and are they public or private? ` +
+    `Search macrotrends.net, macroaxis.com, or wisesheets.io for "${co} revenue employees". Give me the exact numbers.`
+  );
+
+  // 2. Executives — LinkedIn and company site
+  onStatus("Finding key executives...");
+  results.executives = await ws(
+    `Who are the current CEO, CFO, CHRO, COO, and CPO of ${co}? ` +
+    `Search "${co} executives leadership team" on LinkedIn and their website ${url}. List names and exact titles.`
+  );
+
+  // 3. Recent news — targeted to news outlets
+  onStatus("Searching recent news...");
+  results.news = await ws(
+    `Search for "${co}" news from 2024 and 2025. ` +
+    `Look on businesswire.com, prnewswire.com, Reuters, Bloomberg, and Google News. ` +
+    `What are the 3-4 most important recent developments? Include dates.`
+  );
+
+  // 4. Funding and ownership
+  onStatus("Checking funding & ownership...");
+  results.funding = await ws(
+    `Is ${co} publicly traded or privately held? Who are their investors or owners? ` +
+    `Search Crunchbase, PitchBook mentions, and recent funding news. ` +
+    `Include stock ticker if public, or PE/VC firm if private.`
+  );
+
+  // 5. Open jobs and hiring signals
+  onStatus("Checking open roles...");
+  results.jobs = await ws(
+    `Search "${co} jobs hiring 2025" on LinkedIn, Indeed, and their careers page at ${url}/careers. ` +
+    `List the specific job titles and departments currently being hired. ` +
+    `What do the open roles signal about their business priorities?`
+  );
+
+  // 6. Strategic context
+  onStatus("Analyzing strategy...");
+  results.strategy = await ws(
+    `What are ${co}'s current strategic priorities, recent product launches, acquisitions, or major contracts in 2024-2025? ` +
+    `Search for CEO quotes, earnings call summaries, and press releases about their direction.`
+  );
+
+  onStatus("Building RIVER brief...");
+  return results;
+}
+
+// ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 async function callAI(prompt){
   const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
   try{
     const r = await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,messages:[{role:"user",content:prompt}]}),
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,messages:[{role:"user",content:prompt}]}),
     });
     const d = await r.json();
     if(d.error){console.error("callAI:",d.error);return null;}
     const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    // Try to extract JSON
-    const clean=text.replace(/^[\s\S]*?(?=\{)/,"");
-    try{return JSON.parse(clean);}catch{
-      const m=text.match(/\{[\s\S]*\}/s);
-      try{return m?JSON.parse(m[0]):null;}catch{return null;}
+    // Extract JSON — strip any markdown, find the outermost { }
+    const stripped = text.replace(/^[\s\S]*?(?=\{)/,"").replace(/\}[^}]*$/,"}").trim();
+    try{return JSON.parse(stripped);}catch{
+      const m=text.match(/\{[\s\S]*\}/);
+      try{return m?JSON.parse(m[0]):null;}catch{
+        console.error("JSON parse failed. Text preview:",text.slice(0,300));
+        return null;
+      }
     }
   }catch(e){console.error("callAI:",e);return null;}
 }
 
-// ── GENERATE BRIEF: research then synthesize ───────────────────────────────────
-async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes){
-  const co = member.company;
-  const url = member.company_url||co;
+// ── GENERATE BRIEF ────────────────────────────────────────────────────────────
+async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, onStatus){
+  const co  = member.company;
+  const url = member.company_url || co;
   const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
   if(!key||key.length<20){
-    return {_error:"VITE_ANTHROPIC_API_KEY missing — Vercel: Settings → Env Vars → add key → Redeploy",...BLANK_BRIEF,companySnapshot:co+" — API key missing."};
+    return {
+      _error:"VITE_ANTHROPIC_API_KEY missing — Vercel: Settings → Env Vars → add sk-ant-... key → Redeploy",
+      ...BLANK_BRIEF, companySnapshot:co+" — API key not configured.",
+    };
   }
 
-  // ── Phase 1: web research ────────────────────────────────────────────────────
-  const researchQuery = `Search the web and find the following information about the company "${co}" (website: ${url}):
+  // ── Phase 1: Sequential targeted research ─────────────────────────────────
+  const R = await researchCompany(co, url, onStatus||((s)=>{}));
 
-1. Annual revenue or ARR (be specific — e.g. "$16B revenue" or "~$500M ARR")
-2. Public or privately held? If public, stock ticker and market cap. If private, ownership type (PE-backed, VC-backed, founder-owned, etc.)
-3. Number of employees (approximate is fine — e.g. "~270,000 employees")
-4. Headquarters city and country
-5. Year founded
-6. Key executives: CEO name and title, plus CFO, CHRO, CPO, COO if findable
-7. Recent headlines from 2024-2025 — any notable news, acquisitions, product launches, leadership changes, contracts won
-8. Current open job postings — search their careers page or LinkedIn. List specific role titles and the departments they're in.
+  // Build a rich research brief to pass into synthesis
+  const researchBlock = [
+    R.financials ? "FINANCIALS:\n"+R.financials : "",
+    R.executives ? "EXECUTIVES:\n"+R.executives : "",
+    R.news       ? "RECENT NEWS:\n"+R.news       : "",
+    R.funding    ? "FUNDING/OWNERSHIP:\n"+R.funding : "",
+    R.jobs       ? "OPEN ROLES & HIRING:\n"+R.jobs  : "",
+    R.strategy   ? "STRATEGY & DIRECTION:\n"+R.strategy : "",
+  ].filter(Boolean).join("\n\n---\n\n");
 
-Be specific. Use real numbers and real names from your search results. Report what you actually find.`;
+  const hasResearch = researchBlock.length > 100;
 
-  const research = await webSearch(researchQuery);
-
-  const researchText = research.text||"";
-  const researchError = research.error||"";
-
-  console.log("Research result chars:", researchText.length, "error:", researchError);
-
-  // ── Phase 2: seller context ──────────────────────────────────────────────────
+  // ── Phase 2: Seller and product context ───────────────────────────────────
   const sellerCtx = sellerDocs.length>0
-    ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,800)).join("; ")
+    ? "SELLER DOCS: "+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join(" | ")
     : "Seller: "+sellerUrl;
   const prodCtx = products.filter(p=>p.name.trim()).length>0
-    ? "Products available: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" — "+p.description:"")).join("; ")
+    ? "Available products: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" ("+p.description+")":"")).join("; ")
     : "";
 
-  // ── Phase 3: synthesize into JSON ────────────────────────────────────────────
-  const prompt = `You are a B2B sales strategist building a pre-call brief. Use the research below to fill in the JSON.
-
-PROSPECT: ${co} | ${member.ind} | ${url}
-ACV: ${member.acv>0?"$"+member.acv.toLocaleString():"Unknown"} | Need: ${member.outcome}
-${sellerCtx}
-${prodCtx}
-Cohort: ${selectedCohort?.name||""} | Outcomes: ${selectedOutcomes.join(", ")||""}
-
-RESEARCH FINDINGS:
-${researchText||"No web research available — use your training knowledge about "+co+"."}
-${researchError?"Research error: "+researchError:""}
-
-Instructions: Fill in every field using the research above. For fields where research has data, use it exactly. For gaps, make a confident inference based on company type and industry. Never leave a field empty or say "not found" or "unknown".
-
-Return ONLY a JSON object — no markdown fences, no explanation, just the raw JSON:
-{"companySnapshot":"Rich 4-5 sentence profile with specific revenue, employee count, ownership, customers, and one notable recent fact","revenue":"Specific revenue or ARR figure (e.g. $16B annual revenue, or ~$400M ARR)","publicPrivate":"Public (NYSE/NASDAQ: ticker) or Private (PE-backed/VC-backed/founder-owned) — be specific","keyExecutives":[{"name":"CEO full name","title":"Chief Executive Officer","initials":"AB","angle":"Sales angle for this exec"},{"name":"Name","title":"Title","initials":"CD","angle":"Angle"},{"name":"Name","title":"Title","initials":"EF","angle":"Angle"}],"recentHeadlines":[{"headline":"Specific headline with approximate date","relevance":"Why this matters for the sales conversation"},{"headline":"Headline","relevance":"Relevance"},{"headline":"Headline","relevance":"Relevance"}],"openRoles":{"summary":"2-3 sentence overview of their hiring activity and what it signals","roles":[{"title":"Specific job title","dept":"Department","signal":"Strategic meaning"},{"title":"Job title","dept":"Dept","signal":"Signal"},{"title":"Job title","dept":"Dept","signal":"Signal"},{"title":"Job title","dept":"Dept","signal":"Signal"},{"title":"Job title","dept":"Dept","signal":"Signal"}]},"sellerSnapshot":"1-2 sentences on seller most relevant offerings","fundingProfile":"Funding or ownership details","leadershipTeam":[{"name":"Name","title":"Title","initials":"AB","background":"Background","angle":"Angle"}],"strategicTheme":"2-3 sentences on strategic direction","sellerOpportunity":"2-3 sentences why seller is uniquely positioned NOW","solutionMapping":[{"product":"Product name","fit":"Why it fits"},{"product":"Product","fit":"Why"},{"product":"Product","fit":"Why"}],"riverHypothesis":{"reality":"Current state","impact":"Cost of inaction","vision":"Success looks like","entryPoints":"Decision makers","route":"Path to close"},"openingAngle":"Sharp specific opening question from research","watchOuts":["Risk 1","Risk 2","Risk 3"],"keyContacts":[{"name":"Name","title":"Title","initials":"AB","angle":"Angle"},{"name":"Name","title":"Title","initials":"CD","angle":"Angle"}],"competitors":["Competitor 1","Competitor 2"],"growthSignals":["Signal 1","Signal 2","Signal 3"],"recentSignals":["Buying signal 1","Signal 2","Signal 3"]}`;
+  // ── Phase 3: Synthesize into structured JSON ──────────────────────────────
+  const prompt =
+    "You are a senior B2B sales strategist. Use the research below to build a complete pre-call brief.\n\n" +
+    "PROSPECT: "+co+" | "+member.ind+" | "+url+"\n" +
+    "ACV: "+(member.acv>0?"$"+member.acv.toLocaleString():"Unknown")+" | Need: "+member.outcome+"\n" +
+    (selectedCohort?"Cohort: "+selectedCohort.name+" | ":"") +
+    "Outcomes: "+selectedOutcomes.join(", ")+"\n" +
+    sellerCtx+"\n" + (prodCtx?prodCtx+"\n":"") +
+    "\n== RESEARCH ==\n" +
+    (hasResearch ? researchBlock : "No live research — use your training knowledge about "+co+".") +
+    "\n\n== INSTRUCTIONS ==\n" +
+    "Fill in every JSON field. Use EXACT numbers and names from research. " +
+    "For any gaps, make confident inferences — never say not found or leave empty. " +
+    "Return ONLY raw JSON, no markdown, no code fences.\n\n" +
+    '{"companySnapshot":"4-5 rich sentences covering what they do, exact revenue ($XB), exact employee count (~XXX,000), public/private status, HQ, core customers, and one specific recent development",' +
+    '"revenue":"Exact figure e.g. $18.8B annual revenue (FY2025) or ~$400M ARR",' +
+    '"publicPrivate":"Public (NYSE: ARMK) or Private (PE-backed by X, founded YYYY)",' +
+    '"employeeCount":"Exact or approximate e.g. ~270,000 employees globally",' +
+    '"headquarters":"City, State/Country",' +
+    '"founded":"Year founded",' +
+    '"keyExecutives":[' +
+      '{"name":"Full name","title":"CEO","initials":"AB","background":"Prior experience or notable fact","angle":"Why they care about our solution"},' +
+      '{"name":"Full name","title":"CFO","initials":"CD","background":"Background","angle":"Angle"},' +
+      '{"name":"Full name","title":"CHRO or CPO","initials":"EF","background":"Background","angle":"Angle"}' +
+    '],' +
+    '"recentHeadlines":[' +
+      '{"headline":"Specific headline with month/year","relevance":"Why this matters for the sale"},' +
+      '{"headline":"Headline","relevance":"Relevance"},' +
+      '{"headline":"Headline","relevance":"Relevance"},' +
+      '{"headline":"Headline","relevance":"Relevance"}' +
+    '],' +
+    '"openRoles":{"summary":"2-3 sentences on hiring volume and what it signals strategically","roles":[' +
+      '{"title":"Specific job title","dept":"Department","signal":"What this hire signals"},' +
+      '{"title":"Job title","dept":"Dept","signal":"Signal"},' +
+      '{"title":"Job title","dept":"Dept","signal":"Signal"},' +
+      '{"title":"Job title","dept":"Dept","signal":"Signal"},' +
+      '{"title":"Job title","dept":"Dept","signal":"Signal"}' +
+    ']},' +
+    '"sellerSnapshot":"1-2 sentences on most relevant seller offerings for this prospect",' +
+    '"fundingProfile":"Ownership type, investors, funding history, or public market details",' +
+    '"strategicTheme":"2-3 sentences on current direction, what pressures they face, what they are building toward",' +
+    '"sellerOpportunity":"2-3 sentences: exactly why seller is positioned to help THIS company RIGHT NOW — tie to their specific situation",' +
+    '"solutionMapping":[' +
+      '{"product":"Exact product name","fit":"Specific reason grounded in research"},' +
+      '{"product":"Product","fit":"Reason"},' +
+      '{"product":"Product","fit":"Reason"}' +
+    '],' +
+    '"riverHypothesis":{"reality":"Current state specific to research","impact":"Cost of problem in real terms","vision":"What success looks like","entryPoints":"Real decision-maker names or most likely titles","route":"Fastest path based on their stage"},' +
+    '"openingAngle":"One sharp question that references a real finding — makes them say how did you know that",' +
+    '"watchOuts":["Specific risk 1","Risk 2","Risk 3"],' +
+    '"keyContacts":[{"name":"Name","title":"Title","initials":"AB","angle":"Angle"},{"name":"Name","title":"Title","initials":"CD","angle":"Angle"}],' +
+    '"competitors":["Competitor 1","Competitor 2"],' +
+    '"growthSignals":["Signal 1","Signal 2","Signal 3"],' +
+    '"recentSignals":["Top buying signal","Signal 2","Signal 3"]}';
 
   const result = await callAI(prompt);
 
   if(!result){
-    // JSON synthesis failed — show raw research in snapshot
+    const fallbackSnapshot = hasResearch
+      ? [R.financials,R.executives,R.news].filter(Boolean).join(" | ").slice(0,600)
+      : co+" — "+member.ind+". Research unavailable. Edit fields manually.";
     return {
-      ...BLANK_BRIEF,
-      _error: researchError?"Research error: "+researchError:"JSON synthesis failed — see console (F12)",
-      companySnapshot: researchText?researchText.slice(0,800):co+" — "+member.ind+". Research failed. Edit fields manually.",
-      revenue:"", publicPrivate:"", keyExecutives:[], recentHeadlines:[],
-      openRoles:{summary:"",roles:[]},
+      ...BLANK_BRIEF, _error:"JSON synthesis failed — research text shown in snapshot.",
+      companySnapshot:fallbackSnapshot,
+      revenue: R.financials ? R.financials.slice(0,100) : "",
+      publicPrivate:"", employeeCount:"", headquarters:"", founded:"",
+      keyExecutives:[], recentHeadlines:[], openRoles:{summary:R.jobs||"",roles:[]},
     };
   }
 
-  if(researchError) result._error = "Research partial: "+researchError;
   return result;
 }
 
@@ -982,11 +1076,15 @@ export default function App(){
     setBrief(null);
     setBriefLoading(true);
     setBriefError("");
-    setBriefStatus("Searching "+member.company+"...");
+    setBriefStatus("Starting research on "+member.company+"...");
     setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
-    const result = await generateBrief(member,sellerUrl,sellerDocs,products,selectedCohort,selectedOutcomes);
+    const result = await generateBrief(
+      member, sellerUrl, sellerDocs, products,
+      selectedCohort, selectedOutcomes,
+      (msg)=>setBriefStatus(msg)
+    );
 
     if(result._error) setBriefError(result._error);
     setBrief(result);
@@ -1402,7 +1500,7 @@ Return ONLY valid JSON:
               <div className="load-box">
                 <div className="load-status">
                   <div className="load-spin"/>
-                  {briefStatus||"Researching..."}
+                  {briefStatus||"Starting research..."}
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
                   {[
@@ -1466,21 +1564,31 @@ Return ONLY valid JSON:
                   <div className="bb-body">
                     <EF value={brief.companySnapshot||""} onChange={v=>patchBrief(b=>{b.companySnapshot=v;})}/>
 
-                    {/* Revenue + Public/Private row */}
+                    {/* Key facts 2x2 grid */}
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}}>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"#2E6B2E",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>
-                          Annual Revenue / ARR
+                          <span style={{background:"#2E6B2E",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>Annual Revenue / ARR
                         </div>
-                        <EF value={brief.revenue||""} onChange={v=>patchBrief(b=>{b.revenue=v;})} single placeholder="e.g. $16B annual revenue"/>
+                        <EF value={brief.revenue||""} onChange={v=>patchBrief(b=>{b.revenue=v;})} single placeholder="e.g. $18.8B annual revenue (FY2025)"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"#1B3A6B",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>
-                          Public / Private
+                          <span style={{background:"#1B3A6B",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>Public / Private
                         </div>
-                        <EF value={brief.publicPrivate||""} onChange={v=>patchBrief(b=>{b.publicPrivate=v;})} single placeholder="e.g. Public (NYSE: ARMK) or PE-backed"/>
+                        <EF value={brief.publicPrivate||""} onChange={v=>patchBrief(b=>{b.publicPrivate=v;})} single placeholder="e.g. Public (NYSE: ARMK)"/>
+                      </div>
+                      <div>
+                        <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
+                          <span style={{background:"#8B6F47",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>EMPLOYEES</span>Employee Count
+                        </div>
+                        <EF value={brief.employeeCount||""} onChange={v=>patchBrief(b=>{b.employeeCount=v;})} single placeholder="e.g. ~270,000 globally"/>
+                      </div>
+                      <div>
+                        <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
+                          <span style={{background:"#6B3A7A",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>HQ</span>HQ · Founded
+                        </div>
+                        <EF value={(brief.headquarters||(brief.founded?" · Founded "+brief.founded:""))||""} onChange={v=>patchBrief(b=>{b.headquarters=v;})} single placeholder="e.g. Philadelphia, PA · Founded 1959"/>
                       </div>
                     </div>
                   </div>
