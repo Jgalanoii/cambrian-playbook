@@ -477,7 +477,7 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:5000,
+          max_tokens:3500,
           system:"Output only a raw JSON object. No markdown. No ```json. No ``` fences. No explanation. No text before or after. Your entire response must start with { and end with }. Any character before { or after } will break the parser.",
           messages:[{role:"user",content:prompt}],
         }),
@@ -495,19 +495,31 @@ async function callAI(prompt){
       const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
       console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
       if(!text) return null;
-      // Always extract first { to last } — most robust for large responses
+
+      // Extract from first { to last }
       const first = text.indexOf("{");
       const last  = text.lastIndexOf("}");
-      if(first>=0 && last>first){
-        const candidate = text.slice(first, last+1);
-        try{return JSON.parse(candidate);}catch(e){
-          // If that fails, try cleaning non-whitespace control chars then re-parse
-          const cleaned = candidate.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
-          try{return JSON.parse(cleaned);}catch(e2){
-            console.error("JSON parse failed:", e2.message, "position hint:", e2.message.match(/\d+/)?.[0]);
-          }
-        }
+      if(first<0 || last<=first) return null;
+
+      const candidate = text.slice(first, last+1);
+
+      // Try 1: direct parse
+      try{return JSON.parse(candidate);}catch{}
+
+      // Try 2: strip control characters
+      const cleaned = candidate.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
+      try{return JSON.parse(cleaned);}catch{}
+
+      // Try 3: aggressive repair — replace unescaped newlines/tabs inside strings
+      const repaired = cleaned
+        .replace(/([^\\])\n/g, '$1\\n')
+        .replace(/([^\\])\r/g, '$1\\r')
+        .replace(/([^\\])\t/g, '$1\\t');
+      try{return JSON.parse(repaired);}catch(e){
+        console.error("JSON parse failed after repair:", e.message, "at pos:", e.message.match(/\d+/)?.[0]);
+        console.log("Sample around error:", candidate.slice(Math.max(0,(parseInt(e.message.match(/\d+/)?.[0]||0)-100)), parseInt(e.message.match(/\d+/)?.[0]||0)+100));
       }
+
       return null;
     }catch(e){console.error("callAI fetch error:",e);return null;}
   }
@@ -623,6 +635,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     (hasResearch ? researchBlock.slice(0,1500) : "No live search — use training knowledge about "+co+".") +
     "\n\n== RULES ==\n" +
     "Use your training knowledge confidently for facts about major companies. Use live research for recent news and open roles. " +
+    "Be concise — each field should be 1-3 sentences max unless it is an array. Total response must stay under 3000 tokens. " +
     "Every field must be specific — no vague generalities. Quantify where possible. Never say not found or leave empty. " +
     "Opening angle = Cuban power moment + Challenger reframe. Not a question. A statement that makes everything click. " +
     "RIVER hypothesis = Gap Selling. Current state must be specific and untenable. Impact must be quantified. Vision must be vivid. " +
