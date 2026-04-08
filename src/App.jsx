@@ -359,6 +359,7 @@ const BLANK_BRIEF = {
   keyExecutives:[],recentHeadlines:[],
   openRoles:{summary:"",roles:[]},
   solutionMapping:[{product:"",fit:""},{product:"",fit:""},{product:"",fit:""}],
+  caseStudies:[],
   openingAngle:"",watchOuts:["","",""],
   keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
   competitors:[],recentSignals:["","",""],
@@ -600,10 +601,10 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"fundingProfile":"Funding stage, total raised, lead investors, most recent round",`+
     `"strategicTheme":"2-3 sentences on their current strategic direction",`+
     `"sellerOpportunity":"2-3 sentences: why the seller is well-positioned right now - the why-you-why-now that opens doors",`+
-    `"solutionMapping":[{"product":"Specific offering","fit":"Specific reason tied to their signals"},{"product":"","fit":""},{"product":"","fit":""}],`+
+    `"solutionMapping":[{"product":"Specific offering from seller","fit":"Specific reason grounded in their signals and pain"},{"product":"","fit":""},{"product":"","fit":""}],`+`"caseStudies":[`+`{"title":"Case study or customer name from seller website","customer":"Customer company name","relevance":"Why this is relevant to this prospect specifically"},`+`{"title":"Second relevant case study or named customer","customer":"","relevance":""},`+`{"title":"Third case study if applicable","customer":"","relevance":""}],`+
     `"openingAngle":"Sharp statement not a question referencing something real. Format: Most [industry] companies [assumption]. What the data shows is [reframe]. Is that showing up for you?",`+
     `"watchOuts":["Specific risk","Competitive risk","Budget or stakeholder risk"],`+
-    `"keyContacts":[{"name":"Real name or title","title":"Full title","initials":"AB","angle":"Engagement angle"},{"name":"","title":"","initials":"CD","angle":""}],`+
+    `"keyContacts":[`+`{"name":"Real name if findable","title":"VP or Director or Manager-level title — NOT C-suite","initials":"AB","angle":"Why they feel this pain daily and how to get their attention"},`+`{"name":"Real name if findable","title":"Another mid-level champion — HR Tech, Total Rewards, Benefits, Ops","initials":"CD","angle":"Their specific problem and what a win looks like for them"},`+`{"name":"Real name if findable","title":"Third in-road — procurement, IT, or functional lead","initials":"EF","angle":"How they influence the decision and what they care about"}],`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"recentSignals":["Top buying signal","Second signal","Third signal"],`+
     `"growthSignals":["Growth indicator with evidence","Second signal","Third signal"]}`;
@@ -1959,12 +1960,12 @@ Return ONLY valid JSON:
                       {brief.publicSentiment.standoutReview?.text&&(
                         <div style={{marginBottom:12}}>
                           <div className="field-label" style={{marginBottom:6}}>Standout Review</div>
-                          {(()=>{const s=brief.publicSentiment.standoutReview;const isNeg=s.sentiment==="negative";return(
-                          <div style={{background:isNeg?"#FDE8E8":"#EEF5EE",borderLeft:"3px solid "+(isNeg?"#9B2C2C":"#2E6B2E"),borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
-                            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:isNeg?"#9B2C2C":"#2E6B2E"}}>
-                              {isNeg?"👎 Negative":"👍 Positive"}{s.source?" · "+s.source:""}
-                            </div>
-                            <div style={{fontSize:12,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{s.text}"</div>
+                          {(()=>{const s=brief.publicSentiment.standoutReview;return(
+                          <div style={{background:"#FAF8F4",borderLeft:"3px solid #8B6F47",borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
+                            {s.source&&<div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:"#8B6F47"}}>
+                              {s.source}
+                            </div>}
+                            <div style={{fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{s.text}"</div>
                           </div>
                           )})()}
                         </div>
@@ -2012,14 +2013,35 @@ Return ONLY valid JSON:
                     </div>
                   </div>
                   <div className="bb-body">
-                    {(brief.solutionMapping||[]).map((item,i)=>(
-                      item&&<div key={i} className="solution-item">
-                        <div className="sol-badge">{item.product||"Product"}</div>
-                        <div style={{flex:1}}>
-                          <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})}/>
+                    {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
+                      <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<(brief.solutionMapping.filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
+                        <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                          <div style={{background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
+                            {item.product}
+                          </div>
+                          <div style={{flex:1}}>
+                            <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})} placeholder="Why this fits..."/>
+                          </div>
                         </div>
                       </div>
                     ))}
+
+                    {/* Relevant Case Studies */}
+                    {(brief.caseStudies||[]).filter(c=>c?.title).length>0&&(
+                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid #E8E6DF"}}>
+                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:10}}>Relevant Case Studies & Customers</div>
+                        {(brief.caseStudies||[]).filter(c=>c?.title).map((cs,i)=>(
+                          <div key={i} style={{display:"flex",gap:10,marginBottom:10,padding:"9px 12px",background:"#FAF8F4",borderRadius:8,border:"1px solid #E8E6DF"}}>
+                            <div style={{fontSize:18,lineHeight:1,flexShrink:0}}>📄</div>
+                            <div>
+                              <div style={{fontSize:14,fontWeight:600,color:"#1a1a18",marginBottom:2}}>{cs.title}</div>
+                              {cs.customer&&<div style={{fontSize:12,color:"#8B6F47",fontWeight:600,marginBottom:3}}>{cs.customer}</div>}
+                              <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{cs.relevance}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2037,16 +2059,23 @@ Return ONLY valid JSON:
                 {/* Contacts + Watch-outs */}
                 <div className="field-grid-2" style={{gap:12,marginBottom:14}}>
                   <div className="bb" style={{margin:0}}>
-                    <div className="bb-hdr"><div className="bb-title" style={{fontSize:12}}>Key Contacts</div></div>
+                    <div className="bb-hdr">
+                      <div><div className="bb-title" style={{fontSize:14}}>In-Roads</div>
+                      <div className="bb-sub">Mid-level champions who feel the pain daily</div></div>
+                    </div>
                     <div className="bb-body">
-                      {(brief.keyContacts||[]).map((c,i)=>(
-                        <div key={i} className="contact-row">
-                          <div className="contact-av">{c.initials||"?"}</div>
-                          <div style={{flex:1}}>
-                            <div style={{fontSize:12,fontWeight:600}}>{c.name||"Unknown"}</div>
-                            <div style={{fontSize:11,color:"#777"}}>{c.title||""}</div>
-                            <EF value={c.angle||""} onChange={v=>patchBrief(b=>{b.keyContacts[i]={...b.keyContacts[i],angle:v};})} single/>
+                      {(brief.keyContacts||[]).filter(c=>c?.name||c?.title).map((c,i)=>(
+                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<(brief.keyContacts.filter(x=>x?.name||x?.title).length-1)?"1px solid #F0EDE6":"none"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                            <div style={{width:30,height:30,borderRadius:"50%",background:"#2E6B2E",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              {c.initials||"?"}
+                            </div>
+                            <div>
+                              <div style={{fontSize:14,fontWeight:700,color:"#1a1a18"}}>{c.name||"Unknown"}</div>
+                              <div style={{fontSize:12,color:"#2E6B2E",fontWeight:600}}>{c.title||""}</div>
+                            </div>
                           </div>
+                          <EF value={c.angle||""} onChange={v=>patchBrief(b=>{b.keyContacts[i]={...b.keyContacts[i],angle:v};})} placeholder="Why they feel this pain and how to reach them..."/>
                         </div>
                       ))}
                     </div>
