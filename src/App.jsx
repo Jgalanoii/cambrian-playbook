@@ -484,7 +484,7 @@ async function researchCompany(co, url, onStatus){
     `What is ${co}'s annual revenue, number of employees, and are they public or private? ` +
     `Search macrotrends.net, macroaxis.com, or wisesheets.io for "${co} revenue employees". Give me the exact numbers.`
   );
-  await sleep(3000);
+  await sleep(6000);
 
   // 2. Executives
   onStatus("Finding key executives...");
@@ -492,7 +492,7 @@ async function researchCompany(co, url, onStatus){
     `Who are the current CEO, CFO, CHRO, COO, and CPO of ${co}? ` +
     `Search "${co} executives leadership team" on LinkedIn and their website ${url}. List names and exact titles.`
   );
-  await sleep(3000);
+  await sleep(6000);
 
   // 3. Recent news
   onStatus("Searching recent news...");
@@ -501,24 +501,24 @@ async function researchCompany(co, url, onStatus){
     `Look on businesswire.com, prnewswire.com, Reuters, Bloomberg, and Google News. ` +
     `What are the 3-4 most important recent developments? Include dates.`
   );
-  await sleep(3000);
+  await sleep(6000);
 
-  // 4. Open jobs (merged funding+jobs to reduce calls)
+  // 4. Open jobs merged with ownership
   onStatus("Checking open roles & ownership...");
   results.funding = await ws(
     `Is ${co} publicly traded or privately held? Stock ticker if public, PE/VC firm if private. ` +
     `Also search "${co} jobs hiring 2025" — list specific job titles and departments being hired.`
   );
-  await sleep(3000);
+  await sleep(6000);
 
-  // 5. Strategy + sentiment (merged to reduce calls)
+  // 5. Strategy + sentiment merged
   onStatus("Analyzing strategy & sentiment...");
   results.strategy = await ws(
     `Search for two things about ${co}: ` +
     `(1) Current strategic priorities, CEO quotes, recent product launches or acquisitions in 2024-2025. ` +
     `(2) BBB Better Business Bureau rating at bbb.org, and any standout Glassdoor or Reddit sentiment.`
   );
-  await sleep(2000);
+  await sleep(8000);
 
   onStatus("Building RIVER brief...");
   return results;
@@ -526,39 +526,50 @@ async function researchCompany(co, url, onStatus){
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 async function callAI(prompt){
-  const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  try{
-    const r = await fetch("/api/claude",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:5000,
-        system:"You are a JSON-only API. You output raw JSON objects only. Never include markdown fences, explanations, or any text outside the JSON object. Start your response with { and end with }.",
-        messages:[{role:"user",content:prompt}],
-      }),
-    });
-    const d = await r.json();
-    if(d.error){console.error("callAI error:",d.error);return null;}
-    const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
-    if(!text) return null;
-    // Try 1: direct parse (system prompt should give us clean JSON)
-    try{return JSON.parse(text);}catch{}
-    // Try 2: strip any accidental markdown fences
-    const fence = String.fromCharCode(96,96,96);
-    const clean = text.replace(new RegExp("^"+fence+"json\\s*",""),"").replace(new RegExp("^"+fence+"\\s*",""),"").replace(new RegExp(fence+"\\s*$"),"").trim();
-    try{return JSON.parse(clean);}catch{}
-    // Try 3: find first { to last }
-    const first = text.indexOf("{");
-    const last  = text.lastIndexOf("}");
-    if(first>=0 && last>first){
-      try{return JSON.parse(text.slice(first,last+1));}catch(e){
-        console.error("JSON parse failed:", e.message, "\nText sample:", text.slice(0,500));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const r = await fetch("/api/claude",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:5000,
+          system:"You are a JSON-only API. You output raw JSON objects only. Never include markdown fences, explanations, or any text outside the JSON object. Start your response with { and end with }.",
+          messages:[{role:"user",content:prompt}],
+        }),
+      });
+      const d = await r.json();
+      if(d.error){
+        if(d.error.type==="rate_limit_error"){
+          console.warn("callAI rate limit, waiting 15s... attempt", attempt+1);
+          await sleep(15000);
+          continue;
+        }
+        console.error("callAI error:",d.error);
+        return null;
       }
-    }
-    return null;
-  }catch(e){console.error("callAI fetch error:",e);return null;}
+      const text=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
+      if(!text) return null;
+      // Try 1: direct parse
+      try{return JSON.parse(text);}catch{}
+      // Try 2: strip markdown fences
+      const fence = String.fromCharCode(96,96,96);
+      const clean = text.replace(new RegExp("^"+fence+"json\\s*",""),"").replace(new RegExp("^"+fence+"\\s*",""),"").replace(new RegExp(fence+"\\s*$"),"").trim();
+      try{return JSON.parse(clean);}catch{}
+      // Try 3: find first { to last }
+      const first = text.indexOf("{");
+      const last  = text.lastIndexOf("}");
+      if(first>=0 && last>first){
+        try{return JSON.parse(text.slice(first,last+1));}catch(e){
+          console.error("JSON parse failed:", e.message, "\nText sample:", text.slice(0,500));
+        }
+      }
+      return null;
+    }catch(e){console.error("callAI fetch error:",e);return null;}
+  }
+  return null;
 }
 
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
