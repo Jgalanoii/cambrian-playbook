@@ -441,21 +441,33 @@ function extractJSON(text){
 // One focused query → returns plain text summary. Short prompt = Claude searches.
 async function ws(question){
   // Key is handled server-side via /api/claude proxy
-  try{
-    const r = await fetch("/api/claude",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:1000,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
-        messages:[{role:"user",content:question}],
-      }),
-    });
-    const d = await r.json();
-    if(d.error){console.warn("ws error:",d.error.message);return "";}
-    return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,1200);
-  }catch(e){console.warn("ws fetch error:",e.message);return "";}
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const r = await fetch("/api/claude",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+          messages:[{role:"user",content:question}],
+        }),
+      });
+      const d = await r.json();
+      if(d.error){
+        if(d.error.type==="rate_limit_error"){
+          console.warn("ws rate limit, waiting 8s...");
+          await sleep(8000);
+          continue;
+        }
+        console.warn("ws error:",d.error.message);
+        return "";
+      }
+      return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim().slice(0,1200);
+    }catch(e){console.warn("ws fetch error:",e.message);return "";}
+  }
+  return "";
 }
 
 // ── SEQUENTIAL TARGETED RESEARCH ─────────────────────────────────────────────
@@ -464,60 +476,49 @@ async function ws(question){
 // rate limits; each call is fast (<5s).
 async function researchCompany(co, url, onStatus){
   const results = {};
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // 1. Financials — go directly to financial data sites
+  // 1. Financials
   onStatus("Looking up financials...");
   results.financials = await ws(
     `What is ${co}'s annual revenue, number of employees, and are they public or private? ` +
     `Search macrotrends.net, macroaxis.com, or wisesheets.io for "${co} revenue employees". Give me the exact numbers.`
   );
+  await sleep(3000);
 
-  // 2. Executives — LinkedIn and company site
+  // 2. Executives
   onStatus("Finding key executives...");
   results.executives = await ws(
     `Who are the current CEO, CFO, CHRO, COO, and CPO of ${co}? ` +
     `Search "${co} executives leadership team" on LinkedIn and their website ${url}. List names and exact titles.`
   );
+  await sleep(3000);
 
-  // 3. Recent news — targeted to news outlets
+  // 3. Recent news
   onStatus("Searching recent news...");
   results.news = await ws(
     `Search for "${co}" news from 2024 and 2025. ` +
     `Look on businesswire.com, prnewswire.com, Reuters, Bloomberg, and Google News. ` +
     `What are the 3-4 most important recent developments? Include dates.`
   );
+  await sleep(3000);
 
-  // 4. Funding and ownership
-  onStatus("Checking funding & ownership...");
+  // 4. Open jobs (merged funding+jobs to reduce calls)
+  onStatus("Checking open roles & ownership...");
   results.funding = await ws(
-    `Is ${co} publicly traded or privately held? Who are their investors or owners? ` +
-    `Search Crunchbase, PitchBook mentions, and recent funding news. ` +
-    `Include stock ticker if public, or PE/VC firm if private.`
+    `Is ${co} publicly traded or privately held? Stock ticker if public, PE/VC firm if private. ` +
+    `Also search "${co} jobs hiring 2025" — list specific job titles and departments being hired.`
   );
+  await sleep(3000);
 
-  // 5. Open jobs and hiring signals
-  onStatus("Checking open roles...");
-  results.jobs = await ws(
-    `Search "${co} jobs hiring 2025" on LinkedIn, Indeed, and their careers page at ${url}/careers. ` +
-    `List the specific job titles and departments currently being hired. ` +
-    `What do the open roles signal about their business priorities?`
-  );
-
-  // 6. Strategic context
-  onStatus("Analyzing strategy...");
+  // 5. Strategy + sentiment (merged to reduce calls)
+  onStatus("Analyzing strategy & sentiment...");
   results.strategy = await ws(
-    `What are ${co}'s current strategic priorities, recent product launches, acquisitions, or major contracts in 2024-2025? ` +
-    `Search for CEO quotes, earnings call summaries, and press releases about their direction.`
+    `Search for two things about ${co}: ` +
+    `(1) Current strategic priorities, CEO quotes, recent product launches or acquisitions in 2024-2025. ` +
+    `(2) BBB Better Business Bureau rating at bbb.org, and any standout Glassdoor or Reddit sentiment.`
   );
-
-  // 7. Public sentiment
-  onStatus("Checking public sentiment...");
-  results.sentiment = await ws(
-    `Search for public reputation about "${co}": ` +
-    `(1) BBB Better Business Bureau letter grade at bbb.org. ` +
-    `(2) One standout review from Glassdoor, Trustpilot, or Google Reviews. ` +
-    `(3) Reddit, LinkedIn, or social media sentiment — specific themes people mention.`
-  );
+  await sleep(2000);
 
   onStatus("Building RIVER brief...");
   return results;
@@ -633,6 +634,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "Fill in every field using the research above. Use exact numbers and real names. Make confident inferences for gaps — never say not found or leave empty. " +
     "Return ONLY the raw JSON object. No markdown fences, no explanation, no text before or after the JSON:\n\n" +
     schema;
+  onStatus("Building RIVER brief...");
+  await new Promise(r => setTimeout(r, 4000)); // let rate limit window reset
   const result = await callAI(prompt);
 
   if(!result){
