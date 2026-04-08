@@ -440,12 +440,11 @@ function extractJSON(text){
 // ── WEB SEARCH HELPER ────────────────────────────────────────────────────────
 // One focused query → returns plain text summary. Short prompt = Claude searches.
 async function ws(question){
-  const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if(!key||key.length<20) return "";
+  // Key is handled server-side via /api/claude proxy
   try{
-    const r = await fetch("https://api.anthropic.com/v1/messages",{
+    const r = await fetch("/api/claude",{
       method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         model:"claude-sonnet-4-20250514",
         max_tokens:1000,
@@ -528,9 +527,9 @@ async function researchCompany(co, url, onStatus){
 async function callAI(prompt){
   const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
   try{
-    const r = await fetch("https://api.anthropic.com/v1/messages",{
+    const r = await fetch("/api/claude",{
       method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         model:"claude-sonnet-4-20250514",
         max_tokens:5000,
@@ -567,12 +566,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const url = member.company_url || co;
   const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
-  if(!key||key.length<20){
-    return {
-      _error:"VITE_ANTHROPIC_API_KEY missing — Vercel: Settings → Env Vars → add sk-ant-... key → Redeploy",
-      ...BLANK_BRIEF, companySnapshot:co+" — API key not configured.",
-    };
-  }
+  // Key validation happens server-side in /api/claude
 
   // ── Phase 1: Sequential targeted research ─────────────────────────────────
   const R = await researchCompany(co, url, onStatus||((s)=>{}));
@@ -1546,7 +1540,7 @@ Return ONLY valid JSON:
                     <div style={{fontSize:11,color:"#7A2020",fontFamily:"monospace",background:"rgba(0,0,0,0.05)",padding:"8px 10px",borderRadius:6,marginBottom:10,wordBreak:"break-word",lineHeight:1.5}}>{briefError}</div>
                     <div style={{fontSize:10,color:"#7A2020",lineHeight:2}}>
                       <strong>Fix:</strong> Vercel → Project → Settings → Environment Variables<br/>
-                      Add <code style={{background:"#f5c6c6",padding:"1px 6px",borderRadius:3}}>VITE_ANTHROPIC_API_KEY</code> = sk-ant-... key → <strong>Redeploy</strong><br/>
+                      Add <code style={{background:"#f5c6c6",padding:"1px 6px",borderRadius:3}}>ANTHROPIC_API_KEY</code> = sk-ant-... key (no VITE_ prefix) → <strong>Redeploy</strong><br/>
                       Check browser DevTools (F12) Console for detailed error.<br/>
                       <em style={{color:"#aaa"}}>Brief below uses Claude training knowledge only — no live research.</em>
                     </div>
