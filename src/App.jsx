@@ -557,9 +557,9 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     headquarters:"City, State",
     founded:"Year",
     keyExecutives:[
-      {name:"",title:"CEO",initials:"",background:"Prior roles, known priorities",angle:"Carnegie: what they care about most — frame around their world"},
-      {name:"",title:"CHRO or CPO",initials:"",background:"",angle:"Carnegie: what makes them a hero internally"},
-      {name:"",title:"CFO or COO",initials:"",background:"",angle:"Carnegie: their ROI/risk lens"}
+      {name:"",title:"CEO",initials:"",background:"Prior roles, known priorities",angle:"Executive Perspective: what this person cares about most professionally and what drives their decisions"},
+      {name:"",title:"CHRO or CPO",initials:"",background:"",angle:"Executive Perspective: what success looks like for them personally — what makes them a hero to their team"},
+      {name:"",title:"CFO or COO",initials:"",background:"",angle:"Executive Perspective: how they evaluate decisions — ROI, risk reduction, or operational impact"}
     ],
     recentHeadlines:[
       {headline:"Headline + month/year",relevance:"Challenger: teaching moment or reframe"},
@@ -574,7 +574,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         {title:"",dept:"",signal:""}
       ]
     },
-    publicSentiment:{bbbRating:"",bbbAccredited:true,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:"Carnegie: how rep uses this to show they know the company"},
+    publicSentiment:{bbbRating:"",bbbAccredited:true,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:"How a well-prepared seller uses this to demonstrate genuine understanding of the company"},
     sellerSnapshot:"Challenger: unique insight seller brings",
     fundingProfile:"",
     strategicTheme:"Gap: current state → gap → future state in 2-3 sentences",
@@ -594,7 +594,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     openingAngle:"Cuban POWER MOMENT: the insight that makes everything click. Format: Most [industry] companies assume [X]. What we find is [Y reframe]. Is that showing up for you?",
     watchOuts:["Risk 1","Risk 2","Risk 3"],
     keyContacts:[
-      {name:"",title:"",initials:"",angle:"Carnegie: outreach framed around their specific situation"},
+      {name:"",title:"",initials:"",angle:"Engagement angle: how to open a conversation framed around their specific priorities"},
       {name:"",title:"",initials:"",angle:""}
     ],
     competitors:["",""],
@@ -606,7 +606,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "You are a master B2B sales strategist. Build a pre-call RIVER brief using these five frameworks:\\n\\n" +
     "1. GAP SELLING (Keenan): Diagnose current state with specifics. Quantify impact — cost of inaction in dollars, time, or risk. Define the future state. The gap IS the sale.\\n" +
     "2. CHALLENGER SALE (Dixon/Adamson): Teach something they don't know. Reframe assumptions. Create constructive tension. Take control — recommend a clear next step. Relationship builders finish last.\\n" +
-    "3. CARNEGIE: Frame everything in terms of THEIR interests. Make them the hero. See it from their point of view. Never sell the product — sell the outcome they personally want.\\n" +
+    "3. HUMAN RELATIONS: Frame everything in terms of THEIR interests. Make them the hero. See it from their point of view. See things from their angle before you speak. Never sell the product — sell the outcome they personally want.\\n" +
     "4. MARK CUBAN: Selling is helping, not convincing. Find the power moment that makes everything click. Sell the outcome not the product. Put the customer in a position to succeed. Be direct, fast, and real.\\n" +
     "5. JOBS + WOMEN LEADERS (Blakely, Nooyi, Barra): Use the rule of three. Sell a vision of a better world, not features. Connect the dots they haven't connected. Be transparent. Frame with a bigger purpose. Resilience and specificity win.\\n\\n" +
     "PROSPECT: " + co + " | domain: " + (hasUrl ? url : "NOT PROVIDED — use company name to infer") + " | " + member.ind + "\n" +
@@ -626,7 +626,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     "Every field must be specific — no vague generalities. Quantify where possible. Never say not found or leave empty. " +
     "Opening angle = Cuban power moment + Challenger reframe. Not a question. A statement that makes everything click. " +
     "RIVER hypothesis = Gap Selling. Current state must be specific and untenable. Impact must be quantified. Vision must be vivid. " +
-    "Exec angles = Carnegie. Frame everything around what THEY care about and what makes them a hero internally. " +
+    "Exec angles = Executive Perspectives. Frame everything around what THEY care about and what makes them a hero internally. " +
     "Seller opportunity = Jobs. Paint a vision of a better world, not a feature list. Make change feel inevitable. " +
     "Rule of three = Jobs. Where possible structure insights in threes for memorability. " +
     "Return ONLY raw JSON, no markdown, start with { end with }:\\n\\n" +
@@ -767,24 +767,24 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
 const LOADER_QUIPS = [
   "Bribing the hamsters to run faster...",
   "Enhance. Enhance. Enhance.",
-  "Triangulating your path to yes...",
-  "Asking the data nicely...",
-  "Connecting dots you didn't know existed...",
-  "Warming up the closing engine...",
-  "Reading their annual report so you don't have to...",
-  "Finding the gap. Sharpening the angle.",
-  "Keenan would be proud. Probably.",
   "Building your map to success...",
-  "Running OSINT. (Not really. Kind of.)",
-  "Teaching Claude about their fiscal year...",
-  "Calculating the cost of their inaction...",
-  "Channeling Challenger energy...",
-  "Making Carnegie proud, one exec angle at a time...",
-  "Cuban says selling is helping. We're helping.",
-  "Activating the RIVER hypothesis...",
-  "Cross-referencing 10 sources. Simultaneously. No big deal.",
-  "Your prospect doesn't know this is happening. Good.",
-  "Identifying the gap. Quantifying the impact. Closing the deal.",
+  "Connecting dots you didn't know existed...",
+  "Reading their annual report so you don't have to...",
+  "Turning raw data into genuine expertise...",
+  "Figuring out what keeps their CHRO up at night...",
+  "Triangulating your path to yes...",
+  "Becoming the most prepared person in the room...",
+  "Translating their world into your opportunity...",
+  "Warming up the problem-solving engine...",
+  "Finding the signal in the noise...",
+  "Mapping their priorities to your solutions...",
+  "Asking the data nicely...",
+  "Doing the homework so you can ask better questions...",
+  "Turning intelligence into insight...",
+  "Getting you to expert status in 15 seconds...",
+  "Identifying the problem. Quantifying the impact. Building the case.",
+  "Building a brief worthy of their time...",
+  "Almost there — this is the good part...",
 ];
 
 function BriefLoader({ company, status }) {
@@ -1729,7 +1729,7 @@ Return ONLY valid JSON:
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>👤</div>
-                      <div><div className="bb-title">Key Executives</div><div className="bb-sub">Click angles to edit</div></div>
+                      <div><div className="bb-title">Key Executives</div><div className="bb-sub">Executive Perspectives — click to edit</div></div>
                     </div>
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                       {(brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
