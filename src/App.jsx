@@ -595,7 +595,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `{"name":"Real name","title":"CFO or COO","initials":"EF","background":"Financial/operational focus","angle":"Executive Perspective: how they evaluate spend - ROI lens, risk reduction, efficiency gains"}],`+
     `"recentHeadlines":[{"headline":"Headline + date","relevance":"Why this matters for the sale"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
     `"openRoles":{"summary":"What the hiring pattern reveals about strategic priorities and current pain","roles":[{"title":"","dept":"","signal":"Strategic meaning"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
-    `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"Most relevant review","source":""}},`+
+    `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"Most relevant review found","source":"Glassdoor/BBB/LinkedIn","sentiment":"positive or negative"}},`+
     `"sellerSnapshot":"2-3 sentences on sellers most relevant offerings for this prospect",`+
     `"fundingProfile":"Funding stage, total raised, lead investors, most recent round",`+
     `"strategicTheme":"2-3 sentences on their current strategic direction",`+
@@ -1959,12 +1959,14 @@ Return ONLY valid JSON:
                       {brief.publicSentiment.standoutReview?.text&&(
                         <div style={{marginBottom:12}}>
                           <div className="field-label" style={{marginBottom:6}}>Standout Review</div>
-                          <div style={{background:brief.publicSentiment.standoutReview.sentiment==="positive"?"#EEF5EE":"#FDE8E8",borderLeft:"3px solid "+(brief.publicSentiment.standoutReview.sentiment==="positive"?"#2E6B2E":"#9B2C2C"),borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
-                            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:brief.publicSentiment.standoutReview.sentiment==="positive"?"#2E6B2E":"#9B2C2C"}}>
-                              {brief.publicSentiment.standoutReview.sentiment==="positive"?"👍 Positive":"👎 Negative"}{brief.publicSentiment.standoutReview.source?" · "+brief.publicSentiment.standoutReview.source:""}
+                          {(()=>{const s=brief.publicSentiment.standoutReview;const isNeg=s.sentiment==="negative";return(
+                          <div style={{background:isNeg?"#FDE8E8":"#EEF5EE",borderLeft:"3px solid "+(isNeg?"#9B2C2C":"#2E6B2E"),borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
+                            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:isNeg?"#9B2C2C":"#2E6B2E"}}>
+                              {isNeg?"👎 Negative":"👍 Positive"}{s.source?" · "+s.source:""}
                             </div>
-                            <div style={{fontSize:12,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{brief.publicSentiment.standoutReview.text}"</div>
+                            <div style={{fontSize:12,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{s.text}"</div>
                           </div>
+                          )})()}
                         </div>
                       )}
                       {brief.publicSentiment.sentimentSummary&&(
