@@ -2,6 +2,7 @@ import React,{useState,useEffect,useRef}from'react';
 import{useUser,useClerk,SignInButton,SignUpButton,UserButton,SignedIn,SignedOut,ClerkProvider}from'@clerk/clerk-react';
 const SUPA_URL="https://xtnidawfuaxwwwcnkewu.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmlkYXdmdWF4d3d3Y25rZXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3Njc2NzEsImV4cCI6MjA5MTM0MzY3MX0.JPTyCbsLk9Kr4AHo3ynszOo_SxvLA-XpT_5TzP8M71o";
+const CLERK_KEY="pk_test_Zml0LXNoaW5lci05MC5jbGVyay5hY2NvdW50cy5kZXYk";
 const supa=async(path,opts={})=>{
   const r=await fetch(SUPA_URL+'/rest/v1/'+path,{method:opts.method||'GET',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})},body:opts.body?JSON.stringify(opts.body):undefined});
   if(!r.ok){const e=await r.text();console.error('Supabase:',e);return null;}
@@ -1301,7 +1302,6 @@ class ErrorBoundary extends React.Component {
 }
 
 
-const CLERK_KEY="pk_test_Zml0LXNoaW5lci05MC5jbGVyay5hY2NvdW50cy5kZXYk";
 
 // ── AUTH GATE — Registration-first, email sign-up ────────────────────────
 function AuthGate({onGuest}){
