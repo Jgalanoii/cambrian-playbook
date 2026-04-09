@@ -436,6 +436,24 @@ const RKEYS = ["reality","impact","vision","entryPoints","route"];
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
 function parseACV(v){if(!v)return 0;const n=parseFloat(v.toString().replace(/[$,]/g,"").replace(/k$/i,"000"));return isNaN(n)?0:n;}
+// Cohorts now based on org size, not ACV
+function labelOrgSize(row,mapping){
+  const emp = ((mapping.employees&&row[mapping.employees])||"").toString().toLowerCase();
+  const ind = ((mapping.industry&&row[mapping.industry])||"").toString();
+  if(emp){
+    const n=parseFloat(emp.replace(/[^0-9.]/g,""));
+    if(!isNaN(n)){
+      if(n<500)   return"Small Org (<500 employees)";
+      if(n<5000)  return"Mid-Size (500–5K employees)";
+      if(n<50000) return"Large Org (5K–50K employees)";
+      return"Enterprise (50K+ employees)";
+    }
+  }
+  // Fall back to industry signals if no employee data
+  const indLow=ind.toLowerCase();
+  if(indLow.includes("university")||indLow.includes("higher ed")) return"Mid-Size (500–5K employees)";
+  return"Unknown Size";
+}
 function labelACV(v){if(v===0)return"Unknown";if(v<25000)return"SMB (<$25K)";if(v<100000)return"Mid-Market ($25K–$100K)";return"Enterprise ($100K+)";}
 function getOutcomeTheme(row,mapping){
   const get=k=>(mapping[k]?(row[mapping[k]]||""):"").toString().toLowerCase();
@@ -452,7 +470,10 @@ function buildCohorts(rows,mapping){
   const get=(row,key)=>(mapping[key]?(row[mapping[key]]||""):"").toString().trim();
   const groups={};
   rows.forEach(row=>{
-    const acv=parseACV(get(row,"acv")),band=labelACV(acv),ind=get(row,"industry")||"Other",
+    const acv=0, // ACV removed — reps assess deal size themselves
+      ind=get(row,"industry")||"Other",
+      // Band by industry vertical for meaningful cohorts
+      band=ind||"Other",
       src=get(row,"lead_source")||"Direct",outcome=getOutcomeTheme(row,mapping),
       company=get(row,"company"),product=get(row,"product"),company_url=get(row,"company_url")||"";
     if(!groups[band])groups[band]=[];
@@ -1060,9 +1081,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={
               ))}
             </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#aaa",marginTop:3}}>
-              <span>Min: ${cohort.members.filter(m=>m.acv>0).length?Math.min(...cohort.members.filter(m=>m.acv>0).map(m=>m.acv)).toLocaleString():"—"}</span>
-              <span>Avg: ${cohort.avgACV>0?cohort.avgACV.toLocaleString():"—"}</span>
-              <span>Max: ${cohort.members.filter(m=>m.acv>0).length?Math.max(...cohort.members.filter(m=>m.acv>0).map(m=>m.acv)).toLocaleString():"—"}</span>
+
             </div>
           </div>
 
@@ -1070,7 +1089,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={
           <table className="cohort-member-table">
             <thead>
               <tr>
-                <th>Company</th><th>Industry</th><th>ACV</th><th>Lead Source</th><th>Outcome</th><th>Fit Check</th><th></th>
+                <th>Company</th><th>Industry</th><th>Lead Source</th><th>Outcome</th><th>Fit Check</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -1194,7 +1213,9 @@ export default function App(){
   const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:""});
   const[fileName,setFileName]=useState("");
   const[drag,setDrag]=useState(false);
-  const[importMode,setImportMode]=useState("csv"); // "csv" | "quick"
+  const[importMode,setImportMode]=useState("csv");
+  const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
+  const[dealClassification,setDealClassification]=useState(""); // "Top-Line Revenue" etc // "csv" | "quick"
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
   const[fitScores,setFitScores]=useState({}); // {company: {score, label, reason, color}}
   const[fitScoring,setFitScoring]=useState(false);
@@ -1418,7 +1439,7 @@ export default function App(){
     setBriefLoading(true);
     setBriefError("");
     setBriefStatus("Researching "+member.company+"...");
-    setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setNotes("");setPostCall(null);setContactRole("");
+    setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setDealValue("");setDealClassification("");setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
     const {_brief,_phase2Promise} = await generateBrief(
@@ -2022,15 +2043,15 @@ Return ONLY valid JSON:
             {/* Overall pie charts */}
             <div className="cohort-chart-wrap">
               <div className="pie-card">
-                <div className="pie-title">ACV by Cohort</div>
+                <div className="pie-title">Accounts by Vertical</div>
                 <div className="pie-wrap">
-                  <PieChart size={100} data={cohorts.map(c=>({label:c.name,value:c.avgACV*c.size,color:c.color}))}/>
+                  <PieChart size={100} data={cohorts.map(c=>({label:c.name,value:c.size,color:c.color}))}/>
                   <div className="pie-legend">
                     {cohorts.map((c,i)=>(
                       <div key={i} className="pie-legend-item">
                         <div className="pie-legend-dot" style={{background:c.color}}/>
                         <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{c.name}</span>
-                        <span className="pie-legend-val">{c.avgACV>0?"$"+(c.avgACV/1000).toFixed(0)+"K":""}</span>
+                        <span className="pie-legend-val">{c.size+" accts"}</span>
                       </div>
                     ))}
                   </div>
@@ -2171,6 +2192,36 @@ Return ONLY valid JSON:
                         <div style={{fontSize:15,fontWeight:700,color:"#1a1a18"}}>{selectedAccount.company}</div>
                         <div style={{fontSize:12,color:"#777"}}>{selectedAccount.ind}</div>
                       </div>
+                    </div>
+
+                    {/* Deal Value */}
+                    <div style={{marginBottom:14}}>
+                      <div className="field-label" style={{marginBottom:6}}>Estimated Deal Value <span style={{color:"#aaa",fontWeight:400,fontSize:11,textTransform:"none",letterSpacing:0}}>(1-year contract)</span></div>
+                      <select value={dealValue} onChange={e=>setDealValue(e.target.value)} style={{width:"100%",fontSize:14}}>
+                        <option value="">— Select deal size —</option>
+                        <option>Less than $5,000</option>
+                        <option>$5,000 – $15,000</option>
+                        <option>$15,000 – $50,000</option>
+                        <option>$50,000 – $100,000</option>
+                        <option>$100,000 – $250,000</option>
+                        <option>$250,000 – $500,000</option>
+                        <option>$500,000 – $1,000,000</option>
+                        <option>$1,000,000+</option>
+                      </select>
+                    </div>
+
+                    {/* Deal Classification */}
+                    <div style={{marginBottom:16,paddingBottom:14,borderBottom:"1px solid #E8E6DF"}}>
+                      <div className="field-label" style={{marginBottom:6}}>Revenue Classification</div>
+                      <select value={dealClassification} onChange={e=>setDealClassification(e.target.value)} style={{width:"100%",fontSize:14}}>
+                        <option value="">— Select classification —</option>
+                        <option>Top-Line Revenue (TCV)</option>
+                        <option>Contribution Margin</option>
+                        <option>Gross Profit</option>
+                        <option>Net New ARR</option>
+                        <option>Expansion Revenue</option>
+                        <option>Professional Services</option>
+                      </select>
                     </div>
 
                     {/* Outcomes */}
@@ -2687,8 +2738,8 @@ Return ONLY valid JSON:
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
-              <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setRightTab("brief");setStep(7);}}>
-                Start In-Call →
+              <button className="btn btn-green btn-lg" onClick={()=>setStep(6)}>
+                Review Hypothesis →
               </button>
             </div>
           </div></ErrorBoundary>
