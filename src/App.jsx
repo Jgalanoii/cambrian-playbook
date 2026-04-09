@@ -1471,13 +1471,17 @@ export default function App(){
     setUrlScanStatus("scanning");
     setUrlScanConfirmed(false);
 
+    const baseUrl = "https://"+url;
     const prompt =
-      `Fetch the website at ${url} and identify all product, solution, service, platform, and feature pages.\n`+
-      `Look for links in the navigation, footer, and main content that lead to specific product or service pages.\n`+
+      `Fetch the website at ${baseUrl} and carefully inspect the navigation for dropdown menus, mega-menus, and nested nav items.\n\n`+
+      `Specifically look for dropdown sections labeled: "Solutions", "Use Cases", "Services", "Platform", "Products", "Catalog", "Features", "Industries", "By Role", "By Team".\n\n`+
+      `For each dropdown/nested menu you find, extract the individual sub-page links within it — not just the top-level nav label.\n`+
+      `Also check the footer and any "Our Products" or "What We Offer" sections on the homepage.\n\n`+
+      `Goal: find the 3-5 most specific product or solution pages (e.g. "/solutions/rewards", "/platform/incentives") — NOT generic pages like /about, /blog, /careers, /contact, /pricing.\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
       `{"pages":[`+
-      `{"url":"full URL including https://","label":"Product or section name"},`+
-      `{"url":"","label":""},{"url":"","label":""},{"url":"","label":""}]}`;
+      `{"url":"full URL including https://","label":"Exact name from the nav dropdown"},`+
+      `{"url":"","label":""},{"url":"","label":""},{"url":"","label":""},{"url":"","label":""}]}`;
 
     try{
       const r = await fetch("/api/claude",{
