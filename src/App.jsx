@@ -2093,6 +2093,180 @@ Return ONLY valid JSON:
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
+  // ── CUSTOMER-FACING POST-CALL BRIEF ─────────────────────────────────────
+  const showCustomerBrief=()=>{
+    const co = selectedAccount?.company||"";
+    const date = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+    const sellerName = sbUser?.user_metadata?.full_name||sbUser?.email||sellerUrl;
+    const solutions = (brief?.solutionMapping||[]).filter(s=>s?.product).slice(0,4);
+    const outcomes = (selectedOutcomes||[]).join(", ");
+    const callSummary = postCall?.callSummary||"";
+    const nextSteps = postCall?.nextSteps||[];
+    // Split next steps: steps with "you" / customer-named action → their side; rest → seller
+    const sellerSteps = nextSteps.filter((_,i)=>i%2===0).slice(0,3);
+    const customerSteps = nextSteps.filter((_,i)=>i%2!==0).slice(0,3);
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Call Summary — ${co}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #fff; color: #1a1a18; }
+  @page { size: A4; margin: 18mm 18mm 14mm; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+  .page { max-width: 720px; margin: 0 auto; padding: 40px 44px; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid #1a1a18; }
+  .header-left h1 { font-family: 'Lora', serif; font-size: 26px; font-weight: 700; color: #1a1a18; margin-bottom: 4px; }
+  .header-left .sub { font-size: 13px; color: #8B6F47; font-weight: 600; letter-spacing: 0.3px; }
+  .header-right { text-align: right; font-size: 12px; color: #777; line-height: 1.8; }
+  .header-right strong { color: #1a1a18; font-weight: 600; }
+
+  /* Section */
+  .section { margin-bottom: 24px; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #8B6F47; margin-bottom: 10px; }
+  .section-body { font-size: 14px; line-height: 1.7; color: #333; }
+
+  /* Summary box */
+  .summary-box { background: #F8F6F1; border-left: 3px solid #8B6F47; border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14px; line-height: 1.7; color: #333; }
+
+  /* Solutions */
+  .solutions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .solution-card { background: #F8F6F1; border-radius: 8px; padding: 12px 14px; }
+  .solution-name { font-size: 13px; font-weight: 700; color: #1a1a18; margin-bottom: 4px; }
+  .solution-fit { font-size: 12px; color: #555; line-height: 1.5; }
+
+  /* Next steps */
+  .steps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .steps-col { }
+  .steps-col-title { font-size: 12px; font-weight: 700; color: #fff; background: #1a1a18; border-radius: 6px; padding: 5px 12px; margin-bottom: 10px; display: inline-block; }
+  .steps-col-title.theirs { background: #2E6B2E; }
+  .step-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+  .step-num { width: 20px; height: 20px; border-radius: 50%; background: #1a1a18; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-num.green { background: #2E6B2E; }
+  .step-text { font-size: 13px; color: #333; line-height: 1.5; }
+
+  /* Footer */
+  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #E8E6DF; display: flex; justify-content: space-between; align-items: center; }
+  .footer-left { font-size: 11px; color: #aaa; }
+  .footer-right { font-size: 11px; color: #aaa; }
+  .footer-brand { font-family: 'Lora', serif; font-weight: 700; color: #1a1a18; font-size: 12px; }
+  .footer-brand span { color: #8B6F47; }
+
+  /* Divider */
+  .divider { height: 1px; background: #E8E6DF; margin: 20px 0; }
+
+  /* Outcomes pill */
+  .outcomes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .outcome-pill { background: #EEF5EE; color: #2E6B2E; border: 1px solid #2E6B2E44; border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Discovery Call Summary</h1>
+      <div class="sub">${co} · Confidential</div>
+    </div>
+    <div class="header-right">
+      <div><strong>Date:</strong> ${date}</div>
+      <div><strong>Prepared by:</strong> ${sellerName}</div>
+      <div><strong>Account:</strong> ${co}</div>
+    </div>
+  </div>
+
+  <!-- Call Summary -->
+  <div class="section">
+    <div class="section-title">Call Summary</div>
+    <div class="summary-box">${callSummary||"Summary of discovery call and key findings."}</div>
+  </div>
+
+  ${outcomes?`
+  <!-- Outcomes -->
+  <div class="section">
+    <div class="section-title">Target Outcomes Discussed</div>
+    <div class="outcomes">
+      ${selectedOutcomes.map(o=>`<span class="outcome-pill">${o}</span>`).join("")}
+    </div>
+  </div>`:""}
+
+  ${solutions.length?`
+  <!-- Solutions -->
+  <div class="section">
+    <div class="section-title">Solutions Reviewed</div>
+    <div class="solutions">
+      ${solutions.map(s=>`
+      <div class="solution-card">
+        <div class="solution-name">${s.product}</div>
+        <div class="solution-fit">${s.fit?.split(".")[0]||""}</div>
+      </div>`).join("")}
+    </div>
+  </div>`:""}
+
+  <div class="divider"></div>
+
+  <!-- Next Steps -->
+  <div class="section">
+    <div class="section-title">Agreed Next Steps</div>
+    <div class="steps-grid">
+      <div class="steps-col">
+        <div class="steps-col-title">We Will</div>
+        ${sellerSteps.length?sellerSteps.map((s,i)=>`
+        <div class="step-item">
+          <div class="step-num">${i+1}</div>
+          <div class="step-text">${s}</div>
+        </div>`).join(""):nextSteps.slice(0,3).map((s,i)=>`
+        <div class="step-item">
+          <div class="step-num">${i+1}</div>
+          <div class="step-text">${s}</div>
+        </div>`).join("")}
+      </div>
+      <div class="steps-col">
+        <div class="steps-col-title theirs">You Will</div>
+        ${customerSteps.length?customerSteps.map((s,i)=>`
+        <div class="step-item">
+          <div class="step-num green">${i+1}</div>
+          <div class="step-text">${s}</div>
+        </div>`).join(""):`
+        <div class="step-item">
+          <div class="step-num green">1</div>
+          <div class="step-text">Review the proposed solutions and share any questions or feedback</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num green">2</div>
+          <div class="step-text">Confirm stakeholders who should be involved in next conversation</div>
+        </div>`}
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">Prepared for ${co} · ${date}</div>
+    <div class="footer-right">
+      <span class="footer-brand">Cambrian <span>Catalyst</span></span>
+    </div>
+  </div>
+
+</div>
+<script>
+  // Auto-open print dialog after fonts load
+  window.addEventListener('load', () => setTimeout(() => window.print(), 800));
+</script>
+</body>
+</html>`;
+
+    const win = window.open("","_blank","width=900,height=1100");
+    if(win){ win.document.write(html); win.document.close(); }
+  };
+
   const doExport=()=>{
     // Scroll to top so print starts from beginning of current step
     window.scrollTo(0,0);
@@ -4011,6 +4185,9 @@ Return ONLY valid JSON:
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(6)}>← Back to Call</button>
                   <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
+                  <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
+                    📄 Customer Brief
+                  </button>
                   <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(8);}}>
                     Solution Fit Review →
