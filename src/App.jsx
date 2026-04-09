@@ -1095,7 +1095,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={
 // ── RIVER FIELD CARD — Quick Summary + Expand (must be a component, not inline) ──
 function RiverFieldCard({fieldKey, label, icon, sub, color, value, onChange}){
   const [expanded, setExpanded] = useState(false);
-  const full = value || "";
+  const full = typeof value === "string" ? value : (value ? String(value) : "");
   const sentEnd = full.search(/[.!?]\s/);
   const summary = sentEnd>0&&sentEnd<180 ? full.slice(0,sentEnd+1) : full.slice(0,160)+(full.length>160?"...":"");
   const needsExpand = full.length > summary.length+2;
@@ -2563,7 +2563,7 @@ Return ONLY valid JSON:
                     icon={icon}
                     sub={sub}
                     color={color}
-                    value={riverHypo[key]||""}
+                    value={String(riverHypo[key]||"")}
                     onChange={v=>setRiverHypo(prev=>({...prev,[key]:v}))}
                   />
                 ))}
