@@ -1349,6 +1349,28 @@ class ErrorBoundary extends React.Component {
 
 export default function App(){
   const[authed,setAuthed]=useState(false);
+
+  // ── PERSIST SESSION TO LOCALSTORAGE ─────────────────────────────────────
+  const STORAGE_KEY = "cambrian_session_v1";
+  const saveSession = (patch) => {
+    try {
+      const current = JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({...current,...patch,_saved:new Date().toISOString()}));
+    } catch(e){ console.warn("Save failed:",e.message); }
+  };
+  const loadSession = () => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}"); }
+    catch { return {}; }
+  };
+  const clearSession = () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch{}
+  };
+  const lastSaved = () => {
+    try {
+      const d = JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+      return d._saved ? new Date(d._saved).toLocaleString() : null;
+    } catch { return null; }
+  };
   const[_step,_setStep]=useState(0);
   const step=_step;
   const setStep=(n)=>{_setStep(n);window.scrollTo({top:0,behavior:"smooth"});};
@@ -1615,6 +1637,54 @@ export default function App(){
     }catch(e){console.warn("ICP build failed:",e.message);}
     setIcpLoading(false);
   };
+
+  // ── RESTORE SESSION ON MOUNT ──────────────────────────────────────────────
+  useEffect(()=>{
+    const s = loadSession();
+    if(!s._saved) return;
+    if(s.sellerUrl) setSellerUrl(s.sellerUrl);
+    if(s.sellerInput) setSellerInput(s.sellerInput);
+    if(s.productUrls?.length) setProductUrls(s.productUrls);
+    if(s.urlScanConfirmed) setUrlScanConfirmed(s.urlScanConfirmed);
+    if(s.sellerICP) setSellerICP(s.sellerICP);
+    if(s.products?.length) setProducts(s.products);
+    if(s.sellerDocs?.length) setSellerDocs(s.sellerDocs);
+    if(s.rows?.length){ setRows(s.rows); setHeaders(s.headers||[]); setMapping(s.mapping||{}); setFileName(s.fileName||""); }
+    if(s.importMode) setImportMode(s.importMode);
+    if(s.quickEntries?.length) setQuickEntries(s.quickEntries);
+    if(s.cohorts?.length){ setCohorts(s.cohorts); }
+    if(s.selectedCohort) setSelectedCohort(s.selectedCohort);
+    if(s.fitScores) setFitScores(s.fitScores);
+    if(s.accountQueue?.length) setAccountQueue(s.accountQueue);
+    if(s.queueIdx) setQueueIdx(s.queueIdx);
+    if(s.selectedAccount) setSelectedAccount(s.selectedAccount);
+    if(s.selectedOutcomes?.length) setSelectedOutcomes(s.selectedOutcomes);
+    if(s.customOutcome) setCustomOutcome(s.customOutcome);
+    if(s.dealValue) setDealValue(s.dealValue);
+    if(s.dealClassification) setDealClassification(s.dealClassification);
+    if(s.contactRole) setContactRole(s.contactRole);
+    if(s.brief) setBrief(s.brief);
+    if(s.riverHypo) setRiverHypo(s.riverHypo);
+    if(s.discoveryQs) setDiscoveryQs(s.discoveryQs);
+    if(s.gateAnswers) setGateAnswers(s.gateAnswers);
+    if(s.gateNotes) setGateNotes(s.gateNotes);
+    if(s.riverData) setRiverData(s.riverData);
+    if(s.notes) setNotes(s.notes);
+    if(s.postCall) setPostCall(s.postCall);
+    if(s.solutionFit) setSolutionFit(s.solutionFit);
+    console.log("Session restored from", s._saved);
+  },[]);
+
+  // ── AUTO-SAVE SESSION ON KEY STATE CHANGES ────────────────────────────────
+  useEffect(()=>{ if(sellerUrl) saveSession({sellerUrl,sellerInput,productUrls,urlScanConfirmed,sellerICP,products,sellerDocs}); },[sellerUrl,productUrls,sellerICP,products]);
+  useEffect(()=>{ if(rows.length) saveSession({rows,headers,mapping,fileName,importMode,quickEntries}); },[rows,importMode]);
+  useEffect(()=>{ if(cohorts.length) saveSession({cohorts,selectedCohort,fitScores,accountQueue,queueIdx}); },[cohorts,fitScores]);
+  useEffect(()=>{ if(selectedAccount) saveSession({selectedAccount,selectedOutcomes,customOutcome,dealValue,dealClassification,contactRole}); },[selectedAccount,selectedOutcomes]);
+  useEffect(()=>{ if(brief) saveSession({brief}); },[brief]);
+  useEffect(()=>{ if(riverHypo) saveSession({riverHypo,discoveryQs}); },[riverHypo,discoveryQs]);
+  useEffect(()=>{ if(Object.keys(gateAnswers).length||notes) saveSession({gateAnswers,gateNotes,riverData,notes}); },[gateAnswers,notes]);
+  useEffect(()=>{ if(postCall) saveSession({postCall}); },[postCall]);
+  useEffect(()=>{ if(solutionFit) saveSession({solutionFit}); },[solutionFit]);
 
   // ── SCAN SELLER URL FOR PRODUCT PAGES ────────────────────────────────────
   const scanSellerUrl = async(rawUrl) => {
@@ -2046,11 +2116,20 @@ Return ONLY valid JSON:
             {selectedCohort&&<><span>·</span><span>Cohort: <strong>{selectedCohort.name}</strong></span></>}
             {selectedAccount&&<><span>·</span><span>Account: <strong>{selectedAccount.company}</strong></span></>}
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+              {lastSaved()&&(
+                <span style={{fontSize:9,color:"#aaa",fontStyle:"italic"}}>
+                  💾 Saved {lastSaved()}
+                </span>
+              )}
               <label style={{fontSize:10,color:"#8B6F47",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                 <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
               {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
+              <button style={{fontSize:10,color:"#9B2C2C",fontWeight:600,background:"none",border:"1px solid #9B2C2C44",borderRadius:6,padding:"2px 8px",cursor:"pointer"}}
+                onClick={()=>{if(window.confirm("Clear session and start over?")){clearSession();window.location.reload();}}}>
+                ✕ New Session
+              </button>
             </span>
           </div>
         )}
@@ -3787,7 +3866,7 @@ Return ONLY valid JSON:
                     Solution Fit Review →
                   </button>
                   <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
-                  <button className="btn btn-secondary" onClick={()=>{setStep(1);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");}}>New Dataset</button>
+                  <button className="btn btn-secondary" onClick={()=>{setStep(1);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");clearSession();}}>New Dataset</button>
                 </div>
               </>
             )}
