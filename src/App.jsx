@@ -693,7 +693,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"fundingProfile":"CRITICAL: This is about ${co} (the PROSPECT), NOT the seller. What is ${co}'s ownership structure? If PE-backed name the PE firm and year acquired. If VC-backed list the series (A/B/C/D/E), total raised, lead investors, and most recent round. If public list the exchange and ticker. If private only, note estimated revenue or valuation if known.",`+
     `"strategicTheme":"2-3 sentences on their current strategic direction",`+
     `"sellerOpportunity":"2-3 sentences: why the seller is well-positioned right now - the why-you-why-now that opens doors",`+
-    `"solutionMapping":[{"product":"Specific offering from seller","fit":"Specific reason grounded in their signals and pain"},{"product":"","fit":""},{"product":"","fit":""}],`+`"caseStudies":[`+`{"title":"Case study or customer name from seller website","customer":"Customer company name","relevance":"Why this is relevant to this prospect specifically"},`+`{"title":"Second relevant case study or named customer","customer":"","relevance":""},`+`{"title":"Third case study if applicable","customer":"","relevance":""}],`+
+    `"solutionMapping":[{"product":"Specific offering from seller","fit":"SA rationale: how this maps to their business need, what architecture complexity exists, and what outcome it drives"},{"product":"","fit":"SA rationale for second solution"},{"product":"","fit":"SA rationale for third solution"}],`+`"caseStudies":[`+`{"title":"Case study or customer name from seller website","customer":"Customer company name","relevance":"Why this is relevant to this prospect specifically"},`+`{"title":"Second relevant case study or named customer","customer":"","relevance":""},`+`{"title":"Third case study if applicable","customer":"","relevance":""}],`+
     `"openingAngle":"Sharp statement not a question referencing something real. Format: Most [industry] companies [assumption]. What the data shows is [reframe]. Is that showing up for you?",`+
     `"watchOuts":["Specific risk","Competitive risk","Budget or stakeholder risk"],`+
     `"keyContacts":[`+`{"name":"Real name if findable","title":"VP or Director or Manager-level title — NOT C-suite","initials":"AB","angle":"Why they feel this pain daily and how to get their attention"},`+`{"name":"Real name if findable","title":"Another mid-level champion — HR Tech, Total Rewards, Benefits, Ops","initials":"CD","angle":"Their specific problem and what a win looks like for them"},`+`{"name":"Real name if findable","title":"Third in-road — procurement, IT, or functional lead","initials":"EF","angle":"How they influence the decision and what they care about"}],`+
@@ -1285,6 +1285,8 @@ export default function App(){
   const[riverHypo,setRiverHypo]=useState(null);
   const[riverHypoLoading,setRiverHypoLoading]=useState(false);
   const[discoveryQs,setDiscoveryQs]=useState(null); // product-specific discovery questions
+  const[solutionFit,setSolutionFit]=useState(null); // post-call SA review
+  const[solutionFitLoading,setSolutionFitLoading]=useState(false);
   const[contactRole,setContactRole]=useState("");
 
   const[activeRiver,setActiveRiver]=useState(0);
@@ -1688,6 +1690,57 @@ export default function App(){
     if(result) setDiscoveryQs(result);
   };
 
+  // ── SOLUTION ARCHITECTURE REVIEW ──────────────────────────────────────────
+  // Fired after post-call. Uses call capture to re-evaluate solution fit
+  // with SA rigor: business requirements → architecture → fit mapping.
+  // Frameworks: Rajput (biz→digital), McSweeney (stakeholder alignment),
+  // Richards/Ford (architecture attributes), Fowler (integration patterns)
+  const buildSolutionFit = async() => {
+    if(!brief||!postCall) return;
+    setSolutionFitLoading(true);
+
+    const solutions = (brief.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product+": "+s.fit).join("\n");
+    const riverCapture = RIVER_STAGES.map(s=>{
+      const gates = s.gates.map(g=>`${g.q}: ${gateAnswers[g.id]||"Not answered"}`).join("; ");
+      const disc  = s.discovery.map(p=>`${p.label}: ${riverData[p.id]||"Not captured"}`).join("; ");
+      return `${s.label}: ${gates} | ${disc}`;
+    }).join("\n");
+
+    const prompt =
+      `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call.\n\n`+
+      `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
+      `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
+      `DEAL CONFIDENCE: ${confidence}%\n`+
+      `DEAL ROUTE: ${postCall?.dealRoute||"Unknown"}\n\n`+
+      `SELLER SOLUTIONS MAPPED PRE-CALL:\n${solutions}\n\n`+
+      `DISCOVERY CAPTURE (what we actually heard):\n${riverCapture}\n\n`+
+      `CALL NOTES:\n${notes||"None"}\n\n`+
+      `POST-CALL SUMMARY: ${postCall?.callSummary||""}\n\n`+
+      `Apply Solution Architecture principles:\n`+
+      `- Rajput: align their business proposition to the digital solution — does what we sell map to what they need to BUILD?\n`+
+      `- McSweeney: assess stakeholder alignment — do the right people see the value?\n`+
+      `- Richards/Ford: evaluate architecture fit attributes — scalability, reliability, maintainability, security fit\n`+
+      `- Fowler: flag integration complexity — what patterns does connecting to their stack require?\n`+
+      `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n\n`+
+      `Return ONLY raw JSON, start with {:\n`+
+      `{"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
+      `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
+      `"architectureGaps":[{"gap":"What the customer needs that we didn't fully address","recommendation":"How to bridge it — our product, partnership, or configuration"}],`+
+      `"implementationRoadmap":"2-3 sentence recommended phasing: what to implement first and why, framed around their desired outcomes",`+
+      `"integrationComplexity":"Low / Medium / High with 1-sentence explanation",`+
+      `"successMetrics":["Specific measurable outcome 1 tied to their stated goals","Metric 2","Metric 3"],`+
+      `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`;
+
+    const result = await callAI(prompt);
+    setSolutionFit(result||{
+      confirmedSolutions:[],revisedSolutions:[],architectureGaps:[],
+      implementationRoadmap:"Unable to generate — review discovery notes and try again.",
+      integrationComplexity:"Unknown",successMetrics:[],
+      saRecommendation:"Insufficient discovery data captured.",
+    });
+    setSolutionFitLoading(false);
+  };
+
   const runPostCall=async()=>{
     setPostLoading(true);
     const riverSummary=RIVER_STAGES.map(s=>{
@@ -1737,7 +1790,7 @@ Return ONLY valid JSON:
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   const doExport=()=>exportToExcel(brief,gateAnswers,riverData,postCall,selectedAccount,selectedCohort,selectedOutcomes,sellerUrl,confidence);
 
-  const STEPS=["Session","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call"];
+  const STEPS=["Session","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
@@ -1764,6 +1817,7 @@ Return ONLY valid JSON:
                 if(i===5) return !!brief; // hypothesis needs brief
                 if(i===6) return !!riverHypo; // in-call needs hypothesis
                 if(i===7) return !!postCall; // post-call needs in-call
+                if(i===8) return !!solutionFit; // solution fit needs post-call
                 return step>i;
               })();
               return(
@@ -2560,7 +2614,7 @@ Return ONLY valid JSON:
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
                       <button className="btn btn-navy" onClick={doExport}>↓ Export RIVER</button>
                       <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
-                      <button className="btn btn-green btn-lg" onClick={()=>{setStep(6);}}>Review Hypothesis →</button>
+                      <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(5);}}>Review Hypothesis →</button>
                     </div>
                   </div>
                 </div>
@@ -3278,10 +3332,195 @@ Return ONLY valid JSON:
                   <button className="btn btn-secondary" onClick={()=>setStep(6)}>← Back to Call</button>
                   <button className="btn btn-navy" onClick={doExport}>↓ Export Full RIVER</button>
                   <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
+                  <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(8);}}>
+                    Solution Fit Review →
+                  </button>
                   <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
                   <button className="btn btn-secondary" onClick={()=>{setStep(1);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");}}>New Dataset</button>
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 8: SOLUTION FIT REVIEW ── */}
+        {step===8&&(
+          <div className="page">
+            <div className="page-title">Solution Architecture Review</div>
+            <div className="page-sub">Post-call solution fit re-evaluation for <strong>{selectedAccount?.company}</strong> — aligned to what you actually heard, not just what you assumed.</div>
+
+            {solutionFitLoading&&(
+              <div className="card">
+                <div style={{fontSize:13,color:"#777",marginBottom:12}}>Applying Solution Architecture framework to your discovery capture...</div>
+                <div className="pulse-wrap">{[70,90,55,80,65,75,50].map((w,i)=><div key={i} className="pulse-line" style={{width:`${w}%`,animationDelay:`${i*0.12}s`}}/>)}</div>
+                <div style={{fontSize:12,color:"#8B6F47",marginTop:12,fontStyle:"italic"}}>
+                  Evaluating business alignment, integration complexity, and implementation phasing...
+                </div>
+              </div>
+            )}
+
+            {solutionFit&&!solutionFitLoading&&(
+              <>
+                {/* Integration complexity badge */}
+                <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
+                  <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"#1a1a18"}}>
+                    Integration Complexity:
+                  </div>
+                  {(()=>{
+                    const ic=(solutionFit.integrationComplexity||"").split("/")[0].trim().toLowerCase();
+                    const c=ic==="low"?"#2E6B2E":ic==="medium"?"#BA7517":"#9B2C2C";
+                    const bg=ic==="low"?"#EEF5EE":ic==="medium"?"#FEF6E4":"#FDE8E8";
+                    return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"4px 14px",fontSize:14,fontWeight:700}}>
+                      {solutionFit.integrationComplexity}
+                    </span>;
+                  })()}
+                </div>
+
+                {/* Confirmed Solutions */}
+                {(solutionFit.confirmedSolutions||[]).length>0&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon">✓</div>
+                      <div><div className="bb-title">Confirmed Solution Fit</div><div className="bb-sub">Solutions validated by discovery — with SA rationale</div></div>
+                    </div>
+                    <div className="bb-body">
+                      {solutionFit.confirmedSolutions.map((s,i)=>(
+                        <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<solutionFit.confirmedSolutions.length-1?"1px solid #F0EDE6":"none"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+                            <div style={{background:"#F0EDE6",color:"#7A5C30",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
+                              {s.product}
+                            </div>
+                            <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                              background:s.fitScore>=75?"#EEF5EE":s.fitScore>=50?"#FEF6E4":"#FDE8E8",
+                              color:s.fitScore>=75?"#2E6B2E":s.fitScore>=50?"#BA7517":"#9B2C2C",
+                              border:"1px solid "+(s.fitScore>=75?"#2E6B2E":s.fitScore>=50?"#BA7517":"#9B2C2C")+"44"}}>
+                              {s.fitScore}% · {s.fitLabel}
+                            </div>
+                            <div style={{fontSize:11,background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:"2px 10px",color:"#555"}}>
+                              {s.implementationPhase}
+                            </div>
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                            <div>
+                              <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Business Alignment</div>
+                              <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{s.businessAlignment}</div>
+                            </div>
+                            <div>
+                              <div style={{fontSize:11,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Architecture Notes</div>
+                              <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{s.architectureNotes}</div>
+                            </div>
+                          </div>
+                          {s.risks&&(
+                            <div style={{marginTop:8,padding:"8px 10px",background:"#FDE8E8",borderRadius:6,fontSize:12,color:"#9B2C2C"}}>
+                              ⚠ {s.risks}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Revised / Changed Solutions */}
+                {(solutionFit.revisedSolutions||[]).length>0&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>↕</div>
+                      <div><div className="bb-title">Revised After Discovery</div><div className="bb-sub">Solutions that changed based on what you actually heard</div></div>
+                    </div>
+                    <div className="bb-body">
+                      {solutionFit.revisedSolutions.map((r,i)=>(
+                        <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",background:"#FAF8F4",borderRadius:8,marginBottom:8,border:"1px solid #E8E6DF"}}>
+                          <div style={{flex:1}}>
+                            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
+                              <span style={{fontWeight:700,fontSize:13,color:"#1a1a18"}}>{r.product}</span>
+                              <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,
+                                background:r.change==="Upgraded"?"#EEF5EE":r.change==="Removed"?"#FDE8E8":"#FEF6E4",
+                                color:r.change==="Upgraded"?"#2E6B2E":r.change==="Removed"?"#9B2C2C":"#BA7517"}}>
+                                {r.change}
+                              </span>
+                            </div>
+                            <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{r.reason}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Architecture Gaps */}
+                {(solutionFit.architectureGaps||[]).length>0&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>🔍</div>
+                      <div><div className="bb-title">Architecture Gaps</div><div className="bb-sub">Customer needs not fully addressed — recommendations to bridge</div></div>
+                    </div>
+                    <div className="bb-body">
+                      {solutionFit.architectureGaps.map((g,i)=>(
+                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<solutionFit.architectureGaps.length-1?"1px solid #F0EDE6":"none"}}>
+                          <div style={{fontSize:13,fontWeight:600,color:"#9B2C2C",marginBottom:4}}>Gap: {g.gap}</div>
+                          <div style={{fontSize:13,color:"#2E6B2E",lineHeight:1.5}}>→ {g.recommendation}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Implementation Roadmap */}
+                {solutionFit.implementationRoadmap&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>🗺</div>
+                      <div><div className="bb-title">Implementation Roadmap</div><div className="bb-sub">Recommended phasing based on their outcomes and architecture</div></div>
+                    </div>
+                    <div className="bb-body">
+                      <div style={{fontSize:14,color:"#333",lineHeight:1.7}}>{solutionFit.implementationRoadmap}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Success Metrics */}
+                {(solutionFit.successMetrics||[]).filter(Boolean).length>0&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>📊</div>
+                      <div><div className="bb-title">Success Metrics</div><div className="bb-sub">What winning looks like — measurable, tied to their outcomes</div></div>
+                    </div>
+                    <div className="bb-body">
+                      {solutionFit.successMetrics.filter(Boolean).map((m,i)=>(
+                        <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}}>
+                          <div style={{width:20,height:20,borderRadius:"50%",background:"#2E6B2E",color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
+                          <div style={{fontSize:14,color:"#333",lineHeight:1.6}}>{m}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SA Recommendation */}
+                {solutionFit.saRecommendation&&(
+                  <div style={{background:"#1a1a18",borderRadius:14,padding:"20px 22px",marginBottom:16}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>🏗 Senior SA Recommendation</div>
+                    <div style={{fontSize:15,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>"{solutionFit.saRecommendation}"</div>
+                  </div>
+                )}
+
+                <div className="actions-row">
+                  <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Post-Call</button>
+                  <button className="btn btn-secondary" onClick={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}>↻ Regenerate</button>
+                  <button className="btn btn-navy" onClick={doExport}>↓ Export RIVER</button>
+                  <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}>Next Account</button>
+                </div>
+              </>
+            )}
+
+            {!solutionFit&&!solutionFitLoading&&(
+              <div style={{background:"#FAF8F4",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:32,textAlign:"center"}}>
+                <div style={{fontSize:28,marginBottom:12}}>🏗</div>
+                <div style={{fontSize:15,fontWeight:600,color:"#1a1a18",marginBottom:6}}>Solution Architecture Review</div>
+                <div style={{fontSize:13,color:"#777",marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>Re-evaluate solution fit against what you heard in the call. Maps customer needs to your solutions using SA principles.</div>
+                <button className="btn btn-primary btn-lg" onClick={buildSolutionFit}>Run Solution Fit Review →</button>
+              </div>
             )}
           </div>
         )}
