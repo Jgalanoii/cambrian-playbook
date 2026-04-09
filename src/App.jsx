@@ -709,7 +709,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
 
   const baseInstructions =
     `Senior B2B sales strategist. Build a pre-call brief about TARGET PROSPECT "${co}" for a seller at ${sellerUrl}.\n`+
-    `CRITICAL: All fields about ${co}, NOT the seller. ASCII punctuation only. No curly quotes. No trailing commas.\n`+
+    `CRITICAL: All fields describe ${co}, NOT the seller. ASCII punctuation only. No curly quotes. No trailing commas.\n`+`If data is unknown or unavailable, return an empty string "" — NEVER write "N/A", "Not applicable", "Unknown", or error messages in fields.\n`+
     `Apply DMAIC lens to processMaturity: Define=knows problem unmeasured, Measure=anecdotal data, Analyze=diagnosing, Improve=evaluating solutions, Control=sustaining.\n`+
     `SELLER (context only):\n${sellerCtx}${prodCtx}\n`+
     `PROSPECT TO RESEARCH: ${co} (${dealCtx})\n`;
@@ -808,7 +808,12 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
       }
       // Merge Part C (live search) — only real data, not error messages
       if(partC&&typeof partC==="object"){
-        if(partC.recentHeadlines?.some(h=>h?.headline)) next.recentHeadlines=partC.recentHeadlines;
+        const errorPatterns = ["unable to retrieve","web search","domain-specific","cannot filter","search failed","not available","no specific","visit the website","check the news","real-time","may not have"];
+        const cleanHeadlines = (partC.recentHeadlines||[]).filter(h=>{
+          const txt=(h?.headline||"").toLowerCase();
+          return h?.headline && !errorPatterns.some(p=>txt.includes(p)) && h.headline.length>10;
+        });
+        if(cleanHeadlines.length>0) next.recentHeadlines=cleanHeadlines;
         if(partC.openRoles?.summary&&!next.openRoles?.summary) next.openRoles=partC.openRoles;
         if(partC.fundingProfile&&!partC.fundingProfile.includes("Search failed")) next.fundingProfile=partC.fundingProfile;
         if(partC.recentSignals?.some(s=>s)) next.recentSignals=partC.recentSignals;
@@ -1900,7 +1905,12 @@ Return ONLY valid JSON:
 
         {/* HEADER */}
         <header className="header">
-          <div className="logo">Cambrian <span>Catalyst</span></div>
+          <div style={{display:"flex",flexDirection:"column",gap:3}}>
+            <div className="logo">Cambrian <span>Catalyst</span></div>
+            <div style={{fontSize:9,letterSpacing:"0.6px",color:"#aaa",fontWeight:600,textTransform:"uppercase",paddingLeft:2}}>
+              R·eality &nbsp;I·mpact &nbsp;V·ision &nbsp;E·ntry &nbsp;R·oute
+            </div>
+          </div>
           <div className="stepper">
             {STEPS.map((s,i)=>{
               // Determine if step is reachable
@@ -2869,7 +2879,11 @@ Return ONLY valid JSON:
                       <div><div className="bb-title">Recent Headlines</div><div className="bb-sub">Notable news from 2024–2025</div></div>
                     </div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {(brief.recentHeadlines||[]).filter(h=>h?.headline||typeof h==="string").map((h,i)=>{
+                      {(brief.recentHeadlines||[]).filter(h=>{
+                        const txt=(typeof h==="string"?h:(h?.headline||"")).toLowerCase();
+                        const isErr=["unable to retrieve","web search","domain-specific","cannot filter","search failed","not available"].some(p=>txt.includes(p));
+                        return !isErr&&(h?.headline||typeof h==="string");
+                      }).map((h,i)=>{
                         const headline = typeof h==="string"?h:(h.headline||"");
                         const relevance = typeof h==="object"?h.relevance:"";
                         return(
@@ -2935,11 +2949,12 @@ Return ONLY valid JSON:
                           <div className="field-label" style={{marginBottom:6,display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
                             <span style={{background:"#1B3A6B",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>BBB</span>Rating
                           </div>
-                          <div style={{fontFamily:"Lora,serif",fontSize:28,fontWeight:600,lineHeight:1,color:
-                            !brief.publicSentiment.bbbRating?"#ccc":
-                            brief.publicSentiment.bbbRating.startsWith("A")?"#2E6B2E":
-                            brief.publicSentiment.bbbRating.startsWith("B")?"#BA7517":"#9B2C2C"}}>
-                            {brief.publicSentiment.bbbRating||"—"}
+                          <div style={{fontFamily:"Lora,serif",fontSize:28,fontWeight:600,lineHeight:1,color:(()=>{
+                            const r=brief.publicSentiment.bbbRating||"";
+                            const valid=r.length<=3&&/^[A-F][+-]?$/.test(r.trim());
+                            return !r?"#ccc":valid&&r.startsWith("A")?"#2E6B2E":valid&&r.startsWith("B")?"#BA7517":"#ccc";
+                          })()}}>
+                            {(()=>{const r=brief.publicSentiment.bbbRating||"";return r.length<=3&&/^[A-F][+-]?$/.test(r.trim())?r:"—";})()}
                           </div>
                           {brief.publicSentiment.bbbAccredited!==null&&(
                             <div style={{fontSize:9,marginTop:5,fontWeight:700,color:brief.publicSentiment.bbbAccredited?"#2E6B2E":"#9B2C2C"}}>
@@ -3172,22 +3187,22 @@ Return ONLY valid JSON:
 
             {/* Recommended Solutions — surface at top so rep is anchored */}
             {(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
-              <div style={{background:"#1a1a18",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>
+              <div style={{background:"#1B3A6B",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#B8CCE4",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>
                   🎯 Solutions You're Selling into {selectedAccount?.company}
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {(brief.solutionMapping||[]).filter(s=>s?.product).map((s,i)=>(
                     <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                      <div style={{background:"#8B6F47",color:"#fff",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
+                      <div style={{background:"#2C5282",color:"#fff",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
                         {s.product}
                       </div>
-                      <div style={{fontSize:13,color:"#ccc",lineHeight:1.6}}>{s.fit}</div>
+                      <div style={{fontSize:13,color:"#C8D8EC",lineHeight:1.6}}>{s.fit}</div>
                     </div>
                   ))}
                 </div>
                 {brief?.openingAngle&&(
-                  <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #333"}}>
+                  <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #2C5282"}}>
                     <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Opening Angle</div>
                     <div style={{fontSize:13,color:"#fff",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
                   </div>
