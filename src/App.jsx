@@ -2303,7 +2303,7 @@ Return ONLY valid JSON:
     setTimeout(()=>window.print(), 150);
   };
 
-  const STEPS=["Session","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
+  const STEPS=["Session","ICP","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
@@ -2328,11 +2328,12 @@ Return ONLY valid JSON:
               const canNav = (()=>{
                 if(i===step) return false; // already here
                 if(i===0) return true; // session always
-                if(i===1) return !!sellerUrl; // import needs session
-                if(i===2) return cohorts.length>0; // accounts needs import
-                if(i===3) return cohorts.length>0; // account review needs accounts
-                if(i===4) return !!brief; // brief needs account picked
-                if(i===5) return !!brief; // hypothesis needs brief
+                if(i===1) return !!sellerUrl; // ICP needs URL
+                if(i===2) return !!sellerUrl; // import needs session
+                if(i===3) return cohorts.length>0; // accounts needs import
+                if(i===4) return cohorts.length>0; // account review needs accounts
+                if(i===5) return !!brief; // brief needs account picked
+                if(i===6) return !!brief; // hypothesis needs brief
                 if(i===6) return !!riverHypo; // in-call needs hypothesis
                 if(i===7) return !!postCall; // post-call needs in-call
                 if(i===8) return !!solutionFit; // solution fit needs post-call
@@ -2353,7 +2354,7 @@ Return ONLY valid JSON:
             })}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {step===6&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
+            {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
             {step>0&&(
               <button onClick={saveSession}
                 style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,cursor:"pointer",
@@ -2719,8 +2720,18 @@ Return ONLY valid JSON:
                 )}
               </div>
 
-              {/* ICP Preview */}
-              {(sellerICP||icpLoading)&&(
+              {/* ICP builds in background — reviewed on next step */}
+              {icpLoading&&!sellerICP&&(
+                <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#aaa",padding:"8px 0",marginTop:8}}>
+                  <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Building your ICP in the background...
+                </div>
+              )}
+              {sellerICP&&!icpLoading&&(
+                <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#2E6B2E",padding:"6px 0",marginTop:8}}>
+                  <span>✓</span> ICP ready — you'll review it on the next step
+                </div>
+              )}
+              {false&&(
                 <div style={{marginTop:16}}>
                   <div style={{height:1,background:"#E8E6DF",marginBottom:16}}/>
                   <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
@@ -2831,8 +2842,224 @@ Return ONLY valid JSON:
           </div>
         )}
 
-        {/* ── STEP 1: IMPORT ── */}
+        {/* ── STEP 1: ICP REVIEW ── */}
         {step===1&&(
+          <div className="page">
+            <div className="page-title">Your Ideal Customer Profile</div>
+            <div className="page-sub">Built from <strong>{sellerUrl}</strong> using Revella, Dunford, Osterwalder, and Moore frameworks. Review and edit before scoring accounts.</div>
+
+            {icpLoading&&!sellerICP&&(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:"60px 0",textAlign:"center"}}>
+                <div className="load-spin" style={{width:32,height:32,borderWidth:3}}/>
+                <div style={{fontSize:15,color:"#555",fontWeight:500}}>Building your ICP for {sellerUrl}...</div>
+                <div style={{fontSize:13,color:"#aaa"}}>Researching positioning, buyer personas, pain points, and channels</div>
+              </div>
+            )}
+
+            {!sellerICP&&!icpLoading&&(
+              <div style={{textAlign:"center",padding:"40px 0",color:"#aaa"}}>
+                <div style={{fontSize:32,marginBottom:12}}>🔍</div>
+                <div style={{fontSize:14,marginBottom:16}}>ICP not built yet</div>
+                <button className="btn btn-primary" onClick={()=>buildSellerICP(sellerUrl)}>Build ICP Now</button>
+              </div>
+            )}
+
+            {sellerICP?.icp&&(
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+                {/* Positioning */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon">🎯</div>
+                    <div><div className="bb-title">Positioning (Dunford — Obviously Awesome)</div></div>
+                  </div>
+                  <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Seller Description</div>
+                      <EF value={sellerICP.sellerDescription||""} onChange={v=>setSellerICP(p=>({...p,sellerDescription:v}))} placeholder="What this seller does and their core value prop"/>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                      <div>
+                        <div className="field-label" style={{marginBottom:4}}>Market Category</div>
+                        <EF value={sellerICP.marketCategory||""} onChange={v=>setSellerICP(p=>({...p,marketCategory:v}))} placeholder="e.g. Employee Rewards Platform" single/>
+                      </div>
+                      <div>
+                        <div className="field-label" style={{marginBottom:4}}>Adoption Profile (Moore)</div>
+                        <EF value={sellerICP.icp.adoptionProfile||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,adoptionProfile:v}}))} placeholder="e.g. Early Majority" single/>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Why We Win — Unique Differentiators</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                        {(sellerICP.icp.uniqueDifferentiators||[]).filter(Boolean).map((d,i)=>(
+                          <span key={i} style={{background:"#EEF5EE",border:"1px solid #2E6B2E44",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#2E6B2E",display:"flex",alignItems:"center",gap:4}}>
+                            {d}
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,uniqueDifferentiators:p.icp.uniqueDifferentiators.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#2E6B2E",padding:0}}>✕</button>
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{fontSize:11,color:"#aaa"}}>Competitive alternatives: {(sellerICP.icp.competitiveAlternatives||[]).filter(Boolean).join(", ")||"—"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Target Customer */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon">🏢</div>
+                    <div><div className="bb-title">Target Customer Profile</div></div>
+                  </div>
+                  <div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Target Industries</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
+                        {(sellerICP.icp.industries||[]).map((ind,i)=>(
+                          <span key={i} style={{background:"#E8E6DF",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                            {ind}
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,industries:p.icp.industries.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Company Size Sweet Spot</div>
+                      <EF value={sellerICP.icp.companySize||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,companySize:v}}))} placeholder="e.g. 500–10K employees" single/>
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Revenue Range</div>
+                      <EF value={sellerICP.icp.revenueRange||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,revenueRange:v}}))} placeholder="e.g. $50M–$2B" single/>
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Deal Size / ACV</div>
+                      <EF value={sellerICP.icp.dealSize||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,dealSize:v}}))} placeholder="e.g. $25K–$150K" single/>
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Not a Fit</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {(sellerICP.icp.disqualifiers||[]).filter(Boolean).map((d,i)=>(
+                          <span key={i} style={{background:"#FDE8E8",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#9B2C2C"}}>{d}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Sales Cycle</div>
+                      <EF value={sellerICP.icp.salesCycle||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,salesCycle:v}}))} placeholder="e.g. 3–6 months" single/>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Buyer Personas */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon">👤</div>
+                    <div><div className="bb-title">Buyer Personas (Revella)</div><div className="bb-sub">Economic buyer · Champion · Technical evaluator</div></div>
+                  </div>
+                  <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
+                    {(sellerICP.icp.buyerPersonas||[]).filter(Boolean).map((p,i)=>(
+                      <div key={i} style={{background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:20}}>{"💼👷🔧"[i]||"👤"}</span>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:"#1B3A6B"}}>{p}</div>
+                          <div style={{fontSize:10,color:"#aaa"}}>{["Economic Buyer","Champion / User","Technical Evaluator"][i]||"Stakeholder"}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5 Rings of Buying Insight */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon">💡</div>
+                    <div><div className="bb-title">5 Rings of Buying Insight (Revella)</div><div className="bb-sub">Why they buy, what stops them, how they decide</div></div>
+                  </div>
+                  <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
+                    {[
+                      {key:"priorityInitiative",label:"⚡ Ring 1 — Priority Initiative",sub:"What triggers them to act NOW",color:"#BA7517",bg:"#FEF6E4"},
+                      {key:"successFactors",label:"✓ Ring 2 — Success Factors",sub:"What winning looks like for them",color:"#2E6B2E",bg:"#EEF5EE"},
+                      {key:"perceivedBarriers",label:"🚧 Ring 3 — Perceived Barriers",sub:"What makes them hesitate or walk away",color:"#9B2C2C",bg:"#FDE8E8"},
+                      {key:"decisionCriteria",label:"⚖️ Ring 4 — Decision Criteria",sub:"How they evaluate and compare options",color:"#1B3A6B",bg:"#EEF5F9"},
+                      {key:"buyerJourney",label:"🗺 Ring 5 — Buyer Journey",sub:"How they move from awareness to decision",color:"#6B3A7A",bg:"#F3EEF9"},
+                    ].map(({key,label,sub,color,bg})=>(
+                      <div key={key} style={{background:bg,border:"1px solid "+color+"33",borderRadius:10,padding:"12px 14px"}}>
+                        <div style={{fontSize:11,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>{label}</div>
+                        <div style={{fontSize:10,color:"#aaa",marginBottom:8}}>{sub}</div>
+                        <EF value={sellerICP.icp[key]||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,[key]:v}}))} placeholder={sub}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Customer Jobs + Pains + Gains */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon">🎯</div>
+                    <div><div className="bb-title">Customer Profile (Osterwalder — Value Proposition Canvas)</div></div>
+                  </div>
+                  <div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                    <div>
+                      <div className="field-label" style={{marginBottom:6}}>Top Pains We Solve</div>
+                      {(sellerICP.icp.topPains||[]).filter(Boolean).map((p,i)=>(
+                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid #F0EDE6"}}>• {p}</div>
+                      ))}
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:6}}>Top Gains We Create</div>
+                      {(sellerICP.icp.topGains||[]).filter(Boolean).map((g,i)=>(
+                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid #F0EDE6"}}>• {g}</div>
+                      ))}
+                    </div>
+                    <div style={{gridColumn:"1/-1"}}>
+                      <div className="field-label" style={{marginBottom:6}}>Customer Jobs-to-be-Done</div>
+                      {(sellerICP.icp.customerJobs||[]).filter(Boolean).map((j,i)=>(
+                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid #F0EDE6"}}>
+                          <span style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",marginRight:6}}>{["Functional","Emotional","Social"][i]||""}</span>{j}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Channels + Customer Examples */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon">📡</div>
+                    <div><div className="bb-title">Go-to-Market (Weinberg — Traction)</div></div>
+                  </div>
+                  <div className="bb-body">
+                    <div style={{marginBottom:10}}>
+                      <div className="field-label" style={{marginBottom:6}}>Best Channels to Reach This Buyer</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {(sellerICP.icp.tractionChannels||[]).filter(Boolean).map((c,i)=>(
+                          <span key={i} style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555"}}>{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                    {(sellerICP.icp.customerExamples||[]).filter(Boolean).length>0&&(
+                      <div>
+                        <div className="field-label" style={{marginBottom:4}}>Known Customers</div>
+                        <div style={{fontSize:12,color:"#777"}}>{(sellerICP.icp.customerExamples||[]).filter(Boolean).join(" · ")}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:24,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
+              <button className="btn btn-secondary" onClick={()=>setStep(0)}>← Back</button>
+              <button className="btn btn-primary btn-lg"
+                onClick={()=>setStep(2)}
+                disabled={!sellerICP&&!icpLoading}>
+                {icpLoading&&!sellerICP?"Building ICP...":"Continue to Import →"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 2: IMPORT ── */}
+        {step===2&&(
           <div className="page">
             <div className="page-title">Add Your Accounts</div>
             <div className="page-sub">Upload a CRM export, or type in companies directly — great for conferences, warm intros, or quick meeting prep.</div>
@@ -2956,7 +3183,7 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 2: TARGET ACCOUNT REVIEW ── */}
-        {step===2&&(
+        {step===3&&(
           <div className="page">
             <div className="page-title">Target Account Review</div>
             <div className="page-sub">All {rows.length} accounts ranked by fit. Click any account to start research — or scroll down for cohort analysis.</div>
@@ -3134,7 +3361,7 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 3: ACCOUNT + OUTCOMES ── */}
-        {step===3&&selectedCohort&&(
+        {step===4&&selectedCohort&&(
           <div className="page">
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4,flexWrap:"wrap"}}>
               <div className="page-title" style={{margin:0}}>
@@ -3440,7 +3667,7 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 4: RIVER BRIEF ── */}
-        {step===4&&(
+        {step===5&&(
           <div className="page">
             <div className="page-title">RIVER Brief{selectedAccount?` — ${selectedAccount.company}`:""}</div>
             <div className="page-sub">
@@ -3922,7 +4149,7 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 5: RIVER HYPOTHESIS ── */}
-        {step===5&&(
+        {step===6&&(
           <ErrorBoundary><div className="page">
             <div className="page-title">RIVER Hypothesis — {selectedAccount?.company||"Account"}</div>
             <div className="page-sub">
@@ -4061,7 +4288,7 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 6: IN-CALL NAVIGATOR ── */}
-        {step===6&&(
+        {step===7&&(
           <div className="incall-wrap">
 
             {/* Header */}
@@ -4291,7 +4518,7 @@ Return ONLY valid JSON:
 
         {/* ── STEP 8: POST-CALL ── */}
         {/* ── STEP 7: POST-CALL ── */}
-        {step===7&&(
+        {step===8&&(
           <div className="page">
             <div className="page-title">Post-Call Route</div>
             <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, CRM note, and follow-up email.</div>
@@ -4352,7 +4579,7 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 8: SOLUTION FIT REVIEW ── */}
-        {step===8&&(
+        {step===9&&(
           <div className="page">
             <div className="page-title">Solution Architecture Review</div>
             <div className="page-sub">Post-call solution fit re-evaluation for <strong>{selectedAccount?.company}</strong> — aligned to what you actually heard, not just what you assumed.</div>
