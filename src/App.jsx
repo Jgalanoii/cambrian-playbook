@@ -3136,7 +3136,22 @@ Return ONLY valid JSON:
                 </div>
                 <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
                 <div style={{textAlign:"center",marginBottom:22}}>
-                  <button className="btn btn-secondary" onClick={loadSample}>Load Sample Data (25 accounts)</button>
+                  <button className="btn btn-secondary" onClick={()=>{
+                    const hdrs=Object.keys(SAMPLE_ROWS[0]);
+                    setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName("sample_25_accounts.csv");
+                    const m={};hdrs.forEach(h=>m[h]=h);setMapping(m);
+                    // Auto-advance after a tick so state settles
+                    setTimeout(()=>{
+                      const b=buildCohorts(SAMPLE_ROWS,Object.fromEntries(Object.keys(SAMPLE_ROWS[0]).map(h=>[h,h])));
+                      if(b.length){
+                        setCohorts(b);
+                        const sel=b.find(c=>c.members.length>1)||b[0];
+                        setSelectedCohort(sel);
+                        scoreFit(sel.members, sellerUrl);
+                        setStep(3);
+                      }
+                    },50);
+                  }}>Load Sample Data (25 accounts)</button>
                 </div>
               </>
             )}
