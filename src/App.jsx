@@ -419,7 +419,7 @@ const RIVER_STAGES = [
 
 const BLANK_BRIEF = {
   companySnapshot:"",sellerSnapshot:"",
-  revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",
+  revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",website:"",linkedIn:"",
   keyExecutives:[],recentHeadlines:[],
   openRoles:{summary:"",roles:[]},
   solutionMapping:[{product:"",fit:""},{product:"",fit:""},{product:"",fit:""}],
@@ -574,8 +574,8 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:4000,
-          system:"You are a JSON API. Output only valid JSON.",
+          max_tokens:5500,
+          system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
             {role:"user",content:prompt},
             {role:"assistant",content:"{"},
@@ -681,7 +681,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
 
   const schema =
     `{"companySnapshot":"3-4 sentences: what they do, revenue scale, employee count, HQ, recent strategic direction",`+
-    `"revenue":"e.g. $2.4B ARR (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT)","employeeCount":"e.g. ~47,000","headquarters":"City, State","founded":"Year",`+
+    `"revenue":"e.g. $2.4B ARR (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT)","employeeCount":"e.g. ~47,000","headquarters":"City, State","founded":"Year","website":"e.g. darden.com","linkedIn":"e.g. linkedin.com/company/darden-restaurants",`+
     `"keyExecutives":[`+
     `{"name":"Real name","title":"CEO","initials":"AB","background":"Prior role + known priority","angle":"What personally drives them — their board priority, their career ambition, what specific gap keeps them up at night (2 sentences max)"},`+
     `{"name":"Real name","title":"CHRO or CPO","initials":"CD","background":"People/HR focus","angle":"Success in their terms — retention improvement, culture wins, HR tech ROI, or team productivity gains (2 sentences max)"},`+
@@ -699,13 +699,13 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"keyContacts":[`+`{"name":"Real name if findable","title":"VP or Director or Manager-level title — NOT C-suite","initials":"AB","angle":"Why they feel this pain daily and how to get their attention"},`+`{"name":"Real name if findable","title":"Another mid-level champion — HR Tech, Total Rewards, Benefits, Ops","initials":"CD","angle":"Their specific problem and what a win looks like for them"},`+`{"name":"Real name if findable","title":"Third in-road — procurement, IT, or functional lead","initials":"EF","angle":"How they influence the decision and what they care about"}],`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"recentSignals":["Top buying signal","Second signal","Third signal"],`+
-    `"growthSignals":["Growth indicator with evidence","Second signal","Third signal"],`+`"processMaturity":{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"maturityNote":"1-2 sentences: where is this org in their improvement journey, and what does this mean for how a seller should enter?",`+`"processGaps":["Specific broken process or workflow signal","Second signal"],`+`"bottlenecks":["Where work gets stuck or slows down","Second bottleneck"]}}`;
+    `"growthSignals":["Growth indicator with evidence","Second signal","Third signal"],`+`"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control",`+`"maturityNote":"Where they are in improvement cycle and seller entry implication (1 sentence)",`+`"processGaps":["Gap 1","Gap 2"],`+`"bottlenecks":["Bottleneck 1","Bottleneck 2"]}}`;
 
   // Phase 1: Training-knowledge brief - no web search, shows in ~6-8s
   onStatus("Building brief for "+co+"...");
   // Slim phase1 prompt — rich but concise, avoids token waste on instructions
   const phase1Prompt =
-    `Senior B2B sales strategist. Build a pre-call brief about the TARGET PROSPECT "${co}" for a seller.\n`+
+    `Senior B2B sales strategist. Build a pre-call brief about the TARGET PROSPECT "${co}" for a seller.\n`+`CRITICAL JSON RULES: ASCII punctuation only. No curly quotes. No em-dashes. No trailing commas. No newlines inside strings.\n`+
     `Apply: Gap Selling (quantify gaps), Challenger Sale (teach something new), Carnegie (their interests).\n`+`Apply DMAIC lens to processMaturity: Define=knows problem but unmeasured, Measure=has anecdotal data, Analyze=diagnosing root cause, Improve=evaluating solutions (prime selling moment), Control=sustaining/scaling.\n`+
     `ASCII punctuation only. Real facts only. Return raw JSON starting with {:\n`+
     `SELLER (context only — do NOT write the brief about the seller):\n${sellerCtx}${prodCtx}\n`+
@@ -2679,6 +2679,24 @@ Return ONLY valid JSON:
                         <EF value={(brief.headquarters||(brief.founded?" · Founded "+brief.founded:""))||""} onChange={v=>patchBrief(b=>{b.headquarters=v;})} single placeholder="e.g. Philadelphia, PA · Founded 1959"/>
                       </div>
                     </div>
+
+                    {/* Website + LinkedIn */}
+                    {(brief.website||brief.linkedIn)&&(
+                      <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>
+                        {brief.website&&(
+                          <a href={"https://"+brief.website.replace(/^https?:\/\//,"")} target="_blank" rel="noopener noreferrer"
+                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#1B3A6B",textDecoration:"none",background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:16,padding:"4px 12px",fontWeight:600}}>
+                            🌐 {brief.website.replace(/^https?:\/\//,"")}
+                          </a>
+                        )}
+                        {brief.linkedIn&&(
+                          <a href={"https://"+brief.linkedIn.replace(/^https?:\/\//,"")} target="_blank" rel="noopener noreferrer"
+                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#0a66c2",textDecoration:"none",background:"#e8f3fc",border:"1px solid #0a66c244",borderRadius:16,padding:"4px 12px",fontWeight:600}}>
+                            in {brief.linkedIn.replace(/^https?:\/\//,"").replace(/^linkedin\.com\/company\//,"")}
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Funding Profile */}
