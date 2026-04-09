@@ -3092,7 +3092,7 @@ Return ONLY valid JSON:
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
                   <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
                   <button className="btn btn-navy" onClick={doExport}>↓ Export RIVER</button>
-                  <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setRightTab("brief");setStep(6);}}>Start In-Call →</button>
+                  <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(5);}}>Review Hypothesis →</button>
                 </div>
               </>
             )}
@@ -3213,11 +3213,8 @@ Return ONLY valid JSON:
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
-              <button className="btn btn-green btn-lg" onClick={()=>{
-                if(!riverHypo&&!riverHypoLoading&&brief) buildRiverHypo(brief,selectedAccount);
-                setStep(5);
-              }}>
-                Review Hypothesis →
+              <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(6);}}>
+                Start In-Call →
               </button>
             </div>
           </div></ErrorBoundary>
