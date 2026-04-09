@@ -1635,34 +1635,51 @@ export default function App(){
     setRiverHypo(null);
 
     const co = member.company;
-    const snapshot = briefData.companySnapshot || "";
-    const theme = briefData.strategicTheme || "";
-    const signals = (briefData.recentSignals||[]).join("; ");
-    const headlines = (briefData.recentHeadlines||[]).map(h=>h?.headline||h||"").filter(Boolean).join("; ");
-    const products_ctx = (briefData.solutionMapping||[]).filter(s=>s?.product).map(s=>`${s.product}: ${s.fit}`).join("\n");
+    const snapshot = (briefData.companySnapshot || "").slice(0,350);
+    const theme = (briefData.strategicTheme || "").slice(0,250);
+    const signals = (briefData.recentSignals||[]).join("; ").slice(0,200);
+    const headlines = (briefData.recentHeadlines||[]).map(h=>h?.headline||h||"").filter(Boolean).join("; ").slice(0,200);
+    const opportunity = (briefData.sellerOpportunity || "").slice(0,200);
+
+    // Seller context — this is what determines what the hypothesis can actually propose
+    const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
+    const sellerCtx = sellerDocs.length>0
+      ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
+      : "Seller: "+sellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"");
+    const productsCtx = products.filter(p=>p.name.trim()).length>0
+      ? products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" — "+p.description.slice(0,80):"")).join("; ")
+      : "";
+    const mappedSolutions = (briefData.solutionMapping||[]).filter(s=>s?.product)
+      .map(s=>s.product+": "+s.fit).join("\n").slice(0,400);
 
     const prompt =
-      "You are a senior B2B sales strategist building a RIVER discovery hypothesis.\n\n" +
-      "COMPANY: " + co + " | Industry: " + (member.ind||"") + " | ACV: " + (member.acv>0?"$"+member.acv.toLocaleString():"Unknown") + "\n" +
-      "COMPANY SNAPSHOT: " + snapshot.slice(0,400) + "\n" +
-      "STRATEGIC THEME: " + theme.slice(0,300) + "\n" +
-      "BUYING SIGNALS: " + signals.slice(0,200) + "\n" +
-      "RECENT NEWS: " + headlines.slice(0,300) + "\n" +
-      "SOLUTION FIT: " + products_ctx.slice(0,400) + "\n\n" +
-      "Build a sharp RIVER hypothesis. Be specific — use real company context. No vague generalities.\n" +      "Layer DMAIC thinking into each stage:\n" +      "- Reality: what data proves the current state is broken? (Define+Measure)\n" +      "- Impact: is this root cause or symptom? Quantify the gap. (Analyze)\n" +      "- Vision: what measurable improvement looks like for them. (Improve)\n" +      "- Route: how do they sustain the change? Who owns it? (Control)\n" +
-      "Return ONLY raw JSON, no markdown:\n" +
+      "You are a senior B2B sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
+      "CRITICAL CONSTRAINT: This hypothesis must ONLY reference things the SELLER can deliver. Do NOT suggest the prospect fix food waste, labor costs, or anything outside the seller's scope.\n\n" +
+      "SELLER (" + sellerUrl + ") CONTEXT:\n" + sellerCtx + "\n" +
+      (productsCtx?"SELLER PRODUCTS/SERVICES: "+productsCtx+"\n":"") +
+      "\nPROSPECT: " + co + " | Industry: " + (member.ind||"") + "\n" +
+      "SNAPSHOT: " + snapshot + "\n" +
+      "STRATEGIC THEME: " + theme + "\n" +
+      "BUYING SIGNALS: " + signals + "\n" +
+      "RECENT NEWS: " + headlines + "\n" +
+      "SELLER OPPORTUNITY (pre-built): " + opportunity + "\n" +
+      "SOLUTION MAPPING (pre-built):\n" + mappedSolutions + "\n\n" +
+      "BUILD THE RIVER HYPOTHESIS:\n" +
+      "Every field must be grounded in what " + sellerUrl + " specifically sells. Do not stray into general consulting.\n" +
+      "Apply DMAIC lens: Reality=Define+Measure, Impact=Analyze, Vision=Improve, Route=Control.\n" +
+      "Return ONLY raw JSON, ASCII punctuation only:\n" +
       JSON.stringify({
-        reality:"Current state — what problem are they experiencing today, specifically? Not vague — tie to their industry, size, and signals.",
-        impact:"Quantified cost of the problem — dollars, time, risk, or competitive disadvantage. Make it visceral.",
-        vision:"What success looks like for them when the problem is solved — in their language, not yours.",
-        entryPoints:"Who owns this decision? Names from the brief, or most likely titles given their org.",
-        route:"Fastest path to a committed next step — what sequence of actions closes this deal?",
-        openingAngle:"One sharp reframe that makes them say 'I never thought of it that way.' Not a question — a statement, then validate.",
+        reality:"The specific problem " + co + " faces that "+sellerUrl+" can directly solve — not generic ops issues. Tie to their signals and what the seller's products address.",
+        impact:"Cost of this problem in terms the seller's solution resolves — revenue, efficiency, or brand impact. Reference a specific signal.",
+        vision:"What "+co+" looks like when "+sellerUrl+"'s solution is working — measurable outcomes in their language.",
+        entryPoints:"Decision-maker at "+co+" who owns the problem the seller solves — specific names or titles from the brief.",
+        route:"Step-by-step path from today to a signed deal, using "+sellerUrl+"'s sales motion — pilot, POC, or direct.",
+        openingAngle:"One sharp insight that connects a real signal about "+co+" to a specific capability of "+sellerUrl+". Statement, not a question.",
         talkTracks:[
-          {stage:"Opening",line:"First 30 seconds — reference something specific, create curiosity"},
-          {stage:"Discovery",line:"Best gap-finding question for their specific situation"},
-          {stage:"Impact",line:"How to quantify the cost of inaction in their terms"},
-          {stage:"Vision",line:"How to paint the future state in their language"},
+          {stage:"Opening",line:"Reference something specific about "+co+" that connects to "+sellerUrl+"'s work"},
+          {stage:"Discovery",line:"Best gap-finding question scoped to what "+sellerUrl+" can actually fix"},
+          {stage:"Impact",line:"Quantify the cost of the gap in terms "+sellerUrl+"'s solution resolves"},
+          {stage:"Vision",line:"Paint the future state using "+sellerUrl+"'s specific capabilities"},
         ],
       });
 
