@@ -666,7 +666,7 @@ async function callAI(prompt){
 }
 
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
-async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus){
+async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[]){
   const co  = member.company;
   const url = member.company_url || co;
 
@@ -690,7 +690,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"openRoles":{"summary":"What the hiring pattern reveals about strategic priorities and current pain","roles":[{"title":"","dept":"","signal":"Strategic meaning"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
     `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"Most relevant review found","source":"Glassdoor/BBB/LinkedIn","sentiment":"positive or negative"}},`+
     `"sellerSnapshot":"2-3 sentences on sellers most relevant offerings for this prospect",`+
-    `"fundingProfile":"Funding stage, total raised, lead investors, most recent round",`+
+    `"fundingProfile":"CRITICAL: Full ownership picture. If PE-backed name the firm and acquisition year. If VC-backed list series (A/B/C/D/E), total raised, lead investors, latest round date and amount. If public include exchange and ticker. If private note estimated revenue or valuation if known.",`+
     `"strategicTheme":"2-3 sentences on their current strategic direction",`+
     `"sellerOpportunity":"2-3 sentences: why the seller is well-positioned right now - the why-you-why-now that opens doors",`+
     `"solutionMapping":[{"product":"Specific offering from seller","fit":"Specific reason grounded in their signals and pain"},{"product":"","fit":""},{"product":"","fit":""}],`+`"caseStudies":[`+`{"title":"Case study or customer name from seller website","customer":"Customer company name","relevance":"Why this is relevant to this prospect specifically"},`+`{"title":"Second relevant case study or named customer","customer":"","relevance":""},`+`{"title":"Third case study if applicable","customer":"","relevance":""}],`+
@@ -1129,7 +1129,14 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={
                   </td>
                   <td style={{color:"#555"}}>{m.ind||"—"}</td>
                   <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
-                  <td style={{color:"#555",fontSize:12}}>{m.publicPrivate||"—"}</td>
+                  <td style={{fontSize:12}}>
+                    {m.publicPrivate?(()=>{
+                      const ot=(fitScores[m.company]?.ownershipType)||"";
+                      const c=ot==="public"?"#1B3A6B":ot==="pe"?"#6B3A3A":ot==="vc"?"#2E6B2E":"#555";
+                      const bg=ot==="public"?"#EEF5F9":ot==="pe"?"#FDE8E8":ot==="vc"?"#EEF5EE":"#F8F6F1";
+                      return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:8,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.publicPrivate}</span>;
+                    })():"—"}
+                  </td>
                   <td style={{color:"#555",fontSize:12}}>{m.geography||"—"}</td>
                   <td>{fitScores&&fitScores[m.company]?(
                     <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:12,
@@ -1411,28 +1418,44 @@ export default function App(){
   const scoreFit = async(members, sellerCtx) => {
     if(!members?.length) return;
     setFitScoring(true);
-    const companies = members.slice(0,30).map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.acv>0?"$"+m.acv.toLocaleString():"Unknown ACV"}|${m.company_url||""}`).join("\n");
+    const companies = members.slice(0,30).map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
     const prompt =
-      `You are a B2B sales strategist evaluating whether companies are good targets for a seller.\n\n`+
+      `You are a B2B sales strategist. For each company below, score fit AND provide key firmographic data from your training knowledge.\n\n`+
       `SELLER PROFILE:\n${sellerCtx}\n\n`+
       `SCORING CRITERIA:\n`+
-      `1. Product/industry fit — do the seller's offerings make sense for this company's business?\n`+
+      `1. Product/industry fit — do the seller's offerings make sense for this company?\n`+
       `2. Size fit — does this company's scale match the seller's typical customer profile?\n`+
       `3. Similar customers — would this company fit the seller's existing customer base?\n\n`+
-      `Rate each company 0-100. Be strict — a restaurant tech company should score Walmart LOW, McDonald's HIGH.\n\n`+
-      `COMPANIES TO SCORE (format: Name|Industry|ACV|URL):\n${companies}\n\n`+
+      `For ownership: identify if Public (with ticker), Private, PE-backed (name the PE firm if known), or VC-backed (Series A/B/C/D/E, note lead investor if known).\n`+
+      `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
+      `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"scores":[{"company":"exact company name","score":85,"label":"Strong Fit","reason":"1 sentence why"},{"company":"","score":40,"label":"Poor Fit","reason":""}]}`;
+      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
+      `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
+      `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
 
     const result = await callAI(prompt);
     if(result?.scores){
       const map = {};
+      const memberUpdates = {};
       result.scores.forEach(s=>{
         const color = s.score>=75?"#2E6B2E":s.score>=50?"#BA7517":"#9B2C2C";
         const bg    = s.score>=75?"#EEF5EE":s.score>=50?"#FEF6E4":"#FDE8E8";
-        map[s.company] = {...s, color, bg};
+        // Ownership badge color
+        const ownerColor = s.ownershipType==="public"?"#1B3A6B":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"#2E6B2E":"#555";
+        map[s.company] = {...s, color, bg, ownerColor};
+        memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
       });
       setFitScores(map);
+      // Push orgSize + ownership back into cohort members so table shows them
+      setCohorts(prev=>prev.map(c=>({
+        ...c,
+        members:c.members.map(m=>memberUpdates[m.company]
+          ? {...m,
+              employees:m.employees||memberUpdates[m.company].orgSize,
+              publicPrivate:m.publicPrivate||memberUpdates[m.company].ownership}
+          : m)
+      })));
     }
     setFitScoring(false);
   };
@@ -1490,7 +1513,8 @@ export default function App(){
     const {_brief,_phase2Promise} = await generateBrief(
       member, sellerUrl, sellerDocs, products,
       selectedCohort, selectedOutcomes, productPageUrl,
-      (msg)=>setBriefStatus(msg)
+      (msg)=>setBriefStatus(msg),
+      productUrls
     );
 
     if(_brief._error) setBriefError(_brief._error);
@@ -2107,7 +2131,14 @@ Return ONLY valid JSON:
                           </td>
                           <td style={{color:"#555"}}>{m.ind||"—"}</td>
                           <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
-                          <td style={{color:"#555",fontSize:12}}>{m.publicPrivate||"—"}</td>
+                          <td style={{fontSize:12}} onClick={e=>e.stopPropagation()}>
+                            {m.publicPrivate?(()=>{
+                              const ot=(fitScores[m.company]?.ownershipType)||"";
+                              const c=ot==="public"?"#1B3A6B":ot==="pe"?"#6B3A3A":ot==="vc"?"#2E6B2E":"#555";
+                              const bg=ot==="public"?"#EEF5F9":ot==="pe"?"#FDE8E8":ot==="vc"?"#EEF5EE":"#F8F6F1";
+                              return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:8,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.publicPrivate}</span>;
+                            })():"—"}
+                          </td>
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
@@ -2448,6 +2479,26 @@ Return ONLY valid JSON:
                       </div>
                     </div>
                   </div>
+
+                  {/* Funding Profile */}
+                  {brief.fundingProfile&&(
+                    <div style={{marginTop:10,padding:"12px 14px",background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+                        <div className="field-label" style={{margin:0}}>Funding & Ownership</div>
+                        {(()=>{
+                          const fp=(brief.fundingProfile||"").toLowerCase();
+                          const isPE=fp.includes("pe-backed")||fp.includes("private equity")||fp.includes("portfolio company")||fp.includes("acquired by");
+                          const isSeries=fp.match(/series [a-e]/i);
+                          const isPublic=fp.includes("nyse:")||fp.includes("nasdaq:")||fp.includes("public (");
+                          const label=isPE?"🏦 PE-Backed":isSeries?"🚀 VC-Backed ("+isSeries[0]+")":isPublic?"📈 Public Company":null;
+                          const lColor=isPE?"#9B2C2C":isSeries?"#2E6B2E":isPublic?"#1B3A6B":"";
+                          const lBg=isPE?"#FDE8E8":isSeries?"#EEF5EE":isPublic?"#EEF5F9":"";
+                          return label&&<span style={{background:lBg,color:lColor,border:"1px solid "+lColor+"44",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>{label}</span>;
+                        })()}
+                      </div>
+                      <EF value={brief.fundingProfile||""} onChange={v=>patchBrief(b=>{b.fundingProfile=v;})} placeholder="Ownership structure, funding history..."/>
+                    </div>
+                  )}
                 </div>
 
                 {/* Key Executives */}
