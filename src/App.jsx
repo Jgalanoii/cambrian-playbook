@@ -201,7 +201,7 @@ input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; ba
 .bb-body { padding: 14px 16px; }
 
 .solution-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
-.sol-badge { font-size: 12px; font-weight: 700; background: #1a1a18; color: #8B6F47; padding: 3px 9px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; font-family: 'Lora', serif; }
+.sol-badge { font-size: 13px; font-weight: 700; background: #F0EDE6; color: #7A5C30; border: 1px solid #D4C4A8; padding: 4px 12px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; font-family: 'Lora', serif; }
 .signal-row { display: flex; gap: 8px; margin-bottom: 7px; align-items: flex-start; }
 .sig-dot { width: 5px; height: 5px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; margin-top: 5px; }
 .contact-row { display: flex; gap: 10px; margin-bottom: 8px; background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 12px; align-items: flex-start; }
@@ -1941,7 +1941,7 @@ Return ONLY valid JSON:
                   </div>
                 </div>
                 <div className="actions-row">
-                  <button className="btn btn-primary btn-lg" onClick={goToCohorts}>Build Cohorts →</button>
+                  <button className="btn btn-primary btn-lg" onClick={goToCohorts}>Perform Account Analysis →</button>
                 </div>
               </>
             )}
@@ -2475,7 +2475,7 @@ Return ONLY valid JSON:
                     {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
                       <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
                         <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                          <div style={{background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
+                          <div style={{background:"#F0EDE6",color:"#7A5C30",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
                             {item.product}
                           </div>
                           <div style={{flex:1}}>
