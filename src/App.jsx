@@ -1752,14 +1752,33 @@ Return ONLY valid JSON:
         <header className="header">
           <div className="logo">Cambrian <span>Catalyst</span></div>
           <div className="stepper">
-            {STEPS.map((s,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center"}}>
-                {i>0&&<div className="step-div"/>}
-                <div className={`step-item ${step===i?"active":step>i?"done":""}`} onClick={()=>{if(step>i&&i>0)setStep(i);}}>
-                  <div className="step-num">{step>i?"✓":i+1}</div>{s}
+            {STEPS.map((s,i)=>{
+              // Determine if step is reachable
+              const canNav = (()=>{
+                if(i===step) return false; // already here
+                if(i===0) return true; // session always
+                if(i===1) return !!sellerUrl; // import needs session
+                if(i===2) return cohorts.length>0; // accounts needs import
+                if(i===3) return cohorts.length>0; // account review needs accounts
+                if(i===4) return !!brief; // brief needs account picked
+                if(i===5) return !!brief; // hypothesis needs brief
+                if(i===6) return !!riverHypo; // in-call needs hypothesis
+                if(i===7) return !!postCall; // post-call needs in-call
+                return step>i;
+              })();
+              return(
+                <div key={i} style={{display:"flex",alignItems:"center"}}>
+                  {i>0&&<div className="step-div"/>}
+                  <div
+                    className={`step-item ${step===i?"active":step>i?"done":""}`}
+                    style={{cursor:canNav?"pointer":"default",opacity:(!canNav&&step<i)?0.4:1,transition:"opacity 0.15s"}}
+                    title={canNav?`Go to ${s}`:step===i?s:"Complete earlier steps first"}
+                    onClick={()=>canNav&&setStep(i)}>
+                    <div className="step-num">{step>i?"✓":i+1}</div>{s}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div>{step===6&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}</div>
         </header>
