@@ -699,9 +699,12 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const url = member.company_url || co;
 
   const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
+  const icpCtx = sellerICP?.icp
+    ? ` | ICP: ${sellerICP.icp.industries?.join(",")||""} | Size: ${sellerICP.icp.companySize||""} | Buyer: ${sellerICP.icp.buyerPersonas?.[0]||""}`
+    : "";
   const sellerCtx = sellerDocs.length>0
     ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,500)).join("\n")
-    : "Seller: "+sellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"");
+    : "Seller: "+sellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"")+icpCtx;
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description.slice(0,60):"")).join("; ")
     : "";
@@ -748,7 +751,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"keyContacts":[{"name":"VP/Director/Manager NOT C-suite","title":"Full title","initials":"AB","angle":"Why they feel this pain daily"},{"name":"","title":"","initials":"CD","angle":""}],`+
     `"recentSignals":["Top buying signal","Second","Third"],`+
     `"growthSignals":["Growth indicator","Second","Third"],`+
-    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence on improvement cycle stage and seller entry implication","processGaps":["Gap 1","Gap 2"],"bottlenecks":["Bottleneck 1"]}}`;
+    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence on improvement cycle stage and seller entry implication","processGaps":["Gap 1","Gap 2"],"bottlenecks":["Bottleneck 1"]},`+`"techStack":{"crm":"e.g. Salesforce, HubSpot, or empty","erp":"e.g. SAP, Oracle, NetSuite, or empty","hris":"e.g. ADP, Workday, BambooHR, or empty","marketing":"e.g. Marketo, Pardot, Adobe, or empty","payments":"e.g. Stripe, Adyen, Braintree, or empty","ecommerce":"e.g. Shopify, Magento, or empty","analytics":"e.g. Tableau, Power BI, Looker, or empty","infrastructure":"e.g. AWS, Azure, GCP, or empty","other":["Any other notable SaaS, platform, or integration known to be in use"]}}`;
 
   // ── PART C: Live web search enrichment — fires in parallel ───────────────
   const partCPrompt =
@@ -766,7 +769,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"standoutReview":{"text":"Most relevant quote or paraphrase from a real review or press piece","source":"source name","sentiment":"positive or negative"}},`+
     `"recentSignals":["Most actionable buying signal found","Second","Third"],`+
     `"growthSignals":["Growth signal with evidence","Second","Third"],`+
-    `"companySnapshot":"Updated 2-3 sentence snapshot incorporating any new facts found"}`;
+    `"techStack":{"crm":"tool name if found in job posts or news or empty","erp":"if found","hris":"if found","marketing":"if found","payments":"if found","other":["additional tools found"]},`+`"companySnapshot":"Updated 2-3 sentence snapshot incorporating any new facts found"}`;
 
   // Fire all three simultaneously
   const partAPromise = callAI(partAPrompt);
@@ -813,6 +816,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         if(partB.recentSignals?.some(s=>s)) next.recentSignals=partB.recentSignals;
         if(partB.growthSignals?.some(s=>s)) next.growthSignals=partB.growthSignals;
         if(partB.processMaturity?.dmiacStage) next.processMaturity=partB.processMaturity;
+        if(partB.techStack) next.techStack=partB.techStack;
       }
       // Merge Part C (live search) — only real data, not error messages
       if(partC&&typeof partC==="object"){
@@ -826,16 +830,19 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         if(partC.fundingProfile&&!partC.fundingProfile.includes("Search failed")) next.fundingProfile=partC.fundingProfile;
         if(partC.publicSentiment){
           const ps=partC.publicSentiment;
-          // Only take BBB if it looks like a real grade
-          const bbbValid=ps.bbbRating&&ps.bbbRating.length<=3&&/^[A-F][+-]?$/.test(ps.bbbRating.trim());
           next.publicSentiment={...next.publicSentiment,
-            bbbRating:bbbValid?ps.bbbRating:"",
-            onlineSentiment:ps.onlineSentiment||"",
+            onlineSentiment:ps.onlineSentiment||next.publicSentiment?.onlineSentiment||"",
+            glassdoorRating:ps.glassdoorRating||"",
             standoutReview:ps.standoutReview?.text?ps.standoutReview:next.publicSentiment?.standoutReview||{},
+            salesAngle:ps.salesAngle||"",
           };
         }
         if(partC.recentSignals?.some(s=>s)) next.recentSignals=partC.recentSignals;
         if(partC.growthSignals?.some(s=>s)) next.growthSignals=partC.growthSignals;
+        if(partC.techStack){
+          const existing=next.techStack||{};
+          next.techStack={...existing,...Object.fromEntries(Object.entries(partC.techStack).filter(([,v])=>v&&(typeof v==="string"?v.trim():v.length>0)))};
+        }
         const snapOk=partC.companySnapshot?.length>50&&!partC.companySnapshot.includes("Search failed")&&!partC.companySnapshot.includes("cannot filter");
         if(snapOk) next.companySnapshot=partC.companySnapshot;
       }
@@ -1351,6 +1358,8 @@ export default function App(){
   const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
   const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
   const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
+  const[sellerICP,setSellerICP]=useState(null); // built from seller URL
+  const[icpLoading,setIcpLoading]=useState(false);
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
   const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:"",employees:"",public_private:"",geography:""});
@@ -1517,9 +1526,12 @@ export default function App(){
   const scoreFit = async(members, sellerCtx) => {
     if(!members?.length) return;
     setFitScoring(true);
+    const icpContext = sellerICP?.icp
+      ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
+      : "";
     const companies = members.slice(0,30).map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
     const prompt =
-      `You are a B2B sales strategist. For each company below, score fit AND provide key firmographic data from your training knowledge.\n\n`+
+      `You are a B2B sales strategist. For each company below, score fit against the seller's ICP AND provide firmographic data.\n\n`+icpContext+`\n`+
       `SELLER PROFILE:\n${sellerCtx}\n\n`+
       `SCORING CRITERIA:\n`+
       `1. Product/industry fit — do the seller's offerings make sense for this company?\n`+
@@ -1557,6 +1569,51 @@ export default function App(){
       })));
     }
     setFitScoring(false);
+  };
+
+  // ── BUILD SELLER ICP FROM URL ────────────────────────────────────────────
+  // Fires when seller URL is entered. Uses training knowledge + web search
+  // to understand who this seller actually sells to.
+  const buildSellerICP = async(rawUrl) => {
+    const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+    setIcpLoading(true);
+    const prompt =
+      `You are a B2B market intelligence analyst. Research the company at ${url} and build their Ideal Customer Profile (ICP).\n`+
+      `Use your training knowledge and any available information about ${url}.\n\n`+
+      `Return ONLY raw JSON, start with {:\n`+
+      `{"sellerName":"Company name",`+
+      `"sellerDescription":"1-2 sentences: what they sell and their core value proposition",`+
+      `"icp":{`+
+      `"industries":["Primary industry vertical","Second","Third"],`+
+      `"companySize":"e.g. 500-10K employees or Mid-Market to Enterprise",`+
+      `"revenueRange":"e.g. $50M-$2B annual revenue",`+
+      `"ownershipTypes":["Public","PE-backed","VC-backed","Private"],`+
+      `"geographies":["US","North America","Global"],`+
+      `"buyerPersonas":["Primary buyer title e.g. VP Marketing","Secondary buyer","Economic buyer"],`+
+      `"painPoints":["Core problem they solve","Second pain point","Third"],`+
+      `"disqualifiers":["Company type or situation where they are NOT a fit","Second disqualifier"],`+
+      `"techSignals":["Tech stack indicator that suggests fit e.g. uses Salesforce","Second signal"],`+
+      `"dealSize":"Typical ACV or deal size range",`+
+      `"salesCycle":"Typical sales cycle length",`+
+      `"customerExamples":["Known customer or logo if public","Second","Third"]}}`;
+    try{
+      const r = await fetch("/api/claude",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:1200,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+          messages:[{role:"user",content:prompt}],
+        }),
+      });
+      const d = await r.json();
+      if(!d.error){
+        const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+        const m=raw.match(/\{[\s\S]*\}/);
+        if(m){try{const parsed=JSON.parse(m[0]);setSellerICP(parsed);}catch{}}
+      }
+    }catch(e){console.warn("ICP build failed:",e.message);}
+    setIcpLoading(false);
   };
 
   // ── SCAN SELLER URL FOR PRODUCT PAGES ────────────────────────────────────
@@ -1981,6 +2038,11 @@ Return ONLY valid JSON:
                 <div key={i} className="session-doc-chip">📄 {d.label}</div>
               ))}</>
             )}
+            {sellerICP?.icp?.industries?.length>0&&(
+              <span style={{fontSize:10,color:"#6B3A7A",fontWeight:600,background:"#F3EEF9",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px"}}>
+                ICP: {sellerICP.icp.industries.slice(0,2).join(", ")}
+              </span>
+            )}
             {selectedCohort&&<><span>·</span><span>Cohort: <strong>{selectedCohort.name}</strong></span></>}
             {selectedAccount&&<><span>·</span><span>Account: <strong>{selectedAccount.company}</strong></span></>}
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
@@ -2023,7 +2085,10 @@ Return ONLY valid JSON:
                   <input className="setup-url-input" type="text" placeholder="e.g. yourcompany.com"
                     value={sellerInput} onChange={e=>{setSellerInput(e.target.value);setUrlScanStatus("");setUrlScanConfirmed(false);}}
                     onKeyDown={e=>{if(e.key==="Enter"&&sellerInput.trim()&&!sellerDocs.length){setSellerUrl(sellerInput.trim());setStep(1);}}}
-                    onBlur={()=>{if(sellerInput.trim()&&!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(sellerInput.trim());}}
+                    onBlur={()=>{
+                    if(sellerInput.trim()&&!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(sellerInput.trim());
+                    if(sellerInput.trim()&&!sellerICP&&!icpLoading) buildSellerICP(sellerInput.trim());
+                  }}
                   />
                 </div>
                 <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Claude will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
@@ -2220,6 +2285,82 @@ Return ONLY valid JSON:
                   </div>
                 )}
               </div>
+
+              {/* ICP Preview */}
+              {(sellerICP||icpLoading)&&(
+                <div style={{marginTop:16}}>
+                  <div style={{height:1,background:"#E8E6DF",marginBottom:16}}/>
+                  <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
+                    Your ICP — {sellerICP?.sellerName||sellerInput}
+                  </div>
+                  {icpLoading&&!sellerICP&&(
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#aaa",padding:"8px 0"}}>
+                      <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Building your ICP...
+                    </div>
+                  )}
+                  {sellerICP?.icp&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                      {sellerICP.sellerDescription&&(
+                        <div style={{fontSize:13,color:"#555",lineHeight:1.6,fontStyle:"italic"}}>"{sellerICP.sellerDescription}"</div>
+                      )}
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                        {sellerICP.icp.industries?.length>0&&(
+                          <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Target Industries</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {sellerICP.icp.industries.map((ind,i)=>(
+                                <span key={i} style={{fontSize:11,background:"#E8E6DF",borderRadius:10,padding:"2px 8px",color:"#555"}}>{ind}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {sellerICP.icp.buyerPersonas?.length>0&&(
+                          <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Buyer Personas</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {sellerICP.icp.buyerPersonas.slice(0,3).map((p,i)=>(
+                                <span key={i} style={{fontSize:11,background:"#EEF5F9",borderRadius:10,padding:"2px 8px",color:"#1B3A6B"}}>{p}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {(sellerICP.icp.companySize||sellerICP.icp.dealSize)&&(
+                          <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Sweet Spot</div>
+                            {sellerICP.icp.companySize&&<div style={{fontSize:12,color:"#333"}}>{sellerICP.icp.companySize}</div>}
+                            {sellerICP.icp.dealSize&&<div style={{fontSize:11,color:"#777",marginTop:2}}>{sellerICP.icp.dealSize}</div>}
+                          </div>
+                        )}
+                        {sellerICP.icp.disqualifiers?.length>0&&(
+                          <div style={{background:"#FDE8E8",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Not a Fit</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {sellerICP.icp.disqualifiers.slice(0,2).map((d,i)=>(
+                                <span key={i} style={{fontSize:11,background:"#FDE8E8",borderRadius:10,padding:"2px 8px",color:"#9B2C2C"}}>{d}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {sellerICP.icp.painPoints?.length>0&&(
+                        <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#6B3A7A",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Pain Points We Solve</div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                            {sellerICP.icp.painPoints.map((p,i)=>(
+                              <span key={i} style={{fontSize:11,background:"#F3EEF9",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px",color:"#6B3A7A"}}>{p}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {sellerICP.icp.customerExamples?.filter(Boolean).length>0&&(
+                        <div style={{fontSize:12,color:"#aaa"}}>
+                          Known customers: {sellerICP.icp.customerExamples.filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{height:1,background:"#E8E6DF",margin:"20px 0"}}/>
               <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
@@ -2955,53 +3096,53 @@ Return ONLY valid JSON:
                 )}
 
                 {/* Public Sentiment */}
-                {brief.publicSentiment&&(
+                {brief.publicSentiment&&(brief.publicSentiment.onlineSentiment||brief.publicSentiment.standoutReview?.text||brief.publicSentiment.glassdoorRating)&&(
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:11}}>💬</div>
-                      <div><div className="bb-title">Public Sentiment</div><div className="bb-sub">BBB · reviews · Reddit / LinkedIn / social</div></div>
+                      <div><div className="bb-title">Market Sentiment</div><div className="bb-sub">Glassdoor · G2 · press · employee & customer voice</div></div>
                     </div>
                     <div className="bb-body">
+                      {/* Glassdoor rating + online sentiment side by side */}
                       <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",alignItems:"flex-start"}}>
-                        <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:8,padding:"12px 16px",textAlign:"center",minWidth:100,flexShrink:0}}>
-                          <div className="field-label" style={{marginBottom:6,display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
-                            <span style={{background:"#1B3A6B",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>BBB</span>Rating
-                          </div>
-                          <div style={{fontFamily:"Lora,serif",fontSize:28,fontWeight:600,lineHeight:1,color:(()=>{
-                            const r=brief.publicSentiment.bbbRating||"";
-                            const valid=r.length<=3&&/^[A-F][+-]?$/.test(r.trim());
-                            return !r?"#ccc":valid&&r.startsWith("A")?"#2E6B2E":valid&&r.startsWith("B")?"#BA7517":"#ccc";
-                          })()}}>
-                            {(()=>{const r=brief.publicSentiment.bbbRating||"";return r.length<=3&&/^[A-F][+-]?$/.test(r.trim())?r:"—";})()}
-                          </div>
-                          {brief.publicSentiment.bbbAccredited!==null&&(
-                            <div style={{fontSize:9,marginTop:5,fontWeight:700,color:brief.publicSentiment.bbbAccredited?"#2E6B2E":"#9B2C2C"}}>
-                              {brief.publicSentiment.bbbAccredited?"✓ Accredited":"✗ Not Accredited"}
+                        {brief.publicSentiment.glassdoorRating&&(
+                          <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:8,padding:"12px 16px",textAlign:"center",minWidth:90,flexShrink:0}}>
+                            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#555",marginBottom:6}}>Glassdoor</div>
+                            <div style={{fontFamily:"Lora,serif",fontSize:26,fontWeight:600,lineHeight:1,color:(()=>{
+                              const r=parseFloat(brief.publicSentiment.glassdoorRating);
+                              return isNaN(r)?"#ccc":r>=4?"#2E6B2E":r>=3?"#BA7517":"#9B2C2C";
+                            })()}}>
+                              {brief.publicSentiment.glassdoorRating}
                             </div>
-                          )}
-                        </div>
+                            <div style={{fontSize:9,color:"#aaa",marginTop:4}}>/ 5.0</div>
+                          </div>
+                        )}
                         <div style={{flex:1,minWidth:180}}>
                           <div className="field-label" style={{marginBottom:5}}>Online Sentiment</div>
                           <EF value={brief.publicSentiment.onlineSentiment||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.onlineSentiment=v;})} placeholder="What customers, employees, and communities are saying..."/>
                         </div>
                       </div>
+                      {/* Standout review */}
                       {brief.publicSentiment.standoutReview?.text&&(
-                        <div style={{marginBottom:12}}>
-                          <div className="field-label" style={{marginBottom:6}}>Standout Review</div>
-                          {(()=>{const s=brief.publicSentiment.standoutReview;return(
-                          <div style={{background:"#FAF8F4",borderLeft:"3px solid #8B6F47",borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
-                            {s.source&&<div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:"#8B6F47"}}>
-                              {s.source}
-                            </div>}
-                            <div style={{fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{s.text}"</div>
-                          </div>
+                        <div style={{marginBottom:10}}>
+                          {(()=>{const s=brief.publicSentiment.standoutReview;
+                            const isPos=s.sentiment==="positive";
+                            const borderColor=isPos?"#2E6B2E":"#9B2C2C";
+                            return(
+                            <div style={{background:"#FAF8F4",borderLeft:"3px solid "+borderColor,borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
+                              {s.source&&<div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:borderColor}}>
+                                {isPos?"✓":""} {s.source}
+                              </div>}
+                              <div style={{fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{s.text}"</div>
+                            </div>
                           )})()}
                         </div>
                       )}
-                      {brief.publicSentiment.sentimentSummary&&(
+                      {/* Sales angle */}
+                      {(brief.publicSentiment.salesAngle||brief.publicSentiment.sentimentSummary)&&(
                         <div style={{background:"#F8F6F1",borderLeft:"3px solid #8B6F47",padding:"9px 12px",borderRadius:"0 7px 7px 0"}}>
-                          <div className="field-label" style={{marginBottom:4}}>Sales Angle</div>
-                          <EF value={brief.publicSentiment.sentimentSummary||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.sentimentSummary=v;})} single placeholder="How to reference this in your conversation..."/>
+                          <div className="field-label" style={{marginBottom:4}}>How to Use This</div>
+                          <EF value={brief.publicSentiment.salesAngle||brief.publicSentiment.sentimentSummary||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.salesAngle=v;})} single placeholder="How to reference this in your conversation..."/>
                         </div>
                       )}
                     </div>
@@ -3072,6 +3213,41 @@ Return ONLY valid JSON:
                     )}
                   </div>
                 </div>
+
+                {/* Tech Stack & Integrations */}
+                {brief.techStack&&Object.values(brief.techStack).some(v=>v&&(typeof v==="string"?v.trim():v.length>0))&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:13}}>🔌</div>
+                      <div><div className="bb-title">Tech Stack & Integrations</div><div className="bb-sub">Known SaaS platforms, tools, and systems in use</div></div>
+                    </div>
+                    <div className="bb-body">
+                      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
+                        {[
+                          {key:"crm",label:"CRM"},
+                          {key:"erp",label:"ERP"},
+                          {key:"hris",label:"HRIS"},
+                          {key:"marketing",label:"Marketing"},
+                          {key:"payments",label:"Payments"},
+                          {key:"ecommerce",label:"eCommerce"},
+                          {key:"analytics",label:"Analytics"},
+                          {key:"infrastructure",label:"Infra"},
+                        ].filter(({key})=>brief.techStack[key]?.trim()).map(({key,label})=>(
+                          <div key={key} style={{display:"flex",alignItems:"center",gap:6,background:"#F0EDE6",border:"1px solid #D4C4A8",borderRadius:20,padding:"4px 12px"}}>
+                            <span style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.3px"}}>{label}</span>
+                            <span style={{fontSize:13,fontWeight:600,color:"#1a1a18"}}>{brief.techStack[key]}</span>
+                          </div>
+                        ))}
+                        {(brief.techStack.other||[]).filter(Boolean).map((t,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:20,padding:"4px 12px"}}>
+                            <span style={{fontSize:13,color:"#555"}}>{t}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Used for solution mapping and integration complexity assessment</div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Opening Angle */}
                 <div className="bb">
