@@ -4231,7 +4231,7 @@ Return ONLY valid JSON:
                   <button className="btn btn-secondary" onClick={()=>setStep(6)}>← Back to Call</button>
                   <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
-                    📄 Customer Brief
+                    📄 Download Customer Ready Call Summary
                   </button>
                   <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(8);}}>
