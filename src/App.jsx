@@ -1508,7 +1508,7 @@ export default function App(){
     setBriefError("");
     setBriefStatus("Researching "+member.company+"...");
     setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setDealValue("");setDealClassification("");setNotes("");setPostCall(null);setContactRole("");
-    setStep(5);
+    setStep(4);
 
     const {_brief,_phase2Promise} = await generateBrief(
       member, sellerUrl, sellerDocs, products,
@@ -1522,8 +1522,9 @@ export default function App(){
     setBriefLoading(false);
     setBriefStatus("");
 
-    buildRiverHypo(_brief, member);
-    generateDiscoveryQs(_brief, member);
+    // Both fire in background while rep reads the brief
+    Promise.resolve().then(()=>buildRiverHypo(_brief, member));
+    Promise.resolve().then(()=>generateDiscoveryQs(_brief, member));
 
     _phase2Promise.then(enrichment=>{
       if(!enrichment) return;
@@ -1684,7 +1685,7 @@ Return ONLY valid JSON:
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   const doExport=()=>exportToExcel(brief,gateAnswers,riverData,postCall,selectedAccount,selectedCohort,selectedOutcomes,sellerUrl,confidence);
 
-  const STEPS=["Session","Import","Accounts","Account","Brief","Hypothesis","In-Call","Post-Call"];
+  const STEPS=["Session","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
@@ -2357,7 +2358,7 @@ Return ONLY valid JSON:
                     </div>
 
                     {/* Outcomes */}
-                    <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>Target Outcomes</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>Customer's Target Outcomes</div>
                     <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
                       {OUTCOMES.map(o=>{
                         const sel=selectedOutcomes.includes(o.title);
@@ -2890,7 +2891,10 @@ Return ONLY valid JSON:
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
-              <button className="btn btn-green btn-lg" onClick={()=>setStep(5)}>
+              <button className="btn btn-green btn-lg" onClick={()=>{
+                if(!riverHypo&&!riverHypoLoading&&brief) buildRiverHypo(brief,selectedAccount);
+                setStep(5);
+              }}>
                 Review Hypothesis →
               </button>
             </div>
