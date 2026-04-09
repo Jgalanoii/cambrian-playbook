@@ -705,158 +705,159 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const url = member.company_url || co;
 
   const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
-  const icpCtx = sellerICP?.icp
-    ? ` | ICP: ${sellerICP.icp.industries?.join(",")||""} | Size: ${sellerICP.icp.companySize||""} | Buyer: ${sellerICP.icp.buyerPersonas?.[0]||""}`
-    : "";
   const sellerCtx = sellerDocs.length>0
-    ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,500)).join("\n")
-    : "Seller: "+sellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"")+icpCtx;
+    ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join("\n")
+    : "Seller: "+sellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"");
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description.slice(0,60):"")).join("; ")
     : "";
   const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${(selectedOutcomes||[]).join(", ")||"Not set"}`;
 
-  const baseInstructions =
-    `Senior B2B sales strategist. Build a pre-call brief about TARGET PROSPECT "${co}" for a seller at ${sellerUrl}.\n`+
-    `CRITICAL: All fields describe ${co}, NOT the seller. ASCII punctuation only. No curly quotes. No trailing commas.\n`+
-    `CONSISTENCY RULES: Return EXACTLY the structure shown — same field count, same array lengths. If data is unknown return "" not prose. Use training knowledge confidently — never hedge.\n`+
-    `Apply DMAIC lens to processMaturity: Define=knows problem unmeasured, Measure=anecdotal data, Analyze=diagnosing, Improve=evaluating solutions, Control=sustaining.\n`+
-    `SELLER (context only):\n${sellerCtx}${prodCtx}\n`+
-    `PROSPECT TO RESEARCH: ${co} (${dealCtx})\n`;
+  // Base context injected into every prompt
+  const base =
+    `B2B sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
+    `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
+    `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
+    `SELLER CONTEXT (reference only):\n${sellerCtx}${prodCtx}\n`+
+    `DEAL: ${dealCtx}\n\n`;
 
-  onStatus("Building brief for "+co+"...");
+  onStatus("Researching "+co+"...");
 
-  // ── PART A: Above-the-fold fields — shows first (~5-7s) ─────────────────
-  // Company overview, execs, headlines, funding, sentiment, opening angle
-  const partAPrompt = baseInstructions +
-    `Return ONLY raw JSON for these fields (start with {):\n`+
-    `{"companySnapshot":"3-4 sentences: what they do, revenue, employees, HQ, recent direction",`+
-    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT)","employeeCount":"e.g. ~47,000","headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
-    `"keyExecutives":[`+
-    `{"name":"REQUIRED - real current CEO first and last name","title":"CEO","initials":"XX","background":"Prior company or role in 1 sentence","angle":"Their board mandate and what they are personally measured on. 2 sentences."},`+
-    `{"name":"REQUIRED - real current CHRO or CPO or Chief People Officer first and last name","title":"exact current title","initials":"XX","background":"Their people/HR focus in 1 sentence","angle":"What success looks like for them — retention, engagement, HR tech. 2 sentences."},`+
-    `{"name":"REQUIRED - real current CFO or COO or President first and last name","title":"exact current title","initials":"XX","background":"Financial or ops focus in 1 sentence","angle":"How they evaluate spend — ROI threshold, risk lens, cost focus. 2 sentences."}],`+
-    `"EXEC_RULE":"Return ALL 3 executives. Use real names from your training knowledge. If uncertain of exact person, name the most likely holder of that role. Never leave name empty.",`+
-    `"recentHeadlines":[{"headline":"Headline + date","relevance":"Why it matters for the sale"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
-    `"publicSentiment":{"bbbRating":"","onlineSentiment":"","standoutReview":{"text":"","source":"","sentiment":""}},`+`// NOTE: bbbRating and standoutReview will be enriched by live search — return empty strings here`+
-    `"fundingProfile":"PROSPECT ONLY: PE/VC/Public ownership, total raised, lead investors, latest round",`+
-    `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now — the why-you-why-now",`+
-    `"openingAngle":"Sharp statement referencing something real. Format: Most [industry] companies [assumption]. What the data shows is [reframe]. Is that showing up for you?",`+
-    `"watchOuts":["Specific risk","Competitive risk","Budget or stakeholder risk"],`+
-    `"competitors":["Competitor 1","Competitor 2","Competitor 3"]}`;
+  // ── 5 MICRO-CALLS fire simultaneously, each with a tiny schema ───────────
+  // User sees the overview card the moment the fastest resolves (~2s)
 
-  // ── PART B: Deeper analysis — fires in parallel with Part A ──────────────
-  // Solution mapping, open roles, signals, DMAIC, contacts — merges when ready
-  const partBPrompt = baseInstructions +
-    `Return ONLY raw JSON for these fields (start with {):\n`+
-    `{"sellerSnapshot":"2-3 sentences on seller's most relevant offerings for ${co}",`+
-    `"strategicTheme":"2-3 sentences on ${co}'s current strategic direction",`+
-    `"solutionMapping":[{"product":"Seller offering","fit":"SA rationale: business alignment, architecture fit, outcome it drives"},{"product":"","fit":""},{"product":"","fit":""}],`+
-    `"caseStudies":[{"title":"Relevant case study or customer","customer":"","relevance":"Why relevant to ${co}"},{"title":"","customer":"","relevance":""}],`+
-    `"openRoles":{"summary":"What hiring pattern reveals about strategic priorities and pain","roles":[{"title":"","dept":"","signal":"Strategic meaning"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
-    `"keyContacts":[{"name":"VP/Director/Manager NOT C-suite","title":"Full title","initials":"AB","angle":"Why they feel this pain daily"},{"name":"","title":"","initials":"CD","angle":""}],`+
-    `"recentSignals":["Top buying signal","Second","Third"],`+
-    `"growthSignals":["Growth indicator","Second","Third"],`+
-    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence on improvement cycle stage and seller entry implication","processGaps":["Gap 1","Gap 2"],"bottlenecks":["Bottleneck 1"]},`+`"techStack":{"crm":"e.g. Salesforce, HubSpot, or empty","erp":"e.g. SAP, Oracle, NetSuite, or empty","hris":"e.g. ADP, Workday, BambooHR, or empty","marketing":"e.g. Marketo, Pardot, Adobe, or empty","payments":"e.g. Stripe, Adyen, Braintree, or empty","ecommerce":"e.g. Shopify, Magento, or empty","analytics":"e.g. Tableau, Power BI, Looker, or empty","infrastructure":"e.g. AWS, Azure, GCP, or empty","other":["Any other notable SaaS, platform, or integration known to be in use"]}}`;
+  // MICRO 1: Company overview card — smallest schema, shows first
+  const p1 = callAI(base+
+    `Return ONLY raw JSON (start with {) for the company overview:\n`+
+    `{"companySnapshot":"3-4 sentences: what ${co} does, revenue scale, employees, HQ, strategic direction",`+
+    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:MCD)","employeeCount":"e.g. ~200,000",`+
+    `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
+    `"fundingProfile":"Ownership: PE firm + year acquired, or Series + total raised + lead investor, or Public exchange+ticker",`+
+    `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
+    `"watchOuts":["Specific risk","Competitive risk","Budget risk"]}`
+  );
 
-  // ── PART C: Live web search enrichment — fires in parallel ───────────────
-  const partCPrompt =
-    `Search for recent information about "${co}". Run these searches:\n`+
-    `1. Recent 2024-2025 news, M&A, leadership changes, funding rounds\n`+
-    `2. BBB rating: search bbb.org for "${co}" to find their letter grade\n`+
-    `3. Customer/employee sentiment: Glassdoor, G2, Trustpilot, or industry press reviews\n`+
-    `Return ONLY raw JSON, start with {:\n`+
-    `{"recentHeadlines":[{"headline":"Specific headline + source + date","relevance":"Why it matters"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
-    `"openRoles":{"summary":"What hiring reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
-    `"fundingProfile":"Latest funding or ownership info found",`+
-    `"publicSentiment":{`+
-    `"bbbRating":"ONLY the letter grade found on bbb.org (e.g. A+) or empty string if not listed — no sentences",`+
-    `"onlineSentiment":"2-3 sentences on what customers and employees are actually saying",`+
-    `"standoutReview":{"text":"Most relevant quote or paraphrase from a real review or press piece","source":"source name","sentiment":"positive or negative"}},`+
-    `"recentSignals":["Most actionable buying signal found","Second","Third"],`+
-    `"growthSignals":["Growth signal with evidence","Second","Third"],`+
-    `"techStack":{"crm":"tool name if found in job posts or news or empty","erp":"if found","hris":"if found","marketing":"if found","payments":"if found","other":["additional tools found"]},`+`"companySnapshot":"Updated 2-3 sentence snapshot incorporating any new facts found"}`;
+  // MICRO 2: Executives — fires simultaneously, merges when ready
+  const p2 = callAI(base+
+    `Return ONLY raw JSON (start with {) for the 3 key executives at ${co}:\n`+
+    `{"keyExecutives":[`+
+    `{"name":"REQUIRED real current CEO name","title":"CEO","initials":"XX","background":"Prior role in 1 sentence","angle":"Board mandate and what they are measured on. 2 sentences."},`+
+    `{"name":"REQUIRED real current CHRO or CPO name","title":"exact title","initials":"XX","background":"HR/people focus 1 sentence","angle":"What winning looks like for them personally. 2 sentences."},`+
+    `{"name":"REQUIRED real current CFO or COO name","title":"exact title","initials":"XX","background":"Financial/ops focus 1 sentence","angle":"How they evaluate spend decisions. 2 sentences."}],`+
+    `"sellerSnapshot":"2 sentences on seller most relevant offerings for ${co}"}`
+  );
 
-  // Fire all three simultaneously
-  const partAPromise = callAI(partAPrompt);
-  const partBPromise = callAI(partBPrompt);
-  const partCPromise = (async()=>{
+  // MICRO 3: Strategy + opening angle — shows after execs
+  const p3 = callAI(base+
+    `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
+    `{"strategicTheme":"2-3 sentences on ${co} current strategic direction and priorities",`+
+    `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now for ${co} — the why-you-why-now",`+
+    `"openingAngle":"1-2 sharp sentences referencing something real about ${co}. Reframe an assumption. Sounds human not scripted.",`+
+    `"publicSentiment":{"onlineSentiment":"2 sentences from Glassdoor/G2/press on what customers and employees say","glassdoorRating":"number like 3.8 or empty","standoutReview":{"text":"Most relevant quote or paraphrase","source":"source name","sentiment":"positive or negative"},"salesAngle":"1 sentence: how seller uses this sentiment in conversation"}}`
+  );
+
+  // MICRO 4: Solution mapping + contacts — shows after strategy
+  const p4 = callAI(base+
+    `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
+    `{"solutionMapping":[`+
+    `{"product":"Specific ${sellerUrl} offering","fit":"Business alignment, architecture fit, outcome it drives for ${co}"},`+
+    `{"product":"Second offering if applicable","fit":""},`+
+    `{"product":"Third offering if applicable","fit":""}],`+
+    `"caseStudies":[{"title":"Relevant case study or named customer","customer":"","relevance":"Why relevant to ${co}"},{"title":"","customer":"","relevance":""}],`+
+    `"keyContacts":[{"name":"VP/Director NOT C-suite — real name if known","title":"Full title","initials":"XX","angle":"Why they feel this pain daily and how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
+    `"techStack":{"crm":"if known","erp":"if known","hris":"if known","marketing":"if known","payments":"if known","analytics":"if known","infrastructure":"if known","other":[]},`+
+    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`
+  );
+
+  // MICRO 5: Live search — headlines, roles, signals
+  const p5 = (async()=>{
     try{
+      const prompt =
+        `Search for recent information about "${co}":\n`+
+        `1. News from 2024-2025: headlines, M&A, leadership changes, funding\n`+
+        `2. Open roles on their careers page\n`+
+        `3. Growth signals or buying indicators\n`+
+        `Return ONLY raw JSON (start with {):\n`+
+        `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
+        `"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
+        `"recentSignals":["Most actionable buying signal","Second","Third"],`+
+        `"growthSignals":["Growth indicator with evidence","Second"],`+
+        `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
       const r = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:2000,
+          max_tokens:1800,
           tools:[{type:"web_search_20250305",name:"web_search",max_uses:4}],
-          messages:[{role:"user",content:partCPrompt},{role:"assistant",content:"{"}],
+          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
       });
       const d=await r.json();
-      if(d.error)return null;
+      if(d.error) return null;
       const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
       return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
-    }catch(e){console.warn("Part C failed:",e.message);return null;}
+    }catch(e){console.warn("Live search failed:",e.message);return null;}
   })();
 
-  // Part A resolves first — show the brief immediately
-  const partAResult = await partAPromise;
-  const briefA = (partAResult&&typeof partAResult==="object")
-    ? partAResult
-    : {...BLANK_BRIEF,companySnapshot:co+" — Edit fields below.",_error:"Brief generation failed - try Regenerate."};
+  // ── Await Micro 1 first — show overview card immediately ─────────────────
+  const r1 = await p1;
+  const brief = (r1&&typeof r1==="object")
+    ? r1
+    : {...BLANK_BRIEF,companySnapshot:co+" — "+member.ind+". Edit fields below.",_error:"Brief generation failed — try Regenerate."};
 
   onStatus("");
 
-  // Merge Part B + Part C into the brief when they resolve (background)
-  const mergePromise = Promise.all([partBPromise, partCPromise]).then(([partB, partC])=>{
+  // ── Return brief + a promise that merges the rest as they complete ────────
+  const mergePromise = (async()=>{
+    // Merge each micro-result as it resolves — user sees sections fill in
+    const results = await Promise.allSettled([p2,p3,p4,p5]);
     return (prev)=>{
       if(!prev) return prev;
       const next={...prev};
-      // Merge Part B (deep analysis)
-      if(partB&&typeof partB==="object"){
-        if(partB.sellerSnapshot) next.sellerSnapshot=partB.sellerSnapshot;
-        if(partB.strategicTheme) next.strategicTheme=partB.strategicTheme;
-        if(partB.solutionMapping?.some(s=>s?.product)) next.solutionMapping=partB.solutionMapping;
-        if(partB.caseStudies?.some(c=>c?.title)) next.caseStudies=partB.caseStudies;
-        if(partB.openRoles?.summary) next.openRoles=partB.openRoles;
-        if(partB.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts=partB.keyContacts;
-        if(partB.recentSignals?.some(s=>s)) next.recentSignals=partB.recentSignals;
-        if(partB.growthSignals?.some(s=>s)) next.growthSignals=partB.growthSignals;
-        if(partB.processMaturity?.dmiacStage) next.processMaturity=partB.processMaturity;
-        if(partB.techStack) next.techStack=partB.techStack;
+
+      // Micro 2: executives
+      const r2 = results[0].status==="fulfilled"?results[0].value:null;
+      if(r2?.keyExecutives?.length) next.keyExecutives=r2.keyExecutives;
+      if(r2?.sellerSnapshot) next.sellerSnapshot=r2.sellerSnapshot;
+
+      // Micro 3: strategy
+      const r3 = results[1].status==="fulfilled"?results[1].value:null;
+      if(r3?.strategicTheme) next.strategicTheme=r3.strategicTheme;
+      if(r3?.sellerOpportunity) next.sellerOpportunity=r3.sellerOpportunity;
+      if(r3?.openingAngle) next.openingAngle=r3.openingAngle;
+      if(r3?.publicSentiment?.onlineSentiment||r3?.publicSentiment?.glassdoorRating){
+        next.publicSentiment={...next.publicSentiment,...r3.publicSentiment};
       }
-      // Merge Part C (live search) — only real data, not error messages
-      if(partC&&typeof partC==="object"){
-        const errorPatterns = ["unable to retrieve","web search","domain-specific","cannot filter","search failed","not available","no specific","visit the website","check the news","real-time","may not have"];
-        const cleanHeadlines = (partC.recentHeadlines||[]).filter(h=>{
-          const txt=(h?.headline||"").toLowerCase();
-          return h?.headline && !errorPatterns.some(p=>txt.includes(p)) && h.headline.length>10;
+
+      // Micro 4: solutions + contacts
+      const r4 = results[2].status==="fulfilled"?results[2].value:null;
+      if(r4?.solutionMapping?.some(s=>s?.product)) next.solutionMapping=r4.solutionMapping;
+      if(r4?.caseStudies?.some(c=>c?.title)) next.caseStudies=r4.caseStudies;
+      if(r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts=r4.keyContacts;
+      if(r4?.techStack) next.techStack=r4.techStack;
+      if(r4?.processMaturity?.dmiacStage) next.processMaturity=r4.processMaturity;
+
+      // Micro 5: live search
+      const r5 = results[3].status==="fulfilled"?results[3].value:null;
+      if(r5){
+        const errorWords=["unable","cannot","search failed","not available","web search"];
+        const cleanHL=(r5.recentHeadlines||[]).filter(h=>{
+          const t=(h?.headline||"").toLowerCase();
+          return h?.headline&&h.headline.length>10&&!errorWords.some(w=>t.includes(w));
         });
-        if(cleanHeadlines.length>0) next.recentHeadlines=cleanHeadlines;
-        if(partC.openRoles?.summary&&!next.openRoles?.summary) next.openRoles=partC.openRoles;
-        if(partC.fundingProfile&&!partC.fundingProfile.includes("Search failed")) next.fundingProfile=partC.fundingProfile;
-        if(partC.publicSentiment){
-          const ps=partC.publicSentiment;
-          next.publicSentiment={...next.publicSentiment,
-            onlineSentiment:ps.onlineSentiment||next.publicSentiment?.onlineSentiment||"",
-            glassdoorRating:ps.glassdoorRating||"",
-            standoutReview:ps.standoutReview?.text?ps.standoutReview:next.publicSentiment?.standoutReview||{},
-            salesAngle:ps.salesAngle||"",
-          };
-        }
-        if(partC.recentSignals?.some(s=>s)) next.recentSignals=partC.recentSignals;
-        if(partC.growthSignals?.some(s=>s)) next.growthSignals=partC.growthSignals;
-        if(partC.techStack){
-          const existing=next.techStack||{};
-          next.techStack={...existing,...Object.fromEntries(Object.entries(partC.techStack).filter(([,v])=>v&&(typeof v==="string"?v.trim():v.length>0)))};
-        }
-        const snapOk=partC.companySnapshot?.length>50&&!partC.companySnapshot.includes("Search failed")&&!partC.companySnapshot.includes("cannot filter");
-        if(snapOk) next.companySnapshot=partC.companySnapshot;
+        if(cleanHL.length) next.recentHeadlines=cleanHL;
+        if(r5.openRoles?.summary) next.openRoles=r5.openRoles;
+        if(r5.recentSignals?.some(s=>s)) next.recentSignals=r5.recentSignals;
+        if(r5.growthSignals?.some(s=>s)) next.growthSignals=r5.growthSignals;
+        const snapOk=r5.companySnapshot?.length>50&&!errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
+        if(snapOk) next.companySnapshot=r5.companySnapshot;
       }
+
       return next;
     };
-  });
+  })();
 
-  return {_brief:briefA, _phase2Promise:mergePromise};
+  return {_brief:brief, _phase2Promise:mergePromise};
 }
 
 
@@ -1043,8 +1044,18 @@ function PasswordGate({ onAuth }) {
   const[guestOk,setGuestOk]=React.useState(false);
 
   React.useEffect(()=>{
+    // Clear any legacy password-gate session data
+    sessionStorage.removeItem('cambrian_auth');
     const token=localStorage.getItem('sb_token');
-    if(token) sbGetUser(token).then(u=>{if(u?.id) onAuth(u,token);});
+    if(token){
+      sbGetUser(token).then(u=>{
+        if(u?.id){
+          onAuth(u,token); // valid token — skip gate
+        } else {
+          localStorage.removeItem('sb_token'); // stale — clear and show form
+        }
+      });
+    }
   },[]);
 
   if(guestOk){onAuth(null,'');return null;}
@@ -1388,6 +1399,9 @@ export default function App(){
   const[authed,setAuthed]=useState(false);
   const[sbUser,setSbUser]=useState(null);
   const[sbToken,setSbToken]=useState('');
+
+  // Clear legacy Crow2026 session data on first load
+  useEffect(()=>{ sessionStorage.removeItem('cambrian_auth'); },[]);
   const[showSavePrompt,setShowSavePrompt]=useState(false);
   const[savedSessions,setSavedSessions]=useState([]);
   const[currentSessionId,setCurrentSessionId]=useState(null);
