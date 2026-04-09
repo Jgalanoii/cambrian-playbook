@@ -1601,7 +1601,14 @@ export default function App(){
     const icpContext = sellerICP?.icp
       ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
       : "";
-    const companies = members.slice(0,30).map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
+    // Score in batches of 20 so ALL accounts get scored regardless of list size
+    const BATCH=20;
+    const batches=[];
+    for(let i=0;i<members.length;i+=BATCH) batches.push(members.slice(i,i+BATCH));
+    const allMap={};
+    const allMemberUpdates={};
+    for(const batch of batches){
+    const companies = batch.map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
     const prompt =
       `You are a B2B sales strategist trained in product-market fit assessment. For each company below:\n`+`1. Score ICP fit (0-100) using Olsen's PMF Pyramid: Target Customer fit → Underserved Need fit → Value Proposition fit\n`+`2. Identify their Moore adoption profile: are they Innovators, Early Adopters, Early Majority, or Late Majority?\n`+`3. Provide firmographic data (org size, ownership)\n\n`+icpContext+`\n`+
       `SELLER PROFILE:\n${sellerCtx}\n\n`+
@@ -1629,14 +1636,18 @@ export default function App(){
         map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||""};
         memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
       });
-      setFitScores(map);
-      // Push orgSize + ownership back into cohort members so table shows them
+      Object.assign(allMap, map);
+      Object.assign(allMemberUpdates, memberUpdates);
+    } // end batch loop
+    if(Object.keys(allMap).length){
+      setFitScores(prev=>({...prev,...allMap}));
+      // Push orgSize + ownership back into cohort members
       setCohorts(prev=>prev.map(c=>({
         ...c,
-        members:c.members.map(m=>memberUpdates[m.company]
+        members:c.members.map(m=>allMemberUpdates[m.company]
           ? {...m,
-              employees:m.employees||memberUpdates[m.company].orgSize,
-              publicPrivate:m.publicPrivate||memberUpdates[m.company].ownership}
+              employees:m.employees||allMemberUpdates[m.company].orgSize,
+              publicPrivate:m.publicPrivate||allMemberUpdates[m.company].ownership}
           : m)
       })));
     }
@@ -3282,9 +3293,9 @@ Return ONLY valid JSON:
                   )}
                 </div>
               </div>
-              <div className="tbl-wrap">
+              <div className="tbl-wrap" style={{maxHeight:"60vh",overflowY:"auto"}}>
                 <table className="tbl" style={{fontSize:13}}>
-                  <thead>
+                  <thead style={{position:"sticky",top:0,zIndex:10}}>
                     <tr>
                       <th>Company</th>
                       <th>Industry</th>
