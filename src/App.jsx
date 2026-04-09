@@ -1117,14 +1117,29 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={
               </tr>
             </thead>
             <tbody>
-              {cohort.members.sort((a,b)=>b.acv-a.acv).map((m,i)=>(
-                <tr key={i} onClick={()=>onPickAccount&&onPickAccount(m)}>
-                  <td style={{fontWeight:600,color:"#1a1a18"}}>{m.company}</td>
-                  <td>{m.ind}</td>
-                  <td style={{color:"#8B6F47",fontWeight:600,whiteSpace:"nowrap"}}>{m.acv>0?"$"+m.acv.toLocaleString():"—"}</td>
-                  <td>{m.src}</td>
-                  <td><span className="outcome-badge">{m.outcome.slice(0,40)}{m.outcome.length>40?"...":""}</span></td>
-                  <td style={{textAlign:"right"}}><span style={{fontSize:10,color:"#8B6F47",fontWeight:600}}>Research →</span></td>
+              {cohort.members.sort((a,b)=>{
+                const sa=fitScores[a.company]?.score??50;
+                const sb=fitScores[b.company]?.score??50;
+                return sb-sa;
+              }).map((m,i)=>(
+                <tr key={i} style={{cursor:"pointer"}} onClick={()=>onPickAccount&&onPickAccount(m)}>
+                  <td style={{fontWeight:600,color:"#1a1a18"}}>
+                    {m.company}
+                    {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
+                  </td>
+                  <td style={{color:"#555"}}>{m.ind||"—"}</td>
+                  <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
+                  <td style={{color:"#555",fontSize:12}}>{m.publicPrivate||"—"}</td>
+                  <td style={{color:"#555",fontSize:12}}>{m.geography||"—"}</td>
+                  <td>{fitScores&&fitScores[m.company]?(
+                    <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:12,
+                      background:fitScores[m.company].bg,color:fitScores[m.company].color,
+                      border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap",display:"inline-block"}}
+                      title={fitScores[m.company].reason}>
+                      {fitScores[m.company].score}% · {fitScores[m.company].label}
+                    </div>
+                  ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:"—"}</td>
+                  <td><button className="btn btn-primary btn-sm" onClick={e=>{e.stopPropagation();onPickAccount&&onPickAccount(m);}}>Research →</button></td>
                 </tr>
               ))}
             </tbody>
@@ -1248,6 +1263,8 @@ export default function App(){
   const[selectedCohort,setSelectedCohort]=useState(null);
   const[selectedOutcomes,setSelectedOutcomes]=useState([]);
   const[selectedAccount,setSelectedAccount]=useState(null);
+  const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
+  const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
 
   // Brief state — always an object or null; never undefined
   const[brief,setBrief]=useState(null);
@@ -2019,10 +2036,35 @@ Return ONLY valid JSON:
             {/* ── ALL ACCOUNTS TABLE with Fit Check ── */}
             <div className="card" style={{marginBottom:24}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
-                <div className="card-title" style={{margin:0}}>All Accounts</div>
-                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                <div>
+                  <div className="card-title" style={{margin:0}}>All Accounts</div>
+                  <div style={{fontSize:12,color:"#aaa",marginTop:2}}>Click to select · up to 5 accounts · numbered in priority order</div>
+                </div>
+                <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                   {fitScoring&&<div style={{fontSize:12,color:"#8B6F47"}}>⏳ Evaluating fit...</div>}
                   {Object.keys(fitScores).length>0&&!fitScoring&&<div style={{fontSize:12,color:"#2E6B2E"}}>✓ Fit scores ready</div>}
+                  {accountQueue.length>0&&(
+                    <>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>setAccountQueue([])}>Clear</button>
+                      <button className="btn btn-primary"
+                        onClick={()=>{
+                          if(accountQueue.length===1){
+                            setSelectedCohort(accountQueue[0]._cohort);
+                            setSelectedAccount(accountQueue[0]);
+                            setSelectedOutcomes([]);
+                            setStep(3);
+                          } else {
+                            setQueueIdx(0);
+                            setSelectedCohort(accountQueue[0]._cohort);
+                            setSelectedAccount(accountQueue[0]);
+                            setSelectedOutcomes([]);
+                            setStep(3);
+                          }
+                        }}>
+                        Continue with {accountQueue.length} account{accountQueue.length>1?"s":""} →
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="tbl-wrap">
@@ -2034,7 +2076,7 @@ Return ONLY valid JSON:
                       <th>Org Size</th>
                       <th>Ownership</th>
                       <th>Fit Check</th>
-                      <th>Research</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2042,31 +2084,47 @@ Return ONLY valid JSON:
                       const sa=fitScores[a.company]?.score??50;
                       const sb=fitScores[b.company]?.score??50;
                       return sb-sa;
-                    }).map((m,i)=>(
-                      <tr key={i} style={{cursor:"pointer"}} onClick={()=>{setSelectedCohort(m._cohort);pickAccount(m);}}>
-                        <td style={{fontWeight:600,color:"#1a1a18"}}>
-                          {m.company}
-                          {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
-                        </td>
-                        <td style={{color:"#555"}}>{m.ind||"—"}</td>
-                        <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
-                        <td style={{color:"#555",fontSize:12}}>{m.publicPrivate||"—"}</td>
-                        <td><span style={{background:m._cohort.color+"22",color:m._cohort.color,border:"1px solid "+m._cohort.color+"44",borderRadius:10,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m._cohort.name}</span></td>
-                        <td onClick={e=>e.stopPropagation()}>
-                          {fitScores[m.company]?(
-                            <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
-                              title={fitScores[m.company].reason}>
-                              {fitScores[m.company].score}% · {fitScores[m.company].label}
+                    }).map((m,i)=>{
+                      const inQueue=accountQueue.some(q=>q.company===m.company);
+                      const qPos=accountQueue.findIndex(q=>q.company===m.company);
+                      return(
+                        <tr key={i} style={{cursor:"pointer",background:inQueue?"#FAF8F4":"",transition:"background 0.1s"}}
+                          onClick={()=>setAccountQueue(prev=>{
+                            if(prev.some(q=>q.company===m.company)) return prev.filter(q=>q.company!==m.company);
+                            if(prev.length>=5) return prev;
+                            return [...prev,{...m}];
+                          })}>
+                          <td style={{fontWeight:600,color:"#1a1a18"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <div style={{width:20,height:20,borderRadius:4,border:"2px solid "+(inQueue?"#1a1a18":"#ddd"),background:inQueue?"#1a1a18":"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"#8B6F47",fontWeight:700}}>
+                                {inQueue?qPos+1:""}
+                              </div>
+                              <div>
+                                <div>{m.company}</div>
+                                {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
+                              </div>
                             </div>
-                          ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<span style={{fontSize:11,color:"#ccc"}}>—</span>}
-                        </td>
-                        <td>
-                          <button className="btn btn-primary btn-sm" onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);pickAccount(m);}}>
-                            Brief →
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td style={{color:"#555"}}>{m.ind||"—"}</td>
+                          <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
+                          <td style={{color:"#555",fontSize:12}}>{m.publicPrivate||"—"}</td>
+                          <td onClick={e=>e.stopPropagation()}>
+                            {fitScores[m.company]?(
+                              <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
+                                title={fitScores[m.company].reason}>
+                                {fitScores[m.company].score}% · {fitScores[m.company].label}
+                              </div>
+                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<span style={{fontSize:11,color:"#ccc"}}>—</span>}
+                          </td>
+                          <td onClick={e=>e.stopPropagation()}>
+                            <button className="btn btn-primary btn-sm"
+                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);pickAccount(m);}}>
+                              Brief →
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2143,8 +2201,28 @@ Return ONLY valid JSON:
         {/* ── STEP 3: ACCOUNT + OUTCOMES ── */}
         {step===3&&selectedCohort&&(
           <div className="page">
-            <div className="page-title">Select Account</div>
-            <div className="page-sub">Choose an account, pick your target outcomes, then build the brief.</div>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4,flexWrap:"wrap"}}>
+              <div className="page-title" style={{margin:0}}>
+                {accountQueue.length>1?`Account ${queueIdx+1} of ${accountQueue.length}`:selectedAccount?selectedAccount.company:"Select Account"}
+              </div>
+              {accountQueue.length>1&&(
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn btn-secondary btn-sm" disabled={queueIdx===0}
+                    onClick={()=>{setQueueIdx(i=>i-1);setSelectedAccount(accountQueue[queueIdx-1]);setSelectedOutcomes([]);}}>
+                    ← Prev
+                  </button>
+                  <button className="btn btn-secondary btn-sm" disabled={queueIdx===accountQueue.length-1}
+                    onClick={()=>{setQueueIdx(i=>i+1);setSelectedAccount(accountQueue[queueIdx+1]);setSelectedOutcomes([]);}}>
+                    Next →
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="page-sub" style={{marginBottom:20}}>
+              {accountQueue.length>1
+                ? `Reviewing ${accountQueue.map(a=>a.company).join(", ")} — pick outcomes for each, then build briefs.`
+                : "Choose an account, pick your target outcomes, then build the brief."}
+            </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:20,alignItems:"start"}}>
 
