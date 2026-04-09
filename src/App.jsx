@@ -1,8 +1,20 @@
 import React,{useState,useEffect,useRef}from'react';
-import{useUser,useClerk,SignInButton,SignUpButton,UserButton,SignedIn,SignedOut,ClerkProvider}from'@clerk/clerk-react';
 const SUPA_URL="https://xtnidawfuaxwwwcnkewu.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmlkYXdmdWF4d3d3Y25rZXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3Njc2NzEsImV4cCI6MjA5MTM0MzY3MX0.JPTyCbsLk9Kr4AHo3ynszOo_SxvLA-XpT_5TzP8M71o";
-const CLERK_KEY="pk_test_Zml0LXNoaW5lci05MC5jbGVyay5hY2NvdW50cy5kZXYk";
+// ── SUPABASE AUTH (no external SDK needed) ───────────────────────────────
+const supaAuth=async(path,body,token)=>{
+  const r=await fetch(SUPA_URL+'/auth/v1/'+path,{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},
+    body:JSON.stringify(body),
+  });
+  return r.json();
+};
+const supaGetUser=async(token)=>{
+  const r=await fetch(SUPA_URL+'/auth/v1/user',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}});
+  return r.ok?r.json():null;
+};
+
 const supa=async(path,opts={})=>{
   const r=await fetch(SUPA_URL+'/rest/v1/'+path,{method:opts.method||'GET',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})},body:opts.body?JSON.stringify(opts.body):undefined});
   if(!r.ok){const e=await r.text();console.error('Supabase:',e);return null;}
@@ -1304,53 +1316,33 @@ class ErrorBoundary extends React.Component {
 
 
 // ── AUTH GATE — Registration-first, email sign-up ────────────────────────
-function AuthGate({onGuest}){
-  const[mode,setMode]=useState("signup"); // "signup"|"signin"
+function AuthGate({onGuest,onSignIn,onSignUp}){
+  const[mode,setMode]=useState("signup");
   const[email,setEmail]=useState("");
   const[password,setPassword]=useState("");
   const[firstName,setFirstName]=useState("");
   const[lastName,setLastName]=useState("");
-  const[code,setCode]=useState("");
   const[stage,setStage]=useState("form"); // "form"|"verify"
   const[error,setError]=useState("");
   const[loading,setLoading]=useState(false);
-  const{client}=useClerk();
 
   const handleSubmit=async()=>{
     setError("");setLoading(true);
-    try{
-      if(mode==="signup"){
-        const su=await client.signUp.create({
-          emailAddress:email,
-          password,
-          firstName,
-          lastName,
-        });
-        await su.prepareEmailAddressVerification({strategy:"email_code"});
-        setStage("verify");
-      } else {
-        const si=await client.signIn.create({identifier:email,password});
-        if(si.status==="complete"){
-          await client.setActive({session:si.createdSessionId});
-        }
-      }
-    }catch(e){
-      setError(e.errors?.[0]?.longMessage||e.errors?.[0]?.message||"Something went wrong.");
+    if(mode==="signup"){
+      const r=await onSignUp(email,password,firstName,lastName);
+      if(r?.error) setError(r.error);
+      else if(r?.needsVerification) setStage("verify");
+      // if success with token, parent state update handles redirect
+    } else {
+      const r=await onSignIn(email,password);
+      if(r?.error) setError(r.error);
     }
     setLoading(false);
   };
 
   const handleVerify=async()=>{
-    setError("");setLoading(true);
-    try{
-      const result=await client.signUp.attemptEmailAddressVerification({code});
-      if(result.status==="complete"){
-        await client.setActive({session:result.createdSessionId});
-      }
-    }catch(e){
-      setError(e.errors?.[0]?.longMessage||"Invalid code — check your email and try again.");
-    }
-    setLoading(false);
+    setError("Please check your email and click the verification link, then sign in.");
+    setStage("form");setMode("signin");
   };
 
   const inputStyle={
@@ -1473,9 +1465,50 @@ function AuthGate({onGuest}){
 function AppInner(){
 
   // ── SUPABASE SESSION PERSISTENCE ────────────────────────────────────────────
-  const{user,isLoaded}=useUser();
-  const{signOut}=useClerk();
+  // ── LOCAL AUTH STATE (Supabase Auth) ──────────────────────────────────
+  const[user,setUser]=useState(null);
+  const[authToken,setAuthToken]=useState(()=>localStorage.getItem('sb_token')||'');
+  const[isLoaded,setIsLoaded]=useState(false);
   const[guestMode,setGuestMode]=useState(false);
+
+  // Restore session on mount
+  useEffect(()=>{
+    const token=localStorage.getItem('sb_token');
+    if(token){
+      supaGetUser(token).then(u=>{
+        if(u?.id){setUser(u);setAuthToken(token);}
+        else{localStorage.removeItem('sb_token');}
+        setIsLoaded(true);
+      });
+    } else { setIsLoaded(true); }
+  },[]);
+
+  const signIn=async(email,password)=>{
+    const d=await supaAuth('token?grant_type=password',{email,password});
+    if(d.access_token){
+      localStorage.setItem('sb_token',d.access_token);
+      setAuthToken(d.access_token);
+      setUser(d.user);
+      setGuestMode(false);
+      return{success:true};
+    }
+    return{error:d.error_description||d.msg||'Invalid email or password'};
+  };
+
+  const signUp=async(email,password,firstName,lastName)=>{
+    const d=await supaAuth('signup',{email,password,data:{first_name:firstName,last_name:lastName,full_name:firstName+' '+lastName}});
+    if(d.id||d.access_token){
+      if(d.access_token){localStorage.setItem('sb_token',d.access_token);setAuthToken(d.access_token);setUser(d.user||d);}
+      return{success:true,needsVerification:!d.access_token};
+    }
+    return{error:d.msg||d.error_description||'Sign up failed'};
+  };
+
+  const signOut=async()=>{
+    localStorage.removeItem('sb_token');
+    setUser(null);setAuthToken('');setGuestMode(false);
+    clearSession();
+  };
   const[savedSessions,setSavedSessions]=useState([]);
   const[currentSessionId,setCurrentSessionId]=useState(null);
   const[sessionName,setSessionName]=useState("");
@@ -1494,7 +1527,7 @@ function AppInner(){
 
   const loadSessions=async()=>{
     if(!user) return;
-    const rows=await supa(`sessions?user_id=eq.${user.id}&order=updated_at.desc&limit=20`);
+    const rows=await supa(`sessions?user_id=eq.${user.id}&order=updated_at.desc&limit=20`,{headers:{"Authorization":"Bearer "+authToken}});
     if(rows) setSavedSessions(rows);
   };
 
@@ -1508,11 +1541,11 @@ function AppInner(){
     const data=getSessionData();
     const nm=name||sessionName||sellerUrl||"Session "+new Date().toLocaleDateString();
     if(currentSessionId){
-      await supa(`sessions?id=eq.${currentSessionId}`,{method:"PATCH",body:{name:nm,seller_url:sellerUrl,data}});
+      await supa(`sessions?id=eq.${currentSessionId}`,{method:"PATCH",headers:{"Authorization":"Bearer "+authToken},body:{name:nm,seller_url:sellerUrl,data}});
     } else {
       // Ensure user exists in users table
-      await supa("users",{method:"POST",headers:{"Prefer":"return=minimal","on_conflict":"id"},body:{id:user.id,email:user.primaryEmailAddress?.emailAddress,name:user.fullName,role:"rep"}});
-      const result=await supa("sessions",{method:"POST",body:{user_id:user.id,name:nm,seller_url:sellerUrl,data}});
+      await supa("users?on_conflict=id",{method:"POST",headers:{"Prefer":"return=minimal","Authorization":"Bearer "+authToken},body:{id:user.id,email:user.email,name:user.user_metadata?.full_name||user.email,role:"rep"}});
+      const result=await supa("sessions",{method:"POST",headers:{"Authorization":"Bearer "+authToken},body:{user_id:user.id,name:nm,seller_url:sellerUrl,data}});
       if(result?.[0]?.id) setCurrentSessionId(result[0].id);
     }
     setSessionName(nm);
@@ -1551,7 +1584,7 @@ function AppInner(){
   };
 
   const deleteSession=async(id)=>{
-    await supa(`sessions?id=eq.${id}`,{method:"DELETE"});
+    await supa(`sessions?id=eq.${id}`,{method:"DELETE",headers:{"Authorization":"Bearer "+authToken}});
     if(id===currentSessionId) setCurrentSessionId(null);
     loadSessions();
   };
@@ -2200,7 +2233,7 @@ Return ONLY valid JSON:
     <>
       <style>{FONTS}{css}</style>
       {!user&&!guestMode&&isLoaded?(
-        <AuthGate onGuest={()=>setGuestMode(true)}/>
+        <AuthGate onGuest={()=>setGuestMode(true)} onSignIn={signIn} onSignUp={signUp}/>
       ):(
       <>
       <div className="app">
@@ -2261,7 +2294,9 @@ Return ONLY valid JSON:
                 📂 Sessions {savedSessions.length>0&&`(${savedSessions.length})`}
               </button>
             )}
-            <UserButton afterSignOutUrl="/"/>
+            <button onClick={signOut} style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid #E8E6DF",background:"#fff",color:"#555",cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              {user?.user_metadata?.first_name||user?.email?.split("@")[0]||"Account"} · Sign Out
+            </button>
           </div>
         </header>
 
@@ -4353,4 +4388,4 @@ Return ONLY valid JSON:
     </>
   );
 }
-export default function App(){return(<ClerkProvider publishableKey={CLERK_KEY}><AppInner/></ClerkProvider>);}
+export default function App(){return <AppInner/>;}
