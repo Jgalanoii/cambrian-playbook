@@ -709,7 +709,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
 
   const baseInstructions =
     `Senior B2B sales strategist. Build a pre-call brief about TARGET PROSPECT "${co}" for a seller at ${sellerUrl}.\n`+
-    `CRITICAL: All fields describe ${co}, NOT the seller. ASCII punctuation only. No curly quotes. No trailing commas.\n`+`If data is unknown or unavailable, return an empty string "" — NEVER write "N/A", "Not applicable", "Unknown", or error messages in fields.\n`+
+    `CRITICAL: All fields describe ${co}, NOT the seller. ASCII punctuation only. No curly quotes. No trailing commas.\n`+
+    `CONSISTENCY RULES: Return EXACTLY the structure shown — same field count, same array lengths. If data is unknown return "" not prose. Use training knowledge confidently — never hedge.\n`+
     `Apply DMAIC lens to processMaturity: Define=knows problem unmeasured, Measure=anecdotal data, Analyze=diagnosing, Improve=evaluating solutions, Control=sustaining.\n`+
     `SELLER (context only):\n${sellerCtx}${prodCtx}\n`+
     `PROSPECT TO RESEARCH: ${co} (${dealCtx})\n`;
@@ -723,11 +724,12 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `{"companySnapshot":"3-4 sentences: what they do, revenue, employees, HQ, recent direction",`+
     `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT)","employeeCount":"e.g. ~47,000","headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
     `"keyExecutives":[`+
-    `{"name":"Real name","title":"CEO","initials":"AB","background":"Prior role + priority","angle":"What personally drives them — board priority, career ambition, what gap keeps them up at night"},`+
-    `{"name":"Real name","title":"CHRO or CPO","initials":"CD","background":"People/HR focus","angle":"Success in their terms — retention, culture, HR tech ROI"},`+
-    `{"name":"Real name","title":"CFO or COO","initials":"EF","background":"Financial/ops focus","angle":"How they evaluate spend — ROI lens, risk, efficiency"}],`+
+    `{"name":"REQUIRED - real current CEO first and last name","title":"CEO","initials":"XX","background":"Prior company or role in 1 sentence","angle":"Their board mandate and what they are personally measured on. 2 sentences."},`+
+    `{"name":"REQUIRED - real current CHRO or CPO or Chief People Officer first and last name","title":"exact current title","initials":"XX","background":"Their people/HR focus in 1 sentence","angle":"What success looks like for them — retention, engagement, HR tech. 2 sentences."},`+
+    `{"name":"REQUIRED - real current CFO or COO or President first and last name","title":"exact current title","initials":"XX","background":"Financial or ops focus in 1 sentence","angle":"How they evaluate spend — ROI threshold, risk lens, cost focus. 2 sentences."}],`+
+    `"EXEC_RULE":"Return ALL 3 executives. Use real names from your training knowledge. If uncertain of exact person, name the most likely holder of that role. Never leave name empty.",`+
     `"recentHeadlines":[{"headline":"Headline + date","relevance":"Why it matters for the sale"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
-    `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"Most relevant review","source":"","sentiment":"positive or negative"}},`+
+    `"publicSentiment":{"bbbRating":"","onlineSentiment":"","standoutReview":{"text":"","source":"","sentiment":""}},`+`// NOTE: bbbRating and standoutReview will be enriched by live search — return empty strings here`+
     `"fundingProfile":"PROSPECT ONLY: PE/VC/Public ownership, total raised, lead investors, latest round",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now — the why-you-why-now",`+
     `"openingAngle":"Sharp statement referencing something real. Format: Most [industry] companies [assumption]. What the data shows is [reframe]. Is that showing up for you?",`+
@@ -750,15 +752,21 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
 
   // ── PART C: Live web search enrichment — fires in parallel ───────────────
   const partCPrompt =
-    `Search for the most recent 2024-2025 news about "${co}" (domain: ${url}).\n`+
-    `Find: headlines, M&A, hiring signals, leadership changes, funding.\n`+
+    `Search for recent information about "${co}". Run these searches:\n`+
+    `1. Recent 2024-2025 news, M&A, leadership changes, funding rounds\n`+
+    `2. BBB rating: search bbb.org for "${co}" to find their letter grade\n`+
+    `3. Customer/employee sentiment: Glassdoor, G2, Trustpilot, or industry press reviews\n`+
     `Return ONLY raw JSON, start with {:\n`+
     `{"recentHeadlines":[{"headline":"Specific headline + source + date","relevance":"Why it matters"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
     `"openRoles":{"summary":"What hiring reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
-    `"fundingProfile":"Latest funding found",`+
-    `"recentSignals":["Most actionable signal","Second","Third"],`+
-    `"growthSignals":["Growth signal","Second","Third"],`+
-    `"companySnapshot":"Updated snapshot with new facts"}`;
+    `"fundingProfile":"Latest funding or ownership info found",`+
+    `"publicSentiment":{`+
+    `"bbbRating":"ONLY the letter grade found on bbb.org (e.g. A+) or empty string if not listed — no sentences",`+
+    `"onlineSentiment":"2-3 sentences on what customers and employees are actually saying",`+
+    `"standoutReview":{"text":"Most relevant quote or paraphrase from a real review or press piece","source":"source name","sentiment":"positive or negative"}},`+
+    `"recentSignals":["Most actionable buying signal found","Second","Third"],`+
+    `"growthSignals":["Growth signal with evidence","Second","Third"],`+
+    `"companySnapshot":"Updated 2-3 sentence snapshot incorporating any new facts found"}`;
 
   // Fire all three simultaneously
   const partAPromise = callAI(partAPrompt);
@@ -770,7 +778,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:2000,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:4}],
           messages:[{role:"user",content:partCPrompt},{role:"assistant",content:"{"}],
         }),
       });
@@ -816,6 +824,16 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         if(cleanHeadlines.length>0) next.recentHeadlines=cleanHeadlines;
         if(partC.openRoles?.summary&&!next.openRoles?.summary) next.openRoles=partC.openRoles;
         if(partC.fundingProfile&&!partC.fundingProfile.includes("Search failed")) next.fundingProfile=partC.fundingProfile;
+        if(partC.publicSentiment){
+          const ps=partC.publicSentiment;
+          // Only take BBB if it looks like a real grade
+          const bbbValid=ps.bbbRating&&ps.bbbRating.length<=3&&/^[A-F][+-]?$/.test(ps.bbbRating.trim());
+          next.publicSentiment={...next.publicSentiment,
+            bbbRating:bbbValid?ps.bbbRating:"",
+            onlineSentiment:ps.onlineSentiment||"",
+            standoutReview:ps.standoutReview?.text?ps.standoutReview:next.publicSentiment?.standoutReview||{},
+          };
+        }
         if(partC.recentSignals?.some(s=>s)) next.recentSignals=partC.recentSignals;
         if(partC.growthSignals?.some(s=>s)) next.growthSignals=partC.growthSignals;
         const snapOk=partC.companySnapshot?.length>50&&!partC.companySnapshot.includes("Search failed")&&!partC.companySnapshot.includes("cannot filter");
