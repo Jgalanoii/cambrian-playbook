@@ -382,7 +382,7 @@ const RIVER_STAGES = [
       {id:"r_pain",label:"In their own words, what is the core pain?",hint:"Capture exact language — use verbatim in proposal"},
       {id:"r_tried",label:"What have they already tried? Why did it fail?",hint:"Understand the graveyard before pitching"},
     ],
-    talkTrack:'"Before we get into what we do, walk me through what happens right now when this problem comes up — what does that process actually look like?"',
+    talkTrack:'"Before I share anything about us — help me understand what this looks like for your team today. Walk me through it."',
     objections:[
       {q:"We already have something in place",a:'"What\'s working well — and where does it fall short? I want to understand the gap before assuming we\'re a fit."'},
       {q:"Not sure this is a priority",a:'"What would need to change for it to become one? Is there an event or timeline that would accelerate things?"'},
@@ -396,7 +396,7 @@ const RIVER_STAGES = [
       {id:"i_dollars",label:"Measurable cost of inaction? (revenue, time, headcount, churn)",hint:"Push for a number — even rough is better than nothing"},
       {id:"i_softer",label:"Softer costs? (morale, reputation, missed opportunity)",hint:"These often matter more to champions than hard numbers"},
     ],
-    talkTrack:'"What is this actually costing you — not just process pain, but real dollars? When this problem happens, what\'s the downstream impact?"',
+    talkTrack:'"When this breaks down, what actually happens downstream? Has anyone put a number on it yet?"',
     objections:[
       {q:"We don't know what it's costing us",a:'"Let\'s build that together. Headcount × time lost — what does that math look like?"'},
       {q:"The cost seems manageable",a:'"What would make it unmanageable? What\'s your threshold?"'},
@@ -410,7 +410,7 @@ const RIVER_STAGES = [
       {id:"v_success",label:"In their words: what does a win look like at Day 30, 90, Year 1?",hint:"This becomes your proposal headline — use their exact language"},
       {id:"v_champion_detail",label:"Who is the champion? What do they personally win if this succeeds?",hint:"Champions need a personal win, not just an organizational one"},
     ],
-    talkTrack:'"If we\'re sitting here 90 days after you sign and everything went perfectly — what has changed? What can you point to?"',
+    talkTrack:'"If this were working the way it should — what would that look like for your team week to week?"',
     objections:[
       {q:"Not sure what success looks like",a:'"That\'s the most important thing to define before you sign anything. Can we spend 10 minutes on that?"'},
       {q:"Different stakeholders want different things",a:'"Who has final say on what success means? Is there a shared outcome everyone agrees on?"'},
@@ -424,7 +424,7 @@ const RIVER_STAGES = [
       {id:"e_stakeholders",label:"Map the buying committee: who approves, influences, can kill it?",hint:"Name every stakeholder — flag the ones you haven't met"},
       {id:"e_timeline",label:"Realistic decision timeline? Is there a forcing function?",hint:"Budget cycle, renewal date, board review — find the date"},
     ],
-    talkTrack:'"Walk me through what the decision process looks like from here — who else needs to be involved, and what would need to be true to move forward?"',
+    talkTrack:'"Who else feels this the most? And how do decisions like this typically get made here?"',
     objections:[
       {q:"Need to get more people involved",a:'"Who are the right people? I\'d rather get them in early. Can we set up a 30-min call this week?"'},
       {q:"This will go through procurement",a:'"What does that process look like? I want to make sure we have everything they need ready."'},
@@ -438,7 +438,7 @@ const RIVER_STAGES = [
       {id:"r2_next",label:"Single most important next step?",hint:"Named action + named person + named date"},
       {id:"r2_onboard",label:"What does a successful onboarding look like for them?",hint:"This becomes your close framing and CSM handoff brief"},
     ],
-    talkTrack:'"Based on what you\'ve shared, I have a clear picture of where you are. Here\'s what I think the right path looks like — and what I need from you to make it happen quickly."',
+    talkTrack:'"Based on what you\'ve shared, here\'s what I\'d suggest as a starting point — does that feel right from where you sit?"',
     objections:[
       {q:"Not ready to move forward",a:'"What would need to change? Is this timing or something more fundamental?"'},
       {q:"Need to think about it",a:'"What specifically? If I can help you work through it now, it might save us both a few weeks."'},
@@ -1711,7 +1711,8 @@ export default function App(){
 
     const prompt =
       "You are a senior B2B sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
-      "CRITICAL CONSTRAINT: This hypothesis must ONLY reference things the SELLER can deliver. Do NOT suggest the prospect fix food waste, labor costs, or anything outside the seller's scope.\n\n" +
+      "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting.\n" +
+      "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences a rep can say out loud naturally.\n\n" +
       "SELLER (" + sellerUrl + ") CONTEXT:\n" + sellerCtx + "\n" +
       (productsCtx?"SELLER PRODUCTS/SERVICES: "+productsCtx+"\n":"") +
       "\nPROSPECT: " + co + " | Industry: " + (member.ind||"") + "\n" +
@@ -1722,21 +1723,21 @@ export default function App(){
       "SELLER OPPORTUNITY (pre-built): " + opportunity + "\n" +
       "SOLUTION MAPPING (pre-built):\n" + mappedSolutions + "\n\n" +
       "BUILD THE RIVER HYPOTHESIS:\n" +
-      "Every field must be grounded in what " + sellerUrl + " specifically sells. Do not stray into general consulting.\n" +
-      "Apply DMAIC lens: Reality=Define+Measure, Impact=Analyze, Vision=Improve, Route=Control.\n" +
+      "Every field grounded in what " + sellerUrl + " sells. No stray consulting.\n" +
+      "DMAIC: Reality=Define+Measure, Impact=Analyze, Vision=Improve, Route=Control.\n" +
       "Return ONLY raw JSON, ASCII punctuation only:\n" +
       JSON.stringify({
-        reality:"The specific problem " + co + " faces that "+sellerUrl+" can directly solve — not generic ops issues. Tie to their signals and what the seller's products address.",
-        impact:"Cost of this problem in terms the seller's solution resolves — revenue, efficiency, or brand impact. Reference a specific signal.",
-        vision:"What "+co+" looks like when "+sellerUrl+"'s solution is working — measurable outcomes in their language.",
+        reality:"2-3 sentences: the specific current-state problem "+co+" has that "+sellerUrl+" can solve. One real signal. No fluff.",
+        impact:"What this problem is costing "+co+" in real business terms. One number or consequence if possible. Short and visceral.",
+        vision:"Success in "+co+"'s words — not a product feature list. 1-2 sentences, specific and measurable.",
         entryPoints:"Decision-maker at "+co+" who owns the problem the seller solves — specific names or titles from the brief.",
-        route:"Step-by-step path from today to a signed deal, using "+sellerUrl+"'s sales motion — pilot, POC, or direct.",
-        openingAngle:"One sharp insight that connects a real signal about "+co+" to a specific capability of "+sellerUrl+". Statement, not a question.",
+        route:"The most natural next step given their DMAIC stage. Pilot, workshop, or direct proposal. Who moves it and what triggers commitment?",
+        openingAngle:"2 sentences max. One specific reframe that makes them think. Reference something real about "+co+". Human, not scripted.",
         talkTracks:[
-          {stage:"Opening",line:"Reference something specific about "+co+" that connects to "+sellerUrl+"'s work"},
-          {stage:"Discovery",line:"Best gap-finding question scoped to what "+sellerUrl+" can actually fix"},
-          {stage:"Impact",line:"Quantify the cost of the gap in terms "+sellerUrl+"'s solution resolves"},
-          {stage:"Vision",line:"Paint the future state using "+sellerUrl+"'s specific capabilities"},
+          {stage:"Opening",line:"1-2 natural sentences. Reference one real signal about "+co+" and connect it to a problem "+sellerUrl+" solves. Conversational — something you'd actually say, not a formal opening."},
+          {stage:"Discovery",line:"One short open question that surfaces the gap "+sellerUrl+" can fix. Sound curious, not scripted. Use their language."},
+          {stage:"Impact",line:"One question or short statement that makes the cost real — in business terms "+co+" cares about. Specific, not generic."},
+          {stage:"Vision",line:"One sentence. What good looks like if "+sellerUrl+"'s solution is working — in their words, not a product pitch."},
         ],
       });
 
@@ -1775,11 +1776,10 @@ export default function App(){
       `- The Charisma Myth (Olivia Fox Cabane): project presence, power, and warmth — make them feel seen\n\n`+
       `SELLER: ${seller} | PRODUCTS: ${products_ctx}\n`+
       `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n\n`+
-      `Generate 3 discovery questions per RIVER stage. Each question must:\n`+
-      `- Be product-specific (tie to what the seller actually sells)\n`+
-      `- Make the prospect feel seen and heard, not interrogated\n`+
-      `- Surface a gap or create an insight they hadn't articulated\n`+
-      `- Be conversational, not clinical\n\n`+
+      `Generate 2 discovery questions per RIVER stage. Each question must be:\n`+
+      `- 1 sentence max — something a rep says naturally mid-conversation\n`+
+      `- Tied directly to what the seller sells, not generic consulting\n`+
+      `- Curious and human in tone, not clinical or scripted\n\n`+
       `Also name the listening principle behind each question so the rep knows WHY they're asking it.\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
       `{"reality":[{"q":"Question?","framework":"Active Listening - reflect their reality back","intent":"Why this question works"}],"impact":[{"q":"","framework":"","intent":""}],"vision":[{"q":"","framework":"","intent":""}],"entryPoints":[{"q":"","framework":"","intent":""}],"route":[{"q":"","framework":"","intent":""}]}`;
