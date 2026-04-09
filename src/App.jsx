@@ -7,8 +7,6 @@ const supa=async(path,opts={})=>{
   if(!r.ok){const e=await r.text();console.error('Supabase:',e);return null;}
   const t=await r.text();return t?JSON.parse(t):null;
 };
-import React, { useState, useCallback, useRef, useEffect } from "react";
-
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');`;
 
 const css = `
