@@ -48,6 +48,28 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .btn-lg { padding: 12px 22px; font-size: 16px; }
 .btn-sm { padding: 5px 11px; font-size: 13px; }
 .actions-row { display: flex; gap: 10px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
+/* ── PRINT / PDF STYLES ─────────────────────────────── */
+@media print {
+  @page { margin: 18mm 16mm; size: A4; }
+  body { background: #fff !important; }
+  .header, .session-bar, .footer,
+  .actions-row, .incall-header,
+  button, .btn, .river-pills,
+  .stepper, [class*="load-"], .load-box { display: none !important; }
+  .app { padding: 0 !important; }
+  .page { max-width: 100% !important; padding: 0 !important; }
+  .bb { break-inside: avoid; border: 1px solid #ddd !important; margin-bottom: 12px !important; }
+  .bb-hdr { background: #f5f5f5 !important; }
+  .contact-row { break-inside: avoid; }
+  .field-grid-2 { grid-template-columns: 1fr 1fr !important; }
+  .card { break-inside: avoid; }
+  .incall-wrap { padding: 0 !important; }
+  .incall-grid { grid-template-columns: 1fr !important; }
+  .incall-sidebar { display: none !important; }
+  a { color: #1B3A6B !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
 .footer { text-align: center; padding: 24px 28px; font-size: 12px; color: #bbb; border-top: 1px solid #E8E6DF; margin-top: auto; background: #fff; }
 .footer a { color: #bbb; text-decoration: none; }
 
@@ -1859,7 +1881,11 @@ Return ONLY valid JSON:
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
-  const doExport=()=>exportToExcel(brief,gateAnswers,riverData,postCall,selectedAccount,selectedCohort,selectedOutcomes,sellerUrl,confidence);
+  const doExport=()=>{
+    // Scroll to top so print starts from beginning of current step
+    window.scrollTo(0,0);
+    setTimeout(()=>window.print(), 150);
+  };
 
   const STEPS=["Session","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
@@ -2724,7 +2750,7 @@ Return ONLY valid JSON:
                       <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}/>
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
-                      <button className="btn btn-navy" onClick={doExport}>↓ Export RIVER</button>
+                      <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                       <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
                       <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(5);}}>Review Hypothesis →</button>
                     </div>
@@ -3117,7 +3143,7 @@ Return ONLY valid JSON:
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
                   <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
-                  <button className="btn btn-navy" onClick={doExport}>↓ Export RIVER</button>
+                  <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(5);}}>Review Hypothesis →</button>
                 </div>
               </>
@@ -3546,7 +3572,7 @@ Return ONLY valid JSON:
                 </div>
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(6)}>← Back to Call</button>
-                  <button className="btn btn-navy" onClick={doExport}>↓ Export Full RIVER</button>
+                  <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                   <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(8);}}>
                     Solution Fit Review →
@@ -3746,7 +3772,7 @@ Return ONLY valid JSON:
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Post-Call</button>
                   <button className="btn btn-secondary" onClick={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}>↻ Regenerate</button>
-                  <button className="btn btn-navy" onClick={doExport}>↓ Export RIVER</button>
+                  <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                   <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}>Next Account</button>
                 </div>
               </>
