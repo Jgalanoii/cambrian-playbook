@@ -1688,53 +1688,7 @@ export default function App(){
     setIcpLoading(false);
   };
 
-  // ── RESTORE SESSION ON MOUNT ──────────────────────────────────────────────
-  useEffect(()=>{
-    const s = loadSession();
-    if(!s._saved) return;
-    if(s.sellerUrl) setSellerUrl(s.sellerUrl);
-    if(s.sellerInput) setSellerInput(s.sellerInput);
-    if(s.productUrls?.length) setProductUrls(s.productUrls);
-    if(s.urlScanConfirmed) setUrlScanConfirmed(s.urlScanConfirmed);
-    if(s.sellerICP) setSellerICP(s.sellerICP);
-    if(s.products?.length) setProducts(s.products);
-    if(s.sellerDocs?.length) setSellerDocs(s.sellerDocs);
-    if(s.rows?.length){ setRows(s.rows); setHeaders(s.headers||[]); setMapping(s.mapping||{}); setFileName(s.fileName||""); }
-    if(s.importMode) setImportMode(s.importMode);
-    if(s.quickEntries?.length) setQuickEntries(s.quickEntries);
-    if(s.cohorts?.length){ setCohorts(s.cohorts); }
-    if(s.selectedCohort) setSelectedCohort(s.selectedCohort);
-    if(s.fitScores) setFitScores(s.fitScores);
-    if(s.accountQueue?.length) setAccountQueue(s.accountQueue);
-    if(s.queueIdx) setQueueIdx(s.queueIdx);
-    if(s.selectedAccount) setSelectedAccount(s.selectedAccount);
-    if(s.selectedOutcomes?.length) setSelectedOutcomes(s.selectedOutcomes);
-    if(s.customOutcome) setCustomOutcome(s.customOutcome);
-    if(s.dealValue) setDealValue(s.dealValue);
-    if(s.dealClassification) setDealClassification(s.dealClassification);
-    if(s.contactRole) setContactRole(s.contactRole);
-    if(s.brief) setBrief(s.brief);
-    if(s.riverHypo) setRiverHypo(s.riverHypo);
-    if(s.discoveryQs) setDiscoveryQs(s.discoveryQs);
-    if(s.gateAnswers) setGateAnswers(s.gateAnswers);
-    if(s.gateNotes) setGateNotes(s.gateNotes);
-    if(s.riverData) setRiverData(s.riverData);
-    if(s.notes) setNotes(s.notes);
-    if(s.postCall) setPostCall(s.postCall);
-    if(s.solutionFit) setSolutionFit(s.solutionFit);
-    console.log("Session restored from", s._saved);
-  },[]);
-
-  // ── AUTO-SAVE SESSION ON KEY STATE CHANGES ────────────────────────────────
-  useEffect(()=>{ if(sellerUrl) saveSession({sellerUrl,sellerInput,productUrls,urlScanConfirmed,sellerICP,products,sellerDocs}); },[sellerUrl,productUrls,sellerICP,products]);
-  useEffect(()=>{ if(rows.length) saveSession({rows,headers,mapping,fileName,importMode,quickEntries}); },[rows,importMode]);
-  useEffect(()=>{ if(cohorts.length) saveSession({cohorts,selectedCohort,fitScores,accountQueue,queueIdx}); },[cohorts,fitScores]);
-  useEffect(()=>{ if(selectedAccount) saveSession({selectedAccount,selectedOutcomes,customOutcome,dealValue,dealClassification,contactRole}); },[selectedAccount,selectedOutcomes]);
-  useEffect(()=>{ if(brief) saveSession({brief}); },[brief]);
-  useEffect(()=>{ if(riverHypo) saveSession({riverHypo,discoveryQs}); },[riverHypo,discoveryQs]);
-  useEffect(()=>{ if(Object.keys(gateAnswers).length||notes) saveSession({gateAnswers,gateNotes,riverData,notes}); },[gateAnswers,notes]);
-  useEffect(()=>{ if(postCall) saveSession({postCall}); },[postCall]);
-  useEffect(()=>{ if(solutionFit) saveSession({solutionFit}); },[solutionFit]);
+  // Session restore is handled by Supabase (restoreSession fn) or guest localStorage below
 
   // ── SCAN SELLER URL FOR PRODUCT PAGES ────────────────────────────────────
   const scanSellerUrl = async(rawUrl) => {
