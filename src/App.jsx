@@ -2508,15 +2508,18 @@ Return ONLY valid JSON:
               {/* Left: Account list */}
               <div>
                 <div style={{fontSize:12,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
-                  {selectedCohort.name} · {selectedCohort.members.length} accounts
+                  {accountQueue.length>1?`${accountQueue.length} selected accounts`:selectedCohort.name}
                 </div>
                 <div className="account-list">
-                  {[...selectedCohort.members].sort((a,b)=>{
+                  {(accountQueue.length>0
+                    ? accountQueue
+                    : selectedCohort.members
+                  ).sort((a,b)=>{
                     const sa=fitScores[a.company]?.score??50;
                     const sb=fitScores[b.company]?.score??50;
                     return sb-sa;
                   }).map((m,i)=>{
-                    const isSelected = selectedAccount===m;
+                    const isSelected = selectedAccount?.company===m.company;
                     return(
                       <div key={i}
                         className={`account-item ${isSelected?"selected":""} ${!m.company_url?"no-url":""}`}
@@ -3140,6 +3143,31 @@ Return ONLY valid JSON:
                   ? "Your pre-call hypothesis is ready. Edit any field before going live."
                   : "Generate your RIVER hypothesis below."}
             </div>
+
+            {/* Recommended Solutions — surface at top so rep is anchored */}
+            {(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
+              <div style={{background:"#1a1a18",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>
+                  🎯 Solutions You're Selling into {selectedAccount?.company}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {(brief.solutionMapping||[]).filter(s=>s?.product).map((s,i)=>(
+                    <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                      <div style={{background:"#8B6F47",color:"#fff",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
+                        {s.product}
+                      </div>
+                      <div style={{fontSize:13,color:"#ccc",lineHeight:1.6}}>{s.fit}</div>
+                    </div>
+                  ))}
+                </div>
+                {brief?.openingAngle&&(
+                  <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #333"}}>
+                    <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Opening Angle</div>
+                    <div style={{fontSize:13,color:"#fff",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {riverHypoLoading&&(
               <div className="load-box" style={{marginBottom:20}}>
