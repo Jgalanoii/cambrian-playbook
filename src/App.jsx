@@ -1,25 +1,11 @@
-import React,{useState,useEffect,useRef}from'react';
-const SUPA_URL="https://xtnidawfuaxwwwcnkewu.supabase.co";
-const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmlkYXdmdWF4d3d3Y25rZXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3Njc2NzEsImV4cCI6MjA5MTM0MzY3MX0.JPTyCbsLk9Kr4AHo3ynszOo_SxvLA-XpT_5TzP8M71o";
-// ── SUPABASE AUTH (no external SDK needed) ───────────────────────────────
-const supaAuth=async(path,body,token)=>{
-  const r=await fetch(SUPA_URL+'/auth/v1/'+path,{
-    method:'POST',
-    headers:{'apikey':SUPA_KEY,'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},
-    body:JSON.stringify(body),
-  });
-  return r.json();
-};
-const supaGetUser=async(token)=>{
-  const r=await fetch(SUPA_URL+'/auth/v1/user',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}});
-  return r.ok?r.json():null;
-};
+import React, { useState, useCallback, useRef, useEffect } from "react";
 
-const supa=async(path,opts={})=>{
-  const r=await fetch(SUPA_URL+'/rest/v1/'+path,{method:opts.method||'GET',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})},body:opts.body?JSON.stringify(opts.body):undefined});
-  if(!r.ok){const e=await r.text();console.error('Supabase:',e);return null;}
-  const t=await r.text();return t?JSON.parse(t):null;
-};
+const SB_URL="https://xtnidawfuaxwwwcnkewu.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmlkYXdmdWF4d3d3Y25rZXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3Njc2NzEsImV4cCI6MjA5MTM0MzY3MX0.JPTyCbsLk9Kr4AHo3ynszOo_SxvLA-XpT_5TzP8M71o";
+async function sbAuth(path,body){const r=await fetch(SB_URL+'/auth/v1/'+path,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}
+async function sbGetUser(token){const r=await fetch(SB_URL+'/auth/v1/user',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});return r.ok?r.json():null;}
+async function sbSessions(method,path,token,body){const r=await fetch(SB_URL+'/rest/v1/'+path,{method,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'},body:body?JSON.stringify(body):undefined});const t=await r.text();return t?JSON.parse(t):null;}
+
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');`;
 
 const css = `
@@ -1043,8 +1029,92 @@ function BriefLoader({ company, status }) {
   );
 }
 
+// ── PASSWORD GATE ─────────────────────────────────────────────────────────────
 
-// ── PIE CHART COMPONENT
+function PasswordGate({ onAuth }) {
+  const[mode,setMode]=React.useState("signup");
+  const[email,setEmail]=React.useState("");
+  const[pw,setPw]=React.useState("");
+  const[first,setFirst]=React.useState("");
+  const[last,setLast]=React.useState("");
+  const[err,setErr]=React.useState("");
+  const[loading,setLoading]=React.useState(false);
+  const[verifying,setVerifying]=React.useState(false);
+  const[guestOk,setGuestOk]=React.useState(false);
+
+  React.useEffect(()=>{
+    const token=localStorage.getItem('sb_token');
+    if(token) sbGetUser(token).then(u=>{if(u?.id) onAuth(u,token);});
+  },[]);
+
+  if(guestOk){onAuth(null,'');return null;}
+
+  const submit=async()=>{
+    setErr("");setLoading(true);
+    if(mode==="signup"){
+      const d=await sbAuth('signup',{email,password:pw,data:{first_name:first,last_name:last,full_name:first+' '+last}});
+      if(d.access_token){localStorage.setItem('sb_token',d.access_token);onAuth(d.user,d.access_token);}
+      else if(d.id){setVerifying(true);}
+      else setErr(d.msg||d.error_description||'Sign up failed');
+    } else {
+      const d=await sbAuth('token?grant_type=password',{email,password:pw});
+      if(d.access_token){localStorage.setItem('sb_token',d.access_token);onAuth(d.user,d.access_token);}
+      else setErr(d.error_description||'Incorrect email or password');
+    }
+    setLoading(false);
+  };
+
+  if(verifying) return(
+    <div className="pw-gate"><style>{FONTS}</style>
+    <div className="pw-card" style={{textAlign:"center"}}>
+      <div style={{fontSize:32,marginBottom:12}}>📬</div>
+      <div className="pw-logo">Check your email</div>
+      <div className="pw-sub" style={{marginBottom:16}}>We sent a verification link to <strong>{email}</strong></div>
+      <div style={{fontSize:13,color:"#777",lineHeight:1.6,marginBottom:20}}>Click the link in the email, then come back and sign in.</div>
+      <button className="btn btn-secondary" onClick={()=>{setVerifying(false);setMode("signin");}}>← Sign In</button>
+    </div></div>
+  );
+
+  const inp={width:"100%",padding:"11px 14px",borderRadius:8,border:"1.5px solid #E8E6DF",fontFamily:"DM Sans,sans-serif",fontSize:14,color:"#1a1a18",boxSizing:"border-box",outline:"none",marginBottom:10,display:"block"};
+  return(
+    <div className="pw-gate"><style>{FONTS}</style>
+    <div className="pw-card" style={{maxWidth:400}}>
+      <div className="pw-logo">Cambrian <span>Catalyst</span></div>
+      <div className="pw-sub">Revenue Playbook Engine · Private Beta</div>
+      <div style={{display:"flex",background:"#F0EDE6",borderRadius:10,padding:3,marginBottom:20,marginTop:16}}>
+        {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
+          <button key={m} onClick={()=>{setMode(m);setErr("");}}
+            style={{flex:1,padding:"8px 0",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,
+              background:mode===m?"#fff":"transparent",color:mode===m?"#1a1a18":"#999",
+              boxShadow:mode===m?"0 1px 4px rgba(0,0,0,0.10)":"none",transition:"all 0.15s"}}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode==="signup"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 10px"}}>
+          <input style={inp} placeholder="First name" value={first} onChange={e=>setFirst(e.target.value)} autoFocus/>
+          <input style={inp} placeholder="Last name" value={last} onChange={e=>setLast(e.target.value)}/>
+        </div>
+      )}
+      <input style={inp} type="email" placeholder="Email (Gmail or work)" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()}/>
+      <input style={inp} type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+      {err&&<div style={{fontSize:12,color:"#9B2C2C",marginBottom:10,padding:"8px 10px",background:"#FDE8E8",borderRadius:6}}>{err}</div>}
+      <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1}}
+        onClick={submit}
+        disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
+        {loading?((mode==="signup"?"Creating account...":"Signing in...")):(mode==="signup"?"Create Account →":"Sign In →")}
+      </button>
+      <div style={{textAlign:"center",marginTop:16}}>
+        <button onClick={()=>setGuestOk(true)}
+          style={{background:"none",border:"none",fontSize:12,color:"#aaa",cursor:"pointer",textDecoration:"underline"}}>
+          Continue as guest (work won't be saved)
+        </button>
+      </div>
+    </div></div>
+  );
+}
+
 // ── PIE CHART COMPONENT ───────────────────────────────────────────────────────
 
 function PieChart({data, size=120}){
@@ -1314,296 +1384,29 @@ class ErrorBoundary extends React.Component {
 }
 
 
-
-// ── AUTH GATE — Registration-first, email sign-up ────────────────────────
-function AuthGate({onGuest,onSignIn,onSignUp}){
-  const[mode,setMode]=useState("signup");
-  const[email,setEmail]=useState("");
-  const[password,setPassword]=useState("");
-  const[firstName,setFirstName]=useState("");
-  const[lastName,setLastName]=useState("");
-  const[stage,setStage]=useState("form"); // "form"|"verify"
-  const[error,setError]=useState("");
-  const[loading,setLoading]=useState(false);
-
-  const handleSubmit=async()=>{
-    setError("");setLoading(true);
-    if(mode==="signup"){
-      const r=await onSignUp(email,password,firstName,lastName);
-      if(r?.error) setError(r.error);
-      else if(r?.needsVerification) setStage("verify");
-      // if success with token, parent state update handles redirect
-    } else {
-      const r=await onSignIn(email,password);
-      if(r?.error) setError(r.error);
-    }
-    setLoading(false);
-  };
-
-  const handleVerify=async()=>{
-    setError("Please check your email and click the verification link, then sign in.");
-    setStage("form");setMode("signin");
-  };
-
-  const inputStyle={
-    width:"100%",padding:"11px 14px",borderRadius:8,border:"1.5px solid #E8E6DF",
-    fontFamily:"DM Sans,sans-serif",fontSize:14,color:"#1a1a18",boxSizing:"border-box",
-    outline:"none",marginBottom:10,
-  };
-  const btnPrimary={
-    width:"100%",padding:"13px 0",borderRadius:10,background:"#1a1a18",color:"#fff",
-    fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",
-    marginTop:4,opacity:loading?0.7:1,
-  };
-
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#F8F6F1 0%,#EEF5EE 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"#fff",borderRadius:20,padding:"44px 44px 36px",boxShadow:"0 8px 48px rgba(0,0,0,0.10)",maxWidth:420,width:"100%"}}>
-
-        {/* Logo */}
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{fontFamily:"Lora,serif",fontSize:30,fontWeight:700,color:"#1a1a18",marginBottom:4}}>
-            Cambrian <span style={{color:"#8B6F47"}}>Catalyst</span>
-          </div>
-          <div style={{fontSize:11,color:"#8B6F47",letterSpacing:"0.5px",textTransform:"uppercase",fontWeight:700,marginBottom:10}}>
-            Revenue Playbook Engine · RIVER Framework
-          </div>
-          <div style={{display:"inline-block",background:"#2E6B2E",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 14px",borderRadius:20,letterSpacing:"0.4px"}}>
-            Private Beta
-          </div>
-        </div>
-
-        {stage==="verify"?(
-          <>
-            <div style={{textAlign:"center",marginBottom:24}}>
-              <div style={{fontSize:32,marginBottom:8}}>📬</div>
-              <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:600,color:"#1a1a18",marginBottom:8}}>Check your email</div>
-              <div style={{fontSize:13,color:"#777",lineHeight:1.6}}>We sent a 6-digit code to<br/><strong>{email}</strong></div>
-            </div>
-            <input style={inputStyle} type="text" placeholder="Enter 6-digit code"
-              value={code} onChange={e=>setCode(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&handleVerify()}
-              maxLength={6} autoFocus/>
-            {error&&<div style={{fontSize:12,color:"#9B2C2C",marginBottom:10,padding:"8px 10px",background:"#FDE8E8",borderRadius:6}}>{error}</div>}
-            <button style={btnPrimary} onClick={handleVerify} disabled={loading||code.length<6}>
-              {loading?"Verifying...":"Verify Email →"}
-            </button>
-            <div style={{textAlign:"center",marginTop:14}}>
-              <button onClick={()=>{setStage("form");setCode("");setError("");}}
-                style={{background:"none",border:"none",fontSize:13,color:"#8B6F47",cursor:"pointer",fontWeight:600}}>
-                ← Back
-              </button>
-            </div>
-          </>
-        ):(
-          <>
-            {/* Mode toggle */}
-            <div style={{display:"flex",background:"#F0EDE6",borderRadius:10,padding:3,marginBottom:24}}>
-              {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
-                <button key={m} onClick={()=>{setMode(m);setError("");}}
-                  style={{flex:1,padding:"8px 0",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,
-                    background:mode===m?"#fff":"transparent",color:mode===m?"#1a1a18":"#999",
-                    boxShadow:mode===m?"0 1px 4px rgba(0,0,0,0.10)":"none",transition:"all 0.15s"}}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Sign-up fields */}
-            {mode==="signup"&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 10px"}}>
-                <input style={inputStyle} type="text" placeholder="First name"
-                  value={firstName} onChange={e=>setFirstName(e.target.value)} autoFocus/>
-                <input style={inputStyle} type="text" placeholder="Last name"
-                  value={lastName} onChange={e=>setLastName(e.target.value)}/>
-              </div>
-            )}
-
-            <input style={inputStyle} type="email"
-              placeholder="Email address (Gmail or work)" value={email}
-              onChange={e=>setEmail(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&password&&handleSubmit()}
-              autoFocus={mode==="signin"}/>
-            <input style={inputStyle} type="password"
-              placeholder={mode==="signup"?"Create a password (8+ characters)":"Password"}
-              value={password} onChange={e=>setPassword(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/>
-
-            {error&&<div style={{fontSize:12,color:"#9B2C2C",marginBottom:10,padding:"8px 10px",background:"#FDE8E8",borderRadius:6}}>{error}</div>}
-
-            <button style={btnPrimary} onClick={handleSubmit}
-              disabled={loading||!email||!password||(mode==="signup"&&(!firstName||!lastName))}>
-              {loading?(mode==="signup"?"Creating account...":"Signing in..."):mode==="signup"?"Create Account →":"Sign In →"}
-            </button>
-
-            {mode==="signup"&&(
-              <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:12,lineHeight:1.6}}>
-                By creating an account you agree to our terms of service.<br/>
-                We'll send a verification email to confirm your address.
-              </div>
-            )}
-          </>
-        )}
-
-        <div style={{height:1,background:"#F0EDE6",margin:"24px 0 16px"}}/>
-        {onGuest&&(
-          <div style={{textAlign:"center",marginBottom:16}}>
-            <button onClick={onGuest}
-              style={{background:"none",border:"none",fontSize:13,color:"#8B6F47",cursor:"pointer",fontWeight:600,textDecoration:"underline",textDecorationStyle:"dotted"}}>
-              Continue as guest (work won't be saved)
-            </button>
-          </div>
-        )}
-        <div style={{fontSize:11,color:"#aaa",textAlign:"center"}}>
-          © 2026 Cambrian Catalyst LLC · Seattle, WA
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AppInner(){
-
-  // ── SUPABASE SESSION PERSISTENCE ────────────────────────────────────────────
-  // ── LOCAL AUTH STATE (Supabase Auth) ──────────────────────────────────
-  const[user,setUser]=useState(null);
-  const[authToken,setAuthToken]=useState(()=>localStorage.getItem('sb_token')||'');
-  const[isLoaded,setIsLoaded]=useState(false);
-  const[guestMode,setGuestMode]=useState(false);
-
-  // Restore session on mount
-  useEffect(()=>{
-    const token=localStorage.getItem('sb_token');
-    if(token){
-      supaGetUser(token).then(u=>{
-        if(u?.id){setUser(u);setAuthToken(token);}
-        else{localStorage.removeItem('sb_token');}
-        setIsLoaded(true);
-      });
-    } else { setIsLoaded(true); }
-  },[]);
-
-  const signIn=async(email,password)=>{
-    const d=await supaAuth('token?grant_type=password',{email,password});
-    if(d.access_token){
-      localStorage.setItem('sb_token',d.access_token);
-      setAuthToken(d.access_token);
-      setUser(d.user);
-      setGuestMode(false);
-      return{success:true};
-    }
-    return{error:d.error_description||d.msg||'Invalid email or password'};
-  };
-
-  const signUp=async(email,password,firstName,lastName)=>{
-    const d=await supaAuth('signup',{email,password,data:{first_name:firstName,last_name:lastName,full_name:firstName+' '+lastName}});
-    if(d.id||d.access_token){
-      if(d.access_token){localStorage.setItem('sb_token',d.access_token);setAuthToken(d.access_token);setUser(d.user||d);}
-      return{success:true,needsVerification:!d.access_token};
-    }
-    return{error:d.msg||d.error_description||'Sign up failed'};
-  };
-
-  const signOut=async()=>{
-    localStorage.removeItem('sb_token');
-    setUser(null);setAuthToken('');setGuestMode(false);
-    clearSession();
-  };
+export default function App(){
+  const[authed,setAuthed]=useState(false);
+  const[sbUser,setSbUser]=useState(null);
+  const[sbToken,setSbToken]=useState('');
+  const[showSavePrompt,setShowSavePrompt]=useState(false);
   const[savedSessions,setSavedSessions]=useState([]);
   const[currentSessionId,setCurrentSessionId]=useState(null);
-  const[sessionName,setSessionName]=useState("");
+  const[sessionName,setSessionName]=useState('');
   const[showSessions,setShowSessions]=useState(false);
-  const[showSavePrompt,setShowSavePrompt]=useState(false);
-  const[saveStatus,setSaveStatus]=useState(""); // "saving"|"saved"|""
+  const[saveStatus,setSaveStatus]=useState('');
 
-  const getSessionData=()=>({
-    sellerUrl,sellerInput,productUrls,urlScanConfirmed,sellerICP,
-    products,rows,headers,mapping,fileName,importMode,quickEntries,
-    cohorts,selectedCohort,fitScores,accountQueue,queueIdx,
-    selectedAccount,selectedOutcomes,customOutcome,dealValue,dealClassification,
-    contactRole,brief,riverHypo,discoveryQs,gateAnswers,gateNotes,
-    riverData,notes,postCall,solutionFit,
-  });
-
-  const loadSessions=async()=>{
-    if(!user) return;
-    const rows=await supa(`sessions?user_id=eq.${user.id}&order=updated_at.desc&limit=20`,{headers:{"Authorization":"Bearer "+authToken}});
-    if(rows) setSavedSessions(rows);
-  };
-
-  const saveCurrentSession=async(name)=>{
-    if(!user){
-      // Guest mode — prompt to create account
-      setShowSavePrompt(true);
-      return;
-    }
-    setSaveStatus("saving");
-    const data=getSessionData();
-    const nm=name||sessionName||sellerUrl||"Session "+new Date().toLocaleDateString();
-    if(currentSessionId){
-      await supa(`sessions?id=eq.${currentSessionId}`,{method:"PATCH",headers:{"Authorization":"Bearer "+authToken},body:{name:nm,seller_url:sellerUrl,data}});
-    } else {
-      // Ensure user exists in users table
-      await supa("users?on_conflict=id",{method:"POST",headers:{"Prefer":"return=minimal","Authorization":"Bearer "+authToken},body:{id:user.id,email:user.email,name:user.user_metadata?.full_name||user.email,role:"rep"}});
-      const result=await supa("sessions",{method:"POST",headers:{"Authorization":"Bearer "+authToken},body:{user_id:user.id,name:nm,seller_url:sellerUrl,data}});
-      if(result?.[0]?.id) setCurrentSessionId(result[0].id);
-    }
-    setSessionName(nm);
-    setSaveStatus("saved");
-    setTimeout(()=>setSaveStatus(""),3000);
-    loadSessions();
-  };
-
-  const loadSessionData=(s)=>{
-    const d=s.data;
-    setCurrentSessionId(s.id);
-    setSessionName(s.name);
-    if(d.sellerUrl){setSellerUrl(d.sellerUrl);setSellerInput(d.sellerUrl);}
-    if(d.productUrls?.length) setProductUrls(d.productUrls);
-    if(d.sellerICP) setSellerICP(d.sellerICP);
-    if(d.products?.length) setProducts(d.products);
-    if(d.rows?.length){setRows(d.rows);setHeaders(d.headers||[]);setMapping(d.mapping||{});setFileName(d.fileName||"");}
-    if(d.importMode) setImportMode(d.importMode);
-    if(d.quickEntries?.length) setQuickEntries(d.quickEntries);
-    if(d.cohorts?.length) setCohorts(d.cohorts);
-    if(d.selectedCohort) setSelectedCohort(d.selectedCohort);
-    if(d.fitScores) setFitScores(d.fitScores);
-    if(d.accountQueue?.length) setAccountQueue(d.accountQueue);
-    if(d.selectedAccount) setSelectedAccount(d.selectedAccount);
-    if(d.selectedOutcomes?.length) setSelectedOutcomes(d.selectedOutcomes);
-    if(d.dealValue) setDealValue(d.dealValue);
-    if(d.brief) setBrief(d.brief);
-    if(d.riverHypo) setRiverHypo(d.riverHypo);
-    if(d.gateAnswers) setGateAnswers(d.gateAnswers);
-    if(d.riverData) setRiverData(d.riverData);
-    if(d.notes) setNotes(d.notes);
-    if(d.postCall) setPostCall(d.postCall);
-    if(d.solutionFit) setSolutionFit(d.solutionFit);
-    setShowSessions(false);
-    setStep(d.sellerUrl?1:0);
-  };
-
-  const deleteSession=async(id)=>{
-    await supa(`sessions?id=eq.${id}`,{method:"DELETE",headers:{"Authorization":"Bearer "+authToken}});
-    if(id===currentSessionId) setCurrentSessionId(null);
-    loadSessions();
-  };
-
-  const clearSession=()=>{
-    setCurrentSessionId(null);setSessionName("");
-    setSellerUrl("");setSellerInput("");setBrief(null);setRiverHypo(null);
-    setCohorts([]);setRows([]);setSelectedAccount(null);setPostCall(null);
-    setSolutionFit(null);setNotes("");setGateAnswers({});setRiverData({});
+  // ── SESSION HELPERS (localStorage fallback for guest mode) ──────────────
+  const STORAGE_KEY = "cambrian_session_v1";
+  const clearSession = () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch{}
+    setCurrentSessionId(null); setSessionName('');
+    setSellerUrl(''); setSellerInput(''); setBrief(null); setRiverHypo(null);
+    setCohorts([]); setRows([]); setSelectedAccount(null); setPostCall(null);
+    setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
     setStep(0);
   };
-
-  useEffect(()=>{if(user) loadSessions();},[user]);
-  // Auto-save every 60s if there's active work
-  useEffect(()=>{
-    if(!user||!sellerUrl) return;
-    const t=setInterval(()=>saveCurrentSession(),60000);
-    return()=>clearInterval(t);
-  },[user,sellerUrl,brief,postCall]);
+  const lastSaved = () => null; // reserved for future use
+  const _step_unused = null; // placeholder
   const[_step,_setStep]=useState(0);
   const step=_step;
   const setStep=(n)=>{_setStep(n);window.scrollTo({top:0,behavior:"smooth"});};
@@ -1871,7 +1674,53 @@ function AppInner(){
     setIcpLoading(false);
   };
 
+  // ── RESTORE SESSION ON MOUNT ──────────────────────────────────────────────
+  useEffect(()=>{
+    const s = loadSession();
+    if(!s._saved) return;
+    if(s.sellerUrl) setSellerUrl(s.sellerUrl);
+    if(s.sellerInput) setSellerInput(s.sellerInput);
+    if(s.productUrls?.length) setProductUrls(s.productUrls);
+    if(s.urlScanConfirmed) setUrlScanConfirmed(s.urlScanConfirmed);
+    if(s.sellerICP) setSellerICP(s.sellerICP);
+    if(s.products?.length) setProducts(s.products);
+    if(s.sellerDocs?.length) setSellerDocs(s.sellerDocs);
+    if(s.rows?.length){ setRows(s.rows); setHeaders(s.headers||[]); setMapping(s.mapping||{}); setFileName(s.fileName||""); }
+    if(s.importMode) setImportMode(s.importMode);
+    if(s.quickEntries?.length) setQuickEntries(s.quickEntries);
+    if(s.cohorts?.length){ setCohorts(s.cohorts); }
+    if(s.selectedCohort) setSelectedCohort(s.selectedCohort);
+    if(s.fitScores) setFitScores(s.fitScores);
+    if(s.accountQueue?.length) setAccountQueue(s.accountQueue);
+    if(s.queueIdx) setQueueIdx(s.queueIdx);
+    if(s.selectedAccount) setSelectedAccount(s.selectedAccount);
+    if(s.selectedOutcomes?.length) setSelectedOutcomes(s.selectedOutcomes);
+    if(s.customOutcome) setCustomOutcome(s.customOutcome);
+    if(s.dealValue) setDealValue(s.dealValue);
+    if(s.dealClassification) setDealClassification(s.dealClassification);
+    if(s.contactRole) setContactRole(s.contactRole);
+    if(s.brief) setBrief(s.brief);
+    if(s.riverHypo) setRiverHypo(s.riverHypo);
+    if(s.discoveryQs) setDiscoveryQs(s.discoveryQs);
+    if(s.gateAnswers) setGateAnswers(s.gateAnswers);
+    if(s.gateNotes) setGateNotes(s.gateNotes);
+    if(s.riverData) setRiverData(s.riverData);
+    if(s.notes) setNotes(s.notes);
+    if(s.postCall) setPostCall(s.postCall);
+    if(s.solutionFit) setSolutionFit(s.solutionFit);
+    console.log("Session restored from", s._saved);
+  },[]);
 
+  // ── AUTO-SAVE SESSION ON KEY STATE CHANGES ────────────────────────────────
+  useEffect(()=>{ if(sellerUrl) saveSession({sellerUrl,sellerInput,productUrls,urlScanConfirmed,sellerICP,products,sellerDocs}); },[sellerUrl,productUrls,sellerICP,products]);
+  useEffect(()=>{ if(rows.length) saveSession({rows,headers,mapping,fileName,importMode,quickEntries}); },[rows,importMode]);
+  useEffect(()=>{ if(cohorts.length) saveSession({cohorts,selectedCohort,fitScores,accountQueue,queueIdx}); },[cohorts,fitScores]);
+  useEffect(()=>{ if(selectedAccount) saveSession({selectedAccount,selectedOutcomes,customOutcome,dealValue,dealClassification,contactRole}); },[selectedAccount,selectedOutcomes]);
+  useEffect(()=>{ if(brief) saveSession({brief}); },[brief]);
+  useEffect(()=>{ if(riverHypo) saveSession({riverHypo,discoveryQs}); },[riverHypo,discoveryQs]);
+  useEffect(()=>{ if(Object.keys(gateAnswers).length||notes) saveSession({gateAnswers,gateNotes,riverData,notes}); },[gateAnswers,notes]);
+  useEffect(()=>{ if(postCall) saveSession({postCall}); },[postCall]);
+  useEffect(()=>{ if(solutionFit) saveSession({solutionFit}); },[solutionFit]);
 
   // ── SCAN SELLER URL FOR PRODUCT PAGES ────────────────────────────────────
   const scanSellerUrl = async(rawUrl) => {
@@ -1944,6 +1793,64 @@ function AppInner(){
       setUrlScanStatus("none");
     }
   };
+
+  // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
+  const getSessionSnap=()=>({sellerUrl,sellerInput,productUrls,sellerICP,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
+
+  const loadSessions=async()=>{
+    if(!sbUser||!sbToken) return;
+    const rows=await sbSessions('GET',`sessions?user_id=eq.${sbUser.id}&order=updated_at.desc&limit=20`,sbToken);
+    if(rows) setSavedSessions(rows);
+  };
+
+  const saveSession=async()=>{
+    if(!sbUser||!sbToken){setShowSavePrompt(true);return;}
+    setSaveStatus('saving');
+    const nm=sessionName||sellerUrl||'Session '+new Date().toLocaleDateString();
+    const data=getSessionSnap();
+    // Upsert user record
+    await sbSessions('POST','users?on_conflict=id',sbToken,{id:sbUser.id,email:sbUser.email,name:sbUser.user_metadata?.full_name||sbUser.email,role:'rep'});
+    if(currentSessionId){
+      await sbSessions('PATCH',`sessions?id=eq.${currentSessionId}`,sbToken,{name:nm,seller_url:sellerUrl,data});
+    } else {
+      const res=await sbSessions('POST','sessions',sbToken,{user_id:sbUser.id,name:nm,seller_url:sellerUrl,data});
+      if(res?.[0]?.id){setCurrentSessionId(res[0].id);setSessionName(nm);}
+    }
+    setSaveStatus('saved');setTimeout(()=>setSaveStatus(''),3000);
+    loadSessions();
+  };
+
+  const restoreSession=(s)=>{
+    const d=s.data;setCurrentSessionId(s.id);setSessionName(s.name);
+    if(d.sellerUrl){setSellerUrl(d.sellerUrl);setSellerInput(d.sellerUrl);}
+    if(d.productUrls?.length) setProductUrls(d.productUrls);
+    if(d.sellerICP) setSellerICP(d.sellerICP);
+    if(d.products?.length) setProducts(d.products);
+    if(d.rows?.length){setRows(d.rows);setHeaders(d.headers||[]);setMapping(d.mapping||{});setFileName(d.fileName||'');}
+    if(d.cohorts?.length){setCohorts(d.cohorts);}
+    if(d.selectedCohort) setSelectedCohort(d.selectedCohort);
+    if(d.fitScores) setFitScores(d.fitScores);
+    if(d.accountQueue?.length) setAccountQueue(d.accountQueue);
+    if(d.selectedAccount) setSelectedAccount(d.selectedAccount);
+    if(d.selectedOutcomes?.length) setSelectedOutcomes(d.selectedOutcomes);
+    if(d.dealValue) setDealValue(d.dealValue);
+    if(d.brief) setBrief(d.brief);
+    if(d.riverHypo) setRiverHypo(d.riverHypo);
+    if(d.gateAnswers) setGateAnswers(d.gateAnswers);
+    if(d.riverData) setRiverData(d.riverData);
+    if(d.notes) setNotes(d.notes);
+    if(d.postCall) setPostCall(d.postCall);
+    if(d.solutionFit) setSolutionFit(d.solutionFit);
+    setShowSessions(false);setStep(d.sellerUrl?1:0);
+  };
+
+  const deleteSession=async(id)=>{
+    await sbSessions('DELETE',`sessions?id=eq.${id}`,sbToken);
+    if(id===currentSessionId) setCurrentSessionId(null);
+    loadSessions();
+  };
+
+  React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
 
   const goToCohorts=()=>{
     const b=buildCohorts(rows,mapping);
@@ -2228,14 +2135,11 @@ Return ONLY valid JSON:
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
-  // Wrap with Clerk auth gate
+  if(!authed) return <PasswordGate onAuth={(u,tok)=>{setAuthed(true);setSbUser(u);setSbToken(tok);}}/>;
+
   return(
     <>
       <style>{FONTS}{css}</style>
-      {!user&&!guestMode&&isLoaded?(
-        <AuthGate onGuest={()=>setGuestMode(true)} onSignIn={signIn} onSignUp={signUp}/>
-      ):(
-      <>
       <div className="app">
 
         {/* HEADER */}
@@ -2276,125 +2180,96 @@ Return ONLY valid JSON:
               );
             })}
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
             {step===6&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
-            {sellerUrl&&(
-              <button onClick={()=>saveCurrentSession()}
-                style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,
-                  border:"1.5px solid "+(user?"#2E6B2E":"#BA7517"),
-                  background:saveStatus==="saved"?"#EEF5EE":user?"#fff":"#FEF6E4",
-                  color:user?saveStatus==="saved"?"#2E6B2E":"#2E6B2E":"#7A5010",
-                  cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-                {!user?"🔒 Save":saveStatus==="saving"?"⏳":saveStatus==="saved"?"✓":"💾"} {saveStatus==="saved"?"Saved":"Save"}
+            {step>0&&(
+              <button onClick={saveSession}
+                style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,cursor:"pointer",
+                  border:"1.5px solid "+(sbUser?"#2E6B2E":"#BA7517"),
+                  background:saveStatus==="saved"?"#EEF5EE":sbUser?"#fff":"#FEF6E4",
+                  color:sbUser?(saveStatus==="saved"?"#2E6B2E":"#2E6B2E"):"#7A5010"}}>
+                {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":saveStatus==="saved"?"✓":"💾"} {saveStatus==="saved"?"Saved":"Save"}
               </button>
             )}
-            {user&&(
-              <button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
-                style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid #E8E6DF",background:"#fff",color:"#555",cursor:"pointer"}}>
-                📂 Sessions {savedSessions.length>0&&`(${savedSessions.length})`}
-              </button>
-            )}
-            <button onClick={signOut} style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid #E8E6DF",background:"#fff",color:"#555",cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              {user?.user_metadata?.first_name||user?.email?.split("@")[0]||"Account"} · Sign Out
-            </button>
+            {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid #E8E6DF",background:"#fff",color:"#555",cursor:"pointer"}}>
+              📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
+            </button>}
+            {sbUser&&<button onClick={()=>{localStorage.removeItem('sb_token');window.location.reload();}}
+              style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid #E8E6DF",background:"#fff",color:"#aaa",cursor:"pointer"}}>
+              {sbUser.user_metadata?.first_name||sbUser.email?.split('@')[0]} · Sign out
+            </button>}
           </div>
         </header>
 
         {/* GUEST BANNER */}
-        {guestMode&&!user&&(
-          <div style={{background:"#FEF6E4",borderBottom:"1px solid #BA751744",padding:"8px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-            <div style={{fontSize:13,color:"#7A5010",fontWeight:500}}>
-              👤 You're in <strong>guest mode</strong> — your work is not being saved.
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setShowSavePrompt(true)}
-                style={{fontSize:12,fontWeight:700,padding:"5px 14px",borderRadius:8,background:"#1a1a18",color:"#fff",border:"none",cursor:"pointer"}}>
-                Create Free Account
-              </button>
-              <button onClick={()=>setShowSavePrompt(true)}
-                style={{fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:8,background:"#fff",color:"#1a1a18",border:"1px solid #E8E6DF",cursor:"pointer"}}>
-                Sign In
-              </button>
-            </div>
+        {!sbUser&&step>0&&(
+          <div style={{background:"#FEF6E4",borderBottom:"1px solid #BA751744",padding:"7px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+            <div style={{fontSize:12,color:"#7A5010"}}>👤 <strong>Guest mode</strong> — your work is not being saved.</div>
+            <button onClick={()=>{setAuthed(false);}}
+              style={{fontSize:12,fontWeight:700,padding:"4px 14px",borderRadius:8,background:"#1a1a18",color:"#fff",border:"none",cursor:"pointer"}}>
+              Create Free Account
+            </button>
           </div>
         )}
 
-        {/* SAVE PROMPT MODAL — shown when guest tries to save */}
+        {/* SAVE PROMPT */}
         {showSavePrompt&&(
           <>
-            <div onClick={()=>setShowSavePrompt(false)}
-              style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:2000}}/>
-            <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
-              background:"#fff",borderRadius:16,padding:"36px 40px",maxWidth:400,width:"90%",
-              zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+            <div onClick={()=>setShowSavePrompt(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:2000}}/>
+            <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"#fff",borderRadius:16,padding:"36px 40px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
               <div style={{fontSize:28,marginBottom:12}}>💾</div>
-              <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:700,color:"#1a1a18",marginBottom:8}}>
-                Save your work
-              </div>
-              <div style={{fontSize:14,color:"#555",lineHeight:1.7,marginBottom:24}}>
-                Create a free account to save your sessions, briefs, and hypotheses — and pick up where you left off from any device.
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <button onClick={()=>{setShowSavePrompt(false);setGuestMode(false);}}
-                  style={{padding:"13px 0",borderRadius:10,background:"#1a1a18",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer"}}>
-                  Create Free Account →
-                </button>
-                <button onClick={()=>setShowSavePrompt(false)}
-                  style={{padding:"12px 0",borderRadius:10,background:"#fff",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid #E8E6DF",cursor:"pointer"}}>
-                  Maybe later
-                </button>
-              </div>
+              <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,marginBottom:8}}>Save your work</div>
+              <div style={{fontSize:14,color:"#555",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
+              <button onClick={()=>{setShowSavePrompt(false);setAuthed(false);}}
+                style={{width:"100%",padding:"13px 0",borderRadius:10,background:"#1a1a18",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",marginBottom:10}}>
+                Create Free Account →
+              </button>
+              <button onClick={()=>setShowSavePrompt(false)}
+                style={{width:"100%",padding:"11px 0",borderRadius:10,background:"#fff",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid #E8E6DF",cursor:"pointer"}}>
+                Maybe later
+              </button>
             </div>
           </>
         )}
 
         {/* SESSIONS DRAWER */}
-        {showSessions&&(
-          <div style={{position:"fixed",top:0,right:0,height:"100vh",width:340,background:"#fff",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1000,display:"flex",flexDirection:"column"}}>
-            <div style={{padding:"20px 20px 14px",borderBottom:"1px solid #E8E6DF",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div>
-                <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:700,color:"#1a1a18"}}>Saved Sessions</div>
-                <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{user?.primaryEmailAddress?.emailAddress}</div>
-              </div>
-              <button onClick={()=>setShowSessions(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#aaa"}}>✕</button>
-            </div>
-            <div style={{flex:1,overflowY:"auto",padding:12}}>
-              <button onClick={()=>{clearSession();setShowSessions(false);}}
-                style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"2px dashed #E8E6DF",background:"#F8F6F1",color:"#8B6F47",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:12}}>
-                + New Session
-              </button>
-              {savedSessions.length===0&&(
-                <div style={{textAlign:"center",color:"#aaa",fontSize:13,padding:"32px 0"}}>No saved sessions yet.<br/>Click Save to store your work.</div>
-              )}
-              {savedSessions.map(s=>(
-                <div key={s.id} style={{padding:"12px 14px",borderRadius:10,border:"1.5px solid "+(s.id===currentSessionId?"#1a1a18":"#E8E6DF"),background:s.id===currentSessionId?"#FAF8F4":"#fff",marginBottom:8,cursor:"pointer"}}
-                  onClick={()=>loadSessionData(s)}>
-                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"#1a1a18",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
-                      <div style={{fontSize:11,color:"#8B6F47",marginTop:2}}>{s.seller_url}</div>
-                      <div style={{fontSize:10,color:"#aaa",marginTop:3}}>{new Date(s.updated_at).toLocaleDateString()} {new Date(s.updated_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div>
-                    </div>
-                    <button onClick={e=>{e.stopPropagation();deleteSession(s.id);}}
-                      style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:14,padding:"0 2px",flexShrink:0}}>✕</button>
-                  </div>
+        {showSessions&&sbUser&&(
+          <>
+            <div onClick={()=>setShowSessions(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.2)",zIndex:999}}/>
+            <div style={{position:"fixed",top:0,right:0,height:"100vh",width:320,background:"#fff",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1000,display:"flex",flexDirection:"column"}}>
+              <div style={{padding:"18px 18px 12px",borderBottom:"1px solid #E8E6DF",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700}}>Saved Sessions</div>
+                  <div style={{fontSize:11,color:"#aaa"}}>{sbUser.email}</div>
                 </div>
-              ))}
-            </div>
-            {sellerUrl&&(
-              <div style={{padding:"12px 14px",borderTop:"1px solid #E8E6DF"}}>
-                <input type="text" value={sessionName} onChange={e=>setSessionName(e.target.value)}
-                  placeholder={sellerUrl||"Session name..."}
-                  style={{width:"100%",fontSize:13,borderRadius:8,border:"1.5px solid #E8E6DF",padding:"8px 12px",marginBottom:8,boxSizing:"border-box"}}/>
-                <button onClick={()=>saveCurrentSession(sessionName)}
-                  style={{width:"100%",padding:"10px",borderRadius:8,background:"#1a1a18",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"}}>
+                <button onClick={()=>setShowSessions(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa"}}>✕</button>
+              </div>
+              <div style={{flex:1,overflowY:"auto",padding:10}}>
+                {savedSessions.length===0&&<div style={{textAlign:"center",color:"#aaa",fontSize:13,padding:"32px 0"}}>No saved sessions yet.</div>}
+                {savedSessions.map(s=>(
+                  <div key={s.id} onClick={()=>restoreSession(s)}
+                    style={{padding:"10px 12px",borderRadius:10,border:"1.5px solid "+(s.id===currentSessionId?"#1a1a18":"#E8E6DF"),background:s.id===currentSessionId?"#FAF8F4":"#fff",marginBottom:8,cursor:"pointer"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
+                        <div style={{fontSize:11,color:"#8B6F47"}}>{s.seller_url}</div>
+                        <div style={{fontSize:10,color:"#aaa"}}>{new Date(s.updated_at).toLocaleDateString()}</div>
+                      </div>
+                      <button onClick={e=>{e.stopPropagation();deleteSession(s.id);}} style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:14}}>✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{padding:12,borderTop:"1px solid #E8E6DF"}}>
+                <input value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder={sellerUrl||"Session name..."} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid #E8E6DF",fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
+                <button onClick={saveSession} style={{width:"100%",padding:"10px",borderRadius:8,background:"#1a1a18",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"}}>
                   {saveStatus==="saving"?"Saving...":saveStatus==="saved"?"✓ Saved":"Save Session"}
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          </>
         )}
-        {showSessions&&<div onClick={()=>setShowSessions(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.2)",zIndex:999}}/>}
 
         {/* SESSION BAR */}
         {step>0&&sellerUrl&&(
@@ -2423,14 +2298,19 @@ Return ONLY valid JSON:
             {selectedCohort&&<><span>·</span><span>Cohort: <strong>{selectedCohort.name}</strong></span></>}
             {selectedAccount&&<><span>·</span><span>Account: <strong>{selectedAccount.company}</strong></span></>}
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
-  <label style={{fontSize:10,color:"#8B6F47",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              {lastSaved()&&(
+                <span style={{fontSize:9,color:"#aaa",fontStyle:"italic"}}>
+                  💾 Saved {lastSaved()}
+                </span>
+              )}
+              <label style={{fontSize:10,color:"#8B6F47",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                 <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
               {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
               <button style={{fontSize:10,color:"#9B2C2C",fontWeight:600,background:"none",border:"1px solid #9B2C2C44",borderRadius:6,padding:"2px 8px",cursor:"pointer"}}
-                onClick={()=>{if(window.confirm("Start a new session?")) clearSession();}}>
-                ✕ New
+                onClick={()=>{if(window.confirm("Clear session and start over?")){clearSession();window.location.reload();}}}>
+                ✕ New Session
               </button>
             </span>
           </div>
@@ -4383,9 +4263,6 @@ Return ONLY valid JSON:
       <footer className="footer">
         © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved
       </footer>
-      </>
-      )}
     </>
   );
 }
-export default function App(){return <AppInner/>;}
