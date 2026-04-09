@@ -475,9 +475,12 @@ function buildCohorts(rows,mapping){
       // Band by industry vertical for meaningful cohorts
       band=ind||"Other",
       src=get(row,"lead_source")||"Direct",outcome=getOutcomeTheme(row,mapping),
-      company=get(row,"company"),product=get(row,"product"),company_url=get(row,"company_url")||"";
+      company=get(row,"company"),product=get(row,"product"),company_url=get(row,"company_url")||"",
+      employees=get(row,"employees")||"",
+      publicPrivate=get(row,"public_private")||"",
+      geography=get(row,"geography")||"";
     if(!groups[band])groups[band]=[];
-    groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url});
+    groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
   });
   return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).slice(0,5)
     .map(([name,members],i)=>{
@@ -667,9 +670,10 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const co  = member.company;
   const url = member.company_url || co;
 
+  const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
   const sellerCtx = sellerDocs.length>0
     ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,600)).join("\n")
-    : "Seller: "+sellerUrl+(productPageUrl?" | Product page: "+productPageUrl:"");
+    : "Seller: "+sellerUrl+(activeProductUrls.length?" | Product pages: "+activeProductUrls.join(", "):"");
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description:"")).join("; ")
     : "";
@@ -1010,12 +1014,58 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={
   const [open, setOpen] = useState(selected);
   useEffect(()=>{if(selected)setOpen(true);},[selected]);
 
-  const inds = [...new Set(cohort.members.map(m=>m.ind))];
-  const srcs = [...new Set(cohort.members.map(m=>m.src))];
-  const indCounts = inds.map(ind=>({label:ind, value:cohort.members.filter(m=>m.ind===ind).length}));
-  const srcCounts = srcs.map(src=>({label:src, value:cohort.members.filter(m=>m.src===src).length}));
+  // Compute breakdowns
+  const count = (members, key) => {
+    const map = {};
+    members.forEach(m=>{ const v=m[key]||"Unknown"; map[v]=(map[v]||0)+1; });
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value}));
+  };
+  const indCounts  = count(cohort.members,"ind");
+  const srcCounts  = count(cohort.members,"src");
+  const ppCounts   = count(cohort.members,"publicPrivate");
+  const geoCounts  = count(cohort.members,"geography");
+  const empBands   = (()=>{
+    const bands={"<500":0,"500–5K":0,"5K–50K":0,"50K+":0,"Unknown":0};
+    cohort.members.forEach(m=>{
+      const raw=(m.employees||"").replace(/[^0-9]/g,"");
+      const n=parseInt(raw)||0;
+      if(!n||!m.employees) bands["Unknown"]++;
+      else if(n<500)   bands["<500"]++;
+      else if(n<5000)  bands["500–5K"]++;
+      else if(n<50000) bands["5K–50K"]++;
+      else             bands["50K+"]++;
+    });
+    return Object.entries(bands).filter(([,v])=>v>0).map(([label,value])=>({label,value}));
+  })();
+
+  const hasACV    = cohort.members.some(m=>m.acv>0);
+  const hasPP     = cohort.members.some(m=>m.publicPrivate);
+  const hasGeo    = cohort.members.some(m=>m.geography);
+  const hasEmp    = cohort.members.some(m=>m.employees);
+
   const IND_COLORS = ["#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#8B6F47","#4A6B8E","#6B4A6B"];
   const SRC_COLORS = ["#2E6B2E","#8B6F47","#1B3A6B","#6B3A3A","#3A6B6B","#6B6B3A"];
+  const PP_COLORS  = ["#1B3A6B","#2E6B2E","#8B6F47","#9B2C2C","#6B3A7A"];
+  const GEO_COLORS = ["#2E6B2E","#1B3A6B","#8B6F47","#9B2C2C"];
+  const EMP_COLORS = ["#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#aaa"];
+
+  const MiniPie = ({title, data, colors}) => data.length<2?null:(
+    <div className="pie-card">
+      <div className="pie-title">{title}</div>
+      <div className="pie-wrap">
+        <PieChart size={90} data={data.slice(0,6).map((d,i)=>({...d,color:colors[i%colors.length]}))}/>
+        <div className="pie-legend">
+          {data.slice(0,5).map((d,i)=>(
+            <div key={i} className="pie-legend-item">
+              <div className="pie-legend-dot" style={{background:colors[i%colors.length]}}/>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:80}}>{d.label}</span>
+              <span className="pie-legend-val">{d.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return(
     <div className={`cohort-drill ${selected?"":""}`}>
@@ -1025,71 +1075,45 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={
           <div className="cohort-drill-dot" style={{background:cohort.color}}/>
           <div>
             <div className="cohort-drill-name">{cohort.name}</div>
-            <div className="cohort-drill-meta">{cohort.size} accounts · {cohort.pct}% of base · {cohort.topInd.slice(0,2).join(", ")}</div>
+            <div className="cohort-drill-meta">{cohort.size} accounts · {cohort.pct}% of base</div>
           </div>
         </div>
         <div className="cohort-drill-right">
-          <div className="cohort-drill-acv">{cohort.avgACV>0?"$"+(cohort.avgACV/1000).toFixed(0)+"K avg":""}</div>
+          <div className="cohort-drill-acv">{cohort.size} account{cohort.size!==1?"s":""}</div>
           <div className="cohort-drill-toggle">{open?"▲ Collapse":"▼ Drill Down"}</div>
         </div>
       </div>
 
       {open&&(
         <div className="cohort-drill-body">
-          {/* Mini charts */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,margin:"12px 0"}}>
-            <div className="pie-card">
-              <div className="pie-title">By Industry</div>
-              <div className="pie-wrap">
-                <PieChart size={90} data={indCounts.slice(0,7).map((d,i)=>({...d,color:IND_COLORS[i%IND_COLORS.length]}))}/>
-                <div className="pie-legend">
-                  {indCounts.slice(0,5).map((d,i)=>(
-                    <div key={i} className="pie-legend-item">
-                      <div className="pie-legend-dot" style={{background:IND_COLORS[i%IND_COLORS.length]}}/>
-                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:90}}>{d.label}</span>
-                      <span className="pie-legend-val">{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="pie-card">
-              <div className="pie-title">By Lead Source</div>
-              <div className="pie-wrap">
-                <PieChart size={90} data={srcCounts.slice(0,6).map((d,i)=>({...d,color:SRC_COLORS[i%SRC_COLORS.length]}))}/>
-                <div className="pie-legend">
-                  {srcCounts.slice(0,5).map((d,i)=>(
-                    <div key={i} className="pie-legend-item">
-                      <div className="pie-legend-dot" style={{background:SRC_COLORS[i%SRC_COLORS.length]}}/>
-                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:90}}>{d.label}</span>
-                      <span className="pie-legend-val">{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* Breakdown charts — only shown if data present */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12,margin:"12px 0"}}>
+            <MiniPie title="By Industry"    data={indCounts}  colors={IND_COLORS}/>
+            {hasPP&&<MiniPie title="Public vs Private" data={ppCounts}   colors={PP_COLORS}/>}
+            {hasGeo&&<MiniPie title="Domestic vs International" data={geoCounts} colors={GEO_COLORS}/>}
+            {hasEmp&&<MiniPie title="Org Size (Employees)" data={empBands} colors={EMP_COLORS}/>}
+            <MiniPie title="By Lead Source" data={srcCounts}  colors={SRC_COLORS}/>
           </div>
 
-          {/* ACV distribution bar */}
-          <div style={{marginBottom:12}}>
-            <div className="field-label" style={{marginBottom:6}}>ACV Distribution</div>
-            <div style={{display:"flex",gap:2,height:20,borderRadius:4,overflow:"hidden"}}>
-              {cohort.members.filter(m=>m.acv>0).sort((a,b)=>a.acv-b.acv).map((m,i,arr)=>(
-                <div key={i} title={`${m.company}: $${m.acv.toLocaleString()}`}
-                  style={{flex:1,background:cohort.color,opacity:0.3+0.7*(i/Math.max(arr.length-1,1)),cursor:"pointer"}}
-                  onClick={()=>onPickAccount&&onPickAccount(m)}/>
-              ))}
+          {/* ACV distribution — only if populated */}
+          {hasACV&&(
+            <div style={{marginBottom:12}}>
+              <div className="field-label" style={{marginBottom:6}}>ACV Distribution</div>
+              <div style={{display:"flex",gap:2,height:20,borderRadius:4,overflow:"hidden"}}>
+                {cohort.members.filter(m=>m.acv>0).sort((a,b)=>a.acv-b.acv).map((m,i,arr)=>(
+                  <div key={i} title={`${m.company}: $${m.acv.toLocaleString()}`}
+                    style={{flex:1,background:cohort.color,opacity:0.3+0.7*(i/Math.max(arr.length-1,1)),cursor:"pointer"}}
+                    onClick={()=>onPickAccount&&onPickAccount(m)}/>
+                ))}
+              </div>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#aaa",marginTop:3}}>
-
-            </div>
-          </div>
+          )}
 
           {/* Account table */}
           <table className="cohort-member-table">
             <thead>
               <tr>
-                <th>Company</th><th>Industry</th><th>Lead Source</th><th>Outcome</th><th>Fit Check</th><th></th>
+                <th>Company</th><th>Industry</th><th>Org Size</th><th>Ownership</th><th>Geography</th><th>Fit Check</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -1207,10 +1231,11 @@ export default function App(){
   const setStep=(n)=>{_setStep(n);window.scrollTo({top:0,behavior:"smooth"});};
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
-  const[productPageUrl,setProductPageUrl]=useState("");
+  const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
+  const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
-  const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:""});
+  const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:"",employees:"",public_private:"",geography:""});
   const[fileName,setFileName]=useState("");
   const[drag,setDrag]=useState(false);
   const[importMode,setImportMode]=useState("csv");
@@ -1351,6 +1376,9 @@ export default function App(){
       if(hn.includes("product")||hn.includes("solution"))am.product=h;
       if(hn.includes("outcome")||hn.includes("goal"))am.outcome=h;
       if(hn.includes("url")||hn.includes("website")||hn.includes("web"))am.company_url=h;
+      if(hn.includes("employee")||hn.includes("headcount")||hn.includes("staff"))am.employees=h;
+      if(hn.includes("public")||hn.includes("private")||hn.includes("ownership"))am.public_private=h;
+      if(hn.includes("geo")||hn.includes("domestic")||hn.includes("international")||hn.includes("region"))am.geography=h;
     });
     setMapping(am);
   };
@@ -1399,10 +1427,10 @@ export default function App(){
     setStep(2);
     // Score all members in background
     const allMembers=b.flatMap(c=>c.members);
-    const sellerCtx=sellerDocs.length>0
+    const sellerCtxF=sellerDocs.length>0
       ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
-      : sellerUrl+(productPageUrl?" | "+productPageUrl:"");
-    scoreFit(allMembers, sellerCtx);
+      : sellerUrl+(productUrls.filter(u=>u.url).map(u=>u.url).join(" | ")??" ");
+    scoreFit(allMembers, sellerCtxF);
   };
 
   const goToQuickBrief=()=>{
@@ -1424,11 +1452,11 @@ export default function App(){
     setCohorts([cohort]);
     setSelectedCohort(cohort);
     setSelectedOutcomes([]);
-    setStep(4); // Skip straight to account selection
+    setStep(3); // Skip straight to account selection
     // Score in background
     const sellerCtx2=sellerDocs.length>0
       ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
-      : sellerUrl+(productPageUrl?" | "+productPageUrl:"");
+      : sellerUrl+(productUrls.filter(u=>u.url).map(u=>u.url).join(" | ")??" ");
     scoreFit(cohort.members, sellerCtx2);
   };
   const goToOutcomes=()=>{if(selectedCohort){setSelectedOutcomes(selectedCohort.topOut.slice(0,2));setStep(3);}};
@@ -1608,14 +1636,14 @@ Return ONLY valid JSON:
 
     setPostCall(result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:`Following up — ${selectedAccount?.company}`,emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"});
     setPostLoading(false);
-    setStep(8);
+    setStep(7);
   };
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   const doExport=()=>exportToExcel(brief,gateAnswers,riverData,postCall,selectedAccount,selectedCohort,selectedOutcomes,sellerUrl,confidence);
 
-  const STEPS=["Session","Import","Accounts","Outcomes","Account","Brief","Hypothesis","In-Call","Post-Call"];
+  const STEPS=["Session","Import","Accounts","Account","Brief","Hypothesis","In-Call","Post-Call"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
@@ -1639,7 +1667,7 @@ Return ONLY valid JSON:
               </div>
             ))}
           </div>
-          <div>{step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}</div>
+          <div>{step===6&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}</div>
         </header>
 
         {/* SESSION BAR */}
@@ -1753,28 +1781,41 @@ Return ONLY valid JSON:
                 )}
               </div>
 
-              {/* Product Page URL */}
+              {/* Product / Solution URLs — up to 5 */}
               <div className="field-row" style={{marginBottom:0}}>
-                <div className="field-label" style={{marginBottom:8}}>
-                  Product / Solution Page URL
-                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional)</span>
+                <div className="field-label" style={{marginBottom:4}}>
+                  Product &amp; Solution URLs
+                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional · up to 5)</span>
                 </div>
-                <div className="setup-url-bar">
-                  <div className="setup-url-label">Product URL</div>
-                  <input
-                    className="setup-url-input"
-                    type="text"
-                    placeholder="e.g. yourcompany.com/products"
-                    value={productPageUrl}
-                    onChange={e=>setProductPageUrl(e.target.value)}
-                  />
-                  {productPageUrl&&(
-                    <span style={{fontSize:10,color:"#8B6F47",cursor:"pointer",flexShrink:0}} onClick={()=>setProductPageUrl("")}>✕</span>
-                  )}
+                <div style={{fontSize:11,color:"#aaa",marginBottom:10}}>
+                  Add a URL for each product or service line. Claude will reference these when building solution mapping.
                 </div>
-                <div style={{fontSize:11,color:"#aaa",marginTop:4}}>
-                  Claude will pull product and solution details directly from this page to inform solution mapping.
-                </div>
+                {productUrls.map((item,i)=>(
+                  <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
+                    <div className="setup-url-bar" style={{flex:1,marginBottom:0}}>
+                      <div className="setup-url-label" style={{minWidth:60,fontSize:9}}>{i===0?"Primary":"Product "+(i+1)}</div>
+                      <input
+                        className="setup-url-input"
+                        type="text"
+                        placeholder={i===0?"yourcompany.com/products":"yourcompany.com/service-2"}
+                        value={item.url}
+                        onChange={e=>setProductUrls(p=>p.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
+                        onKeyDown={e=>{if(e.key==="Enter"&&i===productUrls.length-1&&productUrls.length<5)
+                          setProductUrls(p=>[...p,{url:"",label:""}]);}}
+                      />
+                      {item.url&&(
+                        <span style={{fontSize:10,color:"#8B6F47",cursor:"pointer",flexShrink:0}}
+                          onClick={()=>setProductUrls(p=>p.filter((_,j)=>j!==i)||[{url:"",label:""}])}>✕</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {productUrls.length<5&&(
+                  <button className="btn btn-secondary btn-sm" style={{marginTop:2}}
+                    onClick={()=>setProductUrls(p=>[...p,{url:"",label:""}])}>
+                    + Add URL
+                  </button>
+                )}
               </div>
 
               {/* Divider */}
@@ -1941,7 +1982,7 @@ Return ONLY valid JSON:
                 <div className="card">
                   <div className="card-title">Map Your Fields</div>
                   <div className="field-grid-2">
-                    {[{key:"company",label:"Company / Account",req:true},{key:"industry",label:"Industry / Vertical",req:true},{key:"lead_source",label:"Lead Source",req:true},{key:"company_url",label:"Company Website URL"},{key:"close_date",label:"Close Date"},{key:"product",label:"Product / Solution"},{key:"outcome",label:"Customer Outcome"},].map(f=>(
+                    {[{key:"company",label:"Company / Account",req:true},{key:"industry",label:"Industry / Vertical",req:true},{key:"lead_source",label:"Lead Source",req:true},{key:"company_url",label:"Company Website URL"},{key:"employees",label:"Employee Count"},{key:"public_private",label:"Public / Private"},{key:"geography",label:"Domestic / International"},{key:"close_date",label:"Close Date"},{key:"product",label:"Product / Solution"},{key:"outcome",label:"Customer Outcome"},].map(f=>(
                       <div className="field-row" key={f.key}>
                         <div className="field-label">{f.label} {f.req&&<span className="req">*</span>}</div>
                         <select value={mapping[f.key]} onChange={e=>setMapping(m=>({...m,[f.key]:e.target.value}))}>
@@ -1990,7 +2031,8 @@ Return ONLY valid JSON:
                     <tr>
                       <th>Company</th>
                       <th>Industry</th>
-                      <th>Cohort</th>
+                      <th>Org Size</th>
+                      <th>Ownership</th>
                       <th>Fit Check</th>
                       <th>Research</th>
                     </tr>
@@ -2007,6 +2049,8 @@ Return ONLY valid JSON:
                           {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
                         </td>
                         <td style={{color:"#555"}}>{m.ind||"—"}</td>
+                        <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
+                        <td style={{color:"#555",fontSize:12}}>{m.publicPrivate||"—"}</td>
                         <td><span style={{background:m._cohort.color+"22",color:m._cohort.color,border:"1px solid "+m._cohort.color+"44",borderRadius:10,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m._cohort.name}</span></td>
                         <td onClick={e=>e.stopPropagation()}>
                           {fitScores[m.company]?(
@@ -2089,36 +2133,15 @@ Return ONLY valid JSON:
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(1)}>← Back</button>
-              <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(4);}}} disabled={!selectedCohort}>
+              <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(3);}}} disabled={!selectedCohort}>
                 Select Account → {selectedCohort?`(${selectedCohort.name})`:""}
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: OUTCOMES ── */}
+        {/* ── STEP 3: ACCOUNT + OUTCOMES ── */}
         {step===3&&selectedCohort&&(
-          <div className="page">
-            <div className="page-title">Outcome Mapping</div>
-            <div className="page-sub">Select desired outcomes for <strong>{selectedCohort.name}</strong>. These inform RIVER talk tracks and solution mapping.</div>
-            <div className="notice"><strong>Industry-agnostic · Revenue-focused.</strong> We drive big outcomes — growth, retention, efficiency, and transformation — regardless of vertical. Select the outcomes most relevant to this cohort to sharpen talk tracks and solution mapping.</div>
-            <div className="outcome-grid">
-              {OUTCOMES.map(o=>(
-                <div key={o.id} className={`outcome-tile ${selectedOutcomes.includes(o.title)?"selected":""}`}
-                  onClick={()=>setSelectedOutcomes(p=>p.includes(o.title)?p.filter(x=>x!==o.title):[...p,o.title])}>
-                  <div className="outcome-icon">{o.icon}</div><div className="outcome-title">{o.title}</div><div className="outcome-sub">{o.sub}</div>
-                </div>
-              ))}
-            </div>
-            <div className="actions-row">
-              <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
-              <button className="btn btn-primary btn-lg" onClick={()=>setStep(4)} disabled={selectedOutcomes.length===0}>Select Account →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 4: ACCOUNT + OUTCOMES ── */}
-        {step===4&&selectedCohort&&(
           <div className="page">
             <div className="page-title">Select Account</div>
             <div className="page-sub">Choose an account, pick your target outcomes, then build the brief.</div>
@@ -2264,13 +2287,13 @@ Return ONLY valid JSON:
             </div>
 
             <div className="actions-row">
-              <button className="btn btn-secondary" onClick={()=>setStep(3)}>← Back</button>
+              <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 5: RIVER BRIEF ── */}
-        {step===5&&(
+        {/* ── STEP 4: RIVER BRIEF ── */}
+        {step===4&&(
           <div className="page">
             <div className="page-title">RIVER Brief{selectedAccount?` — ${selectedAccount.company}`:""}</div>
             <div className="page-sub">
@@ -2631,8 +2654,8 @@ Return ONLY valid JSON:
           </div>
         )}
 
-        {/* ── STEP 6: RIVER HYPOTHESIS ── */}
-        {step===6&&(
+        {/* ── STEP 5: RIVER HYPOTHESIS ── */}
+        {step===5&&(
           <ErrorBoundary><div className="page">
             <div className="page-title">RIVER Hypothesis — {selectedAccount?.company||"Account"}</div>
             <div className="page-sub">
@@ -2734,19 +2757,19 @@ Return ONLY valid JSON:
             )}
 
             <div className="actions-row">
-              <button className="btn btn-secondary" onClick={()=>setStep(5)}>← Back to Brief</button>
+              <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Back to Brief</button>
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
-              <button className="btn btn-green btn-lg" onClick={()=>setStep(6)}>
+              <button className="btn btn-green btn-lg" onClick={()=>setStep(5)}>
                 Review Hypothesis →
               </button>
             </div>
           </div></ErrorBoundary>
         )}
 
-        {/* ── STEP 7: IN-CALL NAVIGATOR ── */}
-        {step===7&&(
+        {/* ── STEP 6: IN-CALL NAVIGATOR ── */}
+        {step===6&&(
           <div className="incall-wrap">
 
             {/* Header */}
@@ -2758,7 +2781,7 @@ Return ONLY valid JSON:
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
                 <div style={{fontSize:12,color:"#aaa"}}>confidence</div>
-                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(6)}>← Hypothesis</button>
+                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(5)}>← Hypothesis</button>
                 <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
                   {postLoading?"Routing...":"End Call →"}
                 </button>
@@ -2953,8 +2976,8 @@ Return ONLY valid JSON:
         )}
 
         {/* ── STEP 8: POST-CALL ── */}
-        {/* ── STEP 8: POST-CALL ── */}
-        {step===8&&(
+        {/* ── STEP 7: POST-CALL ── */}
+        {step===7&&(
           <div className="page">
             <div className="page-title">Post-Call Route</div>
             <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, CRM note, and follow-up email.</div>
@@ -2997,10 +3020,10 @@ Return ONLY valid JSON:
                   </div>
                 </div>
                 <div className="actions-row">
-                  <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Back to Call</button>
+                  <button className="btn btn-secondary" onClick={()=>setStep(6)}>← Back to Call</button>
                   <button className="btn btn-navy" onClick={doExport}>↓ Export Full RIVER</button>
                   <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
-                  <button className="btn btn-primary" onClick={()=>{setStep(4);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
+                  <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
                   <button className="btn btn-secondary" onClick={()=>{setStep(1);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");}}>New Dataset</button>
                 </div>
               </>
