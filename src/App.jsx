@@ -569,10 +569,10 @@ async function callAI(prompt){
         return null;
       }
       const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      // Prepend the "{" we used as assistant prefill, then find last }
-      const text = "{" + raw;
-      console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
       if(!raw) return null;
+      // If model already included the opening {, don't double up
+      const text = raw.startsWith("{") ? raw : "{" + raw;
+      console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
 
       const last = text.lastIndexOf("}");
       if(last<=0) return null;
@@ -713,7 +713,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
       const d=await r.json();
       if(d.error)return null;
       const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      return safeParseJSON("{"+raw);
+      return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
     }catch(e){console.warn("Phase 2 failed:",e.message);return null;}
   })();
 
@@ -2068,8 +2068,8 @@ Return ONLY valid JSON:
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(1)}>← Back</button>
-              <button className="btn btn-primary btn-lg" onClick={goToOutcomes} disabled={!selectedCohort}>
-                Map Outcomes → {selectedCohort?`(${selectedCohort.name})`:""}
+              <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(4);}}} disabled={!selectedCohort}>
+                Select Account → {selectedCohort?`(${selectedCohort.name})`:""}
               </button>
             </div>
           </div>
@@ -2096,60 +2096,121 @@ Return ONLY valid JSON:
           </div>
         )}
 
-        {/* ── STEP 4: ACCOUNT SELECT ── */}
+        {/* ── STEP 4: ACCOUNT + OUTCOMES ── */}
         {step===4&&selectedCohort&&(
           <div className="page">
             <div className="page-title">Select Account</div>
-            <div className="page-sub">Click an account to generate your RIVER brief. Accounts with a domain (<code>company_url</code> in your CSV) get live web research — accounts without one rely on training knowledge only and may miss rebrands.</div>
-            <div className="notice"><strong>Auto-research on click:</strong> Claude searches both your org's site and the prospect's site, maps your products to their needs, and builds the RIVER hypothesis. Typically takes 15–25 seconds.</div>
-            <div className="account-list">
-              {[...selectedCohort.members].sort((a,b)=>{
-                const sa=fitScores[a.company]?.score??50;
-                const sb=fitScores[b.company]?.score??50;
-                return sb-sa;
-              }).map((m,i)=>(
-                <div key={i} className={`account-item ${selectedAccount===m?"selected":""} ${!m.company_url?"no-url":""}`} onClick={()=>pickAccount(m)}>
-                  <div style={{flex:1}}>
-                    <div className="account-name">{m.company}</div>
-                    <div className="account-meta">{m.ind} · {m.src} · {m.outcome}</div>
-                    {m.company_url
-                      ? <div style={{fontSize:10,color:"#aaa",marginTop:1}}>🌐 {m.company_url}</div>
-                      : <div style={{fontSize:10,color:"#c0392b",marginTop:2,fontWeight:600}}>⚠ No domain — research may be inaccurate. Add company_url to your CSV.</div>
-                    }
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
+            <div className="page-sub">Choose an account, pick your target outcomes, then build the brief.</div>
 
-                    {fitScores[m.company]?(
-                      <div title={fitScores[m.company].reason} style={{
-                        fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                        background:fitScores[m.company].bg,
-                        color:fitScores[m.company].color,
-                        border:"1px solid "+fitScores[m.company].color+"44",
-                        cursor:"help",whiteSpace:"nowrap"
-                      }}>
-                        {fitScores[m.company].score}% · {fitScores[m.company].label}
-                      </div>
-                    ):fitScoring?(
-                      <div style={{fontSize:11,color:"#aaa"}}>Scoring...</div>
-                    ):null}
-                  </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:20,alignItems:"start"}}>
+
+              {/* Left: Account list */}
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
+                  {selectedCohort.name} · {selectedCohort.members.length} accounts
                 </div>
-              ))}
-            </div>
-
-            {/* Fit scoring legend */}
-            {(Object.keys(fitScores).length>0||fitScoring)&&(
-              <div style={{display:"flex",gap:16,alignItems:"center",margin:"12px 0",flexWrap:"wrap"}}>
-                <div style={{fontSize:12,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.4px"}}>Fit Score</div>
-                {[["#2E6B2E","#EEF5EE","75-100: Strong Fit"],["#BA7517","#FEF6E4","50-74: Potential Fit"],["#9B2C2C","#FDE8E8","0-49: Poor Fit"]].map(([c,bg,label])=>(
-                  <div key={label} style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>
-                    <div style={{width:10,height:10,borderRadius:"50%",background:c}}/>
-                    <span style={{color:"#555"}}>{label}</span>
+                <div className="account-list">
+                  {[...selectedCohort.members].sort((a,b)=>{
+                    const sa=fitScores[a.company]?.score??50;
+                    const sb=fitScores[b.company]?.score??50;
+                    return sb-sa;
+                  }).map((m,i)=>{
+                    const isSelected = selectedAccount===m;
+                    return(
+                      <div key={i}
+                        className={`account-item ${isSelected?"selected":""} ${!m.company_url?"no-url":""}`}
+                        style={{
+                          border:isSelected?"2px solid #1a1a18":"1px solid #E8E6DF",
+                          background:isSelected?"#FAF8F4":"#fff",
+                          cursor:"pointer",
+                        }}
+                        onClick={()=>{setSelectedAccount(m);setSelectedOutcomes([]);}}>
+                        <div style={{flex:1}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <div style={{width:18,height:18,borderRadius:"50%",border:"2px solid "+(isSelected?"#1a1a18":"#ccc"),background:isSelected?"#1a1a18":"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              {isSelected&&<div style={{width:8,height:8,borderRadius:"50%",background:"#fff"}}/>}
+                            </div>
+                            <div className="account-name" style={{fontSize:15}}>{m.company}</div>
+                          </div>
+                          <div className="account-meta" style={{marginLeft:26}}>{m.ind}{m.src?" · "+m.src:""}</div>
+                          {m.company_url&&<div style={{fontSize:11,color:"#aaa",marginTop:1,marginLeft:26}}>🌐 {m.company_url}</div>}
+                        </div>
+                        <div style={{flexShrink:0}}>
+                          {fitScores[m.company]?(
+                            <div title={fitScores[m.company].reason} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap"}}>
+                              {fitScores[m.company].score}% · {fitScores[m.company].label}
+                            </div>
+                          ):fitScoring?<div style={{fontSize:11,color:"#aaa"}}>Scoring...</div>:null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(Object.keys(fitScores).length>0||fitScoring)&&(
+                  <div style={{display:"flex",gap:12,alignItems:"center",marginTop:10,flexWrap:"wrap"}}>
+                    {[["#2E6B2E","75+: Strong"],["#BA7517","50-74: Potential"],["#9B2C2C","<50: Poor"]].map(([c,l])=>(
+                      <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
+                        <div style={{width:8,height:8,borderRadius:"50%",background:c}}/><span style={{color:"#777"}}>{l}</span>
+                      </div>
+                    ))}
+                    {fitScoring&&<span style={{fontSize:11,color:"#8B6F47"}}>⏳ scoring...</span>}
                   </div>
-                ))}
-                {fitScoring&&<div style={{fontSize:12,color:"#8B6F47"}}>⏳ Evaluating fit...</div>}
+                )}
               </div>
-            )}
+
+              {/* Right: Sticky outcomes + build panel */}
+              <div style={{position:"sticky",top:72}}>
+                {selectedAccount?(
+                  <div className="card" style={{border:"2px solid #1a1a18"}}>
+                    {/* Selected account summary */}
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,paddingBottom:14,borderBottom:"1px solid #E8E6DF"}}>
+                      <div style={{width:40,height:40,borderRadius:"50%",background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        {selectedAccount.company.slice(0,2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{fontSize:15,fontWeight:700,color:"#1a1a18"}}>{selectedAccount.company}</div>
+                        <div style={{fontSize:12,color:"#777"}}>{selectedAccount.ind}</div>
+                      </div>
+                    </div>
+
+                    {/* Outcomes */}
+                    <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>Target Outcomes</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+                      {OUTCOMES.map(o=>{
+                        const sel=selectedOutcomes.includes(o.title);
+                        return(
+                          <div key={o.id}
+                            onClick={()=>setSelectedOutcomes(p=>p.includes(o.title)?p.filter(x=>x!==o.title):[...p,o.title])}
+                            style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:8,border:"1.5px solid "+(sel?"#1a1a18":"#E8E6DF"),background:sel?"#1a1a18":"#fff",cursor:"pointer",transition:"all 0.15s"}}>
+                            <div style={{fontSize:16,flexShrink:0}}>{o.icon}</div>
+                            <div>
+                              <div style={{fontSize:13,fontWeight:600,color:sel?"#fff":"#1a1a18"}}>{o.title}</div>
+                              <div style={{fontSize:11,color:sel?"#aaa":"#999"}}>{o.sub}</div>
+                            </div>
+                            {sel&&<div style={{marginLeft:"auto",fontSize:14,color:"#8B6F47"}}>✓</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      className="btn btn-primary btn-lg"
+                      style={{width:"100%",justifyContent:"center"}}
+                      disabled={selectedOutcomes.length===0}
+                      onClick={()=>pickAccount(selectedAccount)}>
+                      Build Brief → {selectedOutcomes.length>0&&`(${selectedOutcomes.length} outcome${selectedOutcomes.length>1?"s":""})`}
+                    </button>
+                    {selectedOutcomes.length===0&&<div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:6}}>Select at least one outcome above</div>}
+                  </div>
+                ):(
+                  <div style={{background:"#F8F6F1",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:24,textAlign:"center"}}>
+                    <div style={{fontSize:24,marginBottom:8}}>👈</div>
+                    <div style={{fontSize:14,fontWeight:600,color:"#555",marginBottom:4}}>Select an account</div>
+                    <div style={{fontSize:12,color:"#aaa"}}>Choose from the list to set outcomes and build your brief</div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(3)}>← Back</button>
