@@ -1257,6 +1257,8 @@ export default function App(){
   const[sellerInput,setSellerInput]=useState("");
   const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
   const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
+  const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
+  const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
   const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:"",employees:"",public_private:"",geography:""});
@@ -1460,6 +1462,50 @@ export default function App(){
       })));
     }
     setFitScoring(false);
+  };
+
+  // ── SCAN SELLER URL FOR PRODUCT PAGES ────────────────────────────────────
+  const scanSellerUrl = async(rawUrl) => {
+    if(!rawUrl.trim()) return;
+    const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+    setUrlScanStatus("scanning");
+    setUrlScanConfirmed(false);
+
+    const prompt =
+      `Fetch the website at ${url} and identify all product, solution, service, platform, and feature pages.\n`+
+      `Look for links in the navigation, footer, and main content that lead to specific product or service pages.\n`+
+      `Return ONLY raw JSON, start with {:\n`+
+      `{"pages":[`+
+      `{"url":"full URL including https://","label":"Product or section name"},`+
+      `{"url":"","label":""},{"url":"","label":""},{"url":"","label":""}]}`;
+
+    try{
+      const r = await fetch("/api/claude",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:600,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+        }),
+      });
+      const d = await r.json();
+      if(d.error){setUrlScanStatus("none");return;}
+      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      const parsed = (() => {
+        try{ const t=raw.startsWith("{")?raw:"{"+raw; return JSON.parse(t); }catch{ return null; }
+      })();
+      const pages=(parsed?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,5);
+      if(pages.length>0){
+        setProductUrls(pages.map(p=>({url:p.url,label:p.label||""})));
+        setUrlScanStatus("found");
+      } else {
+        setUrlScanStatus("none");
+      }
+    }catch(e){
+      console.warn("URL scan failed:",e.message);
+      setUrlScanStatus("none");
+    }
   };
 
   const goToCohorts=()=>{
@@ -1773,8 +1819,10 @@ Return ONLY valid JSON:
                 <div className="setup-url-bar">
                   <div className="setup-url-label">Seller URL</div>
                   <input className="setup-url-input" type="text" placeholder="e.g. yourcompany.com"
-                    value={sellerInput} onChange={e=>setSellerInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"&&sellerInput.trim()&&!sellerDocs.length){setSellerUrl(sellerInput.trim());setStep(1);}}}/>
+                    value={sellerInput} onChange={e=>{setSellerInput(e.target.value);setUrlScanStatus("");setUrlScanConfirmed(false);}}
+                    onKeyDown={e=>{if(e.key==="Enter"&&sellerInput.trim()&&!sellerDocs.length){setSellerUrl(sellerInput.trim());setStep(1);}}}
+                    onBlur={()=>{if(sellerInput.trim()&&!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(sellerInput.trim());}}
+                  />
                 </div>
                 <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Claude will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
               </div>
@@ -1825,40 +1873,89 @@ Return ONLY valid JSON:
                 )}
               </div>
 
-              {/* Product / Solution URLs — up to 5 */}
+              {/* Product / Solution URLs — up to 5, auto-scanned */}
               <div className="field-row" style={{marginBottom:0}}>
                 <div className="field-label" style={{marginBottom:4}}>
                   Product &amp; Solution URLs
                   <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional · up to 5)</span>
                 </div>
-                <div style={{fontSize:11,color:"#aaa",marginBottom:10}}>
-                  Add a URL for each product or service line. Claude will reference these when building solution mapping.
-                </div>
-                {productUrls.map((item,i)=>(
-                  <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
-                    <div className="setup-url-bar" style={{flex:1,marginBottom:0}}>
-                      <div className="setup-url-label" style={{minWidth:60,fontSize:9}}>{i===0?"Primary":"Product "+(i+1)}</div>
-                      <input
-                        className="setup-url-input"
-                        type="text"
-                        placeholder={i===0?"yourcompany.com/products":"yourcompany.com/service-2"}
-                        value={item.url}
-                        onChange={e=>setProductUrls(p=>p.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
-                        onKeyDown={e=>{if(e.key==="Enter"&&i===productUrls.length-1&&productUrls.length<5)
-                          setProductUrls(p=>[...p,{url:"",label:""}]);}}
-                      />
-                      {item.url&&(
-                        <span style={{fontSize:10,color:"#8B6F47",cursor:"pointer",flexShrink:0}}
-                          onClick={()=>setProductUrls(p=>p.filter((_,j)=>j!==i)||[{url:"",label:""}])}>✕</span>
-                      )}
+
+                {/* Scanning state */}
+                {urlScanStatus==="scanning"&&(
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#F8F6F1",borderRadius:8,marginBottom:10}}>
+                    <div className="load-spin" style={{width:14,height:14,borderWidth:2}}/>
+                    <span style={{fontSize:13,color:"#8B6F47"}}>Scanning {sellerInput} for product pages...</span>
+                  </div>
+                )}
+
+                {/* Found pages — confirm prompt */}
+                {urlScanStatus==="found"&&!urlScanConfirmed&&(
+                  <div style={{background:"#EEF5EE",border:"1.5px solid #2E6B2E",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#2E6B2E",marginBottom:8}}>
+                      🔍 Found {productUrls.filter(u=>u.url).length} product page{productUrls.filter(u=>u.url).length!==1?"s":""}
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:12}}>
+                      {productUrls.filter(u=>u.url).map((u,i)=>(
+                        <div key={i} style={{fontSize:12,color:"#333",display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{color:"#2E6B2E",fontSize:14}}>🔗</span>
+                          <span style={{fontWeight:600,color:"#2E6B2E",marginRight:4}}>{u.label||"Page "+(i+1)}</span>
+                          <span style={{color:"#777",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{fontSize:13,fontWeight:600,color:"#1a1a18",marginBottom:10}}>Are these the right product pages?</div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button className="btn btn-green btn-sm" onClick={()=>setUrlScanConfirmed(true)}>
+                        ✓ Yes, looks right
+                      </button>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>{setProductUrls([{url:"",label:""}]);setUrlScanStatus("");}}>
+                        ✕ Clear, I'll add manually
+                      </button>
                     </div>
                   </div>
-                ))}
-                {productUrls.length<5&&(
-                  <button className="btn btn-secondary btn-sm" style={{marginTop:2}}
-                    onClick={()=>setProductUrls(p=>[...p,{url:"",label:""}])}>
-                    + Add URL
-                  </button>
+                )}
+
+                {/* Manual URL list — shown when confirmed or manually editing */}
+                {(urlScanStatus===""||urlScanStatus==="none"||urlScanConfirmed)&&(
+                  <>
+                    {urlScanStatus==="none"&&(
+                      <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>No product pages found automatically — add them below.</div>
+                    )}
+                    {urlScanConfirmed&&(
+                      <div style={{fontSize:12,color:"#2E6B2E",marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
+                        ✓ Product pages confirmed — you can edit or add more below.
+                      </div>
+                    )}
+                    {!urlScanConfirmed&&urlScanStatus===""&&(
+                      <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>Add a URL for each product or service line. Claude will reference these for solution mapping.</div>
+                    )}
+                    {productUrls.map((item,i)=>(
+                      <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
+                        <div className="setup-url-bar" style={{flex:1,marginBottom:0}}>
+                          <div className="setup-url-label" style={{minWidth:60,fontSize:9}}>{item.label||(i===0?"Primary":"Product "+(i+1))}</div>
+                          <input
+                            className="setup-url-input"
+                            type="text"
+                            placeholder={i===0?"yourcompany.com/products":"yourcompany.com/service-2"}
+                            value={item.url}
+                            onChange={e=>setProductUrls(p=>p.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
+                            onKeyDown={e=>{if(e.key==="Enter"&&i===productUrls.length-1&&productUrls.length<5)
+                              setProductUrls(p=>[...p,{url:"",label:""}]);}}
+                          />
+                          {item.url&&(
+                            <span style={{fontSize:10,color:"#8B6F47",cursor:"pointer",flexShrink:0}}
+                              onClick={()=>setProductUrls(p=>p.length>1?p.filter((_,j)=>j!==i):[{url:"",label:""}])}>✕</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {productUrls.length<5&&(
+                      <button className="btn btn-secondary btn-sm" style={{marginTop:2}}
+                        onClick={()=>setProductUrls(p=>[...p,{url:"",label:""}])}>
+                        + Add URL
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
