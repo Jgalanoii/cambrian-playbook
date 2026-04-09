@@ -1649,59 +1649,104 @@ export default function App(){
   const buildSellerICP = async(rawUrl) => {
     const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
     setIcpLoading(true);
-    const prompt =
-      `You are a B2B market intelligence analyst and ICP strategist. Research ${url} and build their complete Ideal Customer Profile using leading frameworks.\n\n`+
-      `Apply these frameworks:\n`+
-      `- Revella (Buyer Personas): 5 Rings of Buying Insight — Priority Initiative, Success Factors, Perceived Barriers, Decision Criteria, Buyer Journey\n`+
-      `- Osterwalder (Value Proposition Design): Customer Jobs (functional/emotional/social), Pains, Gains → Pain Relievers, Gain Creators\n`+
-      `- Dunford (Obviously Awesome): Competitive alternatives, unique differentiators, proven value, target market, market category\n`+
-      `- Moore (Crossing the Chasm): Where on the Technology Adoption Lifecycle do ideal customers sit? (Innovators/Early Adopters/Early Majority)\n`+
-      `- Weinberg (Traction): What channels actually reach this buyer?\n\n`+
+
+    // Phase 1 — web search to gather seller intelligence
+    const researchPrompt =
+      `Search for information about the B2B company at ${url}:\n`+
+      `1. What do they sell? Who are their target customers?\n`+
+      `2. Look for: customer case studies, testimonials, customer logos, pricing tiers, partner pages\n`+
+      `3. Look for: job postings mentioning target industries or company sizes\n`+
+      `4. Any known enterprise customers, verticals served, or use cases\n`+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"sellerName":"Company name",`+
-      `"sellerDescription":"2 sentences: what they sell and their differentiated value proposition (Dunford positioning)",`+
-      `"marketCategory":"The specific market category this seller competes in",`+
-      `"icp":{`+
-      `"industries":["Primary vertical","Second","Third"],`+
-      `"companySize":"Employee range that fits best",`+
-      `"revenueRange":"Annual revenue range of ideal accounts",`+
-      `"ownershipTypes":["Public","PE-backed","VC-backed","Private"],`+
-      `"geographies":["Primary geography"],`+
-      `"adoptionProfile":"Innovators or Early Adopters or Early Majority — which segment buys first and why (Moore)",`+
-      `"buyerPersonas":["Primary economic buyer title","Champion/user buyer","Technical evaluator"],`+
-      `"priorityInitiative":"Revella Ring 1 — what triggers this buyer to look for a solution NOW? What event or pressure makes them act?",`+
-      `"successFactors":"Revella Ring 2 — what does winning look like for them personally and professionally?",`+
-      `"perceivedBarriers":"Revella Ring 3 — what makes them hesitate, doubt, or walk away?",`+
-      `"decisionCriteria":"Revella Ring 4 — the 2-3 factors they use to evaluate and compare options",`+
-      `"buyerJourney":"Revella Ring 5 — how they navigate from awareness to decision. Where do they get information?",`+
-      `"customerJobs":["Functional job: what task are they trying to accomplish","Emotional job: how they want to feel","Social job: how they want to be perceived"],`+
-      `"topPains":["Biggest frustration or risk that drives urgency","Second pain","Third pain"],`+
-      `"topGains":["Most desired outcome or improvement","Second gain","Third gain"],`+
-      `"competitiveAlternatives":["What they do instead of buying — status quo, competitor, build in-house"],`+
-      `"uniqueDifferentiators":["What the seller does that alternatives cannot easily copy","Second differentiator"],`+
-      `"disqualifiers":["Type of company or situation that is NOT a fit","Second disqualifier"],`+
-      `"techSignals":["Tech stack or behavior that signals fit","Second signal"],`+
-      `"tractionChannels":["Best channel to reach this buyer e.g. LinkedIn outbound, partner referral, content","Second channel"],`+
-      `"dealSize":"Typical ACV or deal size",`+
-      `"salesCycle":"Typical sales cycle length",`+
-      `"customerExamples":["Known customer or logo","Second","Third"]}}`;
+      `{"companyName":"","tagline":"","products":["product 1","product 2"],"targetCustomers":"who they sell to in plain language","knownCustomers":["logo 1","logo 2","logo 3"],"industries":["vertical 1","vertical 2","vertical 3"],"companySize":"typical customer size","pricingHint":"any pricing signals found","useCases":["use case 1","use case 2"],"competitors":["competitor 1","competitor 2"]}`;
+
+    let researchCtx = "";
     try{
-      const r = await fetch("/api/claude",{
+      const r1 = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1200,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
-          messages:[{role:"user",content:prompt}],
+          max_tokens:800,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:4}],
+          messages:[{role:"user",content:researchPrompt}],
         }),
       });
-      const d = await r.json();
-      if(!d.error){
-        const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-        const m=raw.match(/\{[\s\S]*\}/);
-        if(m){try{const parsed=JSON.parse(m[0]);setSellerICP(parsed);}catch{}}
+      const d1 = await r1.json();
+      if(!d1.error){
+        const raw1=(d1.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+        researchCtx = raw1.slice(0,1500);
       }
-    }catch(e){console.warn("ICP build failed:",e.message);}
+    }catch(e){ console.warn("ICP research failed:",e.message); }
+
+    // Phase 2 — build full ICP using research + training knowledge
+    const icpPrompt =
+      `You are a senior ICP strategist trained in Revella, Osterwalder, Dunford, Moore, and Weinberg frameworks.\n`+
+      `Build the complete Ideal Customer Profile for the B2B seller at: ${url}\n\n`+
+      (researchCtx?`RESEARCH GATHERED:\n${researchCtx}\n\n`:"")+
+      `CRITICAL RULES:\n`+
+      `1. The ICP describes the seller's IDEAL CUSTOMERS — NOT the seller itself\n`+
+      `2. If website data is thin, USE YOUR TRAINING KNOWLEDGE about this company, its market, and comparable B2B sellers\n`+
+      `3. You MUST populate every field with a specific, confident answer — no placeholders, no "N/A", no empty strings\n`+
+      `4. Think like a veteran sales strategist who has studied this company's positioning, wins, and customer patterns\n\n`+
+      `Apply ALL frameworks:\n`+
+      `- Revella: 5 Rings of Buying Insight (what triggers, what success looks like, barriers, decision criteria, journey)\n`+
+      `- Osterwalder: Customer jobs-to-be-done (functional/emotional/social), top pains, top gains\n`+
+      `- Dunford: Competitive alternatives, unique differentiators, market category\n`+
+      `- Moore: Adoption lifecycle segment (Innovator/Early Adopter/Early Majority/Late Majority)\n`+
+      `- Weinberg: Best traction channels to reach this buyer\n\n`+
+      `Return ONLY raw JSON starting with {:\n`+
+      `{"sellerName":"Company name",`+
+      `"sellerDescription":"2 sharp sentences on what they sell and their differentiated value — Dunford positioning style",`+
+      `"marketCategory":"Specific market category e.g. Employee Rewards Platform, Revenue Intelligence Software",`+
+      `"icp":{`+
+      `"industries":["Most common vertical","Second","Third"],`+
+      `"companySize":"e.g. 500–10K employees, Mid-Market to Enterprise",`+
+      `"revenueRange":"e.g. $100M–$5B annual revenue",`+
+      `"ownershipTypes":["most common ownership type of ideal customer"],`+
+      `"geographies":["Primary market"],`+
+      `"adoptionProfile":"Innovators or Early Adopters or Early Majority — which segment is the core buyer and why",`+
+      `"buyerPersonas":["Economic buyer title e.g. VP HR","Champion/user title","Technical evaluator title"],`+
+      `"priorityInitiative":"Specific event or pressure that triggers a buying decision — what just happened at the company that made them look?",`+
+      `"successFactors":"What the economic buyer and champion each define as a win — personal and organizational",`+
+      `"perceivedBarriers":"Specific objections, fears, or switching costs that slow or kill deals",`+
+      `"decisionCriteria":"The 2-3 concrete factors they use to compare and choose between options",`+
+      `"buyerJourney":"How they go from pain awareness to vendor evaluation to decision — who's involved at each stage",`+
+      `"customerJobs":["Functional: the specific task or workflow they need to accomplish","Emotional: how they want to feel","Social: how they want to be seen by peers or leadership"],`+
+      `"topPains":["Most urgent frustration that drives them to act","Second pain","Third pain"],`+
+      `"topGains":["Highest-value outcome they want","Second gain","Third gain"],`+
+      `"competitiveAlternatives":["What they currently use or do instead — status quo","Direct competitor","Build in-house or manual"],`+
+      `"uniqueDifferentiators":["Most defensible thing the seller does that alternatives cannot easily replicate","Second differentiator"],`+
+      `"disqualifiers":["Company type, size, or situation where this is NOT a fit","Second disqualifier"],`+
+      `"techSignals":["Technology in use that signals fit — e.g. uses Workday, Salesforce","Second signal"],`+
+      `"tractionChannels":["Best channel to reach this exact buyer with evidence","Second channel","Third channel"],`+
+      `"dealSize":"Typical ACV or deal value range",`+
+      `"salesCycle":"Typical sales cycle from first contact to close",`+
+      `"customerExamples":["Known customer logo or company type","Second","Third"]}}`;
+
+    try{
+      const r2 = await fetch("/api/claude",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:2500,
+          messages:[
+            {role:"user",content:icpPrompt},
+            {role:"assistant",content:"{"},
+          ],
+        }),
+      });
+      const d2 = await r2.json();
+      if(d2.error){ console.warn("ICP phase 2 error:",d2.error); setIcpLoading(false); return; }
+      const raw=(d2.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      const jsonStr = raw.startsWith("{")? raw : "{"+raw;
+      const m = jsonStr.match(/\{[\s\S]*\}/);
+      if(m){
+        try{
+          const parsed = JSON.parse(m[0]);
+          if(parsed.sellerName||parsed.icp) setSellerICP(parsed);
+        }catch(e){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
+      }
+    }catch(e){ console.warn("ICP build phase 2 failed:",e.message); }
     setIcpLoading(false);
   };
 
