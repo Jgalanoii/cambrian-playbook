@@ -1891,7 +1891,7 @@ export default function App(){
     const b=buildCohorts(rows,mapping);
     setCohorts(b);
     setSelectedCohort(b[0]||null);
-    setStep(2);
+    setStep(3);
     // Score all members in background
     const allMembers=b.flatMap(c=>c.members);
     const sellerCtxF=sellerDocs.length>0
@@ -1926,7 +1926,7 @@ export default function App(){
       : sellerUrl+(productUrls.filter(u=>u.url).map(u=>u.url).join(" | ")??" ");
     scoreFit(cohort.members, sellerCtx2);
   };
-  const goToOutcomes=()=>{if(selectedCohort){setSelectedOutcomes(selectedCohort.topOut.slice(0,2));setStep(3);}};
+  const goToOutcomes=()=>{if(selectedCohort){setSelectedOutcomes(selectedCohort.topOut.slice(0,2));setStep(4);}};
 
   const pickAccount=async member=>{
     setSelectedAccount(member);
@@ -1935,7 +1935,7 @@ export default function App(){
     setBriefError("");
     setBriefStatus("Researching "+member.company+"...");
     setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setDealValue("");setDealClassification("");setNotes("");setPostCall(null);setContactRole("");setCustomOutcome("");
-    setStep(4);
+    setStep(5);
 
     const {_brief,_phase2Promise} = await generateBrief(
       member, sellerUrl, sellerDocs, products,
@@ -2155,7 +2155,7 @@ Return ONLY valid JSON:
 
     setPostCall(result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:`Following up — ${selectedAccount?.company}`,emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"});
     setPostLoading(false);
-    setStep(7);
+    setStep(8);
   };
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
@@ -3267,13 +3267,13 @@ Return ONLY valid JSON:
                             setSelectedCohort(accountQueue[0]._cohort);
                             setSelectedAccount(accountQueue[0]);
                             setSelectedOutcomes([]);
-                            setStep(3);
+                            setStep(4);
                           } else {
                             setQueueIdx(0);
                             setSelectedCohort(accountQueue[0]._cohort);
                             setSelectedAccount(accountQueue[0]);
                             setSelectedOutcomes([]);
-                            setStep(3);
+                            setStep(4);
                           }
                         }}>
                         Continue with {accountQueue.length} account{accountQueue.length>1?"s":""} →
@@ -3412,8 +3412,8 @@ Return ONLY valid JSON:
             ))}
 
             <div className="actions-row">
-              <button className="btn btn-secondary" onClick={()=>setStep(1)}>← Back</button>
-              <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(3);}}} disabled={!selectedCohort}>
+              <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
+              <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(4);}}} disabled={!selectedCohort}>
                 Select Account → {selectedCohort?`(${selectedCohort.name})`:""}
               </button>
             </div>
@@ -3721,7 +3721,7 @@ Return ONLY valid JSON:
             </div>
 
             <div className="actions-row">
-              <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
+              <button className="btn btn-secondary" onClick={()=>setStep(3)}>← Back</button>
             </div>
           </div>
         )}
@@ -4336,7 +4336,7 @@ Return ONLY valid JSON:
             )}
 
             <div className="actions-row">
-              <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Back to Brief</button>
+              <button className="btn btn-secondary" onClick={()=>setStep(5)}>← Back to Brief</button>
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
@@ -4621,17 +4621,17 @@ Return ONLY valid JSON:
                   </div>
                 </div>
                 <div className="actions-row">
-                  <button className="btn btn-secondary" onClick={()=>setStep(6)}>← Back to Call</button>
+                  <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Back to Call</button>
                   <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
                   <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
-                  <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(8);}}>
+                  <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(9);}}>
                     Solution Fit Review →
                   </button>
                   <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
-                  <button className="btn btn-secondary" onClick={()=>{setStep(1);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");clearSession();}}>New Dataset</button>
+                  <button className="btn btn-secondary" onClick={()=>{setStep(2);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");clearSession();}}>New Dataset</button>
                 </div>
               </>
             )}
@@ -4856,7 +4856,7 @@ Return ONLY valid JSON:
                 )}
 
                 <div className="actions-row">
-                  <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Post-Call</button>
+                  <button className="btn btn-secondary" onClick={()=>setStep(8)}>← Post-Call</button>
                   <button className="btn btn-secondary" onClick={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}>↻ Regenerate</button>
                   <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                   <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}>Next Account</button>
