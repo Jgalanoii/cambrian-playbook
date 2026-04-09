@@ -299,12 +299,18 @@ input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; ba
 const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A"];
 
 const OUTCOMES = [
-  {id:"revenue",icon:"↑",title:"Revenue Growth",sub:"Pipeline, new logos, upsell"},
-  {id:"efficiency",icon:"⟳",title:"Operational Efficiency",sub:"Automation, cost reduction"},
-  {id:"retention",icon:"◎",title:"Customer Retention",sub:"Churn reduction, loyalty"},
-  {id:"workforce",icon:"✦",title:"Workforce Management",sub:"Payroll, HR ops"},
-  {id:"ai",icon:"◈",title:"Data & AI Adoption",sub:"Analytics, AI tooling"},
-  {id:"transformation",icon:"◇",title:"Strategic Transformation",sub:"Org change, M&A"},
+  {id:"revenue",       icon:"↑", title:"Revenue Growth",           sub:"Pipeline, new logos, expansion, upsell"},
+  {id:"efficiency",    icon:"⟳", title:"Operational Efficiency",    sub:"Automation, cost reduction, process improvement"},
+  {id:"retention",     icon:"◎", title:"Customer Retention",        sub:"Churn reduction, loyalty, NPS"},
+  {id:"workforce",     icon:"✦", title:"Workforce Management",      sub:"HR ops, talent, engagement, retention"},
+  {id:"ai",            icon:"◈", title:"Data & AI Adoption",        sub:"Analytics, AI tooling, automation"},
+  {id:"transformation",icon:"◇", title:"Strategic Transformation",  sub:"Org change, M&A, modernization"},
+  {id:"brand",         icon:"★", title:"Brand & Marketing Impact",  sub:"Awareness, loyalty, campaign performance"},
+  {id:"cx",            icon:"◉", title:"Customer Experience",       sub:"Satisfaction, NPS, service quality"},
+  {id:"compliance",    icon:"⊕", title:"Risk & Compliance",         sub:"Regulatory, security, audit readiness"},
+  {id:"growth",        icon:"⬆", title:"Market Expansion",          sub:"New markets, geographies, verticals"},
+  {id:"cost",          icon:"⊖", title:"Cost Reduction",            sub:"Overhead, vendor consolidation, margin"},
+  {id:"innovation",    icon:"◆", title:"Innovation & Product",      sub:"New product lines, R&D, speed to market"},
 ];
 
 const SAMPLE_ROWS = [
@@ -1273,6 +1279,7 @@ export default function App(){
   const[cohorts,setCohorts]=useState([]);
   const[selectedCohort,setSelectedCohort]=useState(null);
   const[selectedOutcomes,setSelectedOutcomes]=useState([]);
+  const[customOutcome,setCustomOutcome]=useState(""); // free-form outcome
   const[selectedAccount,setSelectedAccount]=useState(null);
   const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
   const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
@@ -1585,7 +1592,7 @@ export default function App(){
     setBriefLoading(true);
     setBriefError("");
     setBriefStatus("Researching "+member.company+"...");
-    setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setDealValue("");setDealClassification("");setNotes("");setPostCall(null);setContactRole("");
+    setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setDealValue("");setDealClassification("");setNotes("");setPostCall(null);setContactRole("");setCustomOutcome("");
     setStep(4);
 
     const {_brief,_phase2Promise} = await generateBrief(
@@ -2592,6 +2599,44 @@ Return ONLY valid JSON:
                           </div>
                         );
                       })}
+                    </div>
+
+                    {/* Free-form custom outcome */}
+                    <div style={{marginBottom:12,paddingTop:8,borderTop:"1px solid #E8E6DF"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Or describe a specific outcome</div>
+                      <div style={{display:"flex",gap:6}}>
+                        <input
+                          type="text"
+                          placeholder="e.g. Increase franchise marketing ROI..."
+                          value={customOutcome}
+                          style={{flex:1,fontSize:13,borderRadius:8,border:"1.5px solid #E8E6DF",padding:"8px 12px"}}
+                          onChange={e=>setCustomOutcome(e.target.value)}
+                          onKeyDown={e=>{
+                            if(e.key==="Enter"&&customOutcome.trim()){
+                              setSelectedOutcomes(p=>p.includes(customOutcome.trim())?p:[...p,customOutcome.trim()]);
+                              setCustomOutcome("");
+                            }
+                          }}
+                        />
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          disabled={!customOutcome.trim()}
+                          onClick={()=>{
+                            if(customOutcome.trim()){
+                              setSelectedOutcomes(p=>p.includes(customOutcome.trim())?p:[...p,customOutcome.trim()]);
+                              setCustomOutcome("");
+                            }
+                          }}>
+                          Add
+                        </button>
+                      </div>
+                      {selectedOutcomes.filter(o=>!OUTCOMES.find(x=>x.title===o)).map((custom,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginTop:6,padding:"6px 10px",background:"#1a1a18",borderRadius:8}}>
+                          <span style={{fontSize:13,color:"#fff",flex:1}}>{custom}</span>
+                          <button onClick={()=>setSelectedOutcomes(p=>p.filter(o=>o!==custom))}
+                            style={{background:"none",border:"none",color:"#8B6F47",cursor:"pointer",fontSize:14,padding:0}}>✕</button>
+                        </div>
+                      ))}
                     </div>
 
                     <button
