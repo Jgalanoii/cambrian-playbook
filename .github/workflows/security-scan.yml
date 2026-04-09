@@ -1,0 +1,93 @@
+name: Daily Security Scan
+
+on:
+  schedule:
+    # Runs every day at 6:00 AM Pacific (14:00 UTC)
+    - cron: '0 14 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  security-scan:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 1. Dependency vulnerability audit ──────────────────────────────
+      - name: npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+        id: npm_audit
+
+      # ── 2. Check for exposed secrets in source ─────────────────────────
+      - name: Scan for secrets
+        run: |
+          echo "🔍 Scanning for exposed secrets..."
+          # Check for common secret patterns
+          FOUND=0
+          if grep -rn "sk_live_\|sk_test_\|service_role\|CLERK_SECRET" src/ --include="*.jsx" --include="*.js" --include="*.ts" 2>/dev/null; then
+            echo "⛔ Potential secret keys found in source!"
+            FOUND=1
+          fi
+          if grep -rn "password.*=.*['\"][A-Za-z0-9!@#$%]{6,}" src/ --include="*.jsx" --include="*.js" 2>/dev/null | grep -v "placeholder\|type=\|//"; then
+            echo "⛔ Potential hardcoded password found!"
+            FOUND=1
+          fi
+          if [ $FOUND -eq 0 ]; then
+            echo "✅ No exposed secrets detected"
+          fi
+
+      # ── 3. Check for eval() and dangerous patterns ─────────────────────
+      - name: Check dangerous patterns
+        run: |
+          echo "🔍 Checking for dangerous code patterns..."
+          FOUND=0
+          if grep -rn "\beval\s*(" src/ --include="*.jsx" --include="*.js" 2>/dev/null; then
+            echo "⛔ eval() usage detected!"
+            FOUND=1
+          fi
+          if grep -rn "new Function\s*(" src/ --include="*.jsx" --include="*.js" 2>/dev/null; then
+            echo "⛔ new Function() usage detected!"
+            FOUND=1
+          fi
+          if [ $FOUND -eq 0 ]; then
+            echo "✅ No dangerous code patterns detected"
+          fi
+
+      # ── 4. Check for HTTP (non-HTTPS) external calls ───────────────────
+      - name: Check for non-HTTPS calls
+        run: |
+          echo "🔍 Checking for non-HTTPS external calls..."
+          if grep -rn "http://(?!localhost)" src/ --include="*.jsx" --include="*.js" 2>/dev/null | grep -v "xmlns\|w3.org\|schema\|//"; then
+            echo "⚠️  Non-HTTPS external calls found"
+          else
+            echo "✅ All external calls use HTTPS"
+          fi
+
+      # ── 5. Build check — catch compile errors ──────────────────────────
+      - name: Build verification
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # ── 6. Report summary ──────────────────────────────────────────────
+      - name: Security scan summary
+        if: always()
+        run: |
+          echo "================================"
+          echo "CAMBRIAN PLAYBOOK SECURITY SCAN"
+          echo "Run: $(date)"
+          echo "================================"
+          echo "✅ Scan complete — review any ⛔ or ⚠️  items above"

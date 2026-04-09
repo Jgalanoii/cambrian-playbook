@@ -1400,7 +1400,7 @@ export default function App(){
   const[sbUser,setSbUser]=useState(null);
   const[sbToken,setSbToken]=useState('');
 
-  // Clear legacy Crow2026 session data on first load
+  // Clear legacy session data on first load
   useEffect(()=>{ sessionStorage.removeItem('cambrian_auth'); },[]);
   const[showSavePrompt,setShowSavePrompt]=useState(false);
   const[savedSessions,setSavedSessions]=useState([]);
@@ -2111,13 +2111,15 @@ Return ONLY valid JSON:
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   // ── CUSTOMER-FACING POST-CALL BRIEF ─────────────────────────────────────
+  const escHtml=(s)=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
   const showCustomerBrief=()=>{
     const co = selectedAccount?.company||"";
     const date = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
-    const sellerName = sbUser?.user_metadata?.full_name||sbUser?.email||sellerUrl;
+    const sellerName = escHtml(sbUser?.user_metadata?.full_name||sbUser?.email||sellerUrl||"");
     const solutions = (brief?.solutionMapping||[]).filter(s=>s?.product).slice(0,4);
     const outcomes = (selectedOutcomes||[]).join(", ");
-    const callSummary = postCall?.callSummary||"";
+    const callSummary = escHtml(postCall?.callSummary||"");
     const nextSteps = postCall?.nextSteps||[];
     // Split next steps: steps with "you" / customer-named action → their side; rest → seller
     const sellerSteps = nextSteps.filter((_,i)=>i%2===0).slice(0,3);
@@ -2281,7 +2283,13 @@ Return ONLY valid JSON:
 </html>`;
 
     const win = window.open("","_blank","width=900,height=1100");
-    if(win){ win.document.write(html); win.document.close(); }
+    if(win){
+      // Use srcdoc via blob URL instead of document.write (safer)
+      const blob = new Blob([html],{type:"text/html"});
+      const url = URL.createObjectURL(blob);
+      win.location.href = url;
+      setTimeout(()=>URL.revokeObjectURL(url), 10000);
+    }
   };
 
   const doExport=()=>{
