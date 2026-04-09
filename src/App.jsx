@@ -690,7 +690,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"openRoles":{"summary":"What the hiring pattern reveals about strategic priorities and current pain","roles":[{"title":"","dept":"","signal":"Strategic meaning"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
     `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"Most relevant review found","source":"Glassdoor/BBB/LinkedIn","sentiment":"positive or negative"}},`+
     `"sellerSnapshot":"2-3 sentences on sellers most relevant offerings for this prospect",`+
-    `"fundingProfile":"CRITICAL: Full ownership picture. If PE-backed name the firm and acquisition year. If VC-backed list series (A/B/C/D/E), total raised, lead investors, latest round date and amount. If public include exchange and ticker. If private note estimated revenue or valuation if known.",`+
+    `"fundingProfile":"CRITICAL: This is about ${co} (the PROSPECT), NOT the seller. What is ${co}'s ownership structure? If PE-backed name the PE firm and year acquired. If VC-backed list the series (A/B/C/D/E), total raised, lead investors, and most recent round. If public list the exchange and ticker. If private only, note estimated revenue or valuation if known.",`+
     `"strategicTheme":"2-3 sentences on their current strategic direction",`+
     `"sellerOpportunity":"2-3 sentences: why the seller is well-positioned right now - the why-you-why-now that opens doors",`+
     `"solutionMapping":[{"product":"Specific offering from seller","fit":"Specific reason grounded in their signals and pain"},{"product":"","fit":""},{"product":"","fit":""}],`+`"caseStudies":[`+`{"title":"Case study or customer name from seller website","customer":"Customer company name","relevance":"Why this is relevant to this prospect specifically"},`+`{"title":"Second relevant case study or named customer","customer":"","relevance":""},`+`{"title":"Third case study if applicable","customer":"","relevance":""}],`+
@@ -705,10 +705,12 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   onStatus("Building brief for "+co+"...");
   // Slim phase1 prompt — rich but concise, avoids token waste on instructions
   const phase1Prompt =
-    `Senior B2B sales strategist. Build a pre-call brief for "${co}" using your training knowledge.\n`+
+    `Senior B2B sales strategist. Build a pre-call brief about the TARGET PROSPECT "${co}" for a seller.\n`+
     `Apply: Gap Selling (quantify gaps), Challenger Sale (teach something new), Carnegie (their interests).\n`+
     `ASCII punctuation only. Real facts only. Return raw JSON starting with {:\n`+
-    `Seller: ${sellerCtx}${prodCtx}\nContext: ${dealCtx}\n\n`+schema;
+    `SELLER (context only — do NOT write the brief about the seller):\n${sellerCtx}${prodCtx}\n`+
+    `PROSPECT TO RESEARCH: ${co} (${dealCtx})\n`+
+    `ALL fields below are about ${co}, not the seller.\n\n`+schema;
 
   // Phase 2: Live enrichment - fires in parallel, merges when ready
   const phase2Prompt =
