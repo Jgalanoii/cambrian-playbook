@@ -51,6 +51,44 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .footer { text-align: center; padding: 24px 28px; font-size: 12px; color: #bbb; border-top: 1px solid #E8E6DF; margin-top: auto; background: #fff; }
 .footer a { color: #bbb; text-decoration: none; }
 
+/* IN-CALL v2 */
+.incall-wrap { max-width: 960px; margin: 0 auto; padding: 24px 28px 72px; width: 100%; }
+.incall-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.incall-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; color: #1a1a18; }
+.incall-meta { font-size: 13px; color: #999; margin-top: 2px; }
+.river-pills { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+.river-pill { display: flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 30px; border: 2px solid #E8E6DF; background: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #999; transition: all 0.15s; white-space: nowrap; }
+.river-pill:hover { border-color: #8B6F47; color: #8B6F47; }
+.river-pill.active { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.river-pill.filled { border-color: #2E6B2E; color: #2E6B2E; }
+.river-pill.filled.active { background: #2E6B2E; border-color: #2E6B2E; color: #fff; }
+.river-pill-letter { font-family: 'Lora', serif; font-size: 15px; font-weight: 700; }
+.river-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: #2E6B2E; flex-shrink: 0; }
+.stage-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px; }
+.stage-card-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.stage-letter-big { width: 44px; height: 44px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stage-name { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #1a1a18; }
+.stage-sub { font-size: 13px; color: #777; margin-top: 2px; }
+.gate-block { margin-bottom: 20px; }
+.gate-question { font-size: 15px; font-weight: 600; color: #1a1a18; margin-bottom: 12px; line-height: 1.5; }
+.gate-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.gate-choice { padding: 8px 16px; border-radius: 20px; border: 1.5px solid #E8E6DF; background: #FAFAF8; cursor: pointer; font-size: 13px; font-weight: 500; color: #555; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+.gate-choice:hover { border-color: #8B6F47; color: #8B6F47; background: #FAF8F4; }
+.gate-choice.selected { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.gate-note { width: 100%; padding: 10px 12px; border: 1px solid #E8E6DF; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #333; background: #FAFAF8; resize: vertical; min-height: 60px; outline: none; transition: border-color 0.15s; }
+.gate-note:focus { border-color: #8B6F47; background: #fff; }
+.gate-note-lbl { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.dq-block { margin-bottom: 16px; background: #F8F6F1; border-radius: 12px; padding: 16px; border-left: 3px solid #8B6F47; }
+.dq-framework { font-size: 10px; font-weight: 700; color: #8B6F47; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.dq-question { font-size: 14px; font-weight: 600; color: #1a1a18; margin-bottom: 10px; line-height: 1.5; font-style: italic; }
+.dq-note { width: 100%; padding: 9px 12px; border: 1px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; resize: vertical; min-height: 56px; outline: none; }
+.dq-note:focus { border-color: #8B6F47; }
+.incall-sidebar { background: #fff; border: 1px solid #E8E6DF; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.conf-bar-wrap { margin-bottom: 16px; }
+.conf-pct { font-family: 'Lora', serif; font-size: 28px; font-weight: 600; line-height: 1; }
+.incall-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+@media(max-width: 800px){ .incall-grid { grid-template-columns: 1fr; } }
+
 /* PRODUCT CATALOG */
 .prod-entry { display: flex; gap: 10px; padding: 10px 12px; background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 8px; margin-bottom: 7px; align-items: flex-start; }
 .prod-num { width: 22px; height: 22px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
@@ -620,9 +658,9 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `{"companySnapshot":"3-4 sentences: what they do, revenue scale, employee count, HQ, recent strategic direction",`+
     `"revenue":"e.g. $2.4B ARR (FY2024)","publicPrivate":"e.g. Public (NYSE:TGT)","employeeCount":"e.g. ~47,000","headquarters":"City, State","founded":"Year",`+
     `"keyExecutives":[`+
-    `{"name":"Real name","title":"CEO","initials":"AB","background":"Prior role + known priority","angle":"Executive Perspective: what they care about most, what makes them a hero to their board, what specific gap keeps them up at night"},`+
-    `{"name":"Real name","title":"CHRO or CPO","initials":"CD","background":"People/HR focus","angle":"Executive Perspective: success in their terms - retention, culture, HR tech ROI, workforce productivity"},`+
-    `{"name":"Real name","title":"CFO or COO","initials":"EF","background":"Financial/operational focus","angle":"Executive Perspective: how they evaluate spend - ROI lens, risk reduction, efficiency gains"}],`+
+    `{"name":"Real name","title":"CEO","initials":"AB","background":"Prior role + known priority","angle":"What personally drives them — their board priority, their career ambition, what specific gap keeps them up at night (2 sentences max)"},`+
+    `{"name":"Real name","title":"CHRO or CPO","initials":"CD","background":"People/HR focus","angle":"Success in their terms — retention improvement, culture wins, HR tech ROI, or team productivity gains (2 sentences max)"},`+
+    `{"name":"Real name","title":"CFO or COO","initials":"EF","background":"Financial/operational focus","angle":"How they evaluate spend decisions — ROI lens, risk reduction, operational efficiency, or cost avoidance (2 sentences max)"}],`+
     `"recentHeadlines":[{"headline":"Headline + date","relevance":"Why this matters for the sale"},{"headline":"","relevance":""},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
     `"openRoles":{"summary":"What the hiring pattern reveals about strategic priorities and current pain","roles":[{"title":"","dept":"","signal":"Strategic meaning"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
     `"publicSentiment":{"bbbRating":"","standoutReview":{"text":"Most relevant review found","source":"Glassdoor/BBB/LinkedIn","sentiment":"positive or negative"}},`+
@@ -1145,7 +1183,9 @@ class ErrorBoundary extends React.Component {
 
 export default function App(){
   const[authed,setAuthed]=useState(false);
-  const[step,setStep]=useState(0);
+  const[_step,_setStep]=useState(0);
+  const step=_step;
+  const setStep=(n)=>{_setStep(n);window.scrollTo({top:0,behavior:"smooth"});};
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
   const[productPageUrl,setProductPageUrl]=useState("");
@@ -1170,10 +1210,12 @@ export default function App(){
   const[briefError,setBriefError]=useState("");
   const[riverHypo,setRiverHypo]=useState(null);
   const[riverHypoLoading,setRiverHypoLoading]=useState(false);
+  const[discoveryQs,setDiscoveryQs]=useState(null); // product-specific discovery questions
   const[contactRole,setContactRole]=useState("");
 
   const[activeRiver,setActiveRiver]=useState(0);
   const[gateAnswers,setGateAnswers]=useState({});
+  const[gateNotes,setGateNotes]=useState({}); // notes under each gate
   const[riverData,setRiverData]=useState({});
   const[expandedObjs,setExpandedObjs]=useState({});
   const[rightTab,setRightTab]=useState("brief");
@@ -1376,7 +1418,7 @@ export default function App(){
     setBriefLoading(true);
     setBriefError("");
     setBriefStatus("Researching "+member.company+"...");
-    setGateAnswers({});setRiverData({});setNotes("");setPostCall(null);setContactRole("");
+    setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setNotes("");setPostCall(null);setContactRole("");
     setStep(5);
 
     const {_brief,_phase2Promise} = await generateBrief(
@@ -1391,6 +1433,7 @@ export default function App(){
     setBriefStatus("");
 
     buildRiverHypo(_brief, member);
+    generateDiscoveryQs(_brief, member);
 
     _phase2Promise.then(enrichment=>{
       if(!enrichment) return;
@@ -1468,6 +1511,40 @@ export default function App(){
     setRiverHypoLoading(false);
   };
 
+  // ── GENERATE PRODUCT-SPECIFIC DISCOVERY QUESTIONS ───────────────────────
+  // Informed by: seller products, prospect context, 5 listening frameworks
+  // Fires after brief completes, alongside hypothesis build
+  const generateDiscoveryQs = async(briefData, member) => {
+    if(!briefData||discoveryQs) return;
+    const co = member.company;
+    const products_ctx = (briefData.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product+": "+s.fit).join("; ");
+    const seller = sellerUrl;
+    const snapshot = (briefData.companySnapshot||"").slice(0,300);
+    const theme = (briefData.strategicTheme||"").slice(0,200);
+
+    const prompt =
+      `You are a senior B2B discovery coach trained in active listening and human-centered selling.\n`+
+      `Frameworks you apply: Gap Selling, Challenger Sale, plus the following listening principles:\n`+
+      `- Active Listening (Heather Younger): listen for what is NOT said; reflect back what you hear\n`+
+      `- Just Listen (Mark Goulston): make the other person feel heard before advancing your agenda\n`+
+      `- How to Know a Person (David Brooks): witness their reality with openness; ask about their world not your product\n`+
+      `- We Need to Talk (Celeste Headlee): no multitasking, no assumptions, be present and curious\n`+
+      `- The Charisma Myth (Olivia Fox Cabane): project presence, power, and warmth — make them feel seen\n\n`+
+      `SELLER: ${seller} | PRODUCTS: ${products_ctx}\n`+
+      `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n\n`+
+      `Generate 3 discovery questions per RIVER stage. Each question must:\n`+
+      `- Be product-specific (tie to what the seller actually sells)\n`+
+      `- Make the prospect feel seen and heard, not interrogated\n`+
+      `- Surface a gap or create an insight they hadn't articulated\n`+
+      `- Be conversational, not clinical\n\n`+
+      `Also name the listening principle behind each question so the rep knows WHY they're asking it.\n\n`+
+      `Return ONLY raw JSON, start with {:\n`+
+      `{"reality":[{"q":"Question?","framework":"Active Listening - reflect their reality back","intent":"Why this question works"}],"impact":[{"q":"","framework":"","intent":""}],"vision":[{"q":"","framework":"","intent":""}],"entryPoints":[{"q":"","framework":"","intent":""}],"route":[{"q":"","framework":"","intent":""}]}`;
+
+    const result = await callAI(prompt);
+    if(result) setDiscoveryQs(result);
+  };
+
   const runPostCall=async()=>{
     setPostLoading(true);
     const riverSummary=RIVER_STAGES.map(s=>{
@@ -1517,7 +1594,7 @@ Return ONLY valid JSON:
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   const doExport=()=>exportToExcel(brief,gateAnswers,riverData,postCall,selectedAccount,selectedCohort,selectedOutcomes,sellerUrl,confidence);
 
-  const STEPS=["Session","Import","Cohorts","Outcomes","Account","Brief","Hypothesis","In-Call","Post-Call"];
+  const STEPS=["Session","Import","Accounts","Outcomes","Account","Brief","Hypothesis","In-Call","Post-Call"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
@@ -1871,17 +1948,75 @@ Return ONLY valid JSON:
           </div>
         )}
 
-        {/* ── STEP 2: COHORTS ── */}
+        {/* ── STEP 2: TARGET ACCOUNT REVIEW ── */}
         {step===2&&(
           <div className="page">
-            <div className="page-title">Cohort Analysis</div>
-            <div className="page-sub">{rows.length} accounts segmented into {cohorts.length} cohorts by deal size, industry, and lead source. Click any cohort to drill down — or click an account to start research.</div>
+            <div className="page-title">Target Account Review</div>
+            <div className="page-sub">All {rows.length} accounts ranked by fit. Click any account to start research — or scroll down for cohort analysis.</div>
+
+            {/* ── ALL ACCOUNTS TABLE with Fit Check ── */}
+            <div className="card" style={{marginBottom:24}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+                <div className="card-title" style={{margin:0}}>All Accounts</div>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  {fitScoring&&<div style={{fontSize:12,color:"#8B6F47"}}>⏳ Evaluating fit...</div>}
+                  {Object.keys(fitScores).length>0&&!fitScoring&&<div style={{fontSize:12,color:"#2E6B2E"}}>✓ Fit scores ready</div>}
+                </div>
+              </div>
+              <div className="tbl-wrap">
+                <table className="tbl" style={{fontSize:13}}>
+                  <thead>
+                    <tr>
+                      <th>Company</th>
+                      <th>Industry</th>
+                      <th>Cohort</th>
+                      <th>Fit Check</th>
+                      <th>Research</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...cohorts.flatMap(c=>c.members.map(m=>({...m,_cohort:c})))].sort((a,b)=>{
+                      const sa=fitScores[a.company]?.score??50;
+                      const sb=fitScores[b.company]?.score??50;
+                      return sb-sa;
+                    }).map((m,i)=>(
+                      <tr key={i} style={{cursor:"pointer"}} onClick={()=>{setSelectedCohort(m._cohort);pickAccount(m);}}>
+                        <td style={{fontWeight:600,color:"#1a1a18"}}>
+                          {m.company}
+                          {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
+                        </td>
+                        <td style={{color:"#555"}}>{m.ind||"—"}</td>
+                        <td><span style={{background:m._cohort.color+"22",color:m._cohort.color,border:"1px solid "+m._cohort.color+"44",borderRadius:10,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m._cohort.name}</span></td>
+                        <td onClick={e=>e.stopPropagation()}>
+                          {fitScores[m.company]?(
+                            <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
+                              title={fitScores[m.company].reason}>
+                              {fitScores[m.company].score}% · {fitScores[m.company].label}
+                            </div>
+                          ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<span style={{fontSize:11,color:"#ccc"}}>—</span>}
+                        </td>
+                        <td>
+                          <button className="btn btn-primary btn-sm" onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);pickAccount(m);}}>
+                            Brief →
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Scroll cue */}
+            <div style={{textAlign:"center",padding:"10px 0 20px",color:"#aaa",fontSize:13}}>
+              ↓ Cohort analysis below
+            </div>
 
             {/* Summary stats */}
             <div className="summary-grid">
               <div className="stat-card"><div className="stat-num">{rows.length}</div><div className="stat-label">Accounts</div></div>
               <div className="stat-card"><div className="stat-num">{cohorts.length}</div><div className="stat-label">Cohorts</div></div>
-              <div className="stat-card"><div className="stat-num">${Math.round(rows.reduce((s,r)=>s+parseACV(mapping.acv?r[mapping.acv]:"0"),0)/1000)}K</div><div className="stat-label">Total ACV</div></div>
+              <div className="stat-card"><div className="stat-num">{Object.keys(fitScores).length}</div><div className="stat-label">Scored</div></div>
             </div>
 
             {/* Overall pie charts */}
@@ -2112,13 +2247,16 @@ Return ONLY valid JSON:
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                       {(brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
-                          <div className="contact-av" style={{background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"?"}</div>
+                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"?"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:15,fontWeight:700,color:"#1a1a18"}}>{ex.name}</div>
                             <div style={{fontSize:13,color:"#777",marginBottom:4}}>{ex.title}</div>
                             {ex.background&&<div style={{fontSize:13,color:"#555",marginBottom:8,fontStyle:"italic"}}>{ex.background}</div>}
-                            <div style={{fontSize:12,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Executive Perspective</div>
-                            <EF value={ex.angle||""} onChange={v=>patchBrief(b=>{if(!b.keyExecutives)b.keyExecutives=[];b.keyExecutives[i]={...b.keyExecutives[i],angle:v};})} placeholder="What drives their decisions..."/>
+                            <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Executive Perspective</div>
+                            <EF
+                              value={(ex.angle||"").replace(/^Executive Perspective:\s*/i,"").replace(/^Executive Perspective\s*[-—:]\s*/i,"")}
+                              onChange={v=>patchBrief(b=>{if(!b.keyExecutives)b.keyExecutives=[];b.keyExecutives[i]={...b.keyExecutives[i],angle:v};})}
+                              placeholder="What personally drives them..."/>
                           </div>
                         </div>
                       ))}
@@ -2162,7 +2300,7 @@ Return ONLY valid JSON:
                     </div>
                     <div className="bb-body">
                       {brief.openRoles.summary&&(
-                        <div style={{background:"#1a1a18",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                        <div style={{background:"#FAF8F4",borderLeft:"4px solid #8B6F47",borderRadius:"0 10px 10px 0",padding:"14px 16px",marginBottom:14}}>
                           <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Strategic Interpretation</div>
                           <EF value={brief.openRoles.summary||""} onChange={v=>patchBrief(b=>{if(!b.openRoles)b.openRoles={};b.openRoles.summary=v;})}/>
                         </div>
@@ -2172,7 +2310,7 @@ Return ONLY valid JSON:
                           {(brief.openRoles.roles||[]).filter(r=>r?.title).map((role,i)=>(
                             <div key={i} style={{padding:"12px 14px",background:"#fff",border:"1px solid #E8E6DF",borderRadius:10,marginBottom:2}}>
                               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:role.signal?6:0}}>
-                                <div style={{background:"#1a1a18",color:"#8B6F47",borderRadius:5,padding:"3px 9px",fontSize:10,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>{role.dept||"Open"}</div>
+                                <div style={{background:"#F0EDE6",color:"#7A5C30",borderRadius:5,padding:"3px 9px",fontSize:10,fontWeight:700,whiteSpace:"nowrap",flexShrink:0,border:"1px solid #D4C4A8"}}>{role.dept||"Open"}</div>
                                 <div style={{fontSize:14,fontWeight:700,color:"#1a1a18"}}>{role.title}</div>
                               </div>
                               {role.signal&&<div style={{fontSize:13,color:"#5A4A35",lineHeight:1.6,fontStyle:"italic",paddingLeft:2}}>→ {role.signal}</div>}
@@ -2250,7 +2388,7 @@ Return ONLY valid JSON:
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                       {(brief.leadershipTeam||[]).filter(l=>l?.name).map((l,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
-                          <div className="contact-av" style={{background:"#1a1a18",color:"#8B6F47",fontSize:11,fontWeight:700}}>{l.initials||"?"}</div>
+                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontSize:11,fontWeight:700}}>{l.initials||"?"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:12,fontWeight:600,color:"#1a1a18"}}>{l.name}</div>
                             <div style={{fontSize:10,color:"#777",marginBottom:3}}>{l.title}</div>
@@ -2497,184 +2635,212 @@ Return ONLY valid JSON:
 
         {/* ── STEP 7: IN-CALL NAVIGATOR ── */}
         {step===7&&(
-          <div className="call-layout">
-            <div className="call-left">
-              <div className="panel-hdr">
-                <div>
-                  <div className="panel-title">{selectedAccount?.company} · RIVER Navigator</div>
-                  <div style={{fontSize:10,color:"#999",marginTop:2}}>{contactRole||selectedAccount?.ind} · {selectedCohort?.name}</div>
-                </div>
-                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(5)}>← Brief</button>
+          <div className="incall-wrap">
+
+            {/* Header */}
+            <div className="incall-header">
+              <div>
+                <div className="incall-title">🎙 In-Call Navigator · {selectedAccount?.company}</div>
+                <div className="incall-meta">{contactRole||selectedAccount?.ind} · {selectedCohort?.name} · RIVER Framework</div>
               </div>
-              <div className="river-nav">
-                {RIVER_STAGES.map((s,i)=>(
-                  <button key={s.id} className={`r-tab ${activeRiver===i?"active":""}`} onClick={()=>setActiveRiver(i)}>
-                    {isFilled(s)&&<div className="fill-dot"/>}{s.letter} — {s.label}
-                  </button>
-                ))}
-              </div>
-              <div className="panel-body">
-                <div className="conf-wrap">
-                  <div className="conf-row">
-                    <div className="conf-label">Deal Confidence</div>
-                    <div className="conf-score" style={{color:confColor(confidence)}}>{confidence}%</div>
-                  </div>
-                  <div className="conf-track"><div className="conf-fill" style={{width:`${confidence}%`,background:confColor(confidence)}}/></div>
-                </div>
-
-                {RIVER_STAGES.map((stage,si)=>si===activeRiver&&(
-                  <div key={stage.id}>
-                    <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:12}}>
-                      <div className="r-icon">{stage.letter}</div>
-                      <div>
-                        <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:500}}>{stage.label}</div>
-                        <div style={{fontSize:11,color:"#777"}}>{stage.sub}</div>
-                      </div>
-                    </div>
-
-                    {stage.gates.map(gate=>(
-                      <div key={gate.id} className={`gate ${gateAnswers[gate.id]?"answered":""}`}>
-                        <div className="gate-q">{gate.q}</div>
-                        {!gateAnswers[gate.id]?(
-                          <div className="gate-opts">
-                            {gate.options.map((opt,oi)=>(
-                              <button key={oi} className="gate-opt" onClick={()=>setGateAnswers(a=>({...a,[gate.id]:opt}))}>
-                                <span style={{fontSize:9,color:"#aaa",minWidth:12}}>{String.fromCharCode(65+oi)}</span>{opt}
-                              </button>
-                            ))}
-                          </div>
-                        ):(
-                          <div className="gate-ans">
-                            ✓ {gateAnswers[gate.id]}
-                            <button style={{marginLeft:"auto",fontSize:10,padding:"2px 8px",borderRadius:5,border:"1px solid #E8E6DF",background:"transparent",cursor:"pointer",color:"#999",fontFamily:"DM Sans"}}
-                              onClick={()=>setGateAnswers(a=>{const n={...a};delete n[gate.id];return n;})}>Undo</button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    <div style={{marginTop:12}}>
-                      <div className="field-label" style={{marginBottom:8}}>Discovery Capture</div>
-                      {stage.discovery.map(prompt=>(
-                        <div key={prompt.id} style={{marginBottom:10}}>
-                          <div style={{fontSize:11,fontWeight:600,color:"#555",marginBottom:4,fontStyle:"italic"}}>{prompt.label}</div>
-                          <textarea rows={2} placeholder="Capture what you're hearing..." value={riverData[prompt.id]||""} onChange={e=>setRiverData(d=>({...d,[prompt.id]:e.target.value}))}/>
-                          <div style={{fontSize:10,color:"#aaa",marginTop:3}}>{prompt.hint}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="talk-box" style={{marginTop:12}}>
-                      <div className="talk-lbl">Talk Track</div>
-                      <div className="talk-txt">{stage.talkTrack}</div>
-                    </div>
-
-                    <div style={{marginTop:10}}>
-                      <div className="field-label" style={{marginBottom:7}}>Objection Handling</div>
-                      {stage.objections.map((o,oi)=>(
-                        <div key={oi} className="obj-item">
-                          <button className="obj-btn" onClick={()=>setExpandedObjs(s=>({...s,[`${si}-${oi}`]:!s[`${si}-${oi}`]}))}>
-                            "{o.q}" <span style={{color:"#aaa"}}>{expandedObjs[`${si}-${oi}`]?"−":"+"}</span>
-                          </button>
-                          {expandedObjs[`${si}-${oi}`]&&<div className="obj-ans">{o.a}</div>}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{display:"flex",gap:7,marginTop:18,paddingTop:14,borderTop:"1px solid #E8E6DF",flexWrap:"wrap"}}>
-                      {si>0&&<button className="btn btn-secondary btn-sm" onClick={()=>setActiveRiver(si-1)}>← {RIVER_STAGES[si-1].label}</button>}
-                      {si<RIVER_STAGES.length-1&&<button className="btn btn-gold btn-sm" onClick={()=>setActiveRiver(si+1)}>{RIVER_STAGES[si+1].label} →</button>}
-                      {si===RIVER_STAGES.length-1&&<button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>{postLoading?"Generating...":"End Call & Generate Route →"}</button>}
-                    </div>
-                    {si<RIVER_STAGES.length-1&&(
-                      <div style={{marginTop:10}}>
-                        <button className="btn btn-secondary btn-sm" style={{width:"100%",justifyContent:"center"}} onClick={runPostCall} disabled={postLoading}>
-                          {postLoading?"Generating...":"End Call Early & Generate Route"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
+                <div style={{fontSize:12,color:"#aaa"}}>confidence</div>
+                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(6)}>← Hypothesis</button>
+                <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
+                  {postLoading?"Routing...":"End Call →"}
+                </button>
               </div>
             </div>
 
-            <div className="call-right">
-              <div className="right-tabs">
-                {[["brief","RIVER Brief"],["solutions","Solutions"],["notes","Notes"]].map(([id,label])=>(
-                  <button key={id} className={`rt ${rightTab===id?"active":""}`} onClick={()=>setRightTab(id)}>{label}</button>
-                ))}
-              </div>
-              <div className="panel-body">
-                {rightTab==="brief"&&brief&&(
-                  <>
-                    <div className="talk-box" style={{marginBottom:14}}>
-                      <div className="talk-lbl">Opening Angle</div>
-                      <div className="talk-txt">{brief.openingAngle||"—"}</div>
-                    </div>
-                    <div className="field-label" style={{marginBottom:8}}>RIVER Hypothesis</div>
-                    {RIVER_STAGES.map((stage,i)=>(
-                      <div key={i} className="hyp-card" style={{borderColor:activeRiver===i?"#8B6F47":"#E8E6DF"}} onClick={()=>setActiveRiver(i)}>
-                        <div className="hyp-lbl">{stage.letter} — {stage.label} {isFilled(stage)?"✓":""}</div>
-                        <div className="hyp-txt">{(brief.riverHypothesis||{})[RKEYS[i]]||"—"}</div>
-                        {riverData[stage.discovery[0]?.id]&&(
-                          <div style={{marginTop:5,fontSize:10,color:"#2E6B2E",borderTop:"1px solid #E8E6DF",paddingTop:4}}>
-                            Captured: "{riverData[stage.discovery[0].id].slice(0,70)}{riverData[stage.discovery[0].id].length>70?"...":""}"
-                          </div>
-                        )}
+            {/* Confidence bar */}
+            <div style={{height:4,background:"#F0EDE6",borderRadius:2,marginBottom:24,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${confidence}%`,background:confColor(confidence),borderRadius:2,transition:"width 0.4s"}}/>
+            </div>
+
+            {/* RIVER Stage Pills */}
+            <div className="river-pills">
+              {RIVER_STAGES.map((s,i)=>{
+                const filled=isFilled(s);
+                return(
+                  <button key={s.id} className={`river-pill ${activeRiver===i?"active":""} ${filled&&activeRiver!==i?"filled":""}`}
+                    onClick={()=>setActiveRiver(i)}>
+                    {filled&&activeRiver!==i&&<div className="river-pill-dot"/>}
+                    <span className="river-pill-letter">{s.letter}</span>
+                    <span>{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="incall-grid">
+              {/* LEFT: Active stage */}
+              <div>
+                {RIVER_STAGES.map((stage,si)=>si===activeRiver&&(
+                  <div key={stage.id}>
+
+                    {/* Stage header */}
+                    <div className="stage-card">
+                      <div className="stage-card-hdr">
+                        <div className="stage-letter-big">{stage.letter}</div>
+                        <div>
+                          <div className="stage-name">{stage.label}</div>
+                          <div className="stage-sub">{stage.sub}</div>
+                        </div>
                       </div>
-                    ))}
-                  </>
-                )}
-                {rightTab==="solutions"&&brief&&(
-                  <>
-                    <div className="field-label" style={{marginBottom:10}}>Solution Mapping</div>
-                    <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:14,marginBottom:12}}>
-                      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:10}}>Recommended for {selectedAccount?.company}</div>
-                      {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
-                        <div key={i} className="solution-item">
-                          <div className="sol-badge">{item.product}</div>
-                          <div style={{fontSize:11,color:"#444",lineHeight:1.5}}>{item.fit}</div>
+
+                      {/* Gate questions with horizontal choices + notes */}
+                      {stage.gates.map((gate,gi)=>(
+                        <div key={gate.id} className="gate-block">
+                          <div className="gate-question">{gate.q}</div>
+                          <div className="gate-choices">
+                            {gate.options.map((opt,oi)=>(
+                              <button key={oi}
+                                className={`gate-choice ${gateAnswers[gate.id]===opt?"selected":""}`}
+                                onClick={()=>setGateAnswers(a=>({...a,[gate.id]:gateAnswers[gate.id]===opt?undefined:opt}))}>
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="gate-note-lbl">Your notes</div>
+                          <textarea className="gate-note"
+                            placeholder="What are you hearing? Capture exact language..."
+                            value={gateNotes[gate.id]||""}
+                            onChange={e=>setGateNotes(n=>({...n,[gate.id]:e.target.value}))}/>
+                        </div>
+                      ))}
+
+                      {/* Stage nav */}
+                      <div style={{display:"flex",gap:8,marginTop:16,paddingTop:14,borderTop:"1px solid #F0EDE6"}}>
+                        {si>0&&<button className="btn btn-secondary btn-sm" onClick={()=>setActiveRiver(si-1)}>← {RIVER_STAGES[si-1].label}</button>}
+                        {si<RIVER_STAGES.length-1&&<button className="btn btn-gold btn-sm" onClick={()=>setActiveRiver(si+1)}>{RIVER_STAGES[si+1].label} →</button>}
+                        {si===RIVER_STAGES.length-1&&<button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>{postLoading?"Routing...":"End Call & Route Deal →"}</button>}
+                      </div>
+                    </div>
+
+                    {/* Discovery Questions — product-specific */}
+                    <div className="stage-card">
+                      <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,marginBottom:16,color:"#1a1a18"}}>
+                        🎯 Discovery Questions
+                        <span style={{fontSize:11,fontWeight:400,color:"#999",marginLeft:8,fontFamily:"DM Sans,sans-serif"}}>product-specific · tailored to {selectedAccount?.company}</span>
+                      </div>
+
+                      {/* Static RIVER stage questions */}
+                      {stage.discovery.map((prompt,pi)=>(
+                        <div key={prompt.id} className="dq-block">
+                          <div className="dq-framework">RIVER Discovery</div>
+                          <div className="dq-question">"{prompt.label}"</div>
+                          <div className="gate-note-lbl">What you're hearing</div>
+                          <textarea className="dq-note"
+                            placeholder={prompt.hint}
+                            value={riverData[prompt.id]||""}
+                            onChange={e=>setRiverData(d=>({...d,[prompt.id]:e.target.value}))}/>
+                        </div>
+                      ))}
+
+                      {/* AI-generated product-specific questions */}
+                      {discoveryQs&&(()=>{
+                        const stageKey=["reality","impact","vision","entryPoints","route"][si];
+                        const qs=discoveryQs[stageKey]||[];
+                        return qs.filter(q=>q?.q).map((dq,qi)=>(
+                          <div key={qi} className="dq-block" style={{borderLeftColor:"#1B3A6B"}}>
+                            <div className="dq-framework" style={{color:"#1B3A6B"}}>{dq.framework||"Active Listening"}</div>
+                            <div className="dq-question">"{dq.q}"</div>
+                            {dq.intent&&<div style={{fontSize:11,color:"#777",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
+                            <div className="gate-note-lbl">What you're hearing</div>
+                            <textarea className="dq-note"
+                              placeholder="Capture their exact words..."
+                              value={riverData["dq_"+si+"_"+qi]||""}
+                              onChange={e=>setRiverData(d=>({...d,["dq_"+si+"_"+qi]:e.target.value}))}/>
+                          </div>
+                        ));
+                      })()}
+
+                      {!discoveryQs&&(
+                        <div style={{fontSize:12,color:"#aaa",fontStyle:"italic",textAlign:"center",padding:"12px 0"}}>
+                          Generating product-specific questions...
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Talk Track */}
+                    <div style={{background:"#1a1a18",borderRadius:12,padding:"16px 18px",marginBottom:14}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Talk Track</div>
+                      <div style={{fontSize:14,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>{stage.talkTrack}</div>
+                    </div>
+
+                    {/* Objection Handling */}
+                    <div className="stage-card">
+                      <div style={{fontSize:13,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>⚡ Objection Handling</div>
+                      {stage.objections.map((o,oi)=>(
+                        <div key={oi} style={{marginBottom:10}}>
+                          <button style={{width:"100%",textAlign:"left",padding:"10px 14px",borderRadius:8,border:"1px solid #E8E6DF",background:"#FDE8E8",cursor:"pointer",fontSize:13,fontWeight:600,color:"#9B2C2C",fontFamily:"DM Sans,sans-serif"}}
+                            onClick={()=>setExpandedObjs(s=>({...s,[`${si}-${oi}`]:!s[`${si}-${oi}`]}))}>
+                            "{o.q}" <span style={{float:"right",color:"#bbb"}}>{expandedObjs[`${si}-${oi}`]?"▲":"▼"}</span>
+                          </button>
+                          {expandedObjs[`${si}-${oi}`]&&(
+                            <div style={{padding:"10px 14px",background:"#F8F6F1",borderRadius:"0 0 8px 8px",border:"1px solid #E8E6DF",borderTop:"none",fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>
+                              {o.a}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
-                    <div className="field-label" style={{marginBottom:8}}>Key Contacts</div>
-                    {(brief.keyContacts||[]).map((c,i)=>(
-                      <div key={i} className="contact-row">
-                        <div className="contact-av">{c.initials||"?"}</div>
-                        <div><div style={{fontSize:12,fontWeight:600}}>{c.name}</div><div style={{fontSize:11,color:"#777"}}>{c.title}</div><div style={{fontSize:11,color:"#8B6F47",fontStyle:"italic",marginTop:2}}>{c.angle}</div></div>
-                      </div>
-                    ))}
-                    <div className="field-label" style={{margin:"14px 0 8px"}}>Watch-Outs</div>
-                    {(brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
-                      <div key={i} className="signal-row" style={{marginBottom:7}}>
-                        <div className="sig-dot" style={{background:"#9B2C2C"}}/>
-                        <div style={{fontSize:11,color:"#555",lineHeight:1.5}}>{w}</div>
-                      </div>
-                    ))}
-                  </>
+
+                  </div>
+                ))}
+              </div>
+
+              {/* RIGHT: Reference sidebar */}
+              <div>
+                {/* Notes */}
+                <div className="incall-sidebar" style={{marginBottom:14}}>
+                  <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:8}}>Call Notes</div>
+                  <textarea style={{width:"100%",minHeight:160,padding:10,border:"1px solid #E8E6DF",borderRadius:8,fontSize:13,fontFamily:"DM Sans",background:"#FAFAF8",resize:"vertical"}}
+                    placeholder="Free-form notes... Tab = timestamp"
+                    value={notes} onChange={e=>setNotes(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Tab"){e.preventDefault();const ts=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});const el=e.target;const b=el.value.slice(0,el.selectionStart);const a=el.value.slice(el.selectionStart);el.value=b+"\n["+ts+"] "+a;setNotes(el.value);}}}/>
+                  <div style={{fontSize:10,color:"#aaa",marginTop:4}}>Tab inserts timestamp · feeds post-call summary</div>
+                </div>
+
+                {/* Opening Angle */}
+                {brief?.openingAngle&&(
+                  <div className="incall-sidebar" style={{marginBottom:14,borderLeft:"3px solid #8B6F47"}}>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:6}}>Opening Angle</div>
+                    <div style={{fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
+                  </div>
                 )}
-                {rightTab==="notes"&&(
-                  <>
-                    <div className="field-label" style={{marginBottom:8}}>Call Notes</div>
-                    <textarea style={{width:"100%",minHeight:240,padding:10,border:"1px solid #E8E6DF",borderRadius:7,fontSize:12,fontFamily:"DM Sans",background:"#fff",resize:"vertical"}}
-                      placeholder="Free-form notes... Tab inserts timestamp" value={notes} onChange={e=>setNotes(e.target.value)}
-                      onKeyDown={e=>{if(e.key==="Tab"){e.preventDefault();const ts=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});const el=e.target;const b=el.value.slice(0,el.selectionStart);const a=el.value.slice(el.selectionStart);el.value=b+`\n[${ts}] `+a;setNotes(el.value);}}}/>
-                    <div style={{fontSize:10,color:"#aaa",marginTop:5}}>Tab = timestamp · Notes feed into post-call summary</div>
-                    <div className="divider"/>
-                    <div className="field-label" style={{marginBottom:7}}>Gates Logged ({Object.keys(gateAnswers).length})</div>
-                    {Object.keys(gateAnswers).length===0&&<div style={{fontSize:11,color:"#bbb"}}>No gates answered yet</div>}
-                    {Object.entries(gateAnswers).map(([k,v])=>(
-                      <div key={k} style={{fontSize:10,color:"#555",padding:"4px 0",borderBottom:"1px solid #F0EDE6"}}>
-                        <span style={{color:"#aaa"}}>{k}</span> → {v}
+
+                {/* Solutions quick ref */}
+                {(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
+                  <div className="incall-sidebar" style={{marginBottom:14}}>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#1B3A6B",marginBottom:8}}>Solutions</div>
+                    {(brief.solutionMapping||[]).filter(s=>s?.product).map((s,i)=>(
+                      <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(brief.solutionMapping.filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",marginBottom:2}}>{s.product}</div>
+                        <div style={{fontSize:11,color:"#666",lineHeight:1.5}}>{s.fit}</div>
                       </div>
                     ))}
-                  </>
+                  </div>
+                )}
+
+                {/* Watch-outs */}
+                {(brief?.watchOuts||[]).filter(Boolean).length>0&&(
+                  <div className="incall-sidebar">
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#9B2C2C",marginBottom:8}}>⚠ Watch-Outs</div>
+                    {(brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
+                      <div key={i} style={{fontSize:12,color:"#555",paddingBottom:6,marginBottom:6,borderBottom:i<brief.watchOuts.filter(Boolean).length-1?"1px solid #F0EDE6":"none",lineHeight:1.5}}>
+                        {w}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           </div>
         )}
 
+        {/* ── STEP 8: POST-CALL ── */}
         {/* ── STEP 8: POST-CALL ── */}
         {step===8&&(
           <div className="page">
