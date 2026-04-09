@@ -759,8 +759,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   // MICRO 4: Solution mapping + contacts — shows after strategy
   const p4 = callAI(base+
     `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
-    `{"solutionMapping":[`+
-    `{"product":"Specific ${sellerUrl} offering","fit":"Business alignment, architecture fit, outcome it drives for ${co}"},`+
+    `Apply Dunford (Obviously Awesome) positioning and Osterwalder (Value Proposition Canvas) to map seller solutions to ${co}.\n`+`For each solution: (1) what customer job does it do? (2) what pain does it relieve? (3) what gain does it create?\n`+`{"solutionMapping":[`+
+    `{"product":"Specific ${sellerUrl} offering","fit":"Job-to-be-done it performs (Osterwalder) → specific pain it relieves → gain it creates for ${co}. Grounded in a real signal."},`+
     `{"product":"Second offering if applicable","fit":""},`+
     `{"product":"Third offering if applicable","fit":""}],`+
     `"caseStudies":[{"title":"Relevant case study or named customer","customer":"","relevance":"Why relevant to ${co}"},{"title":"","customer":"","relevance":""}],`+
@@ -1603,7 +1603,7 @@ export default function App(){
       : "";
     const companies = members.slice(0,30).map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
     const prompt =
-      `You are a B2B sales strategist. For each company below, score fit against the seller's ICP AND provide firmographic data.\n\n`+icpContext+`\n`+
+      `You are a B2B sales strategist trained in product-market fit assessment. For each company below:\n`+`1. Score ICP fit (0-100) using Olsen's PMF Pyramid: Target Customer fit → Underserved Need fit → Value Proposition fit\n`+`2. Identify their Moore adoption profile: are they Innovators, Early Adopters, Early Majority, or Late Majority?\n`+`3. Provide firmographic data (org size, ownership)\n\n`+icpContext+`\n`+
       `SELLER PROFILE:\n${sellerCtx}\n\n`+
       `SCORING CRITERIA:\n`+
       `1. Product/industry fit — do the seller's offerings make sense for this company?\n`+
@@ -1650,24 +1650,41 @@ export default function App(){
     const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
     setIcpLoading(true);
     const prompt =
-      `You are a B2B market intelligence analyst. Research the company at ${url} and build their Ideal Customer Profile (ICP).\n`+
-      `Use your training knowledge and any available information about ${url}.\n\n`+
+      `You are a B2B market intelligence analyst and ICP strategist. Research ${url} and build their complete Ideal Customer Profile using leading frameworks.\n\n`+
+      `Apply these frameworks:\n`+
+      `- Revella (Buyer Personas): 5 Rings of Buying Insight — Priority Initiative, Success Factors, Perceived Barriers, Decision Criteria, Buyer Journey\n`+
+      `- Osterwalder (Value Proposition Design): Customer Jobs (functional/emotional/social), Pains, Gains → Pain Relievers, Gain Creators\n`+
+      `- Dunford (Obviously Awesome): Competitive alternatives, unique differentiators, proven value, target market, market category\n`+
+      `- Moore (Crossing the Chasm): Where on the Technology Adoption Lifecycle do ideal customers sit? (Innovators/Early Adopters/Early Majority)\n`+
+      `- Weinberg (Traction): What channels actually reach this buyer?\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
       `{"sellerName":"Company name",`+
-      `"sellerDescription":"1-2 sentences: what they sell and their core value proposition",`+
+      `"sellerDescription":"2 sentences: what they sell and their differentiated value proposition (Dunford positioning)",`+
+      `"marketCategory":"The specific market category this seller competes in",`+
       `"icp":{`+
-      `"industries":["Primary industry vertical","Second","Third"],`+
-      `"companySize":"e.g. 500-10K employees or Mid-Market to Enterprise",`+
-      `"revenueRange":"e.g. $50M-$2B annual revenue",`+
+      `"industries":["Primary vertical","Second","Third"],`+
+      `"companySize":"Employee range that fits best",`+
+      `"revenueRange":"Annual revenue range of ideal accounts",`+
       `"ownershipTypes":["Public","PE-backed","VC-backed","Private"],`+
-      `"geographies":["US","North America","Global"],`+
-      `"buyerPersonas":["Primary buyer title e.g. VP Marketing","Secondary buyer","Economic buyer"],`+
-      `"painPoints":["Core problem they solve","Second pain point","Third"],`+
-      `"disqualifiers":["Company type or situation where they are NOT a fit","Second disqualifier"],`+
-      `"techSignals":["Tech stack indicator that suggests fit e.g. uses Salesforce","Second signal"],`+
-      `"dealSize":"Typical ACV or deal size range",`+
+      `"geographies":["Primary geography"],`+
+      `"adoptionProfile":"Innovators or Early Adopters or Early Majority — which segment buys first and why (Moore)",`+
+      `"buyerPersonas":["Primary economic buyer title","Champion/user buyer","Technical evaluator"],`+
+      `"priorityInitiative":"Revella Ring 1 — what triggers this buyer to look for a solution NOW? What event or pressure makes them act?",`+
+      `"successFactors":"Revella Ring 2 — what does winning look like for them personally and professionally?",`+
+      `"perceivedBarriers":"Revella Ring 3 — what makes them hesitate, doubt, or walk away?",`+
+      `"decisionCriteria":"Revella Ring 4 — the 2-3 factors they use to evaluate and compare options",`+
+      `"buyerJourney":"Revella Ring 5 — how they navigate from awareness to decision. Where do they get information?",`+
+      `"customerJobs":["Functional job: what task are they trying to accomplish","Emotional job: how they want to feel","Social job: how they want to be perceived"],`+
+      `"topPains":["Biggest frustration or risk that drives urgency","Second pain","Third pain"],`+
+      `"topGains":["Most desired outcome or improvement","Second gain","Third gain"],`+
+      `"competitiveAlternatives":["What they do instead of buying — status quo, competitor, build in-house"],`+
+      `"uniqueDifferentiators":["What the seller does that alternatives cannot easily copy","Second differentiator"],`+
+      `"disqualifiers":["Type of company or situation that is NOT a fit","Second disqualifier"],`+
+      `"techSignals":["Tech stack or behavior that signals fit","Second signal"],`+
+      `"tractionChannels":["Best channel to reach this buyer e.g. LinkedIn outbound, partner referral, content","Second channel"],`+
+      `"dealSize":"Typical ACV or deal size",`+
       `"salesCycle":"Typical sales cycle length",`+
-      `"customerExamples":["Known customer or logo if public","Second","Third"]}}`;
+      `"customerExamples":["Known customer or logo","Second","Third"]}}`;
     try{
       const r = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -1919,7 +1936,7 @@ export default function App(){
     const prompt =
       "You are a senior B2B sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
       "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting.\n" +
-      "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences a rep can say out loud naturally.\n\n" +
+      "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n\n" +
       "SELLER (" + sellerUrl + ") CONTEXT:\n" + sellerCtx + "\n" +
       (productsCtx?"SELLER PRODUCTS/SERVICES: "+productsCtx+"\n":"") +
       "\nPROSPECT: " + co + " | Industry: " + (member.ind||"") + "\n" +
@@ -1974,7 +1991,7 @@ export default function App(){
     const theme = (briefData.strategicTheme||"").slice(0,200);
 
     const prompt =
-      `You are a senior B2B discovery coach trained in active listening and human-centered selling.\n`+
+      `You are a senior B2B discovery coach trained in customer development and product-market fit validation.\n`+`Apply Mom Test (Fitzpatrick): ask about their PAST BEHAVIOR and REAL PROBLEMS, never about your product or hypothetical futures.\n`+`Apply Blank customer development: validate the problem EXISTS and MATTERS before mentioning solutions.\n`+`Apply Olsen PMF Pyramid: questions should surface Target Customer fit → Underserved Need → Value Prop resonance.\n`+
       `Frameworks you apply: Gap Selling, Challenger Sale, plus the following listening principles:\n`+
       `- Active Listening (Heather Younger): listen for what is NOT said; reflect back what you hear\n`+
       `- Just Listen (Mark Goulston): make the other person feel heard before advancing your agenda\n`+
@@ -2028,7 +2045,7 @@ export default function App(){
       `- Fowler: flag integration complexity — what patterns does connecting to their stack require?\n`+
       `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
+      `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"adoptionProfile":"Innovator or Early Adopter or Early Majority or Late Majority",`+`"adoptionImplication":"1 sentence: what their adoption profile means for messaging, proof points, and sales approach",`+`"pmfAssessment":{"targetCustomerFit":"Strong/Partial/Weak — is this genuinely the ICP?","underservedNeedFit":"Strong/Partial/Weak — is the need real and unmet?","valuePropositionFit":"Strong/Partial/Weak — does our value prop land clearly?","overallPMFSignal":"Strong/Emerging/Weak — overall PMF signal from this discovery"},`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
       `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
       `"architectureGaps":[{"gap":"What the customer needs that we didn't fully address","recommendation":"How to bridge it — our product, partnership, or configuration"}],`+
       `"implementationRoadmap":"2-3 sentence recommended phasing: what to implement first and why, framed around their desired outcomes",`+
@@ -2747,10 +2764,38 @@ Return ONLY valid JSON:
                       </div>
                       {sellerICP.icp.painPoints?.length>0&&(
                         <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#6B3A7A",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Pain Points We Solve</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"#6B3A7A",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Top Pains We Solve</div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                            {sellerICP.icp.painPoints.map((p,i)=>(
+                            {(sellerICP.icp.topPains||sellerICP.icp.painPoints||[]).filter(Boolean).map((p,i)=>(
                               <span key={i} style={{fontSize:11,background:"#F3EEF9",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px",color:"#6B3A7A"}}>{p}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {sellerICP.icp.priorityInitiative&&(
+                        <div style={{background:"#FEF6E4",border:"1px solid #BA751744",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>⚡ Trigger to Buy (Revella)</div>
+                          <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.priorityInitiative}</div>
+                        </div>
+                      )}
+                      {sellerICP.icp.perceivedBarriers&&(
+                        <div style={{background:"#FDE8E8",border:"1px solid #9B2C2C44",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>🚧 Perceived Barriers (Revella)</div>
+                          <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.perceivedBarriers}</div>
+                        </div>
+                      )}
+                      {sellerICP.icp.adoptionProfile&&(
+                        <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 Adoption Profile (Moore)</div>
+                          <div style={{fontSize:12,color:"#555"}}>{sellerICP.icp.adoptionProfile}</div>
+                        </div>
+                      )}
+                      {sellerICP.icp.uniqueDifferentiators?.filter(Boolean).length>0&&(
+                        <div style={{background:"#EEF5EE",border:"1px solid #2E6B2E44",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>✦ Why We Win (Dunford)</div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                            {sellerICP.icp.uniqueDifferentiators.filter(Boolean).map((d,i)=>(
+                              <span key={i} style={{fontSize:11,background:"#fff",border:"1px solid #2E6B2E44",borderRadius:10,padding:"2px 8px",color:"#2E6B2E"}}>{d}</span>
                             ))}
                           </div>
                         </div>
@@ -4218,6 +4263,39 @@ Return ONLY valid JSON:
 
             {solutionFit&&!solutionFitLoading&&(
               <>
+                {/* PMF Assessment */}
+                {solutionFit.pmfAssessment&&(
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:20}}>
+                    {[
+                      {label:"Target Customer Fit",val:solutionFit.pmfAssessment.targetCustomerFit},
+                      {label:"Underserved Need",val:solutionFit.pmfAssessment.underservedNeedFit},
+                      {label:"Value Prop Fit",val:solutionFit.pmfAssessment.valuePropositionFit},
+                      {label:"Overall PMF Signal",val:solutionFit.pmfAssessment.overallPMFSignal},
+                    ].filter(x=>x.val).map((x,i)=>{
+                      const isStrong=x.val?.toLowerCase().includes("strong");
+                      const isWeak=x.val?.toLowerCase().includes("weak");
+                      const c=isStrong?"#2E6B2E":isWeak?"#9B2C2C":"#BA7517";
+                      const bg=isStrong?"#EEF5EE":isWeak?"#FDE8E8":"#FEF6E4";
+                      return(
+                        <div key={i} style={{background:bg,border:"1px solid "+c+"44",borderRadius:10,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:c,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>{x.label}</div>
+                          <div style={{fontSize:13,fontWeight:700,color:c}}>{x.val}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {solutionFit.adoptionProfile&&(
+                  <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px"}}>📊 Adoption Profile (Moore)</div>
+                      <span style={{background:"#1B3A6B",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{solutionFit.adoptionProfile}</span>
+                    </div>
+                    {solutionFit.adoptionImplication&&<div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{solutionFit.adoptionImplication}</div>}
+                  </div>
+                )}
+
                 {solutionFit.dmiacStage&&(
                   <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
                     <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,flexWrap:"wrap"}}>
