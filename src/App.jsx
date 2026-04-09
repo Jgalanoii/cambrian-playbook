@@ -35,16 +35,16 @@ body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; 
 .upload-hint { font-size: 14px; color: #999; margin-bottom: 16px; }
 .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; line-height: 1; white-space: nowrap; }
 .btn:disabled { opacity: 0.4; cursor: default; }
-.btn-primary { background: #1a1a18; color: #fff; }
-.btn-primary:hover:not(:disabled) { background: #333; }
+.btn-primary { background: #1a1a18; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
+.btn-primary:hover:not(:disabled) { background: #2d2d2b; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.22); }
 .btn-secondary { background: transparent; border: 1.5px solid #C8C4BB; color: #1a1a18; }
 .btn-secondary:hover:not(:disabled) { border-color: #8B6F47; color: #8B6F47; }
-.btn-gold { background: #8B6F47; color: #fff; }
-.btn-gold:hover:not(:disabled) { background: #7A6040; }
-.btn-green { background: #2E6B2E; color: #fff; }
-.btn-green:hover:not(:disabled) { background: #245424; }
-.btn-navy { background: #1B3A6B; color: #fff; }
-.btn-navy:hover:not(:disabled) { background: #152d54; }
+.btn-gold { background: #8B6F47; color: #fff; box-shadow: 0 2px 6px rgba(139,111,71,0.3); }
+.btn-gold:hover:not(:disabled) { background: #7A6040; transform: translateY(-1px); }
+.btn-green { background: #2E6B2E; color: #fff; box-shadow: 0 2px 6px rgba(46,107,46,0.3); }
+.btn-green:hover:not(:disabled) { background: #245424; transform: translateY(-1px); }
+.btn-navy { background: #1B3A6B; color: #fff; box-shadow: 0 2px 6px rgba(27,58,107,0.3); }
+.btn-navy:hover:not(:disabled) { background: #152d54; transform: translateY(-1px); }
 .btn-lg { padding: 12px 22px; font-size: 16px; }
 .btn-sm { padding: 5px 11px; font-size: 13px; }
 .actions-row { display: flex; gap: 10px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
@@ -155,7 +155,7 @@ input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; ba
 .ef-input-multi { min-height: 60px; resize: vertical; }
 
 /* BRIEF BLOCKS */
-.bb { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+.bb { background: #fff; border: 1px solid #E8E6DF; border-radius: 14px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 .bb-hdr { display: flex; align-items: center; gap: 9px; padding: 11px 16px; background: #F8F6F1; border-bottom: 1px solid #E8E6DF; }
 .bb-icon { width: 26px; height: 26px; border-radius: 6px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 13px; font-weight: 600; color: #8B6F47; flex-shrink: 0; }
 .bb-title { font-family: 'Lora', serif; font-size: 17px; font-weight: 500; }
@@ -512,7 +512,7 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:5000,
+          max_tokens:4000,
           system:"You are a JSON API. Output only valid JSON.",
           messages:[
             {role:"user",content:prompt},
@@ -640,11 +640,12 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
 
   // Phase 1: Training-knowledge brief - no web search, shows in ~6-8s
   onStatus("Building brief for "+co+"...");
+  // Slim phase1 prompt — rich but concise, avoids token waste on instructions
   const phase1Prompt =
-    `You are a senior B2B sales strategist. Using your training knowledge about "${co}", build a rich pre-call brief.\n`+
-    `Apply Gap Selling (quantify the gap), Challenger Sale (teach something new), Carnegie (their interests not yours).\n`+
-    `ASCII punctuation only. Be specific - use real facts. Return ONLY raw JSON, start with {:\n`+
-    `SELLER:\n${sellerCtx}${prodCtx}\nDEAL: ${dealCtx}\n\n`+schema;
+    `Senior B2B sales strategist. Build a pre-call brief for "${co}" using your training knowledge.\n`+
+    `Apply: Gap Selling (quantify gaps), Challenger Sale (teach something new), Carnegie (their interests).\n`+
+    `ASCII punctuation only. Real facts only. Return raw JSON starting with {:\n`+
+    `Seller: ${sellerCtx}${prodCtx}\nContext: ${dealCtx}\n\n`+schema;
 
   // Phase 2: Live enrichment - fires in parallel, merges when ready
   const phase2Prompt =
@@ -946,7 +947,7 @@ function PieChart({data, size=120}){
 
 // ── COHORT DRILL-DOWN COMPONENT ───────────────────────────────────────────────
 
-function CohortDrillDown({cohort, selected, onSelect, onPickAccount}){
+function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={}, fitScoring=false}){
   const [open, setOpen] = useState(selected);
   useEffect(()=>{if(selected)setOpen(true);},[selected]);
 
@@ -1031,7 +1032,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount}){
           <table className="cohort-member-table">
             <thead>
               <tr>
-                <th>Company</th><th>Industry</th><th>ACV</th><th>Lead Source</th><th>Outcome</th><th></th>
+                <th>Company</th><th>Industry</th><th>ACV</th><th>Lead Source</th><th>Outcome</th><th>Fit Check</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -1577,9 +1578,24 @@ Return ONLY valid JSON:
         {/* ── STEP 0: SESSION SETUP ── */}
         {step===0&&(
           <div style={{padding:"40px 28px"}}>
-            <div className="setup-card" style={{maxWidth:560}}>
-              <div className="setup-logo">Cambrian <span>Catalyst</span></div>
-              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"#999",textAlign:"center",marginBottom:24,fontStyle:"italic"}}>Revenue Playbook Engine · RIVER Framework</div>
+            <div className="setup-card" style={{maxWidth:580}}>
+              <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
+              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"#8B6F47",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Revenue Playbook Engine · RIVER Framework</div>
+              <div style={{textAlign:"center",marginBottom:10}}>
+                <span style={{display:"inline-block",background:"#2E6B2E",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
+              </div>
+              <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
+                <div style={{fontSize:17,fontWeight:600,color:"#1a1a18",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most informed seller in the room.</div>
+                <div style={{fontSize:14,color:"#666",lineHeight:1.7}}>Walk into every call knowing exactly what keeps your prospect up at night — their strategy, gaps, hiring signals, and the precise angle that opens doors. Powered by live research and five proven sales frameworks.</div>
+              </div>
+              <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
+                {[["⚡","Brief in seconds"],["🎯","5 sales frameworks"],["🔍","Live web research"],["📋","RIVER hypothesis"]].map(([icon,label])=>(
+                  <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#777"}}>
+                    <span style={{fontSize:15}}>{icon}</span><span>{label}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{height:1,background:"#E8E6DF",marginBottom:20}}/>
 
               {/* Seller URL */}
               <div className="field-row">
@@ -1910,6 +1926,8 @@ Return ONLY valid JSON:
                 selected={selectedCohort?.id===c.id}
                 onSelect={()=>setSelectedCohort(c)}
                 onPickAccount={m=>{setSelectedCohort(c);pickAccount(m);}}
+                fitScores={fitScores}
+                fitScoring={fitScoring}
               />
             ))}
 
@@ -2140,23 +2158,24 @@ Return ONLY valid JSON:
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>💼</div>
-                      <div><div className="bb-title">Open Positions</div><div className="bb-sub">Current hiring signals strategic priorities</div></div>
+                      <div><div className="bb-title">Open Positions at {selectedAccount?.company||"Target"}</div><div className="bb-sub">Hiring signals reveal strategic priorities — interpret the pattern</div></div>
                     </div>
                     <div className="bb-body">
                       {brief.openRoles.summary&&(
-                        <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:8,padding:"10px 12px",marginBottom:12}}>
+                        <div style={{background:"#1a1a18",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Strategic Interpretation</div>
                           <EF value={brief.openRoles.summary||""} onChange={v=>patchBrief(b=>{if(!b.openRoles)b.openRoles={};b.openRoles.summary=v;})}/>
                         </div>
                       )}
                       {(brief.openRoles.roles||[]).filter(r=>r?.title).length>0&&(
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {(brief.openRoles.roles||[]).filter(r=>r?.title).map((role,i)=>(
-                            <div key={i} style={{display:"flex",gap:10,padding:"8px 10px",background:"#FAFAF8",border:"1px solid #E8E6DF",borderRadius:7,alignItems:"flex-start"}}>
-                              <div style={{background:"#1a1a18",color:"#8B6F47",borderRadius:4,padding:"2px 7px",fontSize:9,fontWeight:700,whiteSpace:"nowrap",marginTop:2,flexShrink:0}}>{role.dept||"Open"}</div>
-                              <div style={{flex:1}}>
-                                <div style={{fontSize:12,fontWeight:600,color:"#1a1a18",marginBottom:2}}>{role.title}</div>
-                                {role.signal&&<div style={{fontSize:11,color:"#8B6F47",fontStyle:"italic"}}>{role.signal}</div>}
+                            <div key={i} style={{padding:"12px 14px",background:"#fff",border:"1px solid #E8E6DF",borderRadius:10,marginBottom:2}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:role.signal?6:0}}>
+                                <div style={{background:"#1a1a18",color:"#8B6F47",borderRadius:5,padding:"3px 9px",fontSize:10,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>{role.dept||"Open"}</div>
+                                <div style={{fontSize:14,fontWeight:700,color:"#1a1a18"}}>{role.title}</div>
                               </div>
+                              {role.signal&&<div style={{fontSize:13,color:"#5A4A35",lineHeight:1.6,fontStyle:"italic",paddingLeft:2}}>→ {role.signal}</div>}
                             </div>
                           ))}
                         </div>
