@@ -1626,7 +1626,7 @@ export default function App(){
         const bg    = s.score>=75?"#EEF5EE":s.score>=50?"#FEF6E4":"#FDE8E8";
         // Ownership badge color
         const ownerColor = s.ownershipType==="public"?"#1B3A6B":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"#2E6B2E":"#555";
-        map[s.company] = {...s, color, bg, ownerColor};
+        map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||""};
         memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
       });
       setFitScores(map);
@@ -1836,6 +1836,11 @@ export default function App(){
   };
 
   React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
+
+  // Build ICP whenever sellerUrl is set but ICP not yet loaded
+  useEffect(()=>{
+    if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl);
+  },[sellerUrl]);
 
   const goToCohorts=()=>{
     const b=buildCohorts(rows,mapping);
@@ -3227,6 +3232,99 @@ Return ONLY valid JSON:
                         <div style={{fontSize:12,color:"#777"}}>{selectedAccount.ind}</div>
                       </div>
                     </div>
+
+                    {/* ICP Match Card */}
+                    {sellerICP?.icp&&(
+                      <div style={{background:"#F8F6F1",borderRadius:10,padding:"12px 14px",marginBottom:16,borderBottom:"1px solid #E8E6DF",paddingBottom:16}}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px"}}>
+                            ICP Match — {sellerICP.sellerName||sellerUrl}
+                          </div>
+                          {fitScores[selectedAccount.company]&&(
+                            <div style={{fontSize:12,fontWeight:700,padding:"2px 10px",borderRadius:20,
+                              background:fitScores[selectedAccount.company].bg,
+                              color:fitScores[selectedAccount.company].color,
+                              border:"1px solid "+fitScores[selectedAccount.company].color+"44"}}>
+                              {fitScores[selectedAccount.company].score}% Fit
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Industry match */}
+                        {sellerICP.icp.industries?.length>0&&(
+                          <div style={{marginBottom:8}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Target Industries</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {sellerICP.icp.industries.map((ind,i)=>{
+                                const acctInd=(selectedAccount.ind||"").toLowerCase();
+                                const match=acctInd&&(ind.toLowerCase().includes(acctInd.split(" ")[0])||acctInd.includes(ind.toLowerCase().split(" ")[0]));
+                                return(
+                                  <span key={i} style={{fontSize:11,borderRadius:10,padding:"2px 8px",
+                                    background:match?"#2E6B2E":"#E8E6DF",
+                                    color:match?"#fff":"#777",
+                                    fontWeight:match?700:400}}>
+                                    {match?"✓ ":""}{ind}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Buyer personas */}
+                        {sellerICP.icp.buyerPersonas?.length>0&&(
+                          <div style={{marginBottom:8}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Key Buyers to Target</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {sellerICP.icp.buyerPersonas.filter(Boolean).map((p,i)=>(
+                                <span key={i} style={{fontSize:11,background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:10,padding:"2px 8px",color:"#1B3A6B"}}>{p}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Trigger to buy */}
+                        {sellerICP.icp.priorityInitiative&&(
+                          <div style={{marginBottom:8}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:3}}>⚡ Trigger to Buy</div>
+                            <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.priorityInitiative}</div>
+                          </div>
+                        )}
+
+                        {/* Perceived barriers */}
+                        {sellerICP.icp.perceivedBarriers&&(
+                          <div style={{marginBottom:8}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:3}}>🚧 Watch for</div>
+                            <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.perceivedBarriers}</div>
+                          </div>
+                        )}
+
+                        {/* Decision criteria */}
+                        {sellerICP.icp.decisionCriteria&&(
+                          <div style={{marginBottom:8}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:3}}>⚖️ Decision Criteria</div>
+                            <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.decisionCriteria}</div>
+                          </div>
+                        )}
+
+                        {/* Adoption profile from fit scores */}
+                        {fitScores[selectedAccount.company]?.adoptionProfile&&(
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6,paddingTop:8,borderTop:"1px solid #E8E6DF"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:"0.3px"}}>Moore Profile:</div>
+                            <span style={{fontSize:11,fontWeight:700,background:"#EEF5F9",color:"#1B3A6B",borderRadius:10,padding:"2px 8px"}}>
+                              {fitScores[selectedAccount.company].adoptionProfile}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Fit score reason */}
+                        {fitScores[selectedAccount.company]?.reason&&(
+                          <div style={{fontSize:11,color:"#777",lineHeight:1.5,marginTop:6,fontStyle:"italic"}}>
+                            {fitScores[selectedAccount.company].reason}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Deal Value */}
                     <div style={{marginBottom:14}}>
