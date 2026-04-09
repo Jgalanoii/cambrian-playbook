@@ -699,14 +699,14 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"keyContacts":[`+`{"name":"Real name if findable","title":"VP or Director or Manager-level title — NOT C-suite","initials":"AB","angle":"Why they feel this pain daily and how to get their attention"},`+`{"name":"Real name if findable","title":"Another mid-level champion — HR Tech, Total Rewards, Benefits, Ops","initials":"CD","angle":"Their specific problem and what a win looks like for them"},`+`{"name":"Real name if findable","title":"Third in-road — procurement, IT, or functional lead","initials":"EF","angle":"How they influence the decision and what they care about"}],`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"recentSignals":["Top buying signal","Second signal","Third signal"],`+
-    `"growthSignals":["Growth indicator with evidence","Second signal","Third signal"]}`;
+    `"growthSignals":["Growth indicator with evidence","Second signal","Third signal"],`+`"processMaturity":{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"maturityNote":"1-2 sentences: where is this org in their improvement journey, and what does this mean for how a seller should enter?",`+`"processGaps":["Specific broken process or workflow signal","Second signal"],`+`"bottlenecks":["Where work gets stuck or slows down","Second bottleneck"]}}`;
 
   // Phase 1: Training-knowledge brief - no web search, shows in ~6-8s
   onStatus("Building brief for "+co+"...");
   // Slim phase1 prompt — rich but concise, avoids token waste on instructions
   const phase1Prompt =
     `Senior B2B sales strategist. Build a pre-call brief about the TARGET PROSPECT "${co}" for a seller.\n`+
-    `Apply: Gap Selling (quantify gaps), Challenger Sale (teach something new), Carnegie (their interests).\n`+
+    `Apply: Gap Selling (quantify gaps), Challenger Sale (teach something new), Carnegie (their interests).\n`+`Apply DMAIC lens to processMaturity: Define=knows problem but unmeasured, Measure=has anecdotal data, Analyze=diagnosing root cause, Improve=evaluating solutions (prime selling moment), Control=sustaining/scaling.\n`+
     `ASCII punctuation only. Real facts only. Return raw JSON starting with {:\n`+
     `SELLER (context only — do NOT write the brief about the seller):\n${sellerCtx}${prodCtx}\n`+
     `PROSPECT TO RESEARCH: ${co} (${dealCtx})\n`+
@@ -1475,33 +1475,57 @@ export default function App(){
 
     const baseUrl = "https://"+url;
     const prompt =
-      `Fetch the website at ${baseUrl} and carefully inspect the navigation for dropdown menus, mega-menus, and nested nav items.\n\n`+
-      `Specifically look for dropdown sections labeled: "Solutions", "Use Cases", "Services", "Platform", "Products", "Catalog", "Features", "Industries", "By Role", "By Team".\n\n`+
-      `For each dropdown/nested menu you find, extract the individual sub-page links within it — not just the top-level nav label.\n`+
-      `Also check the footer and any "Our Products" or "What We Offer" sections on the homepage.\n\n`+
-      `Goal: find the 3-5 most specific product or solution pages (e.g. "/solutions/rewards", "/platform/incentives") — NOT generic pages like /about, /blog, /careers, /contact, /pricing.\n\n`+
-      `Return ONLY raw JSON, start with {:\n`+
-      `{"pages":[`+
-      `{"url":"full URL including https://","label":"Exact name from the nav dropdown"},`+
-      `{"url":"","label":""},{"url":"","label":""},{"url":"","label":""},{"url":"","label":""}]}`;
+      `Search for the website ${baseUrl} and identify its product, solution, and service pages.\n\n`+
+      `Look specifically for pages in navigation menus labeled: Solutions, Use Cases, Services, Platform, Products, Catalog, Features, Industries, By Role, By Team.\n\n`+
+      `Search queries to try:\n`+
+      `1. site:${url} solutions OR products OR services OR platform\n`+
+      `2. "${url}" product pages OR solution pages\n`+
+      `3. ${baseUrl}/solutions OR ${baseUrl}/products OR ${baseUrl}/platform\n\n`+
+      `Find 3-5 specific product or solution pages with their full URLs. Exclude: /about, /blog, /careers, /contact, /pricing, /login, /news.\n\n`+
+      `Return ONLY raw JSON (no markdown, no backticks):\n`+
+      `{"pages":[{"url":"https://full-url-here","label":"Product or Solution Name"},{"url":"","label":""},{"url":"","label":""}]}`;
 
     try{
-      const r = await fetch("/api/claude",{
+      // Step 1: fetch the homepage content directly
+      const fetchR = await fetch("/api/claude",{
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:600,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
-          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+          max_tokens:1200,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+          messages:[{role:"user",content:prompt}],
         }),
       });
-      const d = await r.json();
-      if(d.error){setUrlScanStatus("none");return;}
-      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      const parsed = (() => {
-        try{ const t=raw.startsWith("{")?raw:"{"+raw; return JSON.parse(t); }catch{ return null; }
-      })();
+      const d = await fetchR.json();
+      if(d.error){console.warn("Scan error:",d.error);setUrlScanStatus("none");return;}
+
+      // Extract all text blocks (web_search returns tool results + text)
+      const allText = (d.content||[])
+        .filter(b=>b.type==="text"||b.type==="tool_result")
+        .map(b=>b.type==="text"?b.text:(b.content?.[0]?.text||""))
+        .join(" ");
+
+      // Extract any JSON block in the response
+      const jsonMatch = allText.match(/\{[\s\S]*"pages"[\s\S]*\}/);
+      let parsed = null;
+      if(jsonMatch){
+        try{ parsed = JSON.parse(jsonMatch[0]); }catch{}
+      }
+      if(!parsed){
+        // Try finding URLs directly via regex as fallback
+        const urlMatches = [...allText.matchAll(/https?:\/\/[^\s"'<>]+\/[^\s"'<>]{3,}/g)]
+          .map(m=>m[0])
+          .filter(u=>!u.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|ttf)$/i))
+          .filter(u=>!u.match(/(blog|news|careers|jobs|about|contact|login|signup|privacy|terms|press|investor)/i))
+          .filter(u=>u.includes(url))
+          .slice(0,5);
+        if(urlMatches.length>0){
+          parsed = {pages: urlMatches.map(u=>({url:u,label:u.split("/").pop().replace(/-/g," ")}))};
+        }
+      }
+
       const pages=(parsed?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,5);
+      console.log("URL scan found pages:", pages.length, pages);
       if(pages.length>0){
         setProductUrls(pages.map(p=>({url:p.url,label:p.label||""})));
         setUrlScanStatus("found");
@@ -1625,7 +1649,7 @@ export default function App(){
       "BUYING SIGNALS: " + signals.slice(0,200) + "\n" +
       "RECENT NEWS: " + headlines.slice(0,300) + "\n" +
       "SOLUTION FIT: " + products_ctx.slice(0,400) + "\n\n" +
-      "Build a sharp RIVER hypothesis. Be specific — use real company context. No vague generalities.\n" +
+      "Build a sharp RIVER hypothesis. Be specific — use real company context. No vague generalities.\n" +      "Layer DMAIC thinking into each stage:\n" +      "- Reality: what data proves the current state is broken? (Define+Measure)\n" +      "- Impact: is this root cause or symptom? Quantify the gap. (Analyze)\n" +      "- Vision: what measurable improvement looks like for them. (Improve)\n" +      "- Route: how do they sustain the change? Who owns it? (Control)\n" +
       "Return ONLY raw JSON, no markdown:\n" +
       JSON.stringify({
         reality:"Current state — what problem are they experiencing today, specifically? Not vague — tie to their industry, size, and signals.",
@@ -1723,7 +1747,7 @@ export default function App(){
       `- Fowler: flag integration complexity — what patterns does connecting to their stack require?\n`+
       `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
+      `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
       `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
       `"architectureGaps":[{"gap":"What the customer needs that we didn't fully address","recommendation":"How to bridge it — our product, partnership, or configuration"}],`+
       `"implementationRoadmap":"2-3 sentence recommended phasing: what to implement first and why, framed around their desired outcomes",`+
@@ -2895,6 +2919,48 @@ Return ONLY valid JSON:
                   </div>
                 </div>
 
+                {/* DMAIC Process Maturity */}
+                {brief.processMaturity?.dmiacStage&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>⚙️</div>
+                      <div><div className="bb-title">Process Maturity</div><div className="bb-sub">DMAIC stage — where are they in their improvement cycle?</div></div>
+                    </div>
+                    <div className="bb-body">
+                      <div style={{display:"flex",gap:4,marginBottom:14,flexWrap:"wrap"}}>
+                        {(()=>{
+                          const stages=["Define","Measure","Analyze","Improve","Control"];
+                          const colors=["#9B2C2C","#BA7517","#1B3A6B","#2E6B2E","#6B3A7A"];
+                          const activeIdx=stages.indexOf(brief.processMaturity.dmiacStage);
+                          return stages.map((stage,i)=>(
+                            <div key={stage} style={{display:"flex",alignItems:"center",gap:4}}>
+                              {i>0&&<div style={{width:14,height:2,background:i<=activeIdx?colors[i]+"66":"#E8E6DF",borderRadius:1}}/>}
+                              <div style={{padding:"4px 11px",borderRadius:20,fontSize:12,fontWeight:700,
+                                background:i===activeIdx?colors[i]:i<activeIdx?colors[i]+"22":"#F0EDE6",
+                                color:i===activeIdx?"#fff":i<activeIdx?colors[i]:"#bbb",
+                                border:"1.5px solid "+(i<=activeIdx?colors[i]:"#E8E6DF")}}>
+                                {stage}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                      <EF value={brief.processMaturity.maturityNote||""} onChange={v=>patchBrief(b=>{if(!b.processMaturity)b.processMaturity={};b.processMaturity.maturityNote=v;})}/>
+                      {(brief.processMaturity.processGaps||[]).filter(Boolean).length>0&&(
+                        <div style={{marginTop:12}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Process Gaps</div>
+                          {brief.processMaturity.processGaps.filter(Boolean).map((g,i)=>(
+                            <div key={i} style={{display:"flex",gap:7,marginBottom:5}}>
+                              <div style={{width:5,height:5,borderRadius:"50%",background:"#BA7517",flexShrink:0,marginTop:6}}/>
+                              <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{g}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Contacts + Watch-outs */}
                 <div className="field-grid-2" style={{gap:12,marginBottom:14}}>
                   <div className="bb" style={{margin:0}}>
@@ -3279,6 +3345,28 @@ Return ONLY valid JSON:
                     ))}
                   </div>
                 )}
+
+                {brief?.processMaturity?.dmiacStage&&(
+                  <div className="incall-sidebar" style={{marginTop:14}}>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#1B3A6B",marginBottom:8}}>⚙️ DMAIC Stage</div>
+                    <div style={{display:"flex",gap:3,marginBottom:8,flexWrap:"wrap"}}>
+                      {(()=>{
+                        const stages=["Define","Measure","Analyze","Improve","Control"];
+                        const colors=["#9B2C2C","#BA7517","#1B3A6B","#2E6B2E","#6B3A7A"];
+                        const ai=stages.indexOf(brief.processMaturity.dmiacStage);
+                        return stages.map((s,i)=>(
+                          <span key={s} style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10,
+                            background:i===ai?colors[i]:i<ai?colors[i]+"22":"#F0EDE6",
+                            color:i===ai?"#fff":i<ai?colors[i]:"#aaa",
+                            border:"1px solid "+(i<=ai?colors[i]:"#E8E6DF")}}>
+                            {s}
+                          </span>
+                        ));
+                      })()}
+                    </div>
+                    <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{(brief.processMaturity.maturityNote||"").slice(0,120)}{(brief.processMaturity.maturityNote||"").length>120?"...":""}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -3361,6 +3449,28 @@ Return ONLY valid JSON:
 
             {solutionFit&&!solutionFitLoading&&(
               <>
+                {solutionFit.dmiacStage&&(
+                  <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,flexWrap:"wrap"}}>
+                      <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,color:"#1a1a18"}}>DMAIC Stage:</div>
+                      {(()=>{
+                        const map={Define:"#9B2C2C",Measure:"#BA7517",Analyze:"#1B3A6B",Improve:"#2E6B2E",Control:"#6B3A7A"};
+                        const bgmap={Define:"#FDE8E8",Measure:"#FEF6E4",Analyze:"#EEF5F9",Improve:"#EEF5EE",Control:"#F3EEF9"};
+                        const c=map[solutionFit.dmiacStage]||"#555";
+                        const bg=bgmap[solutionFit.dmiacStage]||"#F8F6F1";
+                        return<span style={{background:bg,color:c,border:"1.5px solid "+c+"44",borderRadius:20,padding:"4px 16px",fontSize:14,fontWeight:700}}>{solutionFit.dmiacStage}</span>;
+                      })()}
+                    </div>
+                    {solutionFit.dmiacRationale&&<div style={{fontSize:14,color:"#555",lineHeight:1.6,marginBottom:solutionFit.entryStrategy?10:0}}>{solutionFit.dmiacRationale}</div>}
+                    {solutionFit.entryStrategy&&(
+                      <div style={{background:"#1a1a18",borderRadius:8,padding:"10px 14px"}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Recommended Entry Strategy</div>
+                        <div style={{fontSize:13,color:"#fff",lineHeight:1.6}}>{solutionFit.entryStrategy}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Integration complexity badge */}
                 <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
                   <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"#1a1a18"}}>
