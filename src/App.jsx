@@ -4339,8 +4339,7 @@ Return ONLY valid JSON:
                 </div>
 
                 {/* Tech Stack & Integrations */}
-                {brief.techStack&&Object.values(brief.techStack).some(v=>v&&(typeof v==="string"?v.trim():v.length>0))&&(
-                  <div className="bb">
+{brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(                  <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:13}}>🔌</div>
                       <div><div className="bb-title">Tech Stack & Integrations</div><div className="bb-sub">Known SaaS platforms, tools, and systems in use</div></div>
