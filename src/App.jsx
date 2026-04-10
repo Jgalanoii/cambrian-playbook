@@ -628,7 +628,7 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:5500,
+          max_tokens:1800,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
             {role:"user",content:prompt},
@@ -820,7 +820,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1800,
+          max_tokens:1000,
           tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
@@ -1726,7 +1726,7 @@ export default function App(){
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:800,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:4}],
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:researchPrompt}],
         }),
       });
