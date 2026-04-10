@@ -2365,14 +2365,7 @@ Return ONLY valid JSON:
     <div class="summary-box">${callSummary||"Summary of discovery call and key findings."}</div>
   </div>
 
-  ${outcomes?`
-  <!-- Outcomes -->
-  <div class="section">
-    <div class="section-title">Target Outcomes Discussed</div>
-    <div class="outcomes">
-      ${selectedOutcomes.map(o=>'<span class="outcome-pill">'+o+'</span>').join("")}
-    </div>
-  </div>`:""}
+  ${outcomes?'<div class="section"><div class="section-title">Target Outcomes Discussed</div><div class="outcomes">'+selectedOutcomes.map(o=>'<span class="outcome-pill">'+o+'</span>').join("")+'</div></div>':""}
 
   ${solutions.length?'<div class="section"><div class="section-title">Solutions Reviewed</div><div class="solutions">'+solutions.map(s=>'<div class="solution-card"><div class="solution-name">'+s.product+'</div><div class="solution-fit">'+(s.fit?.split(".")[0]||"")+'</div></div>').join("")+'</div></div>':""}
 
