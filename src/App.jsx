@@ -2601,7 +2601,7 @@ Return ONLY valid JSON:
                 ICP: {sellerICP.icp.industries.slice(0,2).join(", ")}
               </span>
             )}
-            {selectedCohort&&<><span>·</span><span>Cohort: <strong>{selectedCohort.name}</strong></span></>}
+            {selectedCohort&&step>3&&<><span>·</span><span>Account: <strong>{selectedAccount?.company||selectedCohort.name}</strong></span></>}
             {selectedAccount&&<><span>·</span><span>Account: <strong>{selectedAccount.company}</strong></span></>}
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               {lastSaved()&&(
