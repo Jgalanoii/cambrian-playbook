@@ -1866,8 +1866,8 @@ export default function App(){
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1200,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+          max_tokens:800,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:prompt}],
         }),
       });
