@@ -1800,6 +1800,7 @@ export default function App(){
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:1800,
+          system:"You are a JSON API. Output ONLY raw valid JSON. No markdown. No curly quotes. Use only straight ASCII double quotes for JSON strings. Never use apostrophes or smart quotes inside string values — escape or remove them.",
           messages:[
             {role:"user",content:icpPrompt},
             {role:"assistant",content:"{"},
