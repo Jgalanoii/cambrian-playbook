@@ -363,7 +363,7 @@ const OUTCOMES = [
 ];
 
 // The 6 universal imperatives every company shares — used for pre-selecting baseline outcomes
-const UNIVERSAL_IMPERATIVES = ["grow","expand","comply","fraud","investors","cx"];
+const UNIVERSAL_IMPERATIVES = ["Revenue Growth","Market Expansion","Customer Experience","Retention & Loyalty","Compliance & Audit","Fraud & Risk Reduction"];
 
 const SAMPLE_ROWS = [
   // ── Fortune 1000 / Public Enterprise ─────────────────────────────────────
@@ -631,7 +631,7 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:5500,
+          max_tokens:1800,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
             {role:"user",content:prompt},
@@ -813,17 +813,15 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         `"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
         `"recentSignals":["Most actionable buying signal","Second","Third"],`+
         `"growthSignals":["Growth indicator with evidence","Second"],`+
-        `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
-        `"cultureProfile":{"coreValues":"2-3 stated company values","communicationStyle":"formal/informal","decisionMaking":"top-down/consensus/distributed","sellerLanguageHint":"the vocabulary and tone this company responds to"},`+
-        `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
-        `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
-        `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
+        `"workforceProfile":{"knowledgeWorkerPct":"","unionExposure":"","notes":""},`+
+        `"sentimentScores":{"glassdoorRating":"rating or empty","g2Rating":"rating or empty","trustpilotRating":"rating or empty","npsSignal":"","standoutReview":{"text":"","sentiment":"positive"}},`+
+        `"companySnapshot":"Updated 1-2 sentence snapshot with any new facts"}``;
       const r = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1800,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:4}],
+          max_tokens:1000,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
       });
@@ -1797,8 +1795,8 @@ export default function App(){
       const r2 = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:2500,
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:1800,
           messages:[
             {role:"user",content:icpPrompt},
             {role:"assistant",content:"{"},
