@@ -1,4 +1,34 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+const SAMPLE_ROWS = [
+  // ── Public Blue Chips ─────────────────────────────────────────────────────
+  {company:"JPMorgan Chase",industry:"Financial Services",acv:"380000",lead_source:"Referral",outcome:"Employee engagement",company_url:"jpmorganchase.com",employees:"~290,000",publicPrivate:"Public (NYSE:JPM)"},
+  {company:"Johnson & Johnson",industry:"Healthcare / Pharma",acv:"320000",lead_source:"Partner",outcome:"Workforce productivity",company_url:"jnj.com",employees:"~130,000",publicPrivate:"Public (NYSE:JNJ)"},
+  {company:"Humana Inc.",industry:"Health Insurance",acv:"290000",lead_source:"Referral",outcome:"Member engagement",company_url:"humana.com",employees:"~60,000",publicPrivate:"Public (NYSE:HUM)"},
+  {company:"Aflac",industry:"Supplemental Insurance",acv:"210000",lead_source:"Outbound",outcome:"Digital claims",company_url:"aflac.com",employees:"~10,000",publicPrivate:"Public (NYSE:AFL)"},
+  {company:"Marriott International",industry:"Hospitality",acv:"260000",lead_source:"Conference",outcome:"Employee recognition",company_url:"marriott.com",employees:"~120,000",publicPrivate:"Public (NASDAQ:MAR)"},
+  {company:"Salesforce",industry:"Enterprise SaaS",acv:"180000",lead_source:"Partner",outcome:"Sales team incentives",company_url:"salesforce.com",employees:"~70,000",publicPrivate:"Public (NYSE:CRM)"},
+  {company:"Comcast",industry:"Telecom / Media",acv:"240000",lead_source:"Outbound",outcome:"Customer loyalty",company_url:"comcast.com",employees:"~190,000",publicPrivate:"Public (NASDAQ:CMCSA)"},
+  // ── Private Companies (Brand Recognition) ─────────────────────────────────
+  {company:"Cargill",industry:"Agriculture / Food",acv:"340000",lead_source:"Referral",outcome:"Supply chain workforce",company_url:"cargill.com",employees:"~160,000",publicPrivate:"Private"},
+  {company:"Publix Super Markets",industry:"Grocery Retail",acv:"220000",lead_source:"Partner",outcome:"Associate recognition",company_url:"publix.com",employees:"~240,000",publicPrivate:"Private (Employee-owned)"},
+  {company:"Fidelity Investments",industry:"Financial Services",acv:"310000",lead_source:"Conference",outcome:"Advisor enablement",company_url:"fidelity.com",employees:"~70,000",publicPrivate:"Private"},
+  {company:"USAA",industry:"Insurance / Financial Services",acv:"280000",lead_source:"Referral",outcome:"Member retention",company_url:"usaa.com",employees:"~36,000",publicPrivate:"Private (Mutual)"},
+  {company:"State Farm Insurance",industry:"Insurance",acv:"250000",lead_source:"Outbound",outcome:"Agent productivity",company_url:"statefarm.com",employees:"~54,000",publicPrivate:"Private (Mutual)"},
+  {company:"Koch Industries",industry:"Manufacturing / Energy",acv:"300000",lead_source:"Referral",outcome:"Operational efficiency",company_url:"kochind.com",employees:"~120,000",publicPrivate:"Private"},
+  {company:"Mars Inc.",industry:"CPG / Food",acv:"190000",lead_source:"Partner",outcome:"Channel partner rewards",company_url:"mars.com",employees:"~140,000",publicPrivate:"Private"},
+  {company:"Deloitte",industry:"Professional Services",acv:"270000",lead_source:"Conference",outcome:"Talent retention",company_url:"deloitte.com",employees:"~450,000",publicPrivate:"Private (Partnership)"},
+  // ── PE-Backed ─────────────────────────────────────────────────────────────
+  {company:"AssuredPartners",industry:"Insurance Brokerage",acv:"95000",lead_source:"Partner",outcome:"Agency growth incentives",company_url:"assuredpartners.com",employees:"~9,000",publicPrivate:"PE-Backed (GTCR)"},
+  {company:"Acrisure",industry:"Insurance Agency",acv:"80000",lead_source:"Referral",outcome:"Producer rewards",company_url:"acrisure.com",employees:"~17,000",publicPrivate:"PE-Backed"},
+  {company:"LifeStance Health",industry:"Behavioral Health",acv:"75000",lead_source:"Outbound",outcome:"Clinician engagement",company_url:"lifestance.com",employees:"~8,000",publicPrivate:"PE-Backed"},
+  {company:"WEX Inc.",industry:"Fintech / Fleet Payments",acv:"150000",lead_source:"Partner",outcome:"Partner channel rewards",company_url:"wexinc.com",employees:"~5,000",publicPrivate:"Public (NYSE:WEX)"},
+  {company:"Zelis Healthcare",industry:"Healthcare Payments",acv:"120000",lead_source:"Referral",outcome:"Network engagement",company_url:"zelis.com",employees:"~2,500",publicPrivate:"PE-Backed (Parthenon)"},
+  // ── YC / VC-Backed Startups ────────────────────────────────────────────────
+  {company:"Rippling",industry:"HR / Workforce SaaS",acv:"55000",lead_source:"Outbound",outcome:"Sales team incentives",company_url:"rippling.com",employees:"~3,000",publicPrivate:"VC-Backed (Series F)"},
+  {company:"Gusto",industry:"SMB Payroll / HR",acv:"42000",lead_source:"Partner",outcome:"Partner channel growth",company_url:"gusto.com",employees:"~2,500",publicPrivate:"VC-Backed (YC W12)"},
+  {company:"Ramp",industry:"Fintech / Expense Management",acv:"48000",lead_source:"Referral",outcome:"Spend rewards program",company_url:"ramp.com",employees:"~900",publicPrivate:"VC-Backed (YC S19)"},
+  {company:"Brex",industry:"Fintech / Corporate Cards",acv:"52000",lead_source:"Outbound",outcome:"Customer loyalty rewards",company_url:"brex.com",employees:"~1,200",publicPrivate:"VC-Backed (Series D)"},
+  {company:"Deel",industry:"Global Payroll / HR SaaS",acv:"68000",lead_source:"Conference",outcome:"Global workforce rewards",company_url:"deel.com",employees:"~4,000",publicPrivate:"VC-Backed (Series D)"},
+];import React, { useState, useCallback, useRef, useEffect } from "react";
 
 const SB_URL="https://xtnidawfuaxwwwcnkewu.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmlkYXdmdWF4d3d3Y25rZXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3Njc2NzEsImV4cCI6MjA5MTM0MzY3MX0.JPTyCbsLk9Kr4AHo3ynszOo_SxvLA-XpT_5TzP8M71o";
