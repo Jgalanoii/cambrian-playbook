@@ -3484,8 +3484,8 @@ Return ONLY valid JSON:
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
-                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);pickAccount(m);}}>
-                              Brief →
+                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);setSelectedAccount(m);setSelectedOutcomes([]);setStep(4);}}>
+                              Review →
                             </button>
                           </td>
                         </tr>
