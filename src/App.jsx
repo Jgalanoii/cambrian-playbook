@@ -922,7 +922,7 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
   const H="font-family:Arial;font-size:11pt;font-weight:bold;background:#1a1a18;color:#ffffff;padding:5px 8px;";
   const C="font-family:Arial;font-size:10pt;padding:5px 8px;vertical-align:top;";
   const S="font-family:Arial;font-size:10pt;font-weight:bold;color:#8B6F47;padding:5px 8px;";
-  const mkRow=(cells,isHeader)=>`<tr>${(Array.isArray(cells)?cells:[cells]).map((c,i)=>`<td style="${isHeader&&i===0?H:typeof c==="string"&&c&&c===c.toUpperCase()&&i===0&&c.length>2&&!/[a-z]/.test(c)?S:C}">${esc(c)}</td>`).join("")}</tr>`;
+  const mkRow=(cells,isHeader)=>'<tr>'+(Array.isArray(cells)?cells:[cells]).map((c,i)=>'<td style="'+(isHeader&&i===0?H:typeof c==="string"&&c&&c===c.toUpperCase()&&i===0&&c.length>2&&!/[a-z]/.test(c)?S:C)+'">'+esc(c)+'</td>').join('')+'</tr>';
   const mkSheet=(name,rows)=>{
     let t=`<table x:Name="${esc(name)}"><tbody>`;
     rows.forEach(r=>t+=mkRow(r,false));
