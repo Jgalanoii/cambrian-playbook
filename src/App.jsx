@@ -2945,7 +2945,7 @@ Return ONLY valid JSON:
                       )}
                       {sellerICP.icp.adoptionProfile&&(
                         <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 Adoption Profile (Moore)</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 Buyer Adoption Profile</div>
                           <div style={{fontSize:12,color:"#555"}}>{sellerICP.icp.adoptionProfile}</div>
                         </div>
                       )}
@@ -2981,7 +2981,7 @@ Return ONLY valid JSON:
         {step===1&&(
           <div className="page">
             <div className="page-title">Your Ideal Customer Profile</div>
-            <div className="page-sub">Built from <strong>{sellerUrl}</strong> using Revella, Dunford, Osterwalder, and Moore frameworks. Review and edit before scoring accounts.</div>
+            <div className="page-sub">Built from <strong>{sellerUrl}</strong> — your ideal customer profile, refined. Review and edit before scoring accounts.</div>
 
             {icpLoading&&!sellerICP&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:"60px 0",textAlign:"center"}}>
@@ -3006,7 +3006,7 @@ Return ONLY valid JSON:
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">🎯</div>
-                    <div><div className="bb-title">Positioning (Dunford — Obviously Awesome)</div></div>
+                    <div><div className="bb-title">Market Positioning</div></div>
                   </div>
                   <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
                     <div>
@@ -3087,7 +3087,7 @@ Return ONLY valid JSON:
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">👤</div>
-                    <div><div className="bb-title">Buyer Personas (Revella)</div><div className="bb-sub">Economic buyer · Champion · Technical evaluator</div></div>
+                    <div><div className="bb-title">Buyer Personas</div><div className="bb-sub">Economic buyer · Champion · Technical evaluator</div></div>
                   </div>
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                     {(sellerICP.icp.buyerPersonas||[]).filter(Boolean).map((p,i)=>(
@@ -3106,7 +3106,7 @@ Return ONLY valid JSON:
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">💡</div>
-                    <div><div className="bb-title">5 Rings of Buying Insight (Revella)</div><div className="bb-sub">Why they buy, what stops them, how they decide</div></div>
+                    <div><div className="bb-title">Buying Insight Profile</div><div className="bb-sub">Why they buy, what stops them, how they decide</div></div>
                   </div>
                   <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                     {[
@@ -3129,7 +3129,7 @@ Return ONLY valid JSON:
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">🎯</div>
-                    <div><div className="bb-title">Customer Profile (Osterwalder — Value Proposition Canvas)</div></div>
+                    <div><div className="bb-title">Customer Profile</div></div>
                   </div>
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                     <div>
@@ -3159,7 +3159,7 @@ Return ONLY valid JSON:
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">📡</div>
-                    <div><div className="bb-title">Go-to-Market (Weinberg — Traction)</div></div>
+                    <div><div className="bb-title">Go-to-Market Channels</div></div>
                   </div>
                   <div className="bb-body">
                     <div style={{marginBottom:10}}>
@@ -3182,13 +3182,7 @@ Return ONLY valid JSON:
               </div>
             )}
 
-            {/* Dataset attribution */}
-            <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:"12px 16px",marginTop:8}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>📚 Research Foundations</div>
-              <div style={{fontSize:11,color:"#777",lineHeight:1.7}}>
-                ICP benchmarks calibrated against: <strong>G2</strong> product satisfaction data (company size sweet spots) · <strong>Crunchbase</strong> funding patterns (18-month buy window) · <strong>LinkedIn Economic Graph</strong> hiring signals (Moore adoption stage) · <strong>HubSpot CRM</strong> deal velocity benchmarks · <strong>Kaggle B2B leads</strong> (industry as #1 conversion predictor) · <strong>B2B churn research</strong> (single-threaded risk, evaluation team size) · <strong>Sean Ellis 40% Rule</strong> (PMF threshold)
-              </div>
-            </div>
+
 
             <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
               <button className="btn btn-secondary" onClick={()=>setStep(0)}>← Back</button>
@@ -3722,7 +3716,7 @@ Return ONLY valid JSON:
                         {/* Adoption profile from fit scores */}
                         {fitScores[selectedAccount.company]?.adoptionProfile&&(
                           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6,paddingTop:8,borderTop:"1px solid #E8E6DF"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:"0.3px"}}>Moore Profile:</div>
+                            <div style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:"0.3px"}}>Adoption Profile:</div>
                             <span style={{fontSize:11,fontWeight:700,background:"#EEF5F9",color:"#1B3A6B",borderRadius:10,padding:"2px 8px"}}>
                               {fitScores[selectedAccount.company].adoptionProfile}
                             </span>
