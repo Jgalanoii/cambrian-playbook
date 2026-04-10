@@ -366,41 +366,38 @@ const OUTCOMES = [
 const UNIVERSAL_IMPERATIVES = ["grow","expand","comply","fraud","investors","cx"];
 
 const SAMPLE_ROWS = [
-  // ── TIER 1 (Private Insurance/Finance) — avg 65% fit ─────────────────────
-  {company:"State Farm Insurance",industry:"Insurance",acv:"250000",lead_source:"Referral",outcome:"Digital transformation",company_url:"statefarm.com"},
-  {company:"Northwestern Mutual",industry:"Insurance/Financial Services",acv:"150000",lead_source:"Outbound",outcome:"Compliance",company_url:"northwesternmutual.com"},
-  {company:"Fidelity Investments",industry:"Financial Services",acv:"220000",lead_source:"Partner",outcome:"Technology modernization",company_url:"fidelity.com"},
-  // ── WEALTH MGMT / RIA (64.9% avg — #1 overall) ───────────────────────────
-  {company:"Raymond James Financial",industry:"Wealth Management/RIA",acv:"180000",lead_source:"Conference",outcome:"Client reporting & compliance",company_url:"raymondjames.com"},
-  {company:"Baird Financial Group",industry:"Wealth Management",acv:"120000",lead_source:"Referral",outcome:"Advisor productivity",company_url:"rwbaird.com"},
-  // ── HEALTHCARE SMB (59.8% avg — #1 PE SMB vertical) ─────────────────────
-  {company:"Summit Orthopedics",industry:"Healthcare/Medical Practice",acv:"45000",lead_source:"Outbound",outcome:"Billing efficiency",company_url:"summitortho.com"},
-  {company:"Restore Therapy",industry:"Physical Therapy / Healthcare",acv:"28000",lead_source:"Referral",outcome:"Clinical documentation",company_url:"restoretherapy.com"},
-  {company:"DentalOne Partners",industry:"Dental Practice Management",acv:"35000",lead_source:"Conference",outcome:"Patient scheduling",company_url:"dentalone.com"},
-  // ── INSURANCE AGENCIES (55.6% avg) ────────────────────────────────────────
-  {company:"Acrisure Agency",industry:"Insurance Agency",acv:"55000",lead_source:"Partner",outcome:"Agency management",company_url:"acrisure.com"},
-  {company:"Brown & Brown Insurance",industry:"Insurance Agency",acv:"80000",lead_source:"Referral",outcome:"Carrier connectivity",company_url:"bbinsurance.com"},
-  // ── PROFESSIONAL SERVICES SMB ─────────────────────────────────────────────
-  {company:"Marcum LLP",industry:"Accounting/Professional Services",acv:"65000",lead_source:"Conference",outcome:"Client management",company_url:"marcumllp.com"},
-  {company:"Frazier & Deeter",industry:"Professional Services/Advisory",acv:"55000",lead_source:"Outbound",outcome:"Workflow efficiency",company_url:"frazierdeeter.com"},
-  // ── MID-MARKET SWEET SPOTS ────────────────────────────────────────────────
-  {company:"First Business Financial",industry:"Regional Banking",acv:"200000",lead_source:"Referral",outcome:"Digital transformation",company_url:"firstbusiness.com"},
-  {company:"Inland Empire Health Plan",industry:"Health Insurance/Managed Care",acv:"300000",lead_source:"Conference",outcome:"Member experience",company_url:"iehp.org"},
-  {company:"CBRE Group (Mid-Market Ops)",industry:"Commercial Real Estate",acv:"250000",lead_source:"Partner",outcome:"Portfolio analytics",company_url:"cbre.com"},
-  // ── BEHAVIORAL HEALTH (emerging — 56.3% avg) ─────────────────────────────
-  {company:"LifeStance Health",industry:"Behavioral Health",acv:"75000",lead_source:"Outbound",outcome:"Clinical documentation",company_url:"lifestance.com"},
-  {company:"BrightSpring Health Services",industry:"Behavioral Health/Post-Acute",acv:"120000",lead_source:"Referral",outcome:"Care coordination",company_url:"brightspringhealth.com"},
-  // ── SMB VERTICALS PE SELLERS DOMINATE ────────────────────────────────────
-  {company:"Green Home Services",industry:"Home Services (HVAC/Plumbing)",acv:"12000",lead_source:"Outbound",outcome:"Dispatching efficiency",company_url:"greenhomeservices.com"},
-  {company:"Mesa Verde Restaurant Group",industry:"Restaurant/Food Service",acv:"18000",lead_source:"Referral",outcome:"Labor management",company_url:"mesaverde.com"},
-  {company:"Apex Roofing & Exteriors",industry:"Construction/Roofing",acv:"15000",lead_source:"Outbound",outcome:"Job management",company_url:"apexroofing.com"},
-  {company:"Heritage Fitness",industry:"Fitness/Wellness Studio",acv:"8000",lead_source:"Outbound",outcome:"Member management",company_url:"heritagefitness.com"},
-  {company:"Pacific Law Partners",industry:"Law Firm (Small)",acv:"22000",lead_source:"Conference",outcome:"Practice management",company_url:"pacificlawpartners.com"},
-  {company:"Midwest Property Management",industry:"Real Estate/Property Management",acv:"20000",lead_source:"Outbound",outcome:"Tenant management",company_url:"midwestpm.com"},
-  {company:"Blue Ridge Staffing",industry:"Staffing/Recruiting",acv:"30000",lead_source:"Referral",outcome:"Compliance management",company_url:"blueridgestaffing.com"},
-  {company:"Cornerstone Wholesale",industry:"Wholesale/Distribution",acv:"35000",lead_source:"Conference",outcome:"Inventory management",company_url:"cornerstonewholesale.com"},
+  // ── Fortune 1000 / Public Enterprise ─────────────────────────────────────
+  {company:"Nike Inc.",industry:"Consumer Goods / Apparel",acv:"280000",lead_source:"Outbound",outcome:"Digital transformation",company_url:"nike.com",employees:"~80,000",publicPrivate:"Public (NYSE: NKE)"},
+  {company:"Target Corporation",industry:"Retail",acv:"320000",lead_source:"Partner",outcome:"Operational efficiency",company_url:"target.com",employees:"~400,000",publicPrivate:"Public (NYSE: TGT)"},
+  {company:"Marriott International",industry:"Hospitality",acv:"240000",lead_source:"Conference",outcome:"Customer experience",company_url:"marriott.com",employees:"~120,000",publicPrivate:"Public (NASDAQ: MAR)"},
+  {company:"Humana Inc.",industry:"Health Insurance",acv:"350000",lead_source:"Referral",outcome:"Member engagement",company_url:"humana.com",employees:"~60,000",publicPrivate:"Public (NYSE: HUM)"},
+  {company:"Aflac",industry:"Supplemental Insurance",acv:"190000",lead_source:"Outbound",outcome:"Digital claims",company_url:"aflac.com",employees:"~10,000",publicPrivate:"Public (NYSE: AFL)"},
+  // ── Large Private Companies ───────────────────────────────────────────────
+  {company:"Cargill",industry:"Agriculture / Food",acv:"420000",lead_source:"Referral",outcome:"Supply chain efficiency",company_url:"cargill.com",employees:"~160,000",publicPrivate:"Private"},
+  {company:"Publix Super Markets",industry:"Grocery Retail",acv:"260000",lead_source:"Partner",outcome:"Workforce productivity",company_url:"publix.com",employees:"~240,000",publicPrivate:"Private (Employee-owned)"},
+  {company:"Fidelity Investments",industry:"Financial Services",acv:"310000",lead_source:"Conference",outcome:"Advisor enablement",company_url:"fidelity.com",employees:"~70,000",publicPrivate:"Private"},
+  {company:"USAA",industry:"Insurance / Financial Services",acv:"380000",lead_source:"Referral",outcome:"Member retention",company_url:"usaa.com",employees:"~36,000",publicPrivate:"Private (Mutual)"},
+  {company:"State Farm Insurance",industry:"Insurance",acv:"290000",lead_source:"Outbound",outcome:"Agent productivity",company_url:"statefarm.com",employees:"~54,000",publicPrivate:"Private (Mutual)"},
+  // ── PE-Backed ─────────────────────────────────────────────────────────────
+  {company:"AssuredPartners",industry:"Insurance Brokerage",acv:"95000",lead_source:"Partner",outcome:"Agency consolidation",company_url:"assuredpartners.com",employees:"~9,000",publicPrivate:"PE-Backed (GTCR)"},
+  {company:"Acrisure",industry:"Insurance Agency",acv:"75000",lead_source:"Referral",outcome:"Tech-enabled growth",company_url:"acrisure.com",employees:"~17,000",publicPrivate:"PE-Backed"},
+  {company:"LifeStance Health",industry:"Behavioral Health",acv:"85000",lead_source:"Outbound",outcome:"Clinical ops",company_url:"lifestance.com",employees:"~8,000",publicPrivate:"Public (NASDAQ: LFST)"},
+  {company:"Confluent Medical",industry:"Medical Devices / Manufacturing",acv:"65000",lead_source:"Conference",outcome:"Compliance automation",company_url:"confluentmedical.com",employees:"~2,500",publicPrivate:"PE-Backed"},
+  // ── Late-Stage / Pre-IPO Startups ─────────────────────────────────────────
+  {company:"Rippling",industry:"HR / Workforce Management SaaS",acv:"55000",lead_source:"Outbound",outcome:"GTM expansion",company_url:"rippling.com",employees:"~3,000",publicPrivate:"VC-Backed (Series F)"},
+  {company:"Brex",industry:"Fintech / Corporate Cards",acv:"48000",lead_source:"Referral",outcome:"Revenue acceleration",company_url:"brex.com",employees:"~1,200",publicPrivate:"VC-Backed (Series D)"},
+  {company:"Plaid",industry:"Fintech / Open Banking",acv:"72000",lead_source:"Partner",outcome:"Partnership expansion",company_url:"plaid.com",employees:"~900",publicPrivate:"VC-Backed (Series D)"},
+  {company:"Carta",industry:"Equity Management SaaS",acv:"60000",lead_source:"Conference",outcome:"Enterprise growth",company_url:"carta.com",employees:"~1,800",publicPrivate:"VC-Backed (Series G)"},
+  {company:"Deel",industry:"Global Payroll / HR SaaS",acv:"90000",lead_source:"Outbound",outcome:"International expansion",company_url:"deel.com",employees:"~4,000",publicPrivate:"VC-Backed (Series D)"},
+  // ── YC Alumni (Operating at Scale) ────────────────────────────────────────
+  {company:"Gusto",industry:"SMB Payroll / HR",acv:"38000",lead_source:"Partner",outcome:"Partner channel growth",company_url:"gusto.com",employees:"~2,500",publicPrivate:"VC-Backed (YC W12)"},
+  {company:"Airbase",industry:"Spend Management SaaS",acv:"42000",lead_source:"Referral",outcome:"Enterprise upmarket",company_url:"airbase.com",employees:"~400",publicPrivate:"VC-Backed (YC W18)"},
+  {company:"Ramp",industry:"Fintech / Expense Management",acv:"50000",lead_source:"Outbound",outcome:"Expansion revenue",company_url:"ramp.com",employees:"~900",publicPrivate:"VC-Backed (YC S19)"},
+  // ── Regional / Mid-Market ─────────────────────────────────────────────────
+  {company:"First Business Financial",industry:"Regional Banking",acv:"140000",lead_source:"Referral",outcome:"Commercial lending growth",company_url:"firstbusiness.com",employees:"~700",publicPrivate:"Public (NASDAQ: FBIZ)"},
+  {company:"Marcum LLP",industry:"Accounting / Advisory",acv:"70000",lead_source:"Conference",outcome:"Client portal modernization",company_url:"marcumllp.com",employees:"~4,500",publicPrivate:"Private"},
+  {company:"Inland Empire Health Plan",industry:"Managed Care / Health Insurance",acv:"220000",lead_source:"Outbound",outcome:"Member services",company_url:"iehp.org",employees:"~3,000",publicPrivate:"Private (Non-profit)"},
 ];
-
 const RIVER_STAGES = [
   {id:"R1",letter:"R",label:"Reality",sub:"Current state — where are they broken?",
     gates:[
@@ -1025,28 +1022,25 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
 
 // ── BRIEF LOADER ─────────────────────────────────────────────────────────────
 const LOADER_QUIPS = [
-  "Bribing the hamsters to run faster...",
-  "Enhance. Enhance. Enhance.",
-  "Building your map to success...",
-  "Connecting dots you didn't know existed...",
-  "Reading their annual report so you don't have to...",
-  "Turning raw data into genuine expertise...",
-  "Figuring out what keeps their CHRO up at night...",
-  "Triangulating your path to yes...",
-  "Becoming the most prepared person in the room...",
-  "Translating their world into your opportunity...",
-  "Warming up the problem-solving engine...",
-  "Finding the signal in the noise...",
-  "Mapping their priorities to your solutions...",
-  "Asking the data nicely...",
-  "Doing the homework so you can ask better questions...",
-  "Turning intelligence into insight...",
-  "Getting you to expert status in 15 seconds...",
-  "Identifying the problem. Quantifying the impact. Building the case.",
-  "Building a brief worthy of their time...",
+  "Doing the homework you definitely weren't going to do...",
+  "Figuring out what keeps their CFO up at night...",
+  "Reading the 10-K so you look like a genius...",
+  "Making you the most dangerous person in the room...",
+  "Finding the angle they didn't know they had...",
+  "Connecting dots across the org chart...",
+  "Building your unfair advantage...",
+  "Translating their problems into your opportunity...",
+  "Turning public intel into private insight...",
+  "Triangulating their priorities...",
+  "Reverse-engineering their buying criteria...",
+  "Mapping their world to your solutions...",
+  "Becoming an expert in 30 seconds...",
+  "Surfacing the signal buried in the noise...",
+  "Crafting the brief they didn't know they needed...",
   "Almost there — this is the good part...",
+  "Preparing your strongest opening...",
+  "Making sure you walk in ready...",
 ];
-
 function BriefLoader({ company, status }) {
   const [quip, setQuip] = useState(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
   const [fade, setFade] = useState(true);
@@ -3386,14 +3380,15 @@ Return ONLY valid JSON:
                   )}
                 </div>
               </div>
-              <div className="tbl-wrap" style={{maxHeight:"60vh",overflowY:"auto"}}>
+              <div className="tbl-wrap" style={{maxHeight:"520px",overflowY:"auto",border:"1px solid #F0EDE6",borderRadius:8}}>
                 <table className="tbl" style={{fontSize:13}}>
-                  <thead style={{position:"sticky",top:0,zIndex:10}}>
+                  <thead style={{position:"sticky",top:0,zIndex:10,background:"#fff"}}>
                     <tr>
                       <th>Company</th>
                       <th>Industry</th>
                       <th>Org Size</th>
                       <th>Ownership</th>
+                      <th>ACV</th>
                       <th>Fit Check</th>
                       <th></th>
                     </tr>
@@ -3434,6 +3429,7 @@ Return ONLY valid JSON:
                               return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:8,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.publicPrivate}</span>;
                             })():"—"}
                           </td>
+                          <td style={{fontSize:12,color:"#8B6F47",fontWeight:600}}>{m.acv>0?"$"+Number(m.acv).toLocaleString():m.acv?"$"+m.acv:"—"}</td>
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
