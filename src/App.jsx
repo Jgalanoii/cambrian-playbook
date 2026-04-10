@@ -1,4 +1,5 @@
-const SAMPLE_ROWS = [
+c, 2000);
+st SAMPLE_ROWS = [
   // ── Public Blue Chips ─────────────────────────────────────────────────────
   {company:"JPMorgan Chase",industry:"Financial Services",acv:"380000",lead_source:"Referral",outcome:"Employee engagement",company_url:"jpmorganchase.com",employees:"~290,000",publicPrivate:"Public (NYSE:JPM)"},
   {company:"Johnson & Johnson",industry:"Healthcare / Pharma",acv:"320000",lead_source:"Partner",outcome:"Workforce productivity",company_url:"jnj.com",employees:"~130,000",publicPrivate:"Public (NYSE:JNJ)"},
@@ -618,7 +619,7 @@ function safeParseJSON(text){
 
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
-async function callAI(prompt){
+async function callAI(prompt, maxTok=1200){
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   for(let attempt=0; attempt<3; attempt++){
     try{
@@ -627,7 +628,7 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1800,
+          max_tokens:maxTok,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
             {role:"user",content:prompt},
@@ -1670,7 +1671,7 @@ export default function App(){
       `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
       `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
 
-    const result = await callAI(prompt);
+    const result = await callAI(prompt, 1400);
     if(result?.scores){
       const map = {};
       const memberUpdates = {};
@@ -2187,7 +2188,7 @@ export default function App(){
       `Return ONLY raw JSON, start with {:\n`+
       `{"reality":[{"q":"Question?","framework":"Active Listening - reflect their reality back","intent":"Why this question works"}],"impact":[{"q":"","framework":"","intent":""}],"vision":[{"q":"","framework":"","intent":""}],"entryPoints":[{"q":"","framework":"","intent":""}],"route":[{"q":"","framework":"","intent":""}]}`;
 
-    const result = await callAI(prompt);
+    const result = await callAI(prompt, 900);
     if(result) setDiscoveryQs(result);
   };
 
