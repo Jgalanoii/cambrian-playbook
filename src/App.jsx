@@ -1789,17 +1789,17 @@ export default function App(){
       `"uniqueDifferentiators":["Most defensible thing the seller does that alternatives cannot easily replicate","Second differentiator"],`+
       `"disqualifiers":["Company type, size, or situation where this is NOT a fit","Second disqualifier"],`+
       `"techSignals":["Technology in use that signals fit — e.g. uses Workday, Salesforce","Second signal"],`+
-      `"tractionChannels":["Best channel to reach this exact buyer with evidence","Second channel","Third channel"],`+
-      `"dealSize":"Typical ACV or deal value range",`+
-      `"salesCycle":"Typical sales cycle from first contact to close",`+
-      `"customerExamples":["Known customer logo or company type","Second","Third"]}}`;
+      `"tractionChannels":["Best channel 1","Best channel 2"],`+
+      `"dealSize":"Typical ACV range",`+
+      `"salesCycle":"Typical length",`+
+      `"customerExamples":["Example 1","Example 2"]}}`;
 
     try{
       const r2 = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          model:"claude-haiku-4-5-20251001",
-          max_tokens:1800,
+          model:"claude-sonnet-4-20250514",
+          max_tokens:3500,
           system:"You are a JSON API. Output ONLY raw valid JSON. No markdown. No curly quotes. Use only straight ASCII double quotes for JSON strings. Never use apostrophes or smart quotes inside string values — escape or remove them.",
           messages:[
             {role:"user",content:icpPrompt},
@@ -1810,8 +1810,16 @@ export default function App(){
       const d2 = await r2.json();
       if(d2.error){ console.warn("ICP phase 2 error:",d2.error); setIcpLoading(false); return; }
       const raw=(d2.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      const jsonStr = raw.startsWith("{")? raw : "{"+raw;
-      const m = jsonStr.match(/\{[\s\S]*\}/);
+      // Normalize unicode quotes/dashes that break JSON.parse
+      const rawClean = raw
+        .replace(/[\u201C\u201D\u201E]/g,'"')
+        .replace(/[\u2018\u2019\u201A]/g,"'")
+        .replace(/[\u2013\u2014]/g,"-")
+        .replace(/[\u2026]/g,"...");
+      const jsonStr = rawClean.startsWith("{")? rawClean : "{"+rawClean;
+      // Find the outermost complete JSON object
+      let m = null;
+      try{ m = jsonStr.match(/\{[\s\S]*\}/); }catch(me){}
       if(m){
         try{
           // Normalize unicode punctuation then parse
