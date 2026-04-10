@@ -353,11 +353,11 @@ const OUTCOMES = [
   {id:"investors",   icon:"💼", title:"Appease Investors",       sub:"IRR, EBITDA, multiples, board narrative, PE/VC reporting"},
   {id:"cx",          icon:"❤️", title:"Make Customers Happy",    sub:"NPS, CSAT, retention, loyalty, churn reduction, customer lifetime value"},
   // ── Operational & Strategic ──
-  {id:"efficiency",  icon:"↻",  title:"Operational Efficiency",  sub:"Automation, cost reduction, process improvement, headcount leverage"},
+  {id:"efficiency",  icon:"⟳",  title:"Operational Efficiency",  sub:"Automation, cost reduction, process improvement, headcount leverage"},
   {id:"workforce",   icon:"✦",  title:"Workforce & Talent",      sub:"HR ops, engagement, retention, performance management"},
-  {id:"ai",          icon:"◇",  title:"Data & AI Adoption",      sub:"Analytics, AI tooling, automation, insight generation"},
-  {id:"brand",       icon:"☆",  title:"Brand & Marketing",       sub:"Awareness, loyalty, campaign performance, demand generation"},
-  {id:"cost",        icon:"-",  title:"Cost Reduction",          sub:"Overhead, vendor consolidation, margin improvement"},
+  {id:"ai",          icon:"◈",  title:"Data & AI Adoption",      sub:"Analytics, AI tooling, automation, insight generation"},
+  {id:"brand",       icon:"★",  title:"Brand & Marketing",       sub:"Awareness, loyalty, campaign performance, demand generation"},
+  {id:"cost",        icon:"⊖",  title:"Cost Reduction",          sub:"Overhead, vendor consolidation, margin improvement"},
   {id:"innovation",  icon:"◆",  title:"Innovation & Product",    sub:"New product lines, R&D, speed to market, competitive differentiation"},
   {id:"transform",   icon:"◇",  title:"Strategic Transformation",sub:"Org change, M&A integration, modernization, digital transformation"},
 ];
@@ -1213,7 +1213,7 @@ function PieChart({data, size=120}){
 
 // ── COHORT DRILL-DOWN COMPONENT ───────────────────────────────────────────────
 
-function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores = {}, fitScoring = false}){
+function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores={}, fitScoring=false}){
   const [open, setOpen] = useState(selected);
   useEffect(()=>{if(selected)setOpen(true);},[selected]);
 
@@ -1693,7 +1693,6 @@ export default function App(){
       });
       Object.assign(allMap, map);
       Object.assign(allMemberUpdates, memberUpdates);
-    } // end forEach
     } // end batch loop
     if(Object.keys(allMap).length){
       setFitScores(prev=>({...prev,...allMap}));
@@ -2262,7 +2261,7 @@ Return ONLY valid JSON:
 }`
     );
 
-    setPostCall(result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:"Following up — "+(selectedAccount?.company||""),emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"});
+    setPostCall(result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:`Following up — ${selectedAccount?.company}`,emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"});
     setPostLoading(false);
     setStep(8);
   };
