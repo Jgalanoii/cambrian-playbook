@@ -3239,7 +3239,8 @@ Return ONLY valid JSON:
                         setCohorts(b);
                         const sel=b.find(c=>c.members.length>1)||b[0];
                         setSelectedCohort(sel);
-                        scoreFit(sel.members, sellerUrl);
+                        const allSampleMembers = b.flatMap(c=>c.members);
+                        scoreFit(allSampleMembers, sellerUrl);
                         setStep(3);
                       }
                     },50);
@@ -3374,7 +3375,7 @@ Return ONLY valid JSON:
                   )}
                 </div>
               </div>
-              <div className="tbl-wrap" style={{maxHeight:"520px",overflowY:"auto",border:"1px solid #F0EDE6",borderRadius:8}}>
+              <div className="tbl-wrap" style={{maxHeight:"480px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
                 <table className="tbl" style={{fontSize:13}}>
                   <thead style={{position:"sticky",top:0,zIndex:10,background:"#fff"}}>
                     <tr>
@@ -3416,12 +3417,14 @@ Return ONLY valid JSON:
                           <td style={{color:"#555"}}>{m.ind||"—"}</td>
                           <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
                           <td style={{fontSize:12}} onClick={e=>e.stopPropagation()}>
-                            {m.publicPrivate?(()=>{
-                              const ot=(fitScores[m.company]?.ownershipType)||"";
-                              const c=ot==="public"?"#1B3A6B":ot==="pe"?"#6B3A3A":ot==="vc"?"#2E6B2E":"#555";
-                              const bg=ot==="public"?"#EEF5F9":ot==="pe"?"#FDE8E8":ot==="vc"?"#EEF5EE":"#F8F6F1";
-                              return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:8,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.publicPrivate}</span>;
-                            })():"—"}
+                            {(()=>{
+                              const pp=fitScores[m.company]?.ownership||m.publicPrivate||"";
+                              if(!pp) return <span style={{color:"#aaa"}}>—</span>;
+                              const low=pp.toLowerCase();
+                              const c=low.includes("public")?"#1B3A6B":low.includes("pe-backed")||low.includes("pe backed")?"#6B3A3A":low.includes("vc")||low.includes("backed")?"#2E6B2E":low.includes("private")?"#555":"#555";
+                              const bg=low.includes("public")?"#EEF5F9":low.includes("pe-backed")||low.includes("pe backed")?"#FDE8E8":low.includes("vc")||low.includes("backed")?"#EEF5EE":"#F8F6F1";
+                              return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{pp}</span>;
+                            })()}
                           </td>
                           <td style={{fontSize:12,color:"#8B6F47",fontWeight:600}}>{m.acv>0?"$"+Number(m.acv).toLocaleString():m.acv?"$"+m.acv:"—"}</td>
                           <td onClick={e=>e.stopPropagation()}>
@@ -3430,7 +3433,7 @@ Return ONLY valid JSON:
                                 title={fitScores[m.company].reason}>
                                 {fitScores[m.company].score}% · {fitScores[m.company].label}
                               </div>
-                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<span style={{fontSize:11,color:"#ccc"}}>—</span>}
+                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):sellerUrl;scoreFit(allM,sCtx);}}>Run fit check</button>:<span style={{fontSize:11,color:"#ccc"}}>—</span>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
