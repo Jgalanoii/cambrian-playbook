@@ -747,6 +747,9 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
     `${universalCtx}\n`+
+    `SELLER STAGE NARRATIVE: Seller stage is ${sellerStage||'not specified'}. Frame accordingly: Bootstrapped/Series A → agility + founder attention + no bureaucracy; Series B/C → proven scale + reference customers + clear ROI; Series D+/PE-Backed → enterprise-grade + compliance + stability + EBITDA alignment; Public → full trust signals + audit-ready.\n`+
+    `SELLER STAGE NARRATIVE: Seller stage is ${sellerStage||'not specified'}. Frame accordingly: Bootstrapped/Series A → agility + founder attention + no bureaucracy; Series B/C → proven scale + reference customers + clear ROI; Series D+/PE-Backed → enterprise-grade + compliance + stability + EBITDA alignment; Public → full trust signals + audit-ready.\n`+
+    `SELLER STAGE NARRATIVE: Seller stage is ${sellerStage||'not specified'}. Frame accordingly: Bootstrapped/Series A → agility + founder attention + no bureaucracy; Series B/C → proven scale + reference customers + clear ROI; Series D+/PE-Backed → enterprise-grade + compliance + stability + EBITDA alignment; Public → full trust signals + audit-ready.\n`+
     `SIGNAL HEURISTICS: Funding <12 months = 18-month buying window; PE acquisition <18 months = cost mandate + 60-90 day budget cycle; hiring "Digital Transformation" = Early Majority; "Innovation/R&D" = Early Adopter; Glassdoor <3.5 = operational pain present.\n`+`SELLER STAGE AWARENESS: Seller is ${sellerStage||"unknown stage"}. `+`SCENARIO INTELLIGENCE (6M+ permutations, 4,634 YC companies × 1,156 targets): `+`If target is in THE WALL (Automotive avg 5.9%, Aerospace/Defense 5.8%, Telecom 6.1%, Energy 11-13%, Mass Retail 13.6%, Tier 1 Banks 12.6%): flag as near-impossible for direct startup sale regardless of stage. `+`If target is Large Private (Insurance, Professional Services, Tech): highlight as TIER 1 — avg 63-65% fit, fastest deal cycles, most underserved by startups. `+`If target is Regional Bank (not JPM/BAC/WF): strong opportunity — 59.5% avg fit, 85 targets in Fortune 1000, widely ignored by YC-stage companies. `+`If seller is Seed/Series A: avg 23-33% fit against all Fortune 1000 — recommend partner/channel motion. `+`If seller is Series D+: 35% of Fortune 1000 scenarios are strong fit — full enterprise motion viable. `+`CPG split: HPC/Beauty (P&G, KC) = 61.9% avg — YES; Food/Beverage (PepsiCo, Kraft) = 49.0% — departmental only. `+`If target has high union exposure (Automotive, Aviation, Manufacturing): scope to knowledge workers explicitly.\n`+
     `SELLER CONTEXT (reference only):\n${sellerCtx}${prodCtx}\n`+
     `DEAL: ${dealCtx}\n\n`;
@@ -1667,7 +1670,7 @@ export default function App(){
       `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
       `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
+      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why grounded in the 6M heuristics — cite the specific tier, ownership dynamic, or stage signal","coaching":"1 sharp sentence on HOW to approach this account given their profile — the angle, the narrative, the entry point","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
       `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
       `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
 
@@ -1680,7 +1683,7 @@ export default function App(){
         const bg    = s.score>=75?"#EEF5EE":s.score>=50?"#FEF6E4":"#FDE8E8";
         // Ownership badge color
         const ownerColor = s.ownershipType==="public"?"#1B3A6B":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"#2E6B2E":"#555";
-        map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||""};
+        map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||"", coaching:s.coaching||""};
         memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
       });
       Object.assign(allMap, map);
@@ -3431,6 +3434,9 @@ Return ONLY valid JSON:
                                 title={fitScores[m.company].reason}>
                                 {fitScores[m.company].score}% · {fitScores[m.company].label}
                               </div>
+                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
+                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
+                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
                             ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):sellerUrl;scoreFit(allM,sCtx);}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
@@ -3582,6 +3588,15 @@ Return ONLY valid JSON:
                             <div title={fitScores[m.company].reason} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap"}}>
                               {fitScores[m.company].score}% · {fitScores[m.company].label}
                             </div>
+                    {fitScores[selectedAccount?.company]?.coaching&&(
+                      <div style={{fontSize:11,color:"#555",marginTop:6,padding:"8px 10px",background:"#F8F6F1",borderRadius:7,lineHeight:1.5}}>💡 {fitScores[selectedAccount?.company].coaching}</div>
+                    )}
+                    {fitScores[selectedAccount?.company]?.coaching&&(
+                      <div style={{fontSize:11,color:"#555",marginTop:6,padding:"8px 10px",background:"#F8F6F1",borderRadius:7,lineHeight:1.5}}>💡 {fitScores[selectedAccount?.company].coaching}</div>
+                    )}
+                    {fitScores[selectedAccount?.company]?.coaching&&(
+                      <div style={{fontSize:11,color:"#555",marginTop:6,padding:"8px 10px",background:"#F8F6F1",borderRadius:7,lineHeight:1.5}}>💡 {fitScores[selectedAccount?.company].coaching}</div>
+                    )}
                           ):fitScoring?<div style={{fontSize:11,color:"#aaa"}}>Scoring...</div>:null}
                         </div>
                       </div>
