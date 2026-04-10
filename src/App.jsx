@@ -2395,31 +2395,11 @@ Return ONLY valid JSON:
     <div class="steps-grid">
       <div class="steps-col">
         <div class="steps-col-title">We Will</div>
-        ${sellerSteps.length?sellerSteps.map((s,i)=>`
-        <div class="step-item">
-          <div class="step-num">${i+1}</div>
-          <div class="step-text">${s}</div>
-        </div>`).join(""):nextSteps.slice(0,3).map((s,i)=>`
-        <div class="step-item">
-          <div class="step-num">${i+1}</div>
-          <div class="step-text">${s}</div>
-        </div>`).join("")}
+        ${(sellerSteps.length?sellerSteps:nextSteps.slice(0,3)).map((s,i)=>'<div class="step-item"><div class="step-num">'+(i+1)+'</div><div class="step-text">'+s+'</div></div>').join('')}
       </div>
       <div class="steps-col">
         <div class="steps-col-title theirs">You Will</div>
-        ${customerSteps.length?customerSteps.map((s,i)=>`
-        <div class="step-item">
-          <div class="step-num green">${i+1}</div>
-          <div class="step-text">${s}</div>
-        </div>`).join(""):`
-        <div class="step-item">
-          <div class="step-num green">1</div>
-          <div class="step-text">Review the proposed solutions and share any questions or feedback</div>
-        </div>
-        <div class="step-item">
-          <div class="step-num green">2</div>
-          <div class="step-text">Confirm stakeholders who should be involved in next conversation</div>
-        </div>`}
+        ${customerSteps.length?customerSteps.map((s,i)=>'<div class="step-item"><div class="step-num green">'+(i+1)+'</div><div class="step-text">'+s+'</div></div>').join(''):'<div class="step-item"><div class="step-num green">1</div><div class="step-text">Review the proposed solutions and share any questions or feedback</div></div><div class="step-item"><div class="step-num green">2</div><div class="step-text">Confirm stakeholders who should be involved in next conversation</div></div>'}
       </div>
     </div>
   </div>
@@ -4756,7 +4736,7 @@ Return ONLY valid JSON:
 
             {/* Confidence bar */}
             <div style={{height:4,background:"#F0EDE6",borderRadius:2,marginBottom:24,overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${confidence}%`,background:confColor(confidence),borderRadius:2,transition:"width 0.4s"}}/>
+              <div style={{height:"100%",width:confidence+"%",background:confColor(confidence),borderRadius:2,transition:"width 0.4s"}}/>
             </div>
 
             {/* RIVER Stage Pills */}
@@ -4876,10 +4856,10 @@ Return ONLY valid JSON:
                       {stage.objections.map((o,oi)=>(
                         <div key={oi} style={{marginBottom:10}}>
                           <button style={{width:"100%",textAlign:"left",padding:"10px 14px",borderRadius:8,border:"1px solid #E8E6DF",background:"#FDE8E8",cursor:"pointer",fontSize:13,fontWeight:600,color:"#9B2C2C",fontFamily:"DM Sans,sans-serif"}}
-                            onClick={()=>setExpandedObjs(s=>({...s,[`${si}-${oi}`]:!s[`${si}-${oi}`]}))}>
-                            "{o.q}" <span style={{float:"right",color:"#bbb"}}>{expandedObjs[`${si}-${oi}`]?"▲":"▼"}</span>
+                            onClick={()=>setExpandedObjs(s=>({...s,[si+"-"+oi]:!s[si+"-"+oi]}))}>
+                            "{o.q}" <span style={{float:"right",color:"#bbb"}}>{expandedObjs[si+"-"+oi]?"▲":"▼"}</span>
                           </button>
-                          {expandedObjs[`${si}-${oi}`]&&(
+                          {expandedObjs[si+"-"+oi]&&(
                             <div style={{padding:"10px 14px",background:"#F8F6F1",borderRadius:"0 0 8px 8px",border:"1px solid #E8E6DF",borderTop:"none",fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>
                               {o.a}
                             </div>
@@ -4996,11 +4976,11 @@ Return ONLY valid JSON:
                     </div>
                   ))}
                 </div>
-                <div className="post-sec"><div className="post-lbl">Next Steps</div><div className="post-content">{postCall.nextSteps?.map((s,i)=>`${i+1}. ${s}`).join("\n")}</div></div>
+                <div className="post-sec"><div className="post-lbl">Next Steps</div><div className="post-content">{postCall.nextSteps?.map((s,i)=>(i+1)+". "+s).join("\n")}</div></div>
                 <div className="post-sec"><div className="post-lbl">CRM Note <button className="copy-btn" onClick={()=>copyText(postCall.crmNote,"crm")}>{copied==="crm"?"Copied ✓":"Copy"}</button></div><div className="post-content">{postCall.crmNote}</div></div>
                 <div className="post-sec"><div className="post-lbl">Call Summary <button className="copy-btn" onClick={()=>copyText(postCall.callSummary,"summary")}>{copied==="summary"?"Copied ✓":"Copy"}</button></div><div className="post-content">{postCall.callSummary}</div></div>
                 <div className="post-sec">
-                  <div className="post-lbl">Follow-Up Email <button className="copy-btn" onClick={()=>copyText(`Subject: ${postCall.emailSubject}\n\n${postCall.emailBody}`,"email")}>{copied==="email"?"Copied ✓":"Copy Email"}</button></div>
+                  <div className="post-lbl">Follow-Up Email <button className="copy-btn" onClick={()=>copyText("Subject: "+postCall.emailSubject+"\n\n"+postCall.emailBody,"email")}>{copied==="email"?"Copied ✓":"Copy Email"}</button></div>
                   <div className="post-content" style={{fontSize:12}}>
                     <div style={{fontWeight:600,marginBottom:9,color:"#1a1a18"}}>Subject: {postCall.emailSubject}</div>
                     {postCall.emailBody}
