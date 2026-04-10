@@ -3342,16 +3342,35 @@ Return ONLY valid JSON:
                   </div>
                 </div>
                 <div className="card">
-                  <div className="card-title">Preview</div>
-                  <div className="tbl-wrap">
-                    <table className="tbl">
-                      <thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead>
-                      <tbody>{rows.slice(0,4).map((r,i)=><tr key={i}>{headers.map(h=><td key={h}>{r[h]}</td>)}</tr>)}</tbody>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                    <div className="card-title" style={{margin:0}}>Account Preview</div>
+                    <div style={{fontSize:12,color:"#aaa"}}>{rows.length} accounts ready to import</div>
+                  </div>
+                  <div style={{height:"340px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
+                    <table className="tbl" style={{fontSize:13}}>
+                      <thead style={{position:"sticky",top:0,background:"#fff",zIndex:10}}>
+                        <tr>
+                          <th>Company</th>
+                          <th>Industry</th>
+                          <th>Lead Source</th>
+                          <th>Outcome</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((r,i)=>(
+                          <tr key={i}>
+                            <td style={{fontWeight:600}}>{r[mapping.company]||r.company||"—"}</td>
+                            <td style={{color:"#555"}}>{r[mapping.industry]||r.industry||"—"}</td>
+                            <td style={{color:"#555",fontSize:12}}>{r[mapping.lead_source]||r.lead_source||"—"}</td>
+                            <td style={{color:"#555",fontSize:12}}>{r[mapping.outcome]||r.outcome||"—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
                     </table>
                   </div>
                 </div>
-                <div className="actions-row">
-                  <button className="btn btn-primary btn-lg" onClick={goToCohorts}>Perform Account Analysis →</button>
+                <div className="actions-row" style={{marginTop:16}}>
+                  <button className="btn btn-primary btn-lg" onClick={goToCohorts}>Import {rows.length} Accounts →</button>
                 </div>
               </>
             )}
