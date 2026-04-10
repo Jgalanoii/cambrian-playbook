@@ -10,372 +10,395 @@ const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,w
 
 const css = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: #FAFAF8; color: #1a1a18; font-size: 18px; }
+body { font-family: 'DM Sans', sans-serif; background: #F7F6F2; color: #1a1a18; font-size: 15px; line-height: 1.6; }
 .app { min-height: 100vh; display: flex; flex-direction: column; }
-.header { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; flex-shrink: 0; }
-.logo { font-family: 'Lora', serif; font-size: 18px; color: #1a1a18; white-space: nowrap; }
+
+/* ── HEADER ──────────────────────────────────────────── */
+.header { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; flex-shrink: 0; gap: 12px; }
+.logo { font-family: 'Lora', serif; font-size: 17px; font-weight: 700; color: #1a1a18; white-space: nowrap; letter-spacing: -0.2px; }
 .logo span { color: #8B6F47; }
-.stepper { display: flex; align-items: center; overflow-x: auto; }
-.step-item { display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 13px; font-weight: 600; color: #bbb; letter-spacing: 0.4px; text-transform: uppercase; cursor: default; white-space: nowrap; }
+.stepper { display: flex; align-items: center; overflow-x: auto; gap: 0; }
+.step-item { display: flex; align-items: center; gap: 5px; padding: 0 8px; font-size: 11px; font-weight: 700; color: #ccc; letter-spacing: 0.5px; text-transform: uppercase; cursor: default; white-space: nowrap; transition: color 0.15s; }
 .step-item.active { color: #1a1a18; }
 .step-item.done { color: #8B6F47; cursor: pointer; }
-.step-num { width: 19px; height: 19px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+.step-item.done:hover { color: #7A6040; }
+.step-num { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
 .step-item.done .step-num { background: #8B6F47; border-color: #8B6F47; color: #fff; }
 .step-item.active .step-num { background: #1a1a18; border-color: #1a1a18; color: #fff; }
-.step-div { width: 14px; height: 1px; background: #E8E6DF; flex-shrink: 0; }
-.live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #2E6B2E; background: #EEF5EE; padding: 3px 9px; border-radius: 20px; }
+.step-div { width: 12px; height: 1px; background: #E8E6DF; flex-shrink: 0; }
+.live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #2E6B2E; background: #EEF5EE; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.3px; }
 .live-dot { width: 5px; height: 5px; border-radius: 50%; background: #2E6B2E; animation: blink 1.2s ease-in-out infinite; }
-@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
-.page { max-width: 880px; margin: 0 auto; padding: 36px 28px 72px; width: 100%; }
-.page-title { font-family: 'Lora', serif; font-size: 34px; font-weight: 600; margin-bottom: 6px; }
-.page-sub { font-size: 17px; color: #555; line-height: 1.65; margin-bottom: 28px; max-width: 580px; }
-.setup-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 14px; padding: 32px; max-width: 520px; margin: 60px auto 0; }
-.setup-logo { font-family: 'Lora', serif; font-size: 25px; color: #1a1a18; margin-bottom: 4px; text-align: center; }
-.setup-logo span { color: #8B6F47; }
-.setup-url-bar { display: flex; align-items: center; gap: 8px; background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 8px; padding: 4px 12px; margin-bottom: 8px; }
-.setup-url-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; white-space: nowrap; min-width: 80px; }
-.setup-url-input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 15px; color: #1a1a18; outline: none; width: 100%; padding: 6px 0; }
-.upload-zone { border: 1.5px dashed #C8C4BB; border-radius: 12px; padding: 40px 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; }
-.upload-zone:hover, .upload-zone.drag { border-color: #8B6F47; background: #FAF8F4; }
-.upload-label { font-family: 'Lora', serif; font-size: 17px; color: #1a1a18; margin-bottom: 5px; }
-.upload-hint { font-size: 14px; color: #999; margin-bottom: 16px; }
-.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; line-height: 1; white-space: nowrap; }
-.btn:disabled { opacity: 0.4; cursor: default; }
-.btn-primary { background: #1a1a18; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.18); }
-.btn-primary:hover:not(:disabled) { background: #2d2d2b; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.22); }
-.btn-secondary { background: transparent; border: 1.5px solid #C8C4BB; color: #1a1a18; }
-.btn-secondary:hover:not(:disabled) { border-color: #8B6F47; color: #8B6F47; }
-.btn-gold { background: #8B6F47; color: #fff; box-shadow: 0 2px 6px rgba(139,111,71,0.3); }
-.btn-gold:hover:not(:disabled) { background: #7A6040; transform: translateY(-1px); }
-.btn-green { background: #2E6B2E; color: #fff; box-shadow: 0 2px 6px rgba(46,107,46,0.3); }
-.btn-green:hover:not(:disabled) { background: #245424; transform: translateY(-1px); }
-.btn-navy { background: #1B3A6B; color: #fff; box-shadow: 0 2px 6px rgba(27,58,107,0.3); }
-.btn-navy:hover:not(:disabled) { background: #152d54; transform: translateY(-1px); }
-.btn-lg { padding: 12px 22px; font-size: 16px; }
-.btn-sm { padding: 5px 11px; font-size: 13px; }
-.actions-row { display: flex; gap: 10px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
-/* ── PRINT / PDF STYLES ─────────────────────────────── */
-@media print {
-  @page { margin: 18mm 16mm; size: A4; }
-  body { background: #fff !important; }
-  .header, .session-bar, .footer,
-  .actions-row, .incall-header,
-  button, .btn, .river-pills,
-  .stepper, [class*="load-"], .load-box { display: none !important; }
-  .app { padding: 0 !important; }
-  .page { max-width: 100% !important; padding: 0 !important; }
-  .bb { break-inside: avoid; border: 1px solid #ddd !important; margin-bottom: 12px !important; }
-  .bb-hdr { background: #f5f5f5 !important; }
-  .contact-row { break-inside: avoid; }
-  .field-grid-2 { grid-template-columns: 1fr 1fr !important; }
-  .card { break-inside: avoid; }
-  .incall-wrap { padding: 0 !important; }
-  .incall-grid { grid-template-columns: 1fr !important; }
-  .incall-sidebar { display: none !important; }
-  a { color: #1B3A6B !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-}
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.25} }
 
-.footer { text-align: center; padding: 24px 28px; font-size: 12px; color: #bbb; border-top: 1px solid #E8E6DF; margin-top: auto; background: #fff; }
-.footer a { color: #bbb; text-decoration: none; }
+/* ── LAYOUT ──────────────────────────────────────────── */
+.page { max-width: 860px; margin: 0 auto; padding: 32px 24px 64px; width: 100%; }
+.page-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 600; margin-bottom: 5px; color: #1a1a18; letter-spacing: -0.3px; }
+.page-sub { font-size: 14px; color: #666; line-height: 1.65; margin-bottom: 24px; max-width: 560px; }
+.footer { text-align: center; padding: 20px 24px; font-size: 11px; color: #bbb; border-top: 1px solid #E8E6DF; margin-top: auto; background: #fff; }
 
-/* IN-CALL v2 */
-.incall-wrap { max-width: 960px; margin: 0 auto; padding: 24px 28px 72px; width: 100%; }
-.incall-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-.incall-title { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; color: #1a1a18; }
-.incall-meta { font-size: 13px; color: #999; margin-top: 2px; }
-.river-pills { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
-.river-pill { display: flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 30px; border: 2px solid #E8E6DF; background: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #999; transition: all 0.15s; white-space: nowrap; }
-.river-pill:hover { border-color: #8B6F47; color: #8B6F47; }
-.river-pill.active { background: #1a1a18; border-color: #1a1a18; color: #fff; }
-.river-pill.filled { border-color: #2E6B2E; color: #2E6B2E; }
-.river-pill.filled.active { background: #2E6B2E; border-color: #2E6B2E; color: #fff; }
-.river-pill-letter { font-family: 'Lora', serif; font-size: 15px; font-weight: 700; }
-.river-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: #2E6B2E; flex-shrink: 0; }
-.stage-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 16px; }
-.stage-card-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.stage-letter-big { width: 44px; height: 44px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.stage-name { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #1a1a18; }
-.stage-sub { font-size: 13px; color: #777; margin-top: 2px; }
-.gate-block { margin-bottom: 20px; }
-.gate-question { font-size: 15px; font-weight: 600; color: #1a1a18; margin-bottom: 12px; line-height: 1.5; }
-.gate-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.gate-choice { padding: 8px 16px; border-radius: 20px; border: 1.5px solid #E8E6DF; background: #FAFAF8; cursor: pointer; font-size: 13px; font-weight: 500; color: #555; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
-.gate-choice:hover { border-color: #8B6F47; color: #8B6F47; background: #FAF8F4; }
-.gate-choice.selected { background: #1a1a18; border-color: #1a1a18; color: #fff; }
-.gate-note { width: 100%; padding: 10px 12px; border: 1px solid #E8E6DF; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #333; background: #FAFAF8; resize: vertical; min-height: 60px; outline: none; transition: border-color 0.15s; }
-.gate-note:focus { border-color: #8B6F47; background: #fff; }
-.gate-note-lbl { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-.dq-block { margin-bottom: 16px; background: #F8F6F1; border-radius: 12px; padding: 16px; border-left: 3px solid #8B6F47; }
-.dq-framework { font-size: 10px; font-weight: 700; color: #8B6F47; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.dq-question { font-size: 14px; font-weight: 600; color: #1a1a18; margin-bottom: 10px; line-height: 1.5; font-style: italic; }
-.dq-note { width: 100%; padding: 9px 12px; border: 1px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; resize: vertical; min-height: 56px; outline: none; }
-.dq-note:focus { border-color: #8B6F47; }
-.incall-sidebar { background: #fff; border: 1px solid #E8E6DF; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.conf-bar-wrap { margin-bottom: 16px; }
-.conf-pct { font-family: 'Lora', serif; font-size: 28px; font-weight: 600; line-height: 1; }
-.incall-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
-@media(max-width: 800px){ .incall-grid { grid-template-columns: 1fr; } }
+/* ── SESSION BAR ─────────────────────────────────────── */
+.session-bar { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 6px 24px; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #888; flex-shrink: 0; flex-wrap: wrap; }
+.session-url { color: #8B6F47; font-weight: 600; }
 
-/* PRODUCT CATALOG */
-.prod-entry { display: flex; gap: 10px; padding: 10px 12px; background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 8px; margin-bottom: 7px; align-items: flex-start; }
-.prod-num { width: 22px; height: 22px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
-.prod-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.prod-name-input { font-size: 14px; font-weight: 600; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #1a1a18; outline: none; }
-.prod-name-input:focus { border-color: #8B6F47; }
-.prod-desc-input { font-size: 13px; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #555; outline: none; resize: vertical; min-height: 48px; }
-.prod-desc-input:focus { border-color: #8B6F47; }
-.prod-remove { font-size: 13px; color: #ccc; cursor: pointer; background: none; border: none; padding: 2px 4px; line-height: 1; align-self: flex-start; flex-shrink: 0; margin-top: 1px; }
-.prod-remove:hover { color: #9B2C2C; }
-.prod-chip { display: inline-flex; align-items: center; gap: 5px; background: #F0EDE6; color: #7A5C30; padding: 3px 9px; border-radius: 10px; font-size: 12px; font-weight: 600; margin: 2px; }
-.prod-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; }
+/* ── BUTTONS ─────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; line-height: 1.2; white-space: nowrap; }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn-primary { background: #1a1a18; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+.btn-primary:hover:not(:disabled) { background: #2d2d2b; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+.btn-secondary { background: #fff; border: 1.5px solid #D4D0C8; color: #444; }
+.btn-secondary:hover:not(:disabled) { border-color: #8B6F47; color: #8B6F47; background: #FAF8F4; }
+.btn-gold { background: #8B6F47; color: #fff; box-shadow: 0 1px 4px rgba(139,111,71,0.25); }
+.btn-gold:hover:not(:disabled) { background: #7A6040; }
+.btn-green { background: #2E6B2E; color: #fff; box-shadow: 0 1px 4px rgba(46,107,46,0.25); }
+.btn-green:hover:not(:disabled) { background: #245424; }
+.btn-navy { background: #1B3A6B; color: #fff; box-shadow: 0 1px 4px rgba(27,58,107,0.25); }
+.btn-navy:hover:not(:disabled) { background: #152d54; }
+.btn-lg { padding: 11px 22px; font-size: 15px; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.actions-row { display: flex; gap: 8px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
 
-/* COHORT CHARTS & DRILL-DOWN */
-.cohort-chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.pie-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 16px; }
-.pie-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #1a1a18; }
-.pie-wrap { display: flex; align-items: center; gap: 14px; }
-.pie-legend { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-.pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
-.pie-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.pie-legend-val { margin-left: auto; font-weight: 700; color: #1a1a18; font-size: 12px; }
-.cohort-drill { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
-.cohort-drill-hdr { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
-.cohort-drill-hdr:hover { background: #FAFAF8; }
-.cohort-drill-hdr.open { border-bottom-color: #E8E6DF; }
-.cohort-drill-left { display: flex; align-items: center; gap: 10px; }
-.cohort-drill-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.cohort-drill-name { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; }
-.cohort-drill-meta { font-size: 13px; color: #999; margin-top: 1px; }
-.cohort-drill-right { display: flex; align-items: center; gap: 12px; }
-.cohort-drill-acv { font-family: 'Lora', serif; font-size: 16px; color: #8B6F47; }
-.cohort-drill-toggle { font-size: 12px; color: #aaa; font-weight: 700; }
-.cohort-drill-body { padding: 0 16px 14px; }
-.cohort-member-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-.cohort-member-table th { background: #F5F3EE; padding: 5px 9px; text-align: left; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: #777; white-space: nowrap; }
-.cohort-member-table td { padding: 6px 9px; border-top: 1px solid #F0EDE6; color: #333; vertical-align: top; }
-.cohort-member-table tr:hover td { background: #FAF8F4; }
-.cohort-member-table tr { cursor: pointer; }
-.outcome-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #F5EEF5; color: #6B3A7A; white-space: nowrap; }
-.pw-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #FAFAF8; }
-.pw-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 16px; padding: 40px; width: 100%; max-width: 380px; text-align: center; }
-.pw-logo { font-family: 'Lora', serif; font-size: 25px; color: #1a1a18; margin-bottom: 4px; }
-.pw-logo span { color: #8B6F47; }
-.pw-sub { font-size: 15px; color: #999; margin-bottom: 28px; }
-.pw-input { width: 100%; padding: 11px 14px; border: 1.5px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 16px; outline: none; text-align: center; letter-spacing: 2px; margin-bottom: 12px; }
-.pw-input:focus { border-color: #8B6F47; }
-.pw-error { font-size: 14px; color: #9B2C2C; margin-bottom: 10px; min-height: 18px; }
-.card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 14px; }
-.card-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; margin-bottom: 13px; }
+/* ── CARDS ───────────────────────────────────────────── */
+.card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+.card-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #1a1a18; }
+
+/* ── FORMS ───────────────────────────────────────────── */
 .field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-.field-label { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
-.req { color: #8B6F47; }
+.field-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #888; }
 .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-input[type=text], select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #E8E6DF; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 16px; color: #1a1a18; background: #FAFAF8; outline: none; transition: border-color 0.15s; resize: vertical; -webkit-appearance: none; }
-input[type=text]:focus, select:focus, textarea:focus { border-color: #8B6F47; background: #fff; }
+input[type=text], input[type=email], input[type=password], select, textarea { width: 100%; padding: 8px 11px; border: 1.5px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1a18; background: #fff; outline: none; transition: border-color 0.15s; resize: vertical; -webkit-appearance: none; }
+input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, select:focus, textarea:focus { border-color: #8B6F47; background: #fff; box-shadow: 0 0 0 3px rgba(139,111,71,0.08); }
+input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeholder { color: #bbb; }
+
+/* ── SETUP / AUTH ────────────────────────────────────── */
+.setup-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 14px; padding: 28px; max-width: 500px; margin: 48px auto 0; }
+.setup-logo { font-family: 'Lora', serif; font-size: 22px; color: #1a1a18; margin-bottom: 4px; text-align: center; }
+.setup-logo span { color: #8B6F47; }
+.setup-url-bar { display: flex; align-items: center; gap: 8px; background: #F7F6F2; border: 1.5px solid #E8E6DF; border-radius: 8px; padding: 3px 12px; margin-bottom: 8px; transition: border-color 0.15s; }
+.setup-url-bar:focus-within { border-color: #8B6F47; background: #fff; }
+.setup-url-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; white-space: nowrap; min-width: 72px; }
+.setup-url-input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1a18; outline: none; width: 100%; padding: 7px 0; }
+.pw-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #F7F6F2 0%, #EEF5EE 100%); }
+.pw-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 16px; padding: 36px; width: 100%; max-width: 400px; }
+.pw-logo { font-family: 'Lora', serif; font-size: 24px; color: #1a1a18; margin-bottom: 3px; }
+.pw-logo span { color: #8B6F47; }
+.pw-sub { font-size: 13px; color: #999; margin-bottom: 24px; }
+.pw-input { width: 100%; padding: 10px 14px; border: 1.5px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; text-align: center; letter-spacing: 2px; margin-bottom: 10px; }
+.pw-input:focus { border-color: #8B6F47; box-shadow: 0 0 0 3px rgba(139,111,71,0.08); }
+.pw-error { font-size: 13px; color: #9B2C2C; margin-bottom: 8px; min-height: 18px; }
+
+/* ── UPLOAD ──────────────────────────────────────────── */
+.upload-zone { border: 1.5px dashed #C8C4BB; border-radius: 10px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; }
+.upload-zone:hover, .upload-zone.drag { border-color: #8B6F47; background: #FAF8F4; }
+.upload-label { font-family: 'Lora', serif; font-size: 16px; color: #1a1a18; margin-bottom: 4px; }
+.upload-hint { font-size: 13px; color: #999; margin-bottom: 14px; }
+
+/* ── TABLE ───────────────────────────────────────────── */
 .tbl-wrap { overflow-x: auto; }
 .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th { background: #F5F3EE; padding: 6px 10px; text-align: left; font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
-.tbl td { padding: 6px 10px; border-top: 1px solid #F0EDE6; color: #333; white-space: nowrap; }
-.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
-.stat-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; padding: 14px; text-align: center; }
-.stat-num { font-family: 'Lora', serif; font-size: 28px; color: #8B6F47; margin-bottom: 2px; }
-.stat-label { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.4px; }
-.cohort-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 11px; margin-bottom: 22px; }
-.cohort-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 12px; padding: 15px 17px; cursor: pointer; transition: all 0.18s; }
+.tbl th { background: #F5F3EE; padding: 7px 10px; text-align: left; font-weight: 700; color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; position: sticky; top: 0; }
+.tbl td { padding: 7px 10px; border-top: 1px solid #F0EDE6; color: #333; }
+.tbl tr:hover td { background: #FAF8F4; }
+
+/* ── STATS ───────────────────────────────────────────── */
+.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+.stat-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; padding: 12px; text-align: center; }
+.stat-num { font-family: 'Lora', serif; font-size: 26px; color: #8B6F47; margin-bottom: 1px; }
+.stat-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.4px; }
+
+/* ── COHORT ──────────────────────────────────────────── */
+.cohort-chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.pie-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; padding: 14px; }
+.pie-title { font-family: 'Lora', serif; font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #1a1a18; }
+.pie-wrap { display: flex; align-items: center; gap: 12px; }
+.pie-legend { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
+.pie-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend-val { margin-left: auto; font-weight: 700; color: #1a1a18; font-size: 11px; }
+.cohort-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 8px; margin-bottom: 16px; }
+.cohort-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 10px; padding: 13px 14px; cursor: pointer; transition: all 0.15s; }
 .cohort-card:hover, .cohort-card.selected { border-color: #8B6F47; }
 .cohort-card.selected { background: #FAF8F4; }
-.cohort-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; flex-shrink: 0; }
-.cohort-name { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; margin-bottom: 3px; display: flex; align-items: center; }
-.cohort-size { font-size: 12px; color: #aaa; margin-bottom: 8px; }
-.tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
-.tag { font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+.cohort-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; flex-shrink: 0; }
+.cohort-name { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; }
+.cohort-size { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+.cohort-drill { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+.cohort-drill-hdr { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid transparent; }
+.cohort-drill-hdr:hover { background: #F7F6F2; }
+.cohort-drill-hdr.open { border-bottom-color: #E8E6DF; }
+.cohort-drill-left { display: flex; align-items: center; gap: 8px; }
+.cohort-drill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cohort-drill-name { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; }
+.cohort-drill-meta { font-size: 12px; color: #999; margin-top: 1px; }
+.cohort-drill-right { display: flex; align-items: center; gap: 10px; }
+.cohort-drill-acv { font-family: 'Lora', serif; font-size: 15px; color: #8B6F47; }
+.cohort-drill-toggle { font-size: 11px; color: #aaa; font-weight: 700; }
+.cohort-drill-body { padding: 0 14px 12px; }
+.cohort-member-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+.cohort-member-table th { background: #F5F3EE; padding: 5px 8px; text-align: left; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: #777; white-space: nowrap; }
+.cohort-member-table td { padding: 6px 8px; border-top: 1px solid #F0EDE6; color: #333; }
+.cohort-member-table tr:hover td { background: #FAF8F4; cursor: pointer; }
+
+/* ── TAGS ────────────────────────────────────────────── */
+.tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
 .tag-ind { background: #EEF2F8; color: #3A5A8C; }
 .tag-size { background: #F3EDE6; color: #7A5C30; }
 .tag-src { background: #EEF5EE; color: #2E6B2E; }
 .tag-out { background: #F5EEF5; color: #6B3A7A; }
-.cohort-stat { font-size: 12px; color: #777; }
-.cohort-stat strong { color: #1a1a18; }
-.account-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
-.account-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 14px; cursor: pointer; transition: all 0.15s; }
-.account-item:hover, .account-item.selected { border-color: #8B6F47; background: #FAF8F4; }
-.account-name { font-size: 17px; font-weight: 500; color: #1a1a18; }
-.account-meta { font-size: 13px; color: #999; margin-top: 2px; }
-.account-acv { font-size: 14px; font-weight: 600; color: #8B6F47; }
-.outcome-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
-.outcome-tile { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 9px; padding: 12px; cursor: pointer; transition: all 0.18s; }
+.outcome-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: #F5EEF5; color: #6B3A7A; white-space: nowrap; }
+
+/* ── ACCOUNT LIST ────────────────────────────────────── */
+.account-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+.account-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 9px 12px; cursor: pointer; transition: all 0.12s; }
+.account-item:hover, .account-item.selected { border-color: #1a1a18; background: #FAF8F4; }
+.account-name { font-size: 15px; font-weight: 600; color: #1a1a18; }
+.account-meta { font-size: 12px; color: #999; margin-top: 1px; }
+.account-acv { font-size: 13px; font-weight: 700; color: #8B6F47; }
+
+/* ── OUTCOMES ────────────────────────────────────────── */
+.outcome-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.outcome-tile { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.15s; }
 .outcome-tile:hover, .outcome-tile.selected { border-color: #8B6F47; }
 .outcome-tile.selected { background: #FAF8F4; }
-.outcome-icon { font-size: 18px; margin-bottom: 5px; }
-.outcome-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-.outcome-sub { font-size: 12px; color: #999; line-height: 1.4; }
+.outcome-icon { font-size: 16px; margin-bottom: 4px; }
+.outcome-title { font-size: 12px; font-weight: 700; margin-bottom: 1px; color: #1a1a18; }
+.outcome-sub { font-size: 11px; color: #999; line-height: 1.4; }
 
-/* EDITABLE FIELDS */
+/* ── BRIEF BLOCKS ────────────────────────────────────── */
+.bb { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+.bb-hdr { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #F7F6F2; border-bottom: 1px solid #E8E6DF; }
+.bb-icon { width: 24px; height: 24px; border-radius: 6px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; color: #8B6F47; flex-shrink: 0; }
+.bb-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 600; color: #1a1a18; }
+.bb-sub { font-size: 12px; color: #888; margin-top: 1px; }
+.bb-body { padding: 12px 14px; }
+.solution-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.sol-badge { font-size: 12px; font-weight: 700; background: #F0EDE6; color: #7A5C30; border: 1px solid #D4C4A8; padding: 3px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; font-family: 'Lora', serif; }
+.signal-row { display: flex; gap: 7px; margin-bottom: 6px; align-items: flex-start; }
+.sig-dot { width: 5px; height: 5px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; margin-top: 5px; }
+.contact-row { display: flex; gap: 10px; margin-bottom: 7px; background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; padding: 9px 11px; align-items: flex-start; }
+.contact-av { width: 28px; height: 28px; border-radius: 50%; background: #E8E6DF; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #555; flex-shrink: 0; }
+
+/* ── EDITABLE FIELDS ─────────────────────────────────── */
 .ef-wrap { position: relative; }
 .ef-wrap:hover .ef-hint { opacity: 1; }
-.ef-hint { position: absolute; top: -16px; right: 2px; font-size: 10px; color: #8B6F47; font-weight: 700; opacity: 0; transition: opacity 0.15s; pointer-events: none; text-transform: uppercase; letter-spacing: 0.4px; }
-.ef-display { font-size: 17px; color: #333; line-height: 1.65; padding: 6px 8px; border-radius: 6px; border: 1px solid transparent; transition: all 0.15s; min-height: 32px; cursor: text; }
-.ef-display:hover { border-color: #E8E6DF; background: #FAFAF8; }
+.ef-hint { position: absolute; top: -14px; right: 2px; font-size: 9px; color: #8B6F47; font-weight: 700; opacity: 0; transition: opacity 0.15s; pointer-events: none; text-transform: uppercase; letter-spacing: 0.4px; }
+.ef-display { font-size: 14px; color: #333; line-height: 1.65; padding: 5px 7px; border-radius: 6px; border: 1px solid transparent; transition: all 0.12s; min-height: 28px; cursor: text; }
+.ef-display:hover { border-color: #E8E6DF; background: #F7F6F2; }
 .ef-empty { color: #bbb; font-style: italic; }
-.ef-input { font-size: 14px; color: #333; line-height: 1.65; padding: 6px 8px; border-radius: 6px; border: 1.5px solid #8B6F47; background: #fff; width: 100%; font-family: 'DM Sans', sans-serif; outline: none; }
-.ef-input-multi { min-height: 60px; resize: vertical; }
+.ef-input { font-size: 14px; color: #333; line-height: 1.65; padding: 5px 7px; border-radius: 6px; border: 1.5px solid #8B6F47; background: #fff; width: 100%; font-family: 'DM Sans', sans-serif; outline: none; box-shadow: 0 0 0 3px rgba(139,111,71,0.08); }
+.ef-input-multi { min-height: 56px; resize: vertical; }
 
-/* BRIEF BLOCKS */
-.bb { background: #fff; border: 1px solid #E8E6DF; border-radius: 14px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.bb-hdr { display: flex; align-items: center; gap: 9px; padding: 11px 16px; background: #F8F6F1; border-bottom: 1px solid #E8E6DF; }
-.bb-icon { width: 26px; height: 26px; border-radius: 6px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 13px; font-weight: 600; color: #8B6F47; flex-shrink: 0; }
-.bb-title { font-family: 'Lora', serif; font-size: 17px; font-weight: 500; }
-.bb-sub { font-size: 14px; color: #777; margin-top: 1px; }
-.bb-body { padding: 14px 16px; }
-
-.solution-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
-.sol-badge { font-size: 13px; font-weight: 700; background: #F0EDE6; color: #7A5C30; border: 1px solid #D4C4A8; padding: 4px 12px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; font-family: 'Lora', serif; }
-.signal-row { display: flex; gap: 8px; margin-bottom: 7px; align-items: flex-start; }
-.sig-dot { width: 5px; height: 5px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; margin-top: 5px; }
-.contact-row { display: flex; gap: 10px; margin-bottom: 8px; background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 12px; align-items: flex-start; }
-.contact-av { width: 30px; height: 30px; border-radius: 50%; background: #E8E6DF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #666; flex-shrink: 0; }
-
-/* LOADING */
-.load-box { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 28px; margin-bottom: 14px; }
-.load-status { font-size: 14px; color: #8B6F47; font-weight: 500; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-.load-spin { width: 12px; height: 12px; border: 2px solid #E8E6DF; border-top-color: #8B6F47; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+/* ── LOADING ─────────────────────────────────────────── */
+.load-box { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 24px; margin-bottom: 12px; }
+.load-status { font-size: 13px; color: #8B6F47; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+.load-spin { width: 14px; height: 14px; border: 2px solid #E8E6DF; border-top-color: #8B6F47; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.pulse-wrap { display: flex; flex-direction: column; gap: 7px; }
-.pulse-line { height: 10px; background: #F0EDE6; border-radius: 5px; animation: pulse 1.4s ease-in-out infinite; }
-@keyframes pulse { 0%{opacity:1}50%{opacity:0.4}100%{opacity:1} }
-@keyframes shimmer { 0%{background-position:200% 0}100%{background-position:-200% 0} }
+.pulse-wrap { display: flex; flex-direction: column; gap: 6px; }
+.pulse-line { height: 9px; background: #EDEBE6; border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%{opacity:1}50%{opacity:0.35}100%{opacity:1} }
 
-/* IN-CALL LAYOUT */
-.call-layout { display: flex; flex: 1; height: calc(100vh - 56px); overflow: hidden; }
+/* ── IN-CALL ─────────────────────────────────────────── */
+.incall-wrap { max-width: 940px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
+.incall-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.incall-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #1a1a18; }
+.incall-meta { font-size: 12px; color: #999; margin-top: 1px; }
+.river-pills { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.river-pill { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 24px; border: 1.5px solid #E8E6DF; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; color: #999; transition: all 0.13s; white-space: nowrap; }
+.river-pill:hover { border-color: #8B6F47; color: #8B6F47; }
+.river-pill.active { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.river-pill.filled { border-color: #2E6B2E; color: #2E6B2E; }
+.river-pill.filled.active { background: #2E6B2E; border-color: #2E6B2E; color: #fff; }
+.river-pill-letter { font-family: 'Lora', serif; font-size: 13px; font-weight: 700; }
+.river-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #2E6B2E; flex-shrink: 0; }
+.stage-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+.stage-card-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.stage-letter-big { width: 40px; height: 40px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stage-name { font-family: 'Lora', serif; font-size: 17px; font-weight: 600; color: #1a1a18; }
+.stage-sub { font-size: 12px; color: #777; margin-top: 1px; }
+.gate-block { margin-bottom: 16px; }
+.gate-question { font-size: 14px; font-weight: 700; color: #1a1a18; margin-bottom: 10px; line-height: 1.4; }
+.gate-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.gate-choice { padding: 6px 13px; border-radius: 20px; border: 1.5px solid #E8E6DF; background: #F7F6F2; cursor: pointer; font-size: 12px; font-weight: 600; color: #555; transition: all 0.13s; font-family: 'DM Sans', sans-serif; }
+.gate-choice:hover { border-color: #8B6F47; color: #8B6F47; background: #FAF8F4; }
+.gate-choice.selected { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.gate-note { width: 100%; padding: 8px 11px; border: 1px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #333; background: #F7F6F2; resize: vertical; min-height: 54px; outline: none; transition: border-color 0.13s; }
+.gate-note:focus { border-color: #8B6F47; background: #fff; }
+.gate-note-lbl { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.dq-block { margin-bottom: 12px; background: #F7F6F2; border-radius: 10px; padding: 13px; border-left: 3px solid #8B6F47; }
+.dq-framework { font-size: 10px; font-weight: 700; color: #8B6F47; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.dq-question { font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 8px; line-height: 1.5; font-style: italic; }
+.dq-note { width: 100%; padding: 7px 10px; border: 1px solid #E8E6DF; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; resize: vertical; min-height: 48px; outline: none; }
+.dq-note:focus { border-color: #8B6F47; }
+.incall-sidebar { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 14px; }
+.conf-bar-wrap { margin-bottom: 14px; }
+.conf-pct { font-family: 'Lora', serif; font-size: 26px; font-weight: 600; line-height: 1; }
+.incall-grid { display: grid; grid-template-columns: 1fr 290px; gap: 16px; align-items: start; }
+@media(max-width: 800px){ .incall-grid { grid-template-columns: 1fr; } }
+.call-layout { display: flex; flex: 1; height: calc(100vh - 52px); overflow: hidden; }
 .call-left { width: 55%; border-right: 1px solid #E8E6DF; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
-.call-right { width: 45%; display: flex; flex-direction: column; background: #FAFAF8; overflow: hidden; }
-.panel-hdr { padding: 12px 18px; border-bottom: 1px solid #E8E6DF; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
-.panel-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 500; }
-.panel-body { flex: 1; overflow-y: auto; padding: 16px 18px; }
-.river-nav { display: flex; overflow-x: auto; border-bottom: 1px solid #E8E6DF; background: #FAFAF8; flex-shrink: 0; }
-.r-tab { padding: 9px 13px; font-size: 12px; font-weight: 700; cursor: pointer; color: #bbb; border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 5px; }
+.call-right { width: 45%; display: flex; flex-direction: column; background: #F7F6F2; overflow: hidden; }
+.panel-hdr { padding: 10px 16px; border-bottom: 1px solid #E8E6DF; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
+.panel-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; }
+.panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.river-nav { display: flex; overflow-x: auto; border-bottom: 1px solid #E8E6DF; background: #F7F6F2; flex-shrink: 0; }
+.r-tab { padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; color: #bbb; border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.13s; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 4px; }
 .r-tab:hover { color: #1a1a18; }
 .r-tab.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #fff; }
 .fill-dot { width: 5px; height: 5px; border-radius: 50%; background: #2E6B2E; flex-shrink: 0; }
-.gate { background: #FAFAF8; border: 1px solid #E8E6DF; border-radius: 9px; padding: 12px; margin-bottom: 8px; }
-.gate.answered { border-color: #2E6B2E; background: #F4FAF4; }
-.gate-q { font-size: 14px; font-weight: 500; color: #1a1a18; margin-bottom: 9px; line-height: 1.4; }
-.gate-opts { display: flex; flex-direction: column; gap: 5px; }
-.gate-opt { display: flex; gap: 9px; align-items: center; padding: 7px 11px; border-radius: 7px; border: 1px solid #E8E6DF; background: #fff; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #333; text-align: left; }
+.gate { background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px; margin-bottom: 7px; }
+.gate.answered { border-color: #2E6B2E; background: #F2FAF2; }
+.gate-q { font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 7px; line-height: 1.4; }
+.gate-opts { display: flex; flex-direction: column; gap: 4px; }
+.gate-opt { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 7px; border: 1px solid #E8E6DF; background: #fff; cursor: pointer; transition: all 0.13s; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #333; text-align: left; }
 .gate-opt:hover { border-color: #8B6F47; background: #FAF8F4; }
-.gate-ans { font-size: 13px; color: #2E6B2E; font-weight: 500; margin-top: 5px; display: flex; align-items: center; gap: 6px; }
-.conf-wrap { margin-bottom: 14px; }
-.conf-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.conf-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
-.conf-score { font-family: 'Lora', serif; font-size: 21px; font-weight: 500; }
-.conf-track { height: 5px; background: #E8E6DF; border-radius: 3px; overflow: hidden; }
-.conf-fill { height: 100%; border-radius: 3px; transition: width 0.5s, background 0.5s; }
+.gate-ans { font-size: 12px; color: #2E6B2E; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+.conf-wrap { margin-bottom: 12px; }
+.conf-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.conf-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
+.conf-score { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; }
+.conf-track { height: 4px; background: #E8E6DF; border-radius: 2px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 2px; transition: width 0.5s, background 0.5s; }
 .right-tabs { display: flex; border-bottom: 1px solid #E8E6DF; background: #fff; flex-shrink: 0; }
-.rt { padding: 9px 13px; font-size: 12px; font-weight: 700; cursor: pointer; color: #999; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.15s; white-space: nowrap; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.4px; }
+.rt { padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; color: #999; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.13s; white-space: nowrap; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.4px; }
 .rt:hover { color: #1a1a18; }
-.rt.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #FAFAF8; }
-.talk-box { background: #F8F6F1; border-left: 3px solid #8B6F47; border-radius: 0 8px 8px 0; padding: 10px 13px; margin-bottom: 10px; }
-.talk-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 4px; }
+.rt.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #F7F6F2; }
+.talk-box { background: #F7F6F2; border-left: 3px solid #8B6F47; border-radius: 0 7px 7px 0; padding: 9px 12px; margin-bottom: 8px; }
+.talk-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 3px; }
 .talk-txt { font-size: 13px; color: #555; line-height: 1.6; font-style: italic; }
 .obj-item { border: 1px solid #E8E6DF; border-radius: 7px; overflow: hidden; background: #fff; margin-bottom: 5px; }
-.obj-btn { display: flex; justify-content: space-between; align-items: center; padding: 8px 11px; cursor: pointer; font-size: 13px; font-weight: 500; width: 100%; text-align: left; background: none; border: none; font-family: 'DM Sans', sans-serif; color: #1a1a18; }
-.obj-ans { padding: 7px 11px 9px; font-size: 13px; color: #555; line-height: 1.5; font-style: italic; border-top: 1px solid #F0EDE6; }
-.hyp-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s; }
+.obj-btn { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%; text-align: left; background: none; border: none; font-family: 'DM Sans', sans-serif; color: #1a1a18; }
+.obj-ans { padding: 7px 10px 9px; font-size: 13px; color: #555; line-height: 1.5; font-style: italic; border-top: 1px solid #F0EDE6; }
+.hyp-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 7px; padding: 9px 11px; margin-bottom: 5px; cursor: pointer; transition: border-color 0.13s; }
 .hyp-card:hover { border-color: #8B6F47; }
-.hyp-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 3px; }
+.hyp-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 2px; }
 .hyp-txt { font-size: 13px; color: #333; line-height: 1.5; }
-.post-sec { margin-bottom: 18px; }
-.post-lbl { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between; }
-.post-content { background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 13px; font-size: 14px; color: #333; line-height: 1.65; white-space: pre-wrap; }
-.copy-btn { font-size: 12px; color: #8B6F47; cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; font-weight: 700; padding: 0; }
+
+/* ── POST-CALL ───────────────────────────────────────── */
+.post-sec { margin-bottom: 16px; }
+.post-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+.post-content { background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 12px; font-size: 14px; color: #333; line-height: 1.65; white-space: pre-wrap; }
+.copy-btn { font-size: 11px; color: #8B6F47; cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; font-weight: 700; padding: 0; }
 .copy-btn:hover { text-decoration: underline; }
-.route-card { border-radius: 9px; padding: 16px 18px; margin-bottom: 14px; border: 1.5px solid; }
+.route-card { border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; border: 1.5px solid; }
 .route-fast { background: #EEF5EE; border-color: #2E6B2E; }
 .route-nurture { background: #FEF3E2; border-color: #BA7517; }
 .route-disq { background: #FDE8E8; border-color: #9B2C2C; }
-.route-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.route-lbl { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
 .route-fast .route-lbl { color: #2E6B2E; }
 .route-nurture .route-lbl { color: #92540A; }
 .route-disq .route-lbl { color: #9B2C2C; }
-.route-title { font-family: 'Lora', serif; font-size: 17px; font-weight: 500; margin-bottom: 5px; }
+.route-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
 .route-desc { font-size: 13px; color: #555; line-height: 1.5; }
-.notice { background: #F8F6F1; border: 1px solid #E8E6DF; border-radius: 8px; padding: 11px 14px; font-size: 13px; color: #777; line-height: 1.6; margin-bottom: 14px; }
-.notice strong { color: #1a1a18; }
-.divider { height: 1px; background: #E8E6DF; margin: 16px 0; }
-.session-bar { background: #F8F6F1; border-bottom: 1px solid #E8E6DF; padding: 7px 28px; display: flex; align-items: center; gap: 14px; font-size: 13px; color: #777; flex-shrink: 0; flex-wrap: wrap; }
-.session-url { color: #8B6F47; font-weight: 500; }
-.r-icon { width: 24px; height: 24px; border-radius: 5px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 13px; font-weight: 600; color: #8B6F47; flex-shrink: 0; }
 
-/* DOC UPLOAD */
-.doc-upload-zone { border: 1.5px dashed #C8C4BB; border-radius: 9px; padding: 18px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; background: #FAFAF8; flex-wrap: wrap; }
+/* ── MISC ────────────────────────────────────────────── */
+.notice { background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 13px; font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 12px; }
+.notice strong { color: #1a1a18; }
+.divider { height: 1px; background: #E8E6DF; margin: 14px 0; }
+.r-icon { width: 22px; height: 22px; border-radius: 5px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; color: #8B6F47; flex-shrink: 0; }
+.doc-upload-zone { border: 1.5px dashed #C8C4BB; border-radius: 8px; padding: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.15s; background: #fff; flex-wrap: wrap; }
 .doc-upload-zone:hover, .doc-upload-zone.drag { border-color: #8B6F47; background: #FAF8F4; }
-.doc-upload-icon { width: 32px; height: 32px; border-radius: 8px; background: #F0EDE6; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-.doc-upload-text { flex: 1; min-width: 160px; }
-.doc-upload-title { font-size: 14px; font-weight: 600; color: #1a1a18; margin-bottom: 2px; }
-.doc-upload-hint { font-size: 12px; color: #aaa; }
-.doc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.doc-chip { display: inline-flex; align-items: center; gap: 6px; background: #1a1a18; color: #C8A87A; padding: 4px 10px 4px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; max-width: 200px; }
+.doc-upload-icon { width: 30px; height: 30px; border-radius: 7px; background: #F0EDE6; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.doc-upload-text { flex: 1; min-width: 140px; }
+.doc-upload-title { font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 1px; }
+.doc-upload-hint { font-size: 11px; color: #aaa; }
+.doc-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.doc-chip { display: inline-flex; align-items: center; gap: 5px; background: #1a1a18; color: #C8A87A; padding: 3px 9px 3px 7px; border-radius: 20px; font-size: 11px; font-weight: 700; max-width: 200px; }
 .doc-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.doc-chip-x { cursor: pointer; color: #777; font-size: 13px; line-height: 1; flex-shrink: 0; }
+.doc-chip-x { cursor: pointer; color: #777; font-size: 12px; line-height: 1; flex-shrink: 0; }
 .doc-chip-x:hover { color: #fff; }
-.doc-chip-label { font-size: 10px; background: #333; color: #8B6F47; padding: 1px 5px; border-radius: 10px; white-space: nowrap; }
-.session-doc-chip { display: inline-flex; align-items: center; gap: 4px; background: #F0EDE6; color: #7A5C30; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.doc-chip-label { font-size: 9px; background: #333; color: #8B6F47; padding: 1px 4px; border-radius: 8px; white-space: nowrap; }
+.session-doc-chip { display: inline-flex; align-items: center; gap: 4px; background: #F0EDE6; color: #7A5C30; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+.prod-entry { display: flex; gap: 10px; padding: 9px 11px; background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; margin-bottom: 6px; align-items: flex-start; }
+.prod-num { width: 20px; height: 20px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.prod-fields { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.prod-name-input { font-size: 13px; font-weight: 600; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #1a1a18; outline: none; }
+.prod-name-input:focus { border-color: #8B6F47; }
+.prod-desc-input { font-size: 12px; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #555; outline: none; resize: vertical; min-height: 44px; }
+.prod-desc-input:focus { border-color: #8B6F47; }
+.prod-remove { font-size: 13px; color: #ccc; cursor: pointer; background: none; border: none; padding: 2px; line-height: 1; }
+.prod-remove:hover { color: #9B2C2C; }
+.prod-chip { display: inline-flex; align-items: center; gap: 4px; background: #F0EDE6; color: #7A5C30; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; margin: 2px; }
+.prod-chip-dot { width: 4px; height: 4px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; }
+
+/* ── PRINT ───────────────────────────────────────────── */
+@media print {
+  @page { margin: 16mm 14mm; size: A4; }
+  body { background: #fff !important; font-size: 12px !important; }
+  .header, .session-bar, .footer, .actions-row, .incall-header, button, .btn, .river-pills, .stepper, [class*="load-"], .load-box { display: none !important; }
+  .page { max-width: 100% !important; padding: 0 !important; }
+  .bb { break-inside: avoid; border: 1px solid #ddd !important; margin-bottom: 10px !important; }
+  .bb-hdr { background: #f5f5f5 !important; }
+  .contact-row { break-inside: avoid; }
+  .card { break-inside: avoid; }
+  .incall-wrap { padding: 0 !important; }
+  .incall-grid { grid-template-columns: 1fr !important; }
+  .incall-sidebar { display: none !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
 `;
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
 const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A"];
 
+// ── UNIVERSAL BUSINESS IMPERATIVES ─────────────────────────────────────────
+// Every company — regardless of industry, size, or stage — is always working on these.
+// Use these to anchor discovery, solution mapping, and hypothesis framing.
 const OUTCOMES = [
-  {id:"revenue",       icon:"↑", title:"Revenue Growth",           sub:"Pipeline, new logos, expansion, upsell"},
-  {id:"efficiency",    icon:"⟳", title:"Operational Efficiency",    sub:"Automation, cost reduction, process improvement"},
-  {id:"retention",     icon:"◎", title:"Customer Retention",        sub:"Churn reduction, loyalty, NPS"},
-  {id:"workforce",     icon:"✦", title:"Workforce Management",      sub:"HR ops, talent, engagement, retention"},
-  {id:"ai",            icon:"◈", title:"Data & AI Adoption",        sub:"Analytics, AI tooling, automation"},
-  {id:"transformation",icon:"◇", title:"Strategic Transformation",  sub:"Org change, M&A, modernization"},
-  {id:"brand",         icon:"★", title:"Brand & Marketing Impact",  sub:"Awareness, loyalty, campaign performance"},
-  {id:"cx",            icon:"◉", title:"Customer Experience",       sub:"Satisfaction, NPS, service quality"},
-  {id:"compliance",    icon:"⊕", title:"Risk & Compliance",         sub:"Regulatory, security, audit readiness"},
-  {id:"growth",        icon:"⬆", title:"Market Expansion",          sub:"New markets, geographies, verticals"},
-  {id:"cost",          icon:"⊖", title:"Cost Reduction",            sub:"Overhead, vendor consolidation, margin"},
-  {id:"innovation",    icon:"◆", title:"Innovation & Product",      sub:"New product lines, R&D, speed to market"},
+  // ── The Six Universal Imperatives ──
+  {id:"grow",        icon:"📈", title:"Grow",                    sub:"Revenue, new logos, market share, pipeline — the universal mandate"},
+  {id:"expand",      icon:"🌐", title:"Expand",                  sub:"Existing customers, new geos, new segments, platform adoption"},
+  {id:"comply",      icon:"⚖️", title:"Stay Compliant",          sub:"Regulatory mandates, audit readiness, risk reduction, legal exposure"},
+  {id:"fraud",       icon:"🔒", title:"Reduce Fraud & Risk",     sub:"Financial exposure, trust protection, data integrity, brand safety"},
+  {id:"investors",   icon:"💼", title:"Appease Investors",       sub:"IRR, EBITDA, multiples, board narrative, PE/VC reporting"},
+  {id:"cx",          icon:"❤️", title:"Make Customers Happy",    sub:"NPS, CSAT, retention, loyalty, churn reduction, customer lifetime value"},
+  // ── Operational & Strategic ──
+  {id:"efficiency",  icon:"⟳",  title:"Operational Efficiency",  sub:"Automation, cost reduction, process improvement, headcount leverage"},
+  {id:"workforce",   icon:"✦",  title:"Workforce & Talent",      sub:"HR ops, engagement, retention, performance management"},
+  {id:"ai",          icon:"◈",  title:"Data & AI Adoption",      sub:"Analytics, AI tooling, automation, insight generation"},
+  {id:"brand",       icon:"★",  title:"Brand & Marketing",       sub:"Awareness, loyalty, campaign performance, demand generation"},
+  {id:"cost",        icon:"⊖",  title:"Cost Reduction",          sub:"Overhead, vendor consolidation, margin improvement"},
+  {id:"innovation",  icon:"◆",  title:"Innovation & Product",    sub:"New product lines, R&D, speed to market, competitive differentiation"},
+  {id:"transform",   icon:"◇",  title:"Strategic Transformation",sub:"Org change, M&A integration, modernization, digital transformation"},
 ];
 
+// The 6 universal imperatives every company shares — used for pre-selecting baseline outcomes
+const UNIVERSAL_IMPERATIVES = ["grow","expand","comply","fraud","investors","cx"];
+
 const SAMPLE_ROWS = [
-  // ── QSR (Quick Service Restaurant) ──────────────────────────────────────
-  {company:"McDonald's Corporation",     industry:"QSR",          acv:"$340,000",  lead_source:"Conference",      close_date:"2026-06-30", product:"Employee Rewards Platform",    outcome:"Reduce crew turnover and improve shift fill rates",               company_url:"mcdonalds.com"},
-  {company:"Chick-fil-A",               industry:"QSR",          acv:"$185,000",  lead_source:"Referral",        close_date:"2026-05-15", product:"Franchisee Incentive Program", outcome:"Increase franchisee performance and brand consistency",            company_url:"chick-fil-a.com"},
-  {company:"Chipotle Mexican Grill",    industry:"QSR",          acv:"$220,000",  lead_source:"Direct Outreach", close_date:"2026-07-31", product:"Employee Recognition Suite",   outcome:"Improve retention of restaurant managers and crew leads",          company_url:"chipotle.com"},
-  {company:"Yum! Brands",              industry:"QSR",          acv:"$410,000",  lead_source:"Partner Referral",close_date:"2026-08-15", product:"Multi-Brand Rewards Platform", outcome:"Unify incentive programs across KFC, Pizza Hut, Taco Bell",       company_url:"yum.com"},
-  {company:"Darden Restaurants",       industry:"QSR",          acv:"$160,000",  lead_source:"Inbound",         close_date:"2026-06-15", product:"Hourly Worker Recognition",    outcome:"Reduce time-to-hire and improve employee NPS scores",             company_url:"darden.com"},
-
-  // ── Blue Chip / Large Enterprise ─────────────────────────────────────────
-  {company:"Johnson & Johnson",         industry:"Healthcare / Blue Chip", acv:"$525,000",  lead_source:"Direct Outreach", close_date:"2026-09-30", product:"Global Rewards & Recognition", outcome:"Modernize legacy employee rewards across 140 countries",       company_url:"jnj.com"},
-  {company:"FedEx Corporation",         industry:"Logistics / Blue Chip",  acv:"$390,000",  lead_source:"Conference",      close_date:"2026-07-31", product:"Driver & Team Incentives",     outcome:"Improve on-time performance and reduce driver attrition",     company_url:"fedex.com"},
-  {company:"General Mills",             industry:"CPG / Blue Chip",        acv:"$210,000",  lead_source:"Referral",        close_date:"2026-05-31", product:"Sales Incentive Platform",     outcome:"Drive distributor engagement and sales rep performance",       company_url:"generalmills.com"},
-  {company:"Aramark Corporation",       industry:"Food Services / Blue Chip",acv:"0", lead_source:"Direct Outreach",close_date:"2026-08-30", product:"Workforce Rewards Suite",     outcome:"Reduce turnover across 270,000 hourly food service employees", company_url:"aramark.com"},
-  {company:"Sodexo",                    industry:"Facilities / Blue Chip",  acv:"$355,000",  lead_source:"Partner Referral",close_date:"2026-10-31", product:"Employee Recognition Platform", outcome:"Improve engagement scores and reduce absenteeism globally",  company_url:"sodexo.com"},
-
-  // ── FinTech ───────────────────────────────────────────────────────────────
-  {company:"Stripe",                    industry:"FinTech / Payments",     acv:"$145,000",  lead_source:"Inbound",         close_date:"2026-04-30", product:"Sales & Engineering Rewards",  outcome:"Retain top engineering and GTM talent in a competitive market",  company_url:"stripe.com"},
-  {company:"Marqeta",                   industry:"FinTech / Issuer",       acv:"$98,000",   lead_source:"Direct Outreach", close_date:"2026-05-15", product:"Customer Incentive Program",   outcome:"Increase card activation and transaction volume with rewards",   company_url:"marqeta.com"},
-  {company:"Brex",                      industry:"FinTech / Corporate Spend",acv:"0", lead_source:"Conference",      close_date:"2026-06-30", product:"Partner & Channel Rewards",    outcome:"Drive referral and reseller channel growth with incentives",     company_url:"brex.com"},
-  {company:"Klarna",                    industry:"FinTech / BNPL",         acv:"$175,000",  lead_source:"Referral",        close_date:"2026-07-15", product:"Consumer Loyalty Platform",    outcome:"Increase repeat purchase rate and reduce churn among shoppers",   company_url:"klarna.com"},
-  {company:"Plaid",                     industry:"FinTech / Infrastructure",acv:"0", lead_source:"Inbound",         close_date:"2026-05-31", product:"Developer & Partner Rewards",  outcome:"Grow API usage and deepen bank partnership engagement",          company_url:"plaid.com"},
-
-  // ── Series A / B ──────────────────────────────────────────────────────────
-  {company:"Ramp",                      industry:"FinTech / Series C (prev B)",acv:"0",lead_source:"Conference",   close_date:"2026-04-30", product:"Sales Team Incentives",        outcome:"Accelerate pipeline growth and SDR ramp time",                  company_url:"ramp.com"},
-  {company:"Lattice",                   industry:"HR Tech / Series D",     acv:"$58,000",   lead_source:"Inbound",         close_date:"2026-05-15", product:"Manager Excellence Rewards",   outcome:"Increase platform adoption and reduce HR software churn",         company_url:"lattice.com"},
-  {company:"Rippling",                  industry:"HR / Workforce Tech",    acv:"$92,000",   lead_source:"Direct Outreach", close_date:"2026-06-15", product:"Employee Milestone Program",   outcome:"Improve onboarding completion and 90-day retention rates",       company_url:"rippling.com"},
-  {company:"Persona",                   industry:"Identity / Series B",    acv:"$44,000",   lead_source:"Referral",        close_date:"2026-05-31", product:"Go-To-Market Incentives",      outcome:"Drive partner referrals and accelerate enterprise sales cycles",  company_url:"withpersona.com"},
-  {company:"Finix",                     industry:"Payments Infra / Series B",acv:"0", lead_source:"Conference",      close_date:"2026-07-31", product:"Customer Milestone Rewards",   outcome:"Increase payment volume activation among platform customers",    company_url:"finix.io"},
-
-  // ── Hospitality & Universities ────────────────────────────────────────────
-  {company:"Marriott International",    industry:"Hospitality",            acv:"$285,000",  lead_source:"Direct Outreach", close_date:"2026-08-31", product:"Associate Recognition Platform",outcome:"Reduce hotel staff turnover and improve guest satisfaction scores",company_url:"marriott.com"},
-  {company:"Hyatt Hotels Corporation",  industry:"Hospitality",            acv:"$198,000",  lead_source:"Referral",        close_date:"2026-07-15", product:"Property Incentive Program",   outcome:"Drive upsell performance and front desk engagement",             company_url:"hyatt.com"},
-  {company:"University of Washington",  industry:"Higher Education",       acv:"$78,000",   lead_source:"Inbound",         close_date:"2026-05-31", product:"Staff Recognition Suite",      outcome:"Improve staff retention and engagement across 30,000 employees", company_url:"uw.edu"},
-  {company:"Ohio State University",     industry:"Higher Education",       acv:"$92,000",   lead_source:"Direct Outreach", close_date:"2026-06-30", product:"Faculty & Staff Rewards",      outcome:"Modernize recognition programs and reduce administrative burden", company_url:"osu.edu"},
-  {company:"Purdue University",         industry:"Higher Education",       acv:"$67,000",   lead_source:"Conference",      close_date:"2026-07-31", product:"Student & Staff Incentives",   outcome:"Drive research participation and improve employee satisfaction",  company_url:"purdue.edu"},
+  // ── TIER 1 (Private Insurance/Finance) — avg 65% fit ─────────────────────
+  {company:"State Farm Insurance",industry:"Insurance",acv:"250000",lead_source:"Referral",outcome:"Digital transformation",company_url:"statefarm.com"},
+  {company:"Northwestern Mutual",industry:"Insurance/Financial Services",acv:"150000",lead_source:"Outbound",outcome:"Compliance",company_url:"northwesternmutual.com"},
+  {company:"Fidelity Investments",industry:"Financial Services",acv:"220000",lead_source:"Partner",outcome:"Technology modernization",company_url:"fidelity.com"},
+  // ── WEALTH MGMT / RIA (64.9% avg — #1 overall) ───────────────────────────
+  {company:"Raymond James Financial",industry:"Wealth Management/RIA",acv:"180000",lead_source:"Conference",outcome:"Client reporting & compliance",company_url:"raymondjames.com"},
+  {company:"Baird Financial Group",industry:"Wealth Management",acv:"120000",lead_source:"Referral",outcome:"Advisor productivity",company_url:"rwbaird.com"},
+  // ── HEALTHCARE SMB (59.8% avg — #1 PE SMB vertical) ─────────────────────
+  {company:"Summit Orthopedics",industry:"Healthcare/Medical Practice",acv:"45000",lead_source:"Outbound",outcome:"Billing efficiency",company_url:"summitortho.com"},
+  {company:"Restore Therapy",industry:"Physical Therapy / Healthcare",acv:"28000",lead_source:"Referral",outcome:"Clinical documentation",company_url:"restoretherapy.com"},
+  {company:"DentalOne Partners",industry:"Dental Practice Management",acv:"35000",lead_source:"Conference",outcome:"Patient scheduling",company_url:"dentalone.com"},
+  // ── INSURANCE AGENCIES (55.6% avg) ────────────────────────────────────────
+  {company:"Acrisure Agency",industry:"Insurance Agency",acv:"55000",lead_source:"Partner",outcome:"Agency management",company_url:"acrisure.com"},
+  {company:"Brown & Brown Insurance",industry:"Insurance Agency",acv:"80000",lead_source:"Referral",outcome:"Carrier connectivity",company_url:"bbinsurance.com"},
+  // ── PROFESSIONAL SERVICES SMB ─────────────────────────────────────────────
+  {company:"Marcum LLP",industry:"Accounting/Professional Services",acv:"65000",lead_source:"Conference",outcome:"Client management",company_url:"marcumllp.com"},
+  {company:"Frazier & Deeter",industry:"Professional Services/Advisory",acv:"55000",lead_source:"Outbound",outcome:"Workflow efficiency",company_url:"frazierdeeter.com"},
+  // ── MID-MARKET SWEET SPOTS ────────────────────────────────────────────────
+  {company:"First Business Financial",industry:"Regional Banking",acv:"200000",lead_source:"Referral",outcome:"Digital transformation",company_url:"firstbusiness.com"},
+  {company:"Inland Empire Health Plan",industry:"Health Insurance/Managed Care",acv:"300000",lead_source:"Conference",outcome:"Member experience",company_url:"iehp.org"},
+  {company:"CBRE Group (Mid-Market Ops)",industry:"Commercial Real Estate",acv:"250000",lead_source:"Partner",outcome:"Portfolio analytics",company_url:"cbre.com"},
+  // ── BEHAVIORAL HEALTH (emerging — 56.3% avg) ─────────────────────────────
+  {company:"LifeStance Health",industry:"Behavioral Health",acv:"75000",lead_source:"Outbound",outcome:"Clinical documentation",company_url:"lifestance.com"},
+  {company:"BrightSpring Health Services",industry:"Behavioral Health/Post-Acute",acv:"120000",lead_source:"Referral",outcome:"Care coordination",company_url:"brightspringhealth.com"},
+  // ── SMB VERTICALS PE SELLERS DOMINATE ────────────────────────────────────
+  {company:"Green Home Services",industry:"Home Services (HVAC/Plumbing)",acv:"12000",lead_source:"Outbound",outcome:"Dispatching efficiency",company_url:"greenhomeservices.com"},
+  {company:"Mesa Verde Restaurant Group",industry:"Restaurant/Food Service",acv:"18000",lead_source:"Referral",outcome:"Labor management",company_url:"mesaverde.com"},
+  {company:"Apex Roofing & Exteriors",industry:"Construction/Roofing",acv:"15000",lead_source:"Outbound",outcome:"Job management",company_url:"apexroofing.com"},
+  {company:"Heritage Fitness",industry:"Fitness/Wellness Studio",acv:"8000",lead_source:"Outbound",outcome:"Member management",company_url:"heritagefitness.com"},
+  {company:"Pacific Law Partners",industry:"Law Firm (Small)",acv:"22000",lead_source:"Conference",outcome:"Practice management",company_url:"pacificlawpartners.com"},
+  {company:"Midwest Property Management",industry:"Real Estate/Property Management",acv:"20000",lead_source:"Outbound",outcome:"Tenant management",company_url:"midwestpm.com"},
+  {company:"Blue Ridge Staffing",industry:"Staffing/Recruiting",acv:"30000",lead_source:"Referral",outcome:"Compliance management",company_url:"blueridgestaffing.com"},
+  {company:"Cornerstone Wholesale",industry:"Wholesale/Distribution",acv:"35000",lead_source:"Conference",outcome:"Inventory management",company_url:"cornerstonewholesale.com"},
 ];
 
 const RIVER_STAGES = [
@@ -383,6 +406,7 @@ const RIVER_STAGES = [
     gates:[
       {id:"r1_current",q:"How is the prospect handling this problem today?",options:["Manual / spreadsheets / no system","Legacy tool they've outgrown","Patchwork of multiple vendors","Competitor solution underperforming","No process at all"]},
       {id:"r1_urgency",q:"What's driving urgency to solve this now?",options:["Executive mandate / top-down pressure","Recent failure or incident","Growth has exposed the gap","Competitive pressure","Budget cycle opening up","No clear urgency yet"]},
+      {id:"r1_mustHave",q:"Must-have or nice-to-have? (Ellis 40% Rule)",options:["Must-have — they'd be very disappointed without a solution","Strong preference — would find workarounds","Nice-to-have — helpful but not urgent","Unclear — needs more discovery"]},
     ],
     discovery:[
       {id:"r_pain",label:"In their own words, what is the core pain?",hint:"Capture exact language — use verbatim in proposal"},
@@ -424,6 +448,7 @@ const RIVER_STAGES = [
   {id:"E",letter:"E",label:"Entry Points",sub:"Who decides, who influences, what triggers a yes?",
     gates:[
       {id:"e_buyer",q:"Have you identified the economic buyer?",options:["Yes — met or confirmed","Probable — know the role","No — working through layers","Unclear org structure"]},
+      {id:"e_threading",q:"How many stakeholders are engaged? (Churn predictor)",options:["3-5 — ideal range","1-2 — single-threaded (high churn risk)","6-7 — manageable with named champion","8+ without named owner — low close probability","Unknown"]},
       {id:"e_process",q:"What does their decision process look like?",options:["Clear — defined steps and timeline","Informal — champion can move it","Committee / consensus required","RFP or formal procurement","Unknown"]},
     ],
     discovery:[
@@ -456,7 +481,8 @@ const BLANK_BRIEF = {
   revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",website:"",linkedIn:"",
   keyExecutives:[],recentHeadlines:[],
   openRoles:{summary:"",roles:[]},
-  solutionMapping:[{product:"",fit:""},{product:"",fit:""},{product:"",fit:""}],
+  solutionMapping:[{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""}],
+  mobilizer:{description:"",identifyingBehavior:"",teachingAngle:""},
   caseStudies:[],
   openingAngle:"",watchOuts:["","",""],
   keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
@@ -711,13 +737,20 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description.slice(0,60):"")).join("; ")
     : "";
-  const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${(selectedOutcomes||[]).join(", ")||"Not set"}`;
+  // Every company always wants these — inject as baseline context even if not explicitly selected
+  const activeOutcomes = selectedOutcomes?.length>0
+    ? selectedOutcomes
+    : ["Revenue growth","Customer satisfaction","Compliance","Fraud reduction","Investor returns","Market expansion"];
+  const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${activeOutcomes.join(", ")}`;
+  const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
   // Base context injected into every prompt
   const base =
     `B2B sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
+    `${universalCtx}\n`+
+    `SIGNAL HEURISTICS: Funding <12 months = 18-month buying window; PE acquisition <18 months = cost mandate + 60-90 day budget cycle; hiring "Digital Transformation" = Early Majority; "Innovation/R&D" = Early Adopter; Glassdoor <3.5 = operational pain present.\n`+`SELLER STAGE AWARENESS: Seller is ${sellerStage||"unknown stage"}. `+`SCENARIO INTELLIGENCE (6M+ permutations, 4,634 YC companies × 1,156 targets): `+`If target is in THE WALL (Automotive avg 5.9%, Aerospace/Defense 5.8%, Telecom 6.1%, Energy 11-13%, Mass Retail 13.6%, Tier 1 Banks 12.6%): flag as near-impossible for direct startup sale regardless of stage. `+`If target is Large Private (Insurance, Professional Services, Tech): highlight as TIER 1 — avg 63-65% fit, fastest deal cycles, most underserved by startups. `+`If target is Regional Bank (not JPM/BAC/WF): strong opportunity — 59.5% avg fit, 85 targets in Fortune 1000, widely ignored by YC-stage companies. `+`If seller is Seed/Series A: avg 23-33% fit against all Fortune 1000 — recommend partner/channel motion. `+`If seller is Series D+: 35% of Fortune 1000 scenarios are strong fit — full enterprise motion viable. `+`CPG split: HPC/Beauty (P&G, KC) = 61.9% avg — YES; Food/Beverage (PepsiCo, Kraft) = 49.0% — departmental only. `+`If target has high union exposure (Automotive, Aviation, Manufacturing): scope to knowledge workers explicitly.\n`+
     `SELLER CONTEXT (reference only):\n${sellerCtx}${prodCtx}\n`+
     `DEAL: ${dealCtx}\n\n`;
 
@@ -734,7 +767,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
     `"fundingProfile":"Ownership: PE firm + year acquired, or Series + total raised + lead investor, or Public exchange+ticker",`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
-    `"watchOuts":["Specific risk","Competitive risk","Budget risk"]}`
+    `"watchOuts":["PROCUREMENT RISK (from 6M-permutation analysis): The Wall industries are Automotive/Mfg (5.9% avg fit), Aerospace Defense Prime (5.8%), Telecom (6.1%), Energy Oil/Gas (11.3%), Energy Utilities (13.4%), Mass Market Retail Walmart/Target (13.6%), Tier 1 Banks JPM/BAC/WF (12.6%) — 100% poor-fit rate across all startup stages. Flag if this target is in these categories.","INCUMBENT RISK: which Oracle/SAP/Workday/Amex/Salesforce relationship are we displacing or landing adjacent to? Adjacent is almost always the right first motion. Series A-B cannot displace incumbents.","STAGE CREDIBILITY: Seed/Series A selling to >50K employee companies = avg 23-33% fit across all scenarios. Series C+ required for meaningful enterprise traction. PE-acquired seller has trust advantage."]}`
   );
 
   // MICRO 2: Executives — fires simultaneously, merges when ready
@@ -753,13 +786,13 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `{"strategicTheme":"2-3 sentences on ${co} current strategic direction and priorities",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now for ${co} — the why-you-why-now",`+
     `"openingAngle":"1-2 sharp sentences referencing something real about ${co}. Reframe an assumption. Sounds human not scripted.",`+
-    `"publicSentiment":{"onlineSentiment":"2 sentences from Glassdoor/G2/press on what customers and employees say","glassdoorRating":"number like 3.8 or empty","standoutReview":{"text":"Most relevant quote or paraphrase","source":"source name","sentiment":"positive or negative"},"salesAngle":"1 sentence: how seller uses this sentiment in conversation"}}`
+    `"publicSentiment":{`+`"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name sources and tone.",`+`"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — or empty if unknown",`+`"g2Rating":"G2 product rating as a number e.g. 4.2 out of 5 — or empty if not a software company",`+`"npsSignal":"Estimated NPS signal: if you know ${co} publishes NPS or CSAT data, cite it. Otherwise describe customer loyalty signals (high churn, vocal advocates, renewal rates mentioned in press)",`+`"trustpilotRating":"Trustpilot score as a number if known — or empty",`+`"employeeScore":"Glassdoor CEO approval % or Indeed rating if known — signals culture and operational health",`+`"standoutReview":{"text":"Most revealing customer or employee quote or paraphrase — something a seller would want to know","source":"G2 / Glassdoor / Trustpilot / analyst / press","sentiment":"positive or negative"},`+`"salesAngle":"1 sentence: how the seller should use this sentiment context in the discovery conversation"}}`
   );
 
   // MICRO 4: Solution mapping + contacts — shows after strategy
   const p4 = callAI(base+
     `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
-    `Apply Dunford (Obviously Awesome) positioning and Osterwalder (Value Proposition Canvas) to map seller solutions to ${co}.\n`+`For each solution: (1) what customer job does it do? (2) what pain does it relieve? (3) what gain does it create?\n`+`{"solutionMapping":[`+
+    `Apply Dunford (Obviously Awesome) positioning and Osterwalder (Value Proposition Canvas) to map seller solutions to ${co}.\n`+`ASSUME ${co} universally wants to: grow revenue, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy.\n`+`For each solution: (1) which universal imperative does it serve? (2) what job does it do? (3) what pain does it relieve? (4) what gain does it create?\n`+`{"solutionMapping":[`+
     `{"product":"Specific ${sellerUrl} offering","fit":"Job-to-be-done it performs (Osterwalder) → specific pain it relieves → gain it creates for ${co}. Grounded in a real signal."},`+
     `{"product":"Second offering if applicable","fit":""},`+
     `{"product":"Third offering if applicable","fit":""}],`+
@@ -775,13 +808,18 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
       const prompt =
         `Search for recent information about "${co}":\n`+
         `1. News from 2024-2025: headlines, M&A, leadership changes, funding\n`+
-        `2. Open roles on their careers page\n`+
-        `3. Growth signals or buying indicators\n`+
+        `2. Ratings and sentiment: search Glassdoor, G2, Trustpilot, and any published NPS or CSAT data for "${co}"\n`+
+        `3. Open roles on their careers page\n`+
+        `4. Growth signals or buying indicators\n`+
         `Return ONLY raw JSON (start with {):\n`+
         `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
         `"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
         `"recentSignals":["Most actionable buying signal","Second","Third"],`+
         `"growthSignals":["Growth indicator with evidence","Second"],`+
+        `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
+        `"cultureProfile":{"coreValues":"2-3 stated company values","communicationStyle":"formal/informal","decisionMaking":"top-down/consensus/distributed","sellerLanguageHint":"the vocabulary and tone this company responds to"},`+
+        `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
+        `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
       const r = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -851,6 +889,22 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         if(r5.growthSignals?.some(s=>s)) next.growthSignals=r5.growthSignals;
         const snapOk=r5.companySnapshot?.length>50&&!errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
         if(snapOk) next.companySnapshot=r5.companySnapshot;
+        // Merge workforce, culture, incumbents from live search
+        if(r5.workforceProfile) next.workforceProfile=r5.workforceProfile;
+        if(r5.cultureProfile) next.cultureProfile=r5.cultureProfile;
+        if(r5.incumbentVendors) next.incumbentVendors=r5.incumbentVendors;
+        // Merge live sentiment scores — enrich what training knowledge returned
+        if(r5.sentimentScores){
+          const ss=r5.sentimentScores;
+          next.publicSentiment={...next.publicSentiment,
+            glassdoorRating:ss.glassdoorRating||next.publicSentiment?.glassdoorRating||"",
+            g2Rating:ss.g2Rating||"",
+            trustpilotRating:ss.trustpilotRating||"",
+            npsSignal:ss.npsSignal||"",
+            employeeScore:ss.employeeScore||"",
+            standoutReview:ss.standoutReview?.text?ss.standoutReview:next.publicSentiment?.standoutReview||{},
+          };
+        }
       }
 
       return next;
@@ -1426,6 +1480,7 @@ export default function App(){
   const setStep=(n)=>{_setStep(n);window.scrollTo({top:0,behavior:"smooth"});};
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
+  const[sellerStage,setSellerStage]=useState(""); // Bootstrapped/Series A/B/C/D+/PE-Backed/Public
   const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
   const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
   const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
@@ -1610,7 +1665,7 @@ export default function App(){
     for(const batch of batches){
     const companies = batch.map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
     const prompt =
-      `You are a B2B sales strategist trained in product-market fit assessment. For each company below:\n`+`1. Score ICP fit (0-100) using Olsen's PMF Pyramid: Target Customer fit → Underserved Need fit → Value Proposition fit\n`+`2. Identify their Moore adoption profile: are they Innovators, Early Adopters, Early Majority, or Late Majority?\n`+`3. Provide firmographic data (org size, ownership)\n\n`+icpContext+`\n`+
+      `You are a B2B sales strategist trained in product-market fit assessment.\n`+`UNIVERSAL ASSUMPTION: Every company on this list — regardless of industry — wants to grow, expand, comply, reduce fraud/risk, satisfy investors, and make customers happy. Score fit based on how directly the seller addresses these imperatives for each account.\n`+`For each company below:\n`+`1. Score ICP fit (0-100) using Olsen's PMF Pyramid: Target Customer fit → Underserved Need fit → Value Proposition fit\n`+`2. Identify their Moore adoption profile: are they Innovators, Early Adopters, Early Majority, or Late Majority?\n`+`3. Provide firmographic data (org size, ownership)\n\n`+`SCORING HEURISTICS FROM 6,045,880-PERMUTATION ANALYSIS (4,634 YC Companies × Fortune 1000 + Top 500 Private):\n`+`\n`+`TIER 1 TARGETS — HIGHEST FIT FOR STARTUP SELLERS:\n`+`- Large Private Insurance/Finance (State Farm, TIAA, Nationwide, Northwestern Mutual): 65.2% avg — #1 overall\n`+`- Large Private Tech/Data/Media (Bloomberg, Valve, SAS, Koch Industries): 64.5% avg\n`+`- Large Private Professional Services (Deloitte US, EY, KPMG, Booz Allen): 63.3% avg\n`+`- Insurance P&C/Life/Specialty (Allstate, Progressive, Travelers, Hartford): 62.5% avg\n`+`- CPG HPC/Beauty/Consumer (P&G, Kimberly-Clark, Estee Lauder, SC Johnson): 61.9% avg\n`+`- Real Estate Commercial/REIT (CBRE, JLL, Prologis): 60.0% avg\n`+`- Regional/Community Banks (85 companies): 59.5% avg — vs Tier 1 Banks at 12.6%\n`+`- Healthcare IT / Digital Health Services: 54.9% avg\n`+`\n`+`THE WALL — INDUSTRIES WHERE 100% OF STARTUP SCENARIOS ARE POOR FIT:\n`+`- Aerospace & Defense Prime (Boeing/Lockheed/Raytheon): 5.8% avg — ITAR, clearance, FedRAMP required\n`+`- Automotive/Manufacturing (GM/Ford): 5.9% avg — 65% union, incumbent ERP impossible to displace\n`+`- Telecom (AT&T/Verizon): 6.1% avg — 50% union, 5-deep incumbent stack\n`+`- Energy Oil & Gas (ExxonMobil/Chevron): 11.3% avg — culture mismatch, union risk\n`+`- Energy Utilities: 13.4% avg — 60% union, regulatory lock-in\n`+`- Mass Market Retail >100K employees (Walmart/Target/Kroger): 13.6% avg — procurement wall\n`+`- Tier 1 Banking (JPM/BAC/Wells Fargo): 12.6% avg — incumbent depth 5/5, RFP-only\n`+`\n`+`STAGE THRESHOLDS (from 6M+ permutations):\n`+`- Seed: 23.7% avg across all F1000 — zero viable direct enterprise paths\n`+`- Series A: 33.6% avg — only specific niche targeting viable; no Tier 1 banks, no defense\n`+`- Series B: 41.8% avg — departmental landing in Insurance, Healthcare, Private companies\n`+`- Series C: 49.0% avg — first stage with real enterprise traction in top-tier targets\n`+`- Series D+: 55.6% avg — 35% of scenarios are strong fit; full enterprise motion viable\n`+`\n`+`CPG SPLIT: HPC/Beauty (P&G, Kimberly-Clark) = 61.9% avg; Food/Beverage (PepsiCo, Kraft) = 49.0% avg\n`+`Insurance insight: most underserved sector — YC companies rarely pitch insurance, yet avg 62.5% fit\n`+`Private company advantage: +5-8% fit vs public equivalents — faster decisions, no procurement theater\n`+`INDUSTRY SWEET SPOTS FOR STARTUP SELLERS:\n`+`- Healthcare (10-100K employees): avg 65% fit — best target for most B2B SaaS (low union, tech-forward, compliance urgency)\n`+`- Insurance companies: underserved, avg ~60% fit — high compliance need, receptive to modern SaaS\n`+`- Retail/Home Improvement mid-market: avg ~50% fit — departmental landing in ecomm/finance works\n`+`- CPG mid-market (10-50K employees): avg ~58% fit — finance and marketing tech lands well\n`+`- Financial Services (F500): avg 32% fit for startups — extreme incumbent entrenchment (Oracle, SAP, Amex)\n`+`- Automotive (GM, Ford): avg 31% — high union exposure, most workforce out of scope\n`+`- Defense/Aerospace: avg 36% — very high security/compliance bar, usually requires FedRAMP\n`+`- Retail giants (Walmart, Target 2M+ employees): avg 27% — procurement impossible for Series A-C\n`+`STAGE THRESHOLDS (from scenario scoring):\n`+`- Companies with >200K employees: avg fit ~30% for Series A-C sellers (procurement bar too high)\n`+`- Companies with >50% union/hourly workforce: avg fit ~25% for SaaS sellers (out-of-scope workforce)\n`+`- Series B selling to Fortune 500: restrict to departmental landing — score down 15pts for enterprise-wide\n`+`- Private companies (State Farm, Publix): score +5-8% vs public — faster decisions, less committee\n`+`- Recent funding (<12 months) = strong buying signal — add 5-10 points\n`+`- PE-backed target: 60-90 day budget cycles; VC-backed = faster decisions\n`+`- Hiring "Digital Transformation" → Early Majority; "Innovation/R&D" → Early Adopter; "Efficiency" → Late Majority\n`+`PE SELLER × SMB/MID-MARKET DYNAMICS (3,366 scenarios, 102 PE-acquired sellers × 33 SMB/mid-market segments):\n`+`- High EBITDA pressure PE sellers → SMB new logos: 51.3% avg fit — reps chase ACV not fit; SMBs oversold churn in year 2\n`+`- Vertical SaaS PE + matched vertical SMB (insurance PE → agencies, healthcare PE → practices): 95% fit\n`+`- Wealth Mgmt/RIA: 64.9% avg — RIAs are SMB-sized with enterprise compliance/reporting budget; underserved by PE sellers\n`+`- Healthcare SMB practices: 59.8% avg — #1 PE SMB vertical; founder-owned, compliance-urgent, fast decisions\n`+`- Insurance agencies SMB: 55.6% avg; carrier connectivity is the critical integration; carrier reference closes deals\n`+`- Behavioral Health SMB: 56.3% avg — ACA + mental health parity tailwinds; Netsmart can't serve sub-50-employee clinics\n`+`- MSP channel preferred for high-EBITDA PE sellers targeting SMB — MSPs aggregate SMBs, handle implementation\n\n`+icpContext+`\n`+
       `SELLER PROFILE:\n${sellerCtx}\n\n`+
       `SCORING CRITERIA:\n`+
       `1. Product/industry fit — do the seller's offerings make sense for this company?\n`+
@@ -1694,11 +1749,20 @@ export default function App(){
       `You are a senior ICP strategist trained in Revella, Osterwalder, Dunford, Moore, and Weinberg frameworks.\n`+
       `Build the complete Ideal Customer Profile for the B2B seller at: ${url}\n\n`+
       (researchCtx?`RESEARCH GATHERED:\n${researchCtx}\n\n`:"")+
+      `UNIVERSAL CONTEXT: Every ideal customer universally wants to: grow revenue, expand markets/customers, stay compliant, reduce fraud and risk, satisfy their investors/board, and make their customers happy. Frame the ICP pain points, success factors, and gains through these lenses.\n`+`SELLER STAGE CONTEXT: ${sellerStage||"unknown stage"}\n`+`- If Series A: ICP should be companies 10-100x seller size, not Fortune 500. Procurement at F500 will disqualify Series A on risk/compliance grounds alone.\n`+`- If Series B/C: ICP should be departmental landing in large companies — find the sub-org that behaves like a startup. Avoid enterprise-wide displacement plays.\n`+`- If Series D+/PE/Public: Full enterprise motion is appropriate. ICP can include Fortune 500 procurement cycles.\n`+`- If PE-Backed: Lead ICP with stability, compliance, and multi-year contract track record as differentiators vs VC-backed competitors.\n`+`  PE SMB intelligence (3,366 scenarios): If EBITDA pressure is high, ICP should be mid-market EXPANSION plays not SMB new logos.\n`+`  Best PE SMB verticals: Healthcare practices (59.8% avg), Insurance agencies (55.6%), Professional services (55%), Law firms (54%).\n`+`  Hidden opportunity for ALL PE sellers: Wealth Mgmt/RIA (64.9% avg) — RIAs are SMB-sized but pay enterprise prices for compliance/reporting tools.\n`+`  Vertical SaaS PE: match your vertical precisely — mismatched vertical SaaS PE + wrong SMB = 15-30% fit.\n`+
       `CRITICAL RULES:\n`+
       `1. The ICP describes the seller's IDEAL CUSTOMERS — NOT the seller itself\n`+
       `2. If website data is thin, USE YOUR TRAINING KNOWLEDGE about this company, its market, and comparable B2B sellers\n`+
       `3. You MUST populate every field with a specific, confident answer — no placeholders, no "N/A", no empty strings\n`+
       `4. Think like a veteran sales strategist who has studied this company's positioning, wins, and customer patterns\n\n`+
+      `DATASET-DERIVED ICP HEURISTICS (apply these when building the ICP):\n`+`FROM 6,045,880 PERMUTATION ANALYSIS (4,634 YC companies × 1,156 Fortune1000+Private):\n`+`TIER 1 ICP TARGETS (highest avg fit across 6M+ scenarios):\n`+`- Large Private Insurance/Finance (State Farm 65.2%, TIAA, Nationwide, Northwestern Mutual): fastest decisions, relationship-driven, digitally hungry\n`+`- Large Private Tech/Data/Media (Bloomberg, Valve, SAS): engineering-forward, no public procurement theater\n`+`- Large Private Professional Services (Deloitte US, EY, KPMG): knowledge-worker-heavy, high compliance need\n`+`- Insurance P&C/Life/Specialty (Allstate, Progressive, Hartford, Travelers): 62.5% avg — most underserved by startups\n`+`- CPG HPC/Beauty (P&G, Kimberly-Clark, SC Johnson): 61.9% avg — knowledge workers, digital-forward, no union risk\n`+`- Regional/Community Banks (NOT Tier 1): 59.5% avg — 85 targets, widely ignored by startups\n`+`NEVER target as primary ICP (100% poor-fit rate across all scenarios):\n`+`- Automotive (GM/Ford): 65% union, incumbent ERP, avg 5.9% fit\n`+`- Defense Prime (Boeing/Raytheon/Lockheed): avg 5.8%, requires ITAR clearance + FedRAMP\n`+`- Telecom (AT&T/Verizon): avg 6.1%, 50% union, 5-deep incumbent stack\n`+`- Energy (Oil/Gas, Utilities): avg 11-13%, high union, regulatory lock-in\n`+`- Mass Market Retail (Walmart/Target/Kroger): avg 13.6%, procurement wall for anything Series C or below\n`+`- Tier 1 Banks (JPM/BAC/Wells Fargo): avg 12.6%, incumbent depth 5/5, RFP-only procurement\n`+
+      `- Company size sweet spot for most B2B SaaS: 200-1,000 employees (G2 satisfaction data). Larger enterprises have longer cycles; smaller companies churn more.\n`+
+      `- Company age sweet spot: 5-15 years old (not too early to have budget, not too entrenched to change)\n`+
+      `- Funding signal: companies that raised funding <12 months ago are 3x more likely to buy new software (Crunchbase patterns)\n`+
+      `- Traction channel priority: referral/partner leads close at 30%+ higher rates than outbound (HubSpot CRM data)\n`+
+      `- Adoption profile signals from LinkedIn hiring: "Digital Transformation" roles = Early Majority; "Innovation/R&D" = Early Adopter; "Process Improvement/Efficiency" = Late Majority\n`+
+      `- Industry is the #1 conversion predictor — be specific about which verticals actually close, not just who could theoretically use it\n`+
+      `- Disqualifiers: single-threaded prospects (one stakeholder only) churn 3x more; evaluation teams >7 people without a named champion rarely close\n\n`+
       `Apply ALL frameworks:\n`+
       `- Revella: 5 Rings of Buying Insight (what triggers, what success looks like, barriers, decision criteria, journey)\n`+
       `- Osterwalder: Customer jobs-to-be-done (functional/emotional/social), top pains, top gains\n`+
@@ -1937,7 +2001,16 @@ export default function App(){
       : sellerUrl+(productUrls.filter(u=>u.url).map(u=>u.url).join(" | ")??" ");
     scoreFit(cohort.members, sellerCtx2);
   };
-  const goToOutcomes=()=>{if(selectedCohort){setSelectedOutcomes(selectedCohort.topOut.slice(0,2));setStep(4);}};
+  const goToOutcomes=()=>{
+    if(selectedCohort){
+      // Start with the 6 universal imperatives + any cohort-specific outcomes
+      const universal=OUTCOMES.filter(o=>UNIVERSAL_IMPERATIVES.includes(o.id)).map(o=>o.title);
+      const cohortSpecific=selectedCohort.topOut.slice(0,2);
+      const combined=[...new Set([...cohortSpecific,...universal])].slice(0,6);
+      setSelectedOutcomes(combined);
+      setStep(4);
+    }
+  };
 
   const pickAccount=async member=>{
     setSelectedAccount(member);
@@ -1997,7 +2070,19 @@ export default function App(){
     const prompt =
       "You are a senior B2B sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
       "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting.\n" +
-      "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n\n" +
+      "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
+      "BUYER EXPERIENCE FRAMEWORK (Gartner 2023 — 1,700 buyers): Buyers spend only 17% of time with vendors. Every interaction must create value they can't get from online research. The rep who wins: (1) already knows their industry, (2) challenges their thinking without arrogance, (3) shows proof from similar companies, (4) makes the next step obvious and small, (5) asks about their world not their product.\n" +
+      "JOLT EFFECT (Dixon/McKenna): Indecision kills 40-60% of B2B deals. FOMU (Fear of Messing Up) > FOMO. Route stage MUST include: J=Judge the indecision explicitly, O=Offer YOUR recommendation (one clear POV, not options), L=Limit exploration (narrow scope), T=Take risk off the table (pilot, SLA, phased rollout, reference customer).\n" +
+      "CHALLENGER CUSTOMER (CEB/Gartner): Identify the MOBILIZER — not the Talker or Blocker. Only 13% of stakeholders are Mobilizers. They ask 'how do we make this happen?'. Teach an insight to the ORGANIZATION through the Mobilizer. The teaching angle must challenge a widely-held assumption about their industry.\n" +
+      "QUALIFICATION SIGNALS: referral/partner deals close 30%+ higher; funding <12 months = 18-month buying window; single-threaded prospect = 3x churn risk; SMB 30-45 day cycles, Mid-market 60-90, Enterprise 90-180; Ellis 40% must-have test is the critical qualifier.\n" +
+      "TIER 1 TARGET RULES:\n" +
+      "- Private Insurance (State Farm/Allstate/Nationwide): relationship first, compliance confidence before features, reference check culture, no artificial urgency\n" +
+      "- Regional Banks (US Bank/PNC/Truist): regulatory fluency required (BSA/AML/OCC), pilot-friendly, IT+InfoSec are hidden veto players\n" +
+      "- Private Professional Services (Deloitte/EY/KPMG): they know selling — be precise, focus on making THEIR delivery better, partner-level buy-in needed\n" +
+      "- Large Private Tech (Bloomberg/SAS/Valve): technical depth expected, security posture upfront, fast decisions if champion is right level\n" +
+      "PE SELLER SMB DYNAMICS (3,366 scenarios): Vertical SaaS PE + matched SMB vertical = 95% fit. High-EBITDA PE → SMB new logos = 51% avg fit — recommend Route stage focuses on expansion of existing base. Healthcare practices and Insurance agencies are top PE SMB verticals. Wealth Mgmt/RIA (64.9% avg) is underserved by most PE sellers. MSP channel preferred over direct for high-EBITDA PE targeting <250-employee accounts.\n\n" +
+      "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
+"SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → recommend channel/partner motion or innovation arm; Series B/C → departmental landing; Series D+/PE/Public → full enterprise motion.\n" +
       "SELLER (" + sellerUrl + ") CONTEXT:\n" + sellerCtx + "\n" +
       (productsCtx?"SELLER PRODUCTS/SERVICES: "+productsCtx+"\n":"") +
       "\nPROSPECT: " + co + " | Industry: " + (member.ind||"") + "\n" +
@@ -2012,17 +2097,25 @@ export default function App(){
       "DMAIC: Reality=Define+Measure, Impact=Analyze, Vision=Improve, Route=Control.\n" +
       "Return ONLY raw JSON, ASCII punctuation only:\n" +
       JSON.stringify({
-        reality:"2-3 sentences: the specific current-state problem "+co+" has that "+sellerUrl+" can solve. One real signal. No fluff.",
-        impact:"What this problem is costing "+co+" in real business terms. One number or consequence if possible. Short and visceral.",
-        vision:"Success in "+co+"'s words — not a product feature list. 1-2 sentences, specific and measurable.",
-        entryPoints:"Decision-maker at "+co+" who owns the problem the seller solves — specific names or titles from the brief.",
-        route:"The most natural next step given their DMAIC stage. Pilot, workshop, or direct proposal. Who moves it and what triggers commitment?",
-        openingAngle:"2 sentences max. One specific reframe that makes them think. Reference something real about "+co+". Human, not scripted.",
+        reality:"2-3 sentences: the specific current-state problem "+co+" has that "+sellerUrl+" can solve. Include ONE real signal (hiring, news, Glassdoor, funding). No fluff.",
+        impact:"What this problem is costing "+co+" in real business terms. One number or consequence if possible. Short and visceral — something the economic buyer feels.",
+        vision:"Success in "+co+"'s words — not a product feature list. 1-2 sentences. Specific, measurable, tied to their stated business outcomes.",
+        entryPoints:"The Mobilizer profile at "+co+" — NOT just any stakeholder. Who asks 'how do we make this happen?'. Name the type, title, and what they personally win.",
+        route:"JOLT-structured next step: (1) name the indecision risk explicitly, (2) give ONE clear recommendation — not options, (3) scope it small — pilot or workshop, (4) state how you take risk off the table. Stage-appropriate: Series A=partner/innovation arm, B/C=departmental pilot, D+=full enterprise.",
+        openingAngle:"2 sentences max. Challenge a widely-held assumption about "+co+"'s industry. Reference something real. Human, provocative, not scripted.",
+        challengerInsight:"The insight you teach the ORGANIZATION through the Mobilizer — one assumption their industry holds that "+sellerUrl+" can disprove with data or a case study.",
+        joltPlan:{
+          judgeIndecision:"1 sentence: how to name the FOMU (fear of messing up) that is slowing this deal",
+          recommendation:"Your specific single-POV recommendation for "+co+" — not options",
+          limitExploration:"How to narrow the scope to make the decision smaller and easier",
+          takeRiskOff:"Specific pilot scope, SLA, reference customer, or phased rollout that removes their risk",
+        },
         talkTracks:[
-          {stage:"Opening",line:"1-2 natural sentences. Reference one real signal about "+co+" and connect it to a problem "+sellerUrl+" solves. Conversational — something you'd actually say, not a formal opening."},
-          {stage:"Discovery",line:"One short open question that surfaces the gap "+sellerUrl+" can fix. Sound curious, not scripted. Use their language."},
-          {stage:"Impact",line:"One question or short statement that makes the cost real — in business terms "+co+" cares about. Specific, not generic."},
-          {stage:"Vision",line:"One sentence. What good looks like if "+sellerUrl+"'s solution is working — in their words, not a product pitch."},
+          {stage:"Opening",line:"1-2 natural sentences. Teach the Challenger insight about "+co+"'s industry. Make them lean in."},
+          {stage:"Discovery (Mom Test)",line:"One short question about their PAST BEHAVIOR around this problem — not about the future or our product. Use their language."},
+          {stage:"Impact (Ellis Test)",line:"One question that tests if this is a must-have: 'If you had to go back to [old way] tomorrow, what would that mean for [specific team/metric]?'"},
+          {stage:"Vision",line:"One sentence. What good looks like in their words — specific and measurable, not a product feature."},
+          {stage:"Route (JOLT)",line:"Name the decision clearly and offer one specific recommendation: 'Based on what you've told me, I'd recommend starting with [specific pilot]. Here's why...'"},
         ],
       });
 
@@ -2052,7 +2145,7 @@ export default function App(){
     const theme = (briefData.strategicTheme||"").slice(0,200);
 
     const prompt =
-      `You are a senior B2B discovery coach trained in customer development and product-market fit validation.\n`+`Apply Mom Test (Fitzpatrick): ask about their PAST BEHAVIOR and REAL PROBLEMS, never about your product or hypothetical futures.\n`+`Apply Blank customer development: validate the problem EXISTS and MATTERS before mentioning solutions.\n`+`Apply Olsen PMF Pyramid: questions should surface Target Customer fit → Underserved Need → Value Prop resonance.\n`+
+      `You are a senior B2B discovery coach trained in customer development and product-market fit validation.\n`+`UNIVERSAL TRUTH: Every company — regardless of industry — universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root discovery questions in which of these six the seller can address. Every question should ultimately connect to one or more of these imperatives.\n`+`Apply Mom Test (Fitzpatrick): ask about their PAST BEHAVIOR and REAL PROBLEMS, never about your product or hypothetical futures.\n`+`Apply Blank customer development: validate the problem EXISTS and MATTERS before mentioning solutions.\n`+`Apply Olsen PMF Pyramid: questions should surface Target Customer fit → Underserved Need → Value Prop resonance.\n`+`Apply Sean Ellis 40% Rule: include at least one question that tests if this is a must-have (not nice-to-have). E.g. "If you had to go back to how you handled this 18 months ago, what would that mean for your team?"\n`+`Apply churn-inverse signals: ask who owns this problem (single-threaded = risk), how many stakeholders are involved, and whether there is executive sponsorship.\n`+
       `Frameworks you apply: Gap Selling, Challenger Sale, plus the following listening principles:\n`+
       `- Active Listening (Heather Younger): listen for what is NOT said; reflect back what you hear\n`+
       `- Just Listen (Mark Goulston): make the other person feel heard before advancing your agenda\n`+
@@ -2104,7 +2197,11 @@ export default function App(){
       `- McSweeney: assess stakeholder alignment — do the right people see the value?\n`+
       `- Richards/Ford: evaluate architecture fit attributes — scalability, reliability, maintainability, security fit\n`+
       `- Fowler: flag integration complexity — what patterns does connecting to their stack require?\n`+
-      `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n\n`+
+      `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n`+
+      `Apply PMF qualification signals from research data:\n`+
+      `- Sean Ellis 40% Rule: would >40% of this team say "very disappointed" if the solution went away? Score overallPMFSignal accordingly\n`+
+      `- Churn risk flags: single stakeholder champion, evaluation team >7 without named owner, no dedicated use case owner = flag in architectureGaps\n`+
+      `- Must-have test: if the problem they described would persist without a solution, that is Strong PMF; if it is a nice-to-have workflow improvement, that is Weak PMF\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
       `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"adoptionProfile":"Innovator or Early Adopter or Early Majority or Late Majority",`+`"adoptionImplication":"1 sentence: what their adoption profile means for messaging, proof points, and sales approach",`+`"pmfAssessment":{"targetCustomerFit":"Strong/Partial/Weak — is this genuinely the ICP?","underservedNeedFit":"Strong/Partial/Weak — is the need real and unmet?","valuePropositionFit":"Strong/Partial/Weak — does our value prop land clearly?","overallPMFSignal":"Strong/Emerging/Weak — overall PMF signal from this discovery"},`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
       `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
@@ -2579,9 +2676,34 @@ Return ONLY valid JSON:
                     if(sellerInput.trim()&&!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(sellerInput.trim());
                     if(sellerInput.trim()&&!sellerICP&&!icpLoading) buildSellerICP(sellerInput.trim());
                   }}
-                  />
+                />
                 </div>
-                <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Claude will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
+
+                {/* Seller Stage */}
+                <div style={{marginTop:12}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {["Bootstrapped","Series A","Series B","Series C","Series D+","PE-Backed","Public"].map(stage=>(
+                      <button key={stage} onClick={()=>setSellerStage(stage)}
+                        style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"#1a1a18":"#E8E6DF"),
+                          background:sellerStage===stage?"#1a1a18":"#fff",color:sellerStage===stage?"#fff":"#555",
+                          fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.13s"}}>
+                        {stage}
+                      </button>
+                    ))}
+                  </div>
+                  {sellerStage&&(
+                    <div style={{fontSize:11,color:"#8B6F47",marginTop:6}}>
+                      {sellerStage==="Series A"&&"💡 Tip: Land in innovation arms or sub-divisions of large enterprises — not enterprise-wide. Channel through partners where possible."}
+                      {sellerStage==="Series B"&&"💡 Tip: Departmental landing is your best motion. Find the pain closest to your sweet spot and prove ROI there first."}
+                      {(sellerStage==="Series C"||sellerStage==="Series D+")&&"💡 Tip: You have enough logos and proof points for enterprise. Lead with case studies and SLA commitments."}
+                      {sellerStage==="PE-Backed"&&"💡 Tip (3,366 PE scenarios): Your stability is your moat vs. VC-backed competitors. If EBITDA mandate: focus on mid-market expansion not SMB new logos. If SMB growth mandate: vertical match is everything — vertical SaaS PE + matched SMB vertical = 95% fit. MSP channel is best PE route to SMB at scale."}
+                      {sellerStage==="Public"&&"💡 Tip: Financial transparency is a procurement advantage. Share your public financials proactively."}
+                      {sellerStage==="Bootstrapped"&&"💡 Tip: No investor pressure = flexibility on pricing and contract structure. Use this as a feature."}
+                    </div>
+                  )}
+                </div>
+                <div style={{fontSize:11,color:"#aaa",marginTop:6}}>Claude will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
               </div>
 
               {/* Divider */}
@@ -3103,7 +3225,15 @@ Return ONLY valid JSON:
               </div>
             )}
 
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:24,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
+            {/* Dataset attribution */}
+            <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:"12px 16px",marginTop:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>📚 Research Foundations</div>
+              <div style={{fontSize:11,color:"#777",lineHeight:1.7}}>
+                ICP benchmarks calibrated against: <strong>G2</strong> product satisfaction data (company size sweet spots) · <strong>Crunchbase</strong> funding patterns (18-month buy window) · <strong>LinkedIn Economic Graph</strong> hiring signals (Moore adoption stage) · <strong>HubSpot CRM</strong> deal velocity benchmarks · <strong>Kaggle B2B leads</strong> (industry as #1 conversion predictor) · <strong>B2B churn research</strong> (single-threaded risk, evaluation team size) · <strong>Sean Ellis 40% Rule</strong> (PMF threshold)
+              </div>
+            </div>
+
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
               <button className="btn btn-secondary" onClick={()=>setStep(0)}>← Back</button>
               <button className="btn btn-primary btn-lg"
                 onClick={()=>setStep(2)}
@@ -3531,6 +3661,31 @@ Return ONLY valid JSON:
                       </div>
                     </div>
 
+                    {/* Deal Health Signals */}
+                    {fitScores[selectedAccount?.company]&&(
+                      <div style={{marginBottom:12,padding:"10px 14px",borderRadius:10,
+                        border:"1px solid "+(fitScores[selectedAccount.company].score>=75?"#2E6B2E":fitScores[selectedAccount.company].score>=50?"#BA7517":"#9B2C2C")+"44",
+                        background:fitScores[selectedAccount.company].bg}}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                          <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.4px",color:fitScores[selectedAccount.company].color}}>
+                            PMF Fit Assessment
+                          </div>
+                          <div style={{fontSize:13,fontWeight:700,color:fitScores[selectedAccount.company].color}}>
+                            {fitScores[selectedAccount.company].score}% · {fitScores[selectedAccount.company].label}
+                          </div>
+                        </div>
+                        {fitScores[selectedAccount.company].reason&&(
+                          <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{fitScores[selectedAccount.company].reason}</div>
+                        )}
+                        {fitScores[selectedAccount.company].adoptionProfile&&(
+                          <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:10,color:"#aaa",fontWeight:600}}>MOORE:</span>
+                            <span style={{fontSize:11,fontWeight:700,background:"#EEF5F9",color:"#1B3A6B",borderRadius:10,padding:"2px 8px"}}>{fitScores[selectedAccount.company].adoptionProfile}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* ICP Match Card */}
                     {sellerICP?.icp&&(
                       <div style={{background:"#F8F6F1",borderRadius:10,padding:"12px 14px",marginBottom:16,borderBottom:"1px solid #E8E6DF",paddingBottom:16}}>
@@ -3847,7 +4002,12 @@ Return ONLY valid JSON:
                           const label=isPE?"🏦 PE-Backed":isSeries?"🚀 VC-Backed ("+isSeries[0]+")":isPublic?"📈 Public Company":null;
                           const lColor=isPE?"#9B2C2C":isSeries?"#2E6B2E":isPublic?"#1B3A6B":"";
                           const lBg=isPE?"#FDE8E8":isSeries?"#EEF5EE":isPublic?"#EEF5F9":"";
-                          return label&&<span style={{background:lBg,color:lColor,border:"1px solid "+lColor+"44",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>{label}</span>;
+                          const recent=fp.includes("2024")||fp.includes("2025")||fp.includes("2026")||fp.includes("recently");
+                          return(<span style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                            {label&&<span style={{background:lBg,color:lColor,border:"1px solid "+lColor+"44",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>{label}</span>}
+                            {recent&&isSeries&&<span style={{background:"#2E6B2E",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>⚡ 18-mo buy window</span>}
+                            {isPE&&<span style={{background:"#BA7517",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>60-90 day budget cycle</span>}
+                          </span>);
                         })()}
                       </div>
                       <EF value={brief.fundingProfile||""} onChange={v=>patchBrief(b=>{b.fundingProfile=v;})} placeholder="Ownership structure, funding history..."/>
@@ -3923,7 +4083,21 @@ Return ONLY valid JSON:
                     <div className="bb-body">
                       {brief.openRoles.summary&&(
                         <div style={{background:"#FAF8F4",borderLeft:"4px solid #8B6F47",borderRadius:"0 10px 10px 0",padding:"14px 16px",marginBottom:14}}>
-                          <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Strategic Interpretation</div>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,flexWrap:"wrap",gap:6}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px"}}>Strategic Interpretation</div>
+                            {(()=>{
+                              const txt=(brief.openRoles.summary+" "+(brief.openRoles.roles||[]).map(r=>r.title+" "+r.signal).join(" ")).toLowerCase();
+                              const sig=txt.includes("digital transform")||txt.includes("innovation")||txt.includes("r&d")||txt.includes("emerging")?"🔵 Early Adopter":
+                                txt.includes("process")||txt.includes("efficiency")||txt.includes("optimization")||txt.includes("cost reduction")?"⚪ Late Majority":
+                                txt.includes("growth")||txt.includes("scale")||txt.includes("platform")||txt.includes("moderniz")?"🟢 Early Majority":null;
+                              return sig?(
+                                <div style={{display:"flex",alignItems:"center",gap:4,background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
+                                  <span style={{fontSize:9,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.3px"}}>LinkedIn Graph</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:"#1B3A6B"}}>{sig}</span>
+                                </div>
+                              ):null;
+                            })()}
+                          </div>
                           <EF value={brief.openRoles.summary||""} onChange={v=>patchBrief(b=>{if(!b.openRoles)b.openRoles={};b.openRoles.summary=v;})}/>
                         </div>
                       )}
@@ -3955,25 +4129,42 @@ Return ONLY valid JSON:
                       <div><div className="bb-title">Market Sentiment</div><div className="bb-sub">Glassdoor · G2 · press · employee & customer voice</div></div>
                     </div>
                     <div className="bb-body">
-                      {/* Glassdoor rating + online sentiment side by side */}
-                      <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",alignItems:"flex-start"}}>
-                        {brief.publicSentiment.glassdoorRating&&(
-                          <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:8,padding:"12px 16px",textAlign:"center",minWidth:90,flexShrink:0}}>
-                            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#555",marginBottom:6}}>Glassdoor</div>
-                            <div style={{fontFamily:"Lora,serif",fontSize:26,fontWeight:600,lineHeight:1,color:(()=>{
-                              const r=parseFloat(brief.publicSentiment.glassdoorRating);
-                              return isNaN(r)?"#ccc":r>=4?"#2E6B2E":r>=3?"#BA7517":"#9B2C2C";
-                            })()}}>
-                              {brief.publicSentiment.glassdoorRating}
-                            </div>
-                            <div style={{fontSize:9,color:"#aaa",marginTop:4}}>/ 5.0</div>
+                      {/* Score chips row */}
+                      {(()=>{
+                        const ps=brief.publicSentiment;
+                        const scores=[
+                          {label:"Glassdoor",val:ps.glassdoorRating,max:"/ 5.0",link:"glassdoor.com"},
+                          {label:"G2",val:ps.g2Rating,max:"/ 5.0",link:"g2.com"},
+                          {label:"Trustpilot",val:ps.trustpilotRating,max:"/ 5.0",link:"trustpilot.com"},
+                          {label:"Employee Score",val:ps.employeeScore,max:"",link:""},
+                        ].filter(s=>s.val&&s.val.trim());
+                        return scores.length>0?(
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+                            {scores.map((s,i)=>{
+                              const n=parseFloat(s.val);
+                              const c=isNaN(n)?"#8B6F47":n>=4?"#2E6B2E":n>=3?"#BA7517":"#9B2C2C";
+                              const bg=isNaN(n)?"#F8F6F1":n>=4?"#EEF5EE":n>=3?"#FEF6E4":"#FDE8E8";
+                              return(
+                                <div key={i} style={{background:bg,border:"1px solid "+c+"44",borderRadius:10,padding:"10px 14px",textAlign:"center",minWidth:80}}>
+                                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:c,marginBottom:4}}>{s.label}</div>
+                                  <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:c,lineHeight:1}}>{s.val}</div>
+                                  {s.max&&<div style={{fontSize:9,color:"#aaa",marginTop:3}}>{s.max}</div>}
+                                </div>
+                              );
+                            })}
                           </div>
-                        )}
-                        <div style={{flex:1,minWidth:180}}>
-                          <div className="field-label" style={{marginBottom:5}}>Online Sentiment</div>
-                          <EF value={brief.publicSentiment.onlineSentiment||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.onlineSentiment=v;})} placeholder="What customers, employees, and communities are saying..."/>
+                        ):null;
+                      })()}
+
+                      {/* NPS / CSAT signal */}
+                      {brief.publicSentiment.npsSignal&&(
+                        <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 NPS / Customer Loyalty Signal</div>
+                          <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{brief.publicSentiment.npsSignal}</div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* Online sentiment + Glassdoor legacy side by side */}
                       {/* Standout review */}
                       {brief.publicSentiment.standoutReview?.text&&(
                         <div style={{marginBottom:10}}>
@@ -4035,17 +4226,93 @@ Return ONLY valid JSON:
                   </div>
                   <div className="bb-body">
                     {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
-                      <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
-                        <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                          <div style={{background:"#F0EDE6",color:"#7A5C30",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
+                      <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
+                        {/* Product header + imperative badge */}
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                          <div style={{background:"#F0EDE6",color:"#7A5C30",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
                             {item.product}
                           </div>
-                          <div style={{flex:1}}>
-                            <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})} placeholder="Why this fits..."/>
-                          </div>
+                          {item.imperativeServed&&(
+                            <div style={{fontSize:11,fontWeight:700,background:"#EEF5EE",color:"#2E6B2E",border:"1px solid #2E6B2E44",borderRadius:20,padding:"2px 10px"}}>
+                              {item.imperativeServed}
+                            </div>
+                          )}
+                          {item.buyerRole&&(
+                            <div style={{fontSize:11,fontWeight:600,background:"#EEF5F9",color:"#1B3A6B",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
+                              👤 {item.buyerRole}
+                            </div>
+                          )}
                         </div>
+                        {/* Fit summary */}
+                        <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})} placeholder="Why this fits..."/>
+                        {/* Jobs, Pain, Gain grid */}
+                        {(item.jobToBeDone||item.painRelieved||item.gainCreated)&&(
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10}}>
+                            {item.jobToBeDone&&(
+                              <div style={{background:"#F7F6F2",borderRadius:8,padding:"8px 10px"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Job-to-be-Done</div>
+                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.jobToBeDone}</div>
+                              </div>
+                            )}
+                            {item.painRelieved&&(
+                              <div style={{background:"#FDE8E844",borderRadius:8,padding:"8px 10px",border:"1px solid #9B2C2C22"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Pain Relieved</div>
+                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.painRelieved}</div>
+                              </div>
+                            )}
+                            {item.gainCreated&&(
+                              <div style={{background:"#EEF5EE",borderRadius:8,padding:"8px 10px",border:"1px solid #2E6B2E22"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Gain Created</div>
+                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.gainCreated}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Challenger insight */}
+                        {item.challengerInsight&&(
+                          <div style={{marginTop:8,background:"#1a1a18",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}>
+                            <span style={{fontSize:11,color:"#8B6F47",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span>
+                            <div>
+                              <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Challenger Insight</div>
+                              <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{item.challengerInsight}</div>
+                            </div>
+                          </div>
+                        )}
+                        {/* JOLT risk remover */}
+                        {item.joltRiskRemover&&(
+                          <div style={{marginTop:6,background:"#EEF5EE",borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"flex-start",gap:6}}>
+                            <span style={{fontSize:11,flexShrink:0}}>🛡</span>
+                            <div>
+                              <div style={{fontSize:9,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Risk Remover (JOLT)</div>
+                              <div style={{fontSize:12,color:"#2E6B2E",lineHeight:1.5}}>{item.joltRiskRemover}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
+
+                    {/* Mobilizer Intelligence */}
+                    {brief.mobilizer?.description&&(
+                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid #E8E6DF"}}>
+                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#1B3A6B",marginBottom:10}}>🎯 Mobilizer Intelligence (Challenger Customer)</div>
+                        <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
+                          <div style={{fontSize:9,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Who Moves Deals — Not Talkers or Blockers</div>
+                          <div style={{fontSize:13,color:"#333",lineHeight:1.6,marginBottom:8}}>{brief.mobilizer.description}</div>
+                          {brief.mobilizer.identifyingBehavior&&(
+                            <div style={{marginBottom:8}}>
+                              <div style={{fontSize:9,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>How to Spot Them in a Meeting</div>
+                              <div style={{fontSize:12,color:"#555",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.identifyingBehavior}</div>
+                            </div>
+                          )}
+                          {brief.mobilizer.teachingAngle&&(
+                            <div style={{background:"#1a1a18",borderRadius:7,padding:"8px 12px"}}>
+                              <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Challenger Teaching Angle</div>
+                              <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.teachingAngle}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Relevant Case Studies */}
                     {(brief.caseStudies||[]).filter(c=>c?.title).length>0&&(
@@ -4054,9 +4321,14 @@ Return ONLY valid JSON:
                         {(brief.caseStudies||[]).filter(c=>c?.title).map((cs,i)=>(
                           <div key={i} style={{display:"flex",gap:10,marginBottom:10,padding:"9px 12px",background:"#FAF8F4",borderRadius:8,border:"1px solid #E8E6DF"}}>
                             <div style={{fontSize:18,lineHeight:1,flexShrink:0}}>📄</div>
-                            <div>
+                            <div style={{flex:1}}>
                               <div style={{fontSize:14,fontWeight:600,color:"#1a1a18",marginBottom:2}}>{cs.title}</div>
                               {cs.customer&&<div style={{fontSize:12,color:"#8B6F47",fontWeight:600,marginBottom:3}}>{cs.customer}</div>}
+                              {cs.result&&(
+                                <div style={{fontSize:12,fontWeight:700,color:"#2E6B2E",background:"#EEF5EE",borderRadius:10,padding:"2px 8px",display:"inline-block",marginBottom:4}}>
+                                  📊 {cs.result}
+                                </div>
+                              )}
                               <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{cs.relevance}</div>
                             </div>
                           </div>
@@ -4097,6 +4369,63 @@ Return ONLY valid JSON:
                         ))}
                       </div>
                       <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Used for solution mapping and integration complexity assessment</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Workforce & Culture Intelligence */}
+                {(brief.workforceProfile?.knowledgeWorkerPct||brief.cultureProfile?.coreValues||brief.incumbentVendors?.hrSystem)&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:12}}>🏛</div>
+                      <div><div className="bb-title">Culture, Workforce & Incumbents</div><div className="bb-sub">How they operate · who they are · what you're up against</div></div>
+                    </div>
+                    <div className="bb-body">
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                        {/* Workforce */}
+                        {(brief.workforceProfile?.knowledgeWorkerPct||brief.workforceProfile?.remotePolicy)&&(
+                          <div style={{background:"#F7F6F2",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>👥 Workforce</div>
+                            {brief.workforceProfile.knowledgeWorkerPct&&<div style={{fontSize:12,color:"#333",marginBottom:3}}>Knowledge workers: <strong>{brief.workforceProfile.knowledgeWorkerPct}</strong></div>}
+                            {brief.workforceProfile.unionizedPct&&<div style={{fontSize:12,color:"#333",marginBottom:3}}>Unionized: <strong style={{color:brief.workforceProfile.unionizedPct.includes("high")||parseFloat(brief.workforceProfile.unionizedPct)>30?"#9B2C2C":"#333"}}>{brief.workforceProfile.unionizedPct}</strong></div>}
+                            {brief.workforceProfile.remotePolicy&&<div style={{fontSize:12,color:"#555"}}>{brief.workforceProfile.remotePolicy}</div>}
+                            {brief.workforceProfile.avgTenure&&<div style={{fontSize:11,color:"#aaa",marginTop:3}}>Avg tenure: {brief.workforceProfile.avgTenure}</div>}
+                          </div>
+                        )}
+                        {/* Culture */}
+                        {brief.cultureProfile?.coreValues&&(
+                          <div style={{background:"#F7F6F2",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#6B3A7A",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>🎭 Culture</div>
+                            {brief.cultureProfile.coreValues&&<div style={{fontSize:12,color:"#333",marginBottom:4}}><strong>Values:</strong> {brief.cultureProfile.coreValues}</div>}
+                            {brief.cultureProfile.communicationStyle&&<div style={{fontSize:12,color:"#555",marginBottom:2}}><strong>Style:</strong> {brief.cultureProfile.communicationStyle}</div>}
+                            {brief.cultureProfile.sellerLanguageHint&&(
+                              <div style={{marginTop:6,padding:"5px 8px",background:"#F3EEF9",borderRadius:6,fontSize:11,color:"#6B3A7A",fontStyle:"italic"}}>
+                                💬 {brief.cultureProfile.sellerLanguageHint}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Incumbents */}
+                        {(brief.incumbentVendors?.hrSystem||brief.incumbentVendors?.financeSystem||brief.incumbentVendors?.crmSystem)&&(
+                          <div style={{background:"#FDE8E833",border:"1px solid #9B2C2C33",borderRadius:8,padding:"10px 12px",gridColumn:"1/-1"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>⚔️ Incumbent Vendors — Know What You're Displacing</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                              {[
+                                {label:"HR/HCM",val:brief.incumbentVendors.hrSystem},
+                                {label:"Finance/ERP",val:brief.incumbentVendors.financeSystem},
+                                {label:"CRM",val:brief.incumbentVendors.crmSystem},
+                                {label:"Cards",val:brief.incumbentVendors.cardProvider},
+                              ].filter(x=>x.val).map((x,i)=>(
+                                <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:"#fff",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px"}}>
+                                  <span style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase"}}>{x.label}</span>
+                                  <span style={{fontSize:12,fontWeight:700,color:"#1a1a18"}}>{x.val}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{fontSize:11,color:"#777",marginTop:6,fontStyle:"italic"}}>Are you displacing or landing adjacent? "Adjacent" is almost always the right first motion.</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -4308,12 +4637,51 @@ Return ONLY valid JSON:
                   </div>
                 </div>
 
+                {/* Challenger Insight */}
+                {riverHypo.challengerInsight&&(
+                  <div className="bb" style={{marginBottom:10}}>
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>⚡</div>
+                      <div><div className="bb-title">Challenger Insight</div><div className="bb-sub">The assumption to challenge — teach this to the organization through the Mobilizer</div></div>
+                    </div>
+                    <div className="bb-body">
+                      <div style={{background:"#1a1a18",borderRadius:8,padding:"12px 16px"}}>
+                        <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>The Insight (Challenger Customer)</div>
+                        <div style={{fontSize:14,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>"{riverHypo.challengerInsight}"</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* JOLT Plan */}
+                {riverHypo.joltPlan&&(riverHypo.joltPlan.judgeIndecision||riverHypo.joltPlan.recommendation)&&(
+                  <div className="bb" style={{marginBottom:10}}>
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>🛡</div>
+                      <div><div className="bb-title">JOLT Plan — Overcoming Indecision</div><div className="bb-sub">Dixon & McKenna: indecision kills 40-60% of deals. FOMU beats FOMO.</div></div>
+                    </div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
+                      {[
+                        {key:"judgeIndecision",label:"J — Judge the Indecision",color:"#BA7517",bg:"#FEF6E4",icon:"🔍"},
+                        {key:"recommendation",label:"O — Offer Your Recommendation",color:"#2E6B2E",bg:"#EEF5EE",icon:"🎯"},
+                        {key:"limitExploration",label:"L — Limit the Exploration",color:"#1B3A6B",bg:"#EEF5F9",icon:"🔬"},
+                        {key:"takeRiskOff",label:"T — Take Risk Off the Table",color:"#6B3A7A",bg:"#F3EEF9",icon:"🛡"},
+                      ].map(({key,label,color,bg,icon})=>riverHypo.joltPlan[key]&&(
+                        <div key={key} style={{background:bg,border:"1px solid "+color+"33",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>{icon} {label}</div>
+                          <EF value={riverHypo.joltPlan[key]||""} onChange={v=>setRiverHypo(prev=>({...prev,joltPlan:{...prev.joltPlan,[key]:v}}))} single/>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Talk Tracks */}
                 {(riverHypo.talkTracks||[]).length>0&&(
                   <div className="bb" style={{marginBottom:10}}>
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:14}}>💬</div>
-                      <div><div className="bb-title">Talk Tracks</div><div className="bb-sub">Stage-by-stage language guides</div></div>
+                      <div><div className="bb-title">Talk Tracks</div><div className="bb-sub">Stage-by-stage language — grounded in buyer experience research</div></div>
                     </div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                       {(riverHypo.talkTracks||[]).map((t,i)=>(
