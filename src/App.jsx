@@ -1813,9 +1813,17 @@ export default function App(){
       const m = jsonStr.match(/\{[\s\S]*\}/);
       if(m){
         try{
-          const parsed = JSON.parse(m[0]);
+          const cleaned=m[0].replace(/[\u201C\u201D]/g,'"').replace(/[\u2018\u2019]/g,"'").replace(/[\u2014]/g,"-").replace(/[\u2013]/g,"-");
+          const parsed = JSON.parse(cleaned);
           if(parsed.sellerName||parsed.icp) setSellerICP(parsed);
-        }catch(e){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
+        }catch(e){
+          // Second attempt: strip everything after last complete field
+          try{
+            const fixed=m[0].replace(/[\u201C\u201D]/g,'"').replace(/[\u2018\u2019]/g,"'").replace(/,\s*\}(\s*\})*$/,"}$1");
+            const parsed2=JSON.parse(fixed);
+            if(parsed2.sellerName||parsed2.icp) setSellerICP(parsed2);
+          }catch(e2){ console.warn("ICP JSON parse failed:",e2.message,raw.slice(0,200)); }
+        }
       }
     }catch(e){ console.warn("ICP build phase 2 failed:",e.message); }
     setIcpLoading(false);
