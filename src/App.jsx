@@ -2379,7 +2379,7 @@ Return ONLY valid JSON:
   <div class="section">
     <div class="section-title">Solutions Reviewed</div>
     <div class="solutions">
-      ${solutions.map(s=>'<div class="solution-card"><div class="solution-name">'+s.product+'</div><div class="solution-fit">'+(s.fit?.split(".")[0]||"")+'</div></div>')).join("")}
+      ${solutions.map(s=>'<div class="solution-card"><div class="solution-name">'+s.product+'</div><div class="solution-fit">'+(s.fit?.split(".")[0]||"")+'</div></div>').join("")}
     </div>
   </div>`:""}
 
