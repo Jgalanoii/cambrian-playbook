@@ -369,7 +369,7 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
-const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A"];
+const COHORT_COLORS=["#8B6F47","#2E6B2E","#1B3A6B","#6B3A3A","#4A6B3A","#6B4A1B","#3A4A6B","#6B1B4A","#1B6B5A","#5A1B6B"];
 
 // ── UNIVERSAL BUSINESS IMPERATIVES ─────────────────────────────────────────
 // Every company — regardless of industry, size, or stage — is always working on these.
@@ -530,16 +530,16 @@ function buildCohorts(rows,mapping){
       band=ind||"Other",
       src=get(row,"lead_source")||"Direct",outcome=getOutcomeTheme(row,mapping),
       company=get(row,"company"),product=get(row,"product"),company_url=get(row,"company_url")||"",
-      employees=get(row,"employees")||"",
-      publicPrivate=get(row,"public_private")||"",
+      employees=get(row,"employees")||row.employees||"",
+      publicPrivate=get(row,"public_private")||get(row,"publicPrivate")||row.publicPrivate||"",
       geography=get(row,"geography")||"";
     if(!groups[band])groups[band]=[];
     groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
   });
-  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).slice(0,5)
+  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).slice(0,10)
     .map(([name,members],i)=>{
       const acvs=members.filter(m=>m.acv>0);
-      return{id:i,name,color:COHORT_COLORS[i],size:members.length,
+      return{id:i,name,color:COHORT_COLORS[i%COHORT_COLORS.length],size:members.length,
         pct:Math.round(members.length/rows.length*100),
         avgACV:acvs.length?Math.round(acvs.reduce((s,m)=>s+m.acv,0)/acvs.length):0,
         topInd:[...new Set(members.map(m=>m.ind))].slice(0,3),
