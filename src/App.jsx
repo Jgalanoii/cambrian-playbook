@@ -4165,6 +4165,14 @@ Return ONLY valid JSON:
                       )}
 
                       {/* Online sentiment + Glassdoor legacy side by side */}
+                      <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",alignItems:"flex-start"}}>
+                        {!brief.publicSentiment.glassdoorRating&&false&&(
+                          <div style={{flex:1,minWidth:180}}>
+                            <div className="field-label" style={{marginBottom:5}}>Online Sentiment</div>
+                            <EF value={brief.publicSentiment.onlineSentiment||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.onlineSentiment=v;})} placeholder="What customers, employees, and communities are saying..."/>
+                          </div>
+                        )}
+                      </div>
                       {/* Standout review */}
                       {brief.publicSentiment.standoutReview?.text&&(
                         <div style={{marginBottom:10}}>
@@ -4339,7 +4347,8 @@ Return ONLY valid JSON:
                 </div>
 
                 {/* Tech Stack & Integrations */}
-{brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(                  <div className="bb">
+                {brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(
+                  <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:13}}>🔌</div>
                       <div><div className="bb-title">Tech Stack & Integrations</div><div className="bb-sub">Known SaaS platforms, tools, and systems in use</div></div>
