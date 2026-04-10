@@ -3398,7 +3398,7 @@ Return ONLY valid JSON:
                   )}
                 </div>
               </div>
-              <div className="tbl-wrap" style={{maxHeight:"480px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
+              <div className="tbl-wrap" style={{height:"460px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
                 <table className="tbl" style={{fontSize:13}}>
                   <thead style={{position:"sticky",top:0,zIndex:10,background:"#fff"}}>
                     <tr>
@@ -3406,7 +3406,6 @@ Return ONLY valid JSON:
                       <th>Industry</th>
                       <th>Org Size</th>
                       <th>Ownership</th>
-                      <th>ACV</th>
                       <th>Fit Check</th>
                       <th></th>
                     </tr>
@@ -3449,13 +3448,11 @@ Return ONLY valid JSON:
                               return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{pp}</span>;
                             })()}
                           </td>
-                          <td style={{fontSize:12,color:"#8B6F47",fontWeight:600}}>{m.acv>0?"$"+Number(m.acv).toLocaleString():m.acv?"$"+m.acv:"—"}</td>
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
                                 title={fitScores[m.company].reason}>
-                                {fitScores[m.company].score}% · {fitScores[m.company].label}
-                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
+                                {fitScores[m.company].score}%
                               </div>
                             ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):sellerUrl;scoreFit(allM,sCtx);}}>Run fit check</button>}
                           </td>
