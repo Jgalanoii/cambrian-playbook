@@ -363,7 +363,7 @@ const OUTCOMES = [
 ];
 
 // The 6 universal imperatives every company shares — used for pre-selecting baseline outcomes
-const UNIVERSAL_IMPERATIVES = ["Revenue Growth","Market Expansion","Customer Experience","Retention & Loyalty","Compliance & Audit","Fraud & Risk Reduction"];
+const UNIVERSAL_IMPERATIVES = ["grow","expand","comply","fraud","investors","cx"];
 
 const SAMPLE_ROWS = [
   // ── Fortune 1000 / Public Enterprise ─────────────────────────────────────
@@ -631,7 +631,7 @@ async function callAI(prompt){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1800,
+          max_tokens:5500,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
             {role:"user",content:prompt},
@@ -747,9 +747,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
     `${universalCtx}\n`+
-    `SELLER STAGE NARRATIVE: Seller stage is ${sellerStage||'not specified'}. Frame accordingly: Bootstrapped/Series A → agility + founder attention + no bureaucracy; Series B/C → proven scale + reference customers + clear ROI; Series D+/PE-Backed → enterprise-grade + compliance + stability + EBITDA alignment; Public → full trust signals + audit-ready.\n`+
-    `SELLER STAGE NARRATIVE: Seller stage is ${sellerStage||'not specified'}. Frame accordingly: Bootstrapped/Series A → agility + founder attention + no bureaucracy; Series B/C → proven scale + reference customers + clear ROI; Series D+/PE-Backed → enterprise-grade + compliance + stability + EBITDA alignment; Public → full trust signals + audit-ready.\n`+
-    `SELLER STAGE NARRATIVE: Seller stage is ${sellerStage||'not specified'}. Frame accordingly: Bootstrapped/Series A → agility + founder attention + no bureaucracy; Series B/C → proven scale + reference customers + clear ROI; Series D+/PE-Backed → enterprise-grade + compliance + stability + EBITDA alignment; Public → full trust signals + audit-ready.\n`+
+    `SELLER STAGE: "+(sellerStage||"not specified")+". Bootstrapped/A=agility+speed; B/C=proven scale+ROI; PE/D+=compliance+EBITDA+stability; Public=audit-ready+trust signals. Frame the pitch accordingly.\n`+
     `SIGNAL HEURISTICS: Funding <12 months = 18-month buying window; PE acquisition <18 months = cost mandate + 60-90 day budget cycle; hiring "Digital Transformation" = Early Majority; "Innovation/R&D" = Early Adopter; Glassdoor <3.5 = operational pain present.\n`+`SELLER STAGE AWARENESS: Seller is ${sellerStage||"unknown stage"}. `+`SCENARIO INTELLIGENCE (6M+ permutations, 4,634 YC companies × 1,156 targets): `+`If target is in THE WALL (Automotive avg 5.9%, Aerospace/Defense 5.8%, Telecom 6.1%, Energy 11-13%, Mass Retail 13.6%, Tier 1 Banks 12.6%): flag as near-impossible for direct startup sale regardless of stage. `+`If target is Large Private (Insurance, Professional Services, Tech): highlight as TIER 1 — avg 63-65% fit, fastest deal cycles, most underserved by startups. `+`If target is Regional Bank (not JPM/BAC/WF): strong opportunity — 59.5% avg fit, 85 targets in Fortune 1000, widely ignored by YC-stage companies. `+`If seller is Seed/Series A: avg 23-33% fit against all Fortune 1000 — recommend partner/channel motion. `+`If seller is Series D+: 35% of Fortune 1000 scenarios are strong fit — full enterprise motion viable. `+`CPG split: HPC/Beauty (P&G, KC) = 61.9% avg — YES; Food/Beverage (PepsiCo, Kraft) = 49.0% — departmental only. `+`If target has high union exposure (Automotive, Aviation, Manufacturing): scope to knowledge workers explicitly.\n`+
     `SELLER CONTEXT (reference only):\n${sellerCtx}${prodCtx}\n`+
     `DEAL: ${dealCtx}\n\n`;
@@ -816,14 +814,16 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         `"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
         `"recentSignals":["Most actionable buying signal","Second","Third"],`+
         `"growthSignals":["Growth indicator with evidence","Second"],`+
-        `"workforceProfile":{"knowledgeWorkerPct":"","unionExposure":"","notes":""},`+
-        `"sentimentScores":{"glassdoorRating":"rating or empty","g2Rating":"rating or empty","trustpilotRating":"rating or empty","npsSignal":"","standoutReview":{"text":"","sentiment":"positive"}},`+
-        `"companySnapshot":"Updated 1-2 sentence snapshot with any new facts"}``;
+        `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
+        `"cultureProfile":{"coreValues":"2-3 stated company values","communicationStyle":"formal/informal","decisionMaking":"top-down/consensus/distributed","sellerLanguageHint":"the vocabulary and tone this company responds to"},`+
+        `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
+        `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
+        `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
       const r = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1000,
+          max_tokens:1800,
           tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
@@ -1670,7 +1670,7 @@ export default function App(){
       `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
       `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why grounded in the 6M heuristics — cite the specific tier, ownership dynamic, or stage signal","coaching":"1 sharp sentence on HOW to approach this account given their profile — the angle, the narrative, the entry point","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
+      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence grounded in 6M heuristics - cite tier, ownership, or stage signal","coaching":"1 sharp sentence on HOW to approach this account - the angle and entry point","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
       `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
       `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
 
@@ -3433,10 +3433,8 @@ Return ONLY valid JSON:
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
                                 title={fitScores[m.company].reason}>
                                 {fitScores[m.company].score}% · {fitScores[m.company].label}
+                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
                               </div>
-                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
-                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
-                              {fitScores[m.company].coaching&&<div style={{fontSize:10,color:"#555",marginTop:3,lineHeight:1.4,maxWidth:220}}>{fitScores[m.company].coaching}</div>}
                             ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):sellerUrl;scoreFit(allM,sCtx);}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
@@ -3588,15 +3586,6 @@ Return ONLY valid JSON:
                             <div title={fitScores[m.company].reason} style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap"}}>
                               {fitScores[m.company].score}% · {fitScores[m.company].label}
                             </div>
-                    {fitScores[selectedAccount?.company]?.coaching&&(
-                      <div style={{fontSize:11,color:"#555",marginTop:6,padding:"8px 10px",background:"#F8F6F1",borderRadius:7,lineHeight:1.5}}>💡 {fitScores[selectedAccount?.company].coaching}</div>
-                    )}
-                    {fitScores[selectedAccount?.company]?.coaching&&(
-                      <div style={{fontSize:11,color:"#555",marginTop:6,padding:"8px 10px",background:"#F8F6F1",borderRadius:7,lineHeight:1.5}}>💡 {fitScores[selectedAccount?.company].coaching}</div>
-                    )}
-                    {fitScores[selectedAccount?.company]?.coaching&&(
-                      <div style={{fontSize:11,color:"#555",marginTop:6,padding:"8px 10px",background:"#F8F6F1",borderRadius:7,lineHeight:1.5}}>💡 {fitScores[selectedAccount?.company].coaching}</div>
-                    )}
                           ):fitScoring?<div style={{fontSize:11,color:"#aaa"}}>Scoring...</div>:null}
                         </div>
                       </div>
