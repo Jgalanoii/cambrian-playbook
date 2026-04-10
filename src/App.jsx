@@ -579,7 +579,7 @@ const getHeaders = () => ({
 
 function extractJSON(text){
   try{
-    const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+    const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").replace(/[\u201C\u201D]/g,'"').replace(/[\u2018\u2019]/g,"'").trim();
     try{return JSON.parse(clean);}catch{
       const m=clean.match(/\{[\s\S]*\}/);
       return m?JSON.parse(m[0]):null;
