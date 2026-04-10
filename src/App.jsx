@@ -4972,8 +4972,7 @@ Return ONLY valid JSON:
             {postLoading&&(
               <div className="card">
                 <div style={{fontSize:13,color:"#777",marginBottom:12}}>Synthesizing RIVER capture and generating deal route...</div>
-                <div className="pulse-wrap">{[80,55,90,45,70,60,85].map((w,i)=><div key={i} className="pulse-line" style={{width:`${w}%`,animationDelay:`${i*0.12}s`}}/>)}</div>
-              </div>
+                <div className="pulse-wrap">{[70,90,55,80,65,75,50].map((w,i)=><div key={i} className="pulse-line" style={{width:w+"%",animationDelay:(i*0.12)+"s"}}/>)}</div>              </div>
             )}
             {postCall&&!postLoading&&(
               <>
@@ -5034,8 +5033,7 @@ Return ONLY valid JSON:
             {solutionFitLoading&&(
               <div className="card">
                 <div style={{fontSize:13,color:"#777",marginBottom:12}}>Applying Solution Architecture framework to your discovery capture...</div>
-                <div className="pulse-wrap">{[70,90,55,80,65,75,50].map((w,i)=><div key={i} className="pulse-line" style={{width:`${w}%`,animationDelay:`${i*0.12}s`}}/>)}</div>
-                <div style={{fontSize:12,color:"#8B6F47",marginTop:12,fontStyle:"italic"}}>
+                  <div className="pulse-wrap">{[70,90,55,80,65,75,50].map((w,i)=><div key={i} className="pulse-line" style={{width:w+"%",animationDelay:(i*0.12)+"s"}}/>)}</div>                <div style={{fontSize:12,color:"#8B6F47",marginTop:12,fontStyle:"italic"}}>
                   Evaluating business alignment, integration complexity, and implementation phasing...
                 </div>
               </div>
