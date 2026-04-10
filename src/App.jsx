@@ -536,8 +536,7 @@ function buildCohorts(rows,mapping){
     if(!groups[band])groups[band]=[];
     groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
   });
-  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).slice(0,10)
-    .map(([name,members],i)=>{
+  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).map(([name,members],i)=>{
       const acvs=members.filter(m=>m.acv>0);
       return{id:i,name,color:COHORT_COLORS[i%COHORT_COLORS.length],size:members.length,
         pct:Math.round(members.length/rows.length*100),
@@ -1976,6 +1975,17 @@ export default function App(){
   useEffect(()=>{
     if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl);
   },[sellerUrl]);
+
+  // Auto-run fit scoring when accounts load on step 3
+  useEffect(()=>{
+    if(step===3&&cohorts.length>0&&Object.keys(fitScores).length===0&&!fitScoring){
+      const allMembers=cohorts.flatMap(c=>c.members);
+      const sellerCtx=sellerDocs.length>0
+        ?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
+        :sellerUrl;
+      if(allMembers.length>0&&sellerCtx) scoreFit(allMembers,sellerCtx);
+    }
+  },[step,cohorts.length]);
 
   const goToCohorts=()=>{
     const b=buildCohorts(rows,mapping);
