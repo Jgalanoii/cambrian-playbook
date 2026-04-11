@@ -639,9 +639,9 @@ async function callAI(prompt, maxTok=1200){
       });
       const d = await r.json();
       if(d.error){
-        if(d.error.type==="rate_limit_error"){
-          console.warn("callAI rate limit, waiting 15s... attempt", attempt+1);
-          await sleep(15000);
+        if(d.error.type==="rate_limit_error"||d.status===429){
+          console.warn("Rate limit, waiting 8s... attempt", attempt+1);
+          await sleep(8000);
           continue;
         }
         console.error("callAI error:",d.error);
@@ -823,7 +823,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:1000,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
       });
