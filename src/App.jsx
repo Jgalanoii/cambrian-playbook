@@ -736,7 +736,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const activeOutcomes = selectedOutcomes?.length>0
     ? selectedOutcomes
     : ["Revenue growth","Customer satisfaction","Compliance","Fraud reduction","Investor returns","Market expansion"];
-  const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${activeOutcomes.join(", ")}`;
+  const rankedOutcomes = activeOutcomes.slice(0,3).map((o,i)=>"#"+(i+1)+": "+o).join(", ");
+  const dealCtx = (selectedCohort?.name||"")+" | Industry: "+(member.ind||"")+" | Priority Outcomes (ranked): "+rankedOutcomes;
   const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
   // Base context injected into every prompt
@@ -3821,7 +3822,7 @@ Return ONLY valid JSON:
                         const sel=selectedOutcomes.includes(o.title);
                         return(
                           <div key={o.id}
-                            onClick={()=>setSelectedOutcomes(p=>p.includes(o.title)?p.filter(x=>x!==o.title):[...p,o.title])}
+                            onClick={()=>setSelectedOutcomes(p=>p.includes(o.title)?p.filter(x=>x!==o.title):p.length>=3?p:[...p,o.title])}
                             style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:8,border:"1.5px solid "+(sel?"#1a1a18":"#E8E6DF"),background:sel?"#1a1a18":"#fff",cursor:"pointer",transition:"all 0.15s"}}>
                             <div style={{fontSize:16,flexShrink:0}}>{o.icon}</div>
                             <div>
