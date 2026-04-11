@@ -1,5 +1,3 @@
-c, 2000);
-2000);
 st SAMPLE_ROWS = [
   // ── Public Blue Chips ─────────────────────────────────────────────────────
   {company:"JPMorgan Chase",industry:"Financial Services",acv:"380000",lead_source:"Referral",outcome:"Employee engagement",company_url:"jpmorganchase.com",employees:"~290,000",publicPrivate:"Public (NYSE:JPM)"},
