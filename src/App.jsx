@@ -1,34 +1,4 @@
-st SAMPLE_ROWS = [
-  // ── Public Blue Chips ─────────────────────────────────────────────────────
-  {company:"JPMorgan Chase",industry:"Financial Services",acv:"380000",lead_source:"Referral",outcome:"Employee engagement",company_url:"jpmorganchase.com",employees:"~290,000",publicPrivate:"Public (NYSE:JPM)"},
-  {company:"Johnson & Johnson",industry:"Healthcare / Pharma",acv:"320000",lead_source:"Partner",outcome:"Workforce productivity",company_url:"jnj.com",employees:"~130,000",publicPrivate:"Public (NYSE:JNJ)"},
-  {company:"Humana Inc.",industry:"Health Insurance",acv:"290000",lead_source:"Referral",outcome:"Member engagement",company_url:"humana.com",employees:"~60,000",publicPrivate:"Public (NYSE:HUM)"},
-  {company:"Aflac",industry:"Supplemental Insurance",acv:"210000",lead_source:"Outbound",outcome:"Digital claims",company_url:"aflac.com",employees:"~10,000",publicPrivate:"Public (NYSE:AFL)"},
-  {company:"Marriott International",industry:"Hospitality",acv:"260000",lead_source:"Conference",outcome:"Employee recognition",company_url:"marriott.com",employees:"~120,000",publicPrivate:"Public (NASDAQ:MAR)"},
-  {company:"Salesforce",industry:"Enterprise SaaS",acv:"180000",lead_source:"Partner",outcome:"Sales team incentives",company_url:"salesforce.com",employees:"~70,000",publicPrivate:"Public (NYSE:CRM)"},
-  {company:"Comcast",industry:"Telecom / Media",acv:"240000",lead_source:"Outbound",outcome:"Customer loyalty",company_url:"comcast.com",employees:"~190,000",publicPrivate:"Public (NASDAQ:CMCSA)"},
-  // ── Private Companies (Brand Recognition) ─────────────────────────────────
-  {company:"Cargill",industry:"Agriculture / Food",acv:"340000",lead_source:"Referral",outcome:"Supply chain workforce",company_url:"cargill.com",employees:"~160,000",publicPrivate:"Private"},
-  {company:"Publix Super Markets",industry:"Grocery Retail",acv:"220000",lead_source:"Partner",outcome:"Associate recognition",company_url:"publix.com",employees:"~240,000",publicPrivate:"Private (Employee-owned)"},
-  {company:"Fidelity Investments",industry:"Financial Services",acv:"310000",lead_source:"Conference",outcome:"Advisor enablement",company_url:"fidelity.com",employees:"~70,000",publicPrivate:"Private"},
-  {company:"USAA",industry:"Insurance / Financial Services",acv:"280000",lead_source:"Referral",outcome:"Member retention",company_url:"usaa.com",employees:"~36,000",publicPrivate:"Private (Mutual)"},
-  {company:"State Farm Insurance",industry:"Insurance",acv:"250000",lead_source:"Outbound",outcome:"Agent productivity",company_url:"statefarm.com",employees:"~54,000",publicPrivate:"Private (Mutual)"},
-  {company:"Koch Industries",industry:"Manufacturing / Energy",acv:"300000",lead_source:"Referral",outcome:"Operational efficiency",company_url:"kochind.com",employees:"~120,000",publicPrivate:"Private"},
-  {company:"Mars Inc.",industry:"CPG / Food",acv:"190000",lead_source:"Partner",outcome:"Channel partner rewards",company_url:"mars.com",employees:"~140,000",publicPrivate:"Private"},
-  {company:"Deloitte",industry:"Professional Services",acv:"270000",lead_source:"Conference",outcome:"Talent retention",company_url:"deloitte.com",employees:"~450,000",publicPrivate:"Private (Partnership)"},
-  // ── PE-Backed ─────────────────────────────────────────────────────────────
-  {company:"AssuredPartners",industry:"Insurance Brokerage",acv:"95000",lead_source:"Partner",outcome:"Agency growth incentives",company_url:"assuredpartners.com",employees:"~9,000",publicPrivate:"PE-Backed (GTCR)"},
-  {company:"Acrisure",industry:"Insurance Agency",acv:"80000",lead_source:"Referral",outcome:"Producer rewards",company_url:"acrisure.com",employees:"~17,000",publicPrivate:"PE-Backed"},
-  {company:"LifeStance Health",industry:"Behavioral Health",acv:"75000",lead_source:"Outbound",outcome:"Clinician engagement",company_url:"lifestance.com",employees:"~8,000",publicPrivate:"PE-Backed"},
-  {company:"WEX Inc.",industry:"Fintech / Fleet Payments",acv:"150000",lead_source:"Partner",outcome:"Partner channel rewards",company_url:"wexinc.com",employees:"~5,000",publicPrivate:"Public (NYSE:WEX)"},
-  {company:"Zelis Healthcare",industry:"Healthcare Payments",acv:"120000",lead_source:"Referral",outcome:"Network engagement",company_url:"zelis.com",employees:"~2,500",publicPrivate:"PE-Backed (Parthenon)"},
-  // ── YC / VC-Backed Startups ────────────────────────────────────────────────
-  {company:"Rippling",industry:"HR / Workforce SaaS",acv:"55000",lead_source:"Outbound",outcome:"Sales team incentives",company_url:"rippling.com",employees:"~3,000",publicPrivate:"VC-Backed (Series F)"},
-  {company:"Gusto",industry:"SMB Payroll / HR",acv:"42000",lead_source:"Partner",outcome:"Partner channel growth",company_url:"gusto.com",employees:"~2,500",publicPrivate:"VC-Backed (YC W12)"},
-  {company:"Ramp",industry:"Fintech / Expense Management",acv:"48000",lead_source:"Referral",outcome:"Spend rewards program",company_url:"ramp.com",employees:"~900",publicPrivate:"VC-Backed (YC S19)"},
-  {company:"Brex",industry:"Fintech / Corporate Cards",acv:"52000",lead_source:"Outbound",outcome:"Customer loyalty rewards",company_url:"brex.com",employees:"~1,200",publicPrivate:"VC-Backed (Series D)"},
-  {company:"Deel",industry:"Global Payroll / HR SaaS",acv:"68000",lead_source:"Conference",outcome:"Global workforce rewards",company_url:"deel.com",employees:"~4,000",publicPrivate:"VC-Backed (Series D)"},
-];import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 
 const SB_URL="https://xtnidawfuaxwwwcnkewu.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmlkYXdmdWF4d3d3Y25rZXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3Njc2NzEsImV4cCI6MjA5MTM0MzY3MX0.JPTyCbsLk9Kr4AHo3ynszOo_SxvLA-XpT_5TzP8M71o";
@@ -369,7 +339,7 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
-const COHORT_COLORS=["#8B6F47","#2E6B2E","#1B3A6B","#6B3A3A","#4A6B3A","#6B4A1B","#3A4A6B","#6B1B4A","#1B6B5A","#5A1B6B"];
+const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A"];
 
 // ── UNIVERSAL BUSINESS IMPERATIVES ─────────────────────────────────────────
 // Every company — regardless of industry, size, or stage — is always working on these.
@@ -395,6 +365,39 @@ const OUTCOMES = [
 // The 6 universal imperatives every company shares — used for pre-selecting baseline outcomes
 const UNIVERSAL_IMPERATIVES = ["grow","expand","comply","fraud","investors","cx"];
 
+const SAMPLE_ROWS = [
+  // ── Fortune 1000 / Public Enterprise ─────────────────────────────────────
+  {company:"Nike Inc.",industry:"Consumer Goods / Apparel",acv:"280000",lead_source:"Outbound",outcome:"Digital transformation",company_url:"nike.com",employees:"~80,000",publicPrivate:"Public (NYSE: NKE)"},
+  {company:"Target Corporation",industry:"Retail",acv:"320000",lead_source:"Partner",outcome:"Operational efficiency",company_url:"target.com",employees:"~400,000",publicPrivate:"Public (NYSE: TGT)"},
+  {company:"Marriott International",industry:"Hospitality",acv:"240000",lead_source:"Conference",outcome:"Customer experience",company_url:"marriott.com",employees:"~120,000",publicPrivate:"Public (NASDAQ: MAR)"},
+  {company:"Humana Inc.",industry:"Health Insurance",acv:"350000",lead_source:"Referral",outcome:"Member engagement",company_url:"humana.com",employees:"~60,000",publicPrivate:"Public (NYSE: HUM)"},
+  {company:"Aflac",industry:"Supplemental Insurance",acv:"190000",lead_source:"Outbound",outcome:"Digital claims",company_url:"aflac.com",employees:"~10,000",publicPrivate:"Public (NYSE: AFL)"},
+  // ── Large Private Companies ───────────────────────────────────────────────
+  {company:"Cargill",industry:"Agriculture / Food",acv:"420000",lead_source:"Referral",outcome:"Supply chain efficiency",company_url:"cargill.com",employees:"~160,000",publicPrivate:"Private"},
+  {company:"Publix Super Markets",industry:"Grocery Retail",acv:"260000",lead_source:"Partner",outcome:"Workforce productivity",company_url:"publix.com",employees:"~240,000",publicPrivate:"Private (Employee-owned)"},
+  {company:"Fidelity Investments",industry:"Financial Services",acv:"310000",lead_source:"Conference",outcome:"Advisor enablement",company_url:"fidelity.com",employees:"~70,000",publicPrivate:"Private"},
+  {company:"USAA",industry:"Insurance / Financial Services",acv:"380000",lead_source:"Referral",outcome:"Member retention",company_url:"usaa.com",employees:"~36,000",publicPrivate:"Private (Mutual)"},
+  {company:"State Farm Insurance",industry:"Insurance",acv:"290000",lead_source:"Outbound",outcome:"Agent productivity",company_url:"statefarm.com",employees:"~54,000",publicPrivate:"Private (Mutual)"},
+  // ── PE-Backed ─────────────────────────────────────────────────────────────
+  {company:"AssuredPartners",industry:"Insurance Brokerage",acv:"95000",lead_source:"Partner",outcome:"Agency consolidation",company_url:"assuredpartners.com",employees:"~9,000",publicPrivate:"PE-Backed (GTCR)"},
+  {company:"Acrisure",industry:"Insurance Agency",acv:"75000",lead_source:"Referral",outcome:"Tech-enabled growth",company_url:"acrisure.com",employees:"~17,000",publicPrivate:"PE-Backed"},
+  {company:"LifeStance Health",industry:"Behavioral Health",acv:"85000",lead_source:"Outbound",outcome:"Clinical ops",company_url:"lifestance.com",employees:"~8,000",publicPrivate:"Public (NASDAQ: LFST)"},
+  {company:"Confluent Medical",industry:"Medical Devices / Manufacturing",acv:"65000",lead_source:"Conference",outcome:"Compliance automation",company_url:"confluentmedical.com",employees:"~2,500",publicPrivate:"PE-Backed"},
+  // ── Late-Stage / Pre-IPO Startups ─────────────────────────────────────────
+  {company:"Rippling",industry:"HR / Workforce Management SaaS",acv:"55000",lead_source:"Outbound",outcome:"GTM expansion",company_url:"rippling.com",employees:"~3,000",publicPrivate:"VC-Backed (Series F)"},
+  {company:"Brex",industry:"Fintech / Corporate Cards",acv:"48000",lead_source:"Referral",outcome:"Revenue acceleration",company_url:"brex.com",employees:"~1,200",publicPrivate:"VC-Backed (Series D)"},
+  {company:"Plaid",industry:"Fintech / Open Banking",acv:"72000",lead_source:"Partner",outcome:"Partnership expansion",company_url:"plaid.com",employees:"~900",publicPrivate:"VC-Backed (Series D)"},
+  {company:"Carta",industry:"Equity Management SaaS",acv:"60000",lead_source:"Conference",outcome:"Enterprise growth",company_url:"carta.com",employees:"~1,800",publicPrivate:"VC-Backed (Series G)"},
+  {company:"Deel",industry:"Global Payroll / HR SaaS",acv:"90000",lead_source:"Outbound",outcome:"International expansion",company_url:"deel.com",employees:"~4,000",publicPrivate:"VC-Backed (Series D)"},
+  // ── YC Alumni (Operating at Scale) ────────────────────────────────────────
+  {company:"Gusto",industry:"SMB Payroll / HR",acv:"38000",lead_source:"Partner",outcome:"Partner channel growth",company_url:"gusto.com",employees:"~2,500",publicPrivate:"VC-Backed (YC W12)"},
+  {company:"Airbase",industry:"Spend Management SaaS",acv:"42000",lead_source:"Referral",outcome:"Enterprise upmarket",company_url:"airbase.com",employees:"~400",publicPrivate:"VC-Backed (YC W18)"},
+  {company:"Ramp",industry:"Fintech / Expense Management",acv:"50000",lead_source:"Outbound",outcome:"Expansion revenue",company_url:"ramp.com",employees:"~900",publicPrivate:"VC-Backed (YC S19)"},
+  // ── Regional / Mid-Market ─────────────────────────────────────────────────
+  {company:"First Business Financial",industry:"Regional Banking",acv:"140000",lead_source:"Referral",outcome:"Commercial lending growth",company_url:"firstbusiness.com",employees:"~700",publicPrivate:"Public (NASDAQ: FBIZ)"},
+  {company:"Marcum LLP",industry:"Accounting / Advisory",acv:"70000",lead_source:"Conference",outcome:"Client portal modernization",company_url:"marcumllp.com",employees:"~4,500",publicPrivate:"Private"},
+  {company:"Inland Empire Health Plan",industry:"Managed Care / Health Insurance",acv:"220000",lead_source:"Outbound",outcome:"Member services",company_url:"iehp.org",employees:"~3,000",publicPrivate:"Private (Non-profit)"},
+];
 const RIVER_STAGES = [
   {id:"R1",letter:"R",label:"Reality",sub:"Current state — where are they broken?",
     gates:[
@@ -530,15 +533,16 @@ function buildCohorts(rows,mapping){
       band=ind||"Other",
       src=get(row,"lead_source")||"Direct",outcome=getOutcomeTheme(row,mapping),
       company=get(row,"company"),product=get(row,"product"),company_url=get(row,"company_url")||"",
-      employees=get(row,"employees")||row.employees||"",
-      publicPrivate=get(row,"public_private")||get(row,"publicPrivate")||row.publicPrivate||"",
+      employees=get(row,"employees")||"",
+      publicPrivate=get(row,"public_private")||"",
       geography=get(row,"geography")||"";
     if(!groups[band])groups[band]=[];
     groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
   });
-  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).map(([name,members],i)=>{
+  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).slice(0,5)
+    .map(([name,members],i)=>{
       const acvs=members.filter(m=>m.acv>0);
-      return{id:i,name,color:COHORT_COLORS[i%COHORT_COLORS.length],size:members.length,
+      return{id:i,name,color:COHORT_COLORS[i],size:members.length,
         pct:Math.round(members.length/rows.length*100),
         avgACV:acvs.length?Math.round(acvs.reduce((s,m)=>s+m.acv,0)/acvs.length):0,
         topInd:[...new Set(members.map(m=>m.ind))].slice(0,3),
@@ -565,7 +569,7 @@ function confColor(s){return s>=75?"#2E6B2E":s>=50?"#BA7517":"#9B2C2C";}
 
 // ── API CONSTANTS ─────────────────────────────────────────────────────────────
 const API_URL = "https://api.anthropic.com/v1/messages";
-const API_MODEL = "claude-sonnet-4-20250514";
+const API_MODEL = "claude-haiku-4-5-20251001";
 const getHeaders = () => ({
   "Content-Type":"application/json",
   "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
@@ -575,7 +579,7 @@ const getHeaders = () => ({
 
 function extractJSON(text){
   try{
-    const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").replace(/[\u201C\u201D]/g,'"').replace(/[\u2018\u2019]/g,"'").trim();
+    const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
     try{return JSON.parse(clean);}catch{
       const m=clean.match(/\{[\s\S]*\}/);
       return m?JSON.parse(m[0]):null;
@@ -618,7 +622,7 @@ function safeParseJSON(text){
 
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
-async function callAI(prompt, maxTok=1200){
+async function callAI(prompt, maxTok=1000){
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   for(let attempt=0; attempt<3; attempt++){
     try{
@@ -627,7 +631,7 @@ async function callAI(prompt, maxTok=1200){
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:maxTok,
+          max_tokens:5500,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
             {role:"user",content:prompt},
@@ -637,9 +641,9 @@ async function callAI(prompt, maxTok=1200){
       });
       const d = await r.json();
       if(d.error){
-        if(d.error.type==="rate_limit_error"||d.status===429){
-          console.warn("Rate limit, waiting 8s... attempt", attempt+1);
-          await sleep(8000);
+        if(d.error.type==="rate_limit_error"){
+          console.warn("callAI rate limit, waiting 15s... attempt", attempt+1);
+          await sleep(15000);
           continue;
         }
         console.error("callAI error:",d.error);
@@ -734,8 +738,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   const activeOutcomes = selectedOutcomes?.length>0
     ? selectedOutcomes
     : ["Revenue growth","Customer satisfaction","Compliance","Fraud reduction","Investor returns","Market expansion"];
-  const rankedOutcomes = activeOutcomes.slice(0,3).map((o,i)=>"#"+(i+1)+": "+o).join(", ");
-  const dealCtx = (selectedCohort?.name||"")+" | Industry: "+(member.ind||"")+" | Priority Outcomes (ranked): "+rankedOutcomes;
+  const rankedOutcomes=activeOutcomes.slice(0,3).map((o,i)=>"#"+(i+1)+": "+o).join(", ");
+  const dealCtx=(selectedCohort?.name||"")+" | Industry: "+(member.ind||"")+" | Priority Outcomes: "+rankedOutcomes;
   const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
   // Base context injected into every prompt
@@ -744,7 +748,6 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
     `${universalCtx}\n`+
-    `SELLER STAGE: "+(sellerStage||"not specified")+". Bootstrapped/A=agility+speed; B/C=proven scale+ROI; PE/D+=compliance+EBITDA+stability; Public=audit-ready+trust signals. Frame the pitch accordingly.\n`+
     `SIGNAL HEURISTICS: Funding <12 months = 18-month buying window; PE acquisition <18 months = cost mandate + 60-90 day budget cycle; hiring "Digital Transformation" = Early Majority; "Innovation/R&D" = Early Adopter; Glassdoor <3.5 = operational pain present.\n`+`SELLER STAGE AWARENESS: Seller is ${sellerStage||"unknown stage"}. `+`SCENARIO INTELLIGENCE (6M+ permutations, 4,634 YC companies × 1,156 targets): `+`If target is in THE WALL (Automotive avg 5.9%, Aerospace/Defense 5.8%, Telecom 6.1%, Energy 11-13%, Mass Retail 13.6%, Tier 1 Banks 12.6%): flag as near-impossible for direct startup sale regardless of stage. `+`If target is Large Private (Insurance, Professional Services, Tech): highlight as TIER 1 — avg 63-65% fit, fastest deal cycles, most underserved by startups. `+`If target is Regional Bank (not JPM/BAC/WF): strong opportunity — 59.5% avg fit, 85 targets in Fortune 1000, widely ignored by YC-stage companies. `+`If seller is Seed/Series A: avg 23-33% fit against all Fortune 1000 — recommend partner/channel motion. `+`If seller is Series D+: 35% of Fortune 1000 scenarios are strong fit — full enterprise motion viable. `+`CPG split: HPC/Beauty (P&G, KC) = 61.9% avg — YES; Food/Beverage (PepsiCo, Kraft) = 49.0% — departmental only. `+`If target has high union exposure (Automotive, Aviation, Manufacturing): scope to knowledge workers explicitly.\n`+
     `SELLER CONTEXT (reference only):\n${sellerCtx}${prodCtx}\n`+
     `DEAL: ${dealCtx}\n\n`;
@@ -820,8 +823,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:1000,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+          max_tokens:1800,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
       });
@@ -1667,11 +1670,11 @@ export default function App(){
       `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
       `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence grounded in 6M heuristics - cite tier, ownership, or stage signal","coaching":"1 sharp sentence on HOW to approach this account - the angle and entry point","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
+      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
       `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
       `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
 
-    const result = await callAI(prompt, 1400);
+    const result = await callAI(prompt,1400);
     if(result?.scores){
       const map = {};
       const memberUpdates = {};
@@ -1680,7 +1683,7 @@ export default function App(){
         const bg    = s.score>=75?"#EEF5EE":s.score>=50?"#FEF6E4":"#FDE8E8";
         // Ownership badge color
         const ownerColor = s.ownershipType==="public"?"#1B3A6B":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"#2E6B2E":"#555";
-        map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||"", coaching:s.coaching||""};
+        map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||""};
         memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
       });
       Object.assign(allMap, map);
@@ -1786,18 +1789,17 @@ export default function App(){
       `"uniqueDifferentiators":["Most defensible thing the seller does that alternatives cannot easily replicate","Second differentiator"],`+
       `"disqualifiers":["Company type, size, or situation where this is NOT a fit","Second disqualifier"],`+
       `"techSignals":["Technology in use that signals fit — e.g. uses Workday, Salesforce","Second signal"],`+
-      `"tractionChannels":["Best channel 1","Best channel 2"],`+
-      `"dealSize":"Typical ACV range",`+
-      `"salesCycle":"Typical length",`+
-      `"customerExamples":["Example 1","Example 2"]}}`;
+      `"tractionChannels":["Best channel to reach this exact buyer with evidence","Second channel","Third channel"],`+
+      `"dealSize":"Typical ACV or deal value range",`+
+      `"salesCycle":"Typical sales cycle from first contact to close",`+
+      `"customerExamples":["Known customer logo or company type","Second","Third"]}}`;
 
     try{
       const r2 = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:3500,
-          system:"You are a JSON API. Output ONLY raw valid JSON. No markdown. No curly quotes. Use only straight ASCII double quotes for JSON strings. Never use apostrophes or smart quotes inside string values — escape or remove them.",
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:2500,
           messages:[
             {role:"user",content:icpPrompt},
             {role:"assistant",content:"{"},
@@ -1807,34 +1809,13 @@ export default function App(){
       const d2 = await r2.json();
       if(d2.error){ console.warn("ICP phase 2 error:",d2.error); setIcpLoading(false); return; }
       const raw=(d2.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      // Normalize unicode quotes/dashes that break JSON.parse
-      const rawClean = raw
-        .replace(/[\u201C\u201D\u201E]/g,'"')
-        .replace(/[\u2018\u2019\u201A]/g,"'")
-        .replace(/[\u2013\u2014]/g,"-")
-        .replace(/[\u2026]/g,"...");
-      const jsonStr = rawClean.startsWith("{")? rawClean : "{"+rawClean;
-      // Find the outermost complete JSON object
-      let m = null;
-      try{ m = jsonStr.match(/\{[\s\S]*\}/); }catch(me){}
+      const jsonStr = raw.startsWith("{")? raw : "{"+raw;
+      const m = jsonStr.match(/\{[\s\S]*\}/);
       if(m){
         try{
-          // Normalize unicode punctuation then parse
-          const cleaned=m[0]
-            .replace(/[\u201C\u201D\u201E\u201F]/g,'"')
-            .replace(/[\u2018\u2019\u201A\u201B]/g,"'")
-            .replace(/[\u2013\u2014\u2015]/g,"-")
-            .replace(/[\u2026]/g,"...");
-          const parsed = JSON.parse(cleaned);
+          const parsed = JSON.parse(m[0]);
           if(parsed.sellerName||parsed.icp) setSellerICP(parsed);
-        }catch(e){
-          // Fallback: use safeParseJSON which handles unescaped quotes
-          try{
-            const fallback=safeParseJSON("{"+raw);
-            if(fallback&&(fallback.sellerName||fallback.icp)) setSellerICP(fallback);
-            else console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200));
-          }catch(e2){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
-        }
+        }catch(e){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
       }
     }catch(e){ console.warn("ICP build phase 2 failed:",e.message); }
     setIcpLoading(false);
@@ -1867,7 +1848,7 @@ export default function App(){
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:800,
+          max_tokens:1200,
           tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:prompt}],
         }),
@@ -1976,17 +1957,6 @@ export default function App(){
   useEffect(()=>{
     if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl);
   },[sellerUrl]);
-
-  // Auto-run fit scoring when accounts load on step 3
-  useEffect(()=>{
-    if(step===3&&cohorts.length>0&&Object.keys(fitScores).length===0&&!fitScoring){
-      const allMembers=cohorts.flatMap(c=>c.members);
-      const sellerCtx=sellerDocs.length>0
-        ?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
-        :sellerUrl;
-      if(allMembers.length>0&&sellerCtx) scoreFit(allMembers,sellerCtx);
-    }
-  },[step,cohorts.length]);
 
   const goToCohorts=()=>{
     const b=buildCohorts(rows,mapping);
@@ -2188,7 +2158,7 @@ export default function App(){
       `Return ONLY raw JSON, start with {:\n`+
       `{"reality":[{"q":"Question?","framework":"Active Listening - reflect their reality back","intent":"Why this question works"}],"impact":[{"q":"","framework":"","intent":""}],"vision":[{"q":"","framework":"","intent":""}],"entryPoints":[{"q":"","framework":"","intent":""}],"route":[{"q":"","framework":"","intent":""}]}`;
 
-    const result = await callAI(prompt, 900);
+    const result = await callAI(prompt,800);
     if(result) setDiscoveryQs(result);
   };
 
@@ -2609,7 +2579,7 @@ Return ONLY valid JSON:
                 ICP: {sellerICP.icp.industries.slice(0,2).join(", ")}
               </span>
             )}
-            {selectedCohort&&step>3&&<><span>·</span><span>Account: <strong>{selectedAccount?.company||selectedCohort.name}</strong></span></>}
+            {selectedCohort&&<><span>·</span><span>Cohort: <strong>{selectedCohort.name}</strong></span></>}
             {selectedAccount&&<><span>·</span><span>Account: <strong>{selectedAccount.company}</strong></span></>}
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               {lastSaved()&&(
@@ -3350,35 +3320,16 @@ Return ONLY valid JSON:
                   </div>
                 </div>
                 <div className="card">
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                    <div className="card-title" style={{margin:0}}>Account Preview</div>
-                    <div style={{fontSize:12,color:"#aaa"}}>{rows.length} accounts ready to import</div>
-                  </div>
-                  <div style={{height:"340px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
-                    <table className="tbl" style={{fontSize:13}}>
-                      <thead style={{position:"sticky",top:0,background:"#fff",zIndex:10}}>
-                        <tr>
-                          <th>Company</th>
-                          <th>Industry</th>
-                          <th>Lead Source</th>
-                          <th>Outcome</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((r,i)=>(
-                          <tr key={i}>
-                            <td style={{fontWeight:600}}>{r[mapping.company]||r.company||"—"}</td>
-                            <td style={{color:"#555"}}>{r[mapping.industry]||r.industry||"—"}</td>
-                            <td style={{color:"#555",fontSize:12}}>{r[mapping.lead_source]||r.lead_source||"—"}</td>
-                            <td style={{color:"#555",fontSize:12}}>{r[mapping.outcome]||r.outcome||"—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
+                  <div className="card-title">Preview</div>
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead>
+                      <tbody>{rows.slice(0,4).map((r,i)=><tr key={i}>{headers.map(h=><td key={h}>{r[h]}</td>)}</tr>)}</tbody>
                     </table>
                   </div>
                 </div>
-                <div className="actions-row" style={{marginTop:16}}>
-                  <button className="btn btn-primary btn-lg" onClick={goToCohorts}>Import {rows.length} Accounts →</button>
+                <div className="actions-row">
+                  <button className="btn btn-primary btn-lg" onClick={goToCohorts}>Perform Account Analysis →</button>
                 </div>
               </>
             )}
@@ -3425,7 +3376,7 @@ Return ONLY valid JSON:
                   )}
                 </div>
               </div>
-              <div className="tbl-wrap" style={{height:"460px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
+              <div className="tbl-wrap" style={{maxHeight:"480px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
                 <table className="tbl" style={{fontSize:13}}>
                   <thead style={{position:"sticky",top:0,zIndex:10,background:"#fff"}}>
                     <tr>
@@ -3433,6 +3384,7 @@ Return ONLY valid JSON:
                       <th>Industry</th>
                       <th>Org Size</th>
                       <th>Ownership</th>
+                      <th>ACV</th>
                       <th>Fit Check</th>
                       <th></th>
                     </tr>
@@ -3475,18 +3427,19 @@ Return ONLY valid JSON:
                               return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{pp}</span>;
                             })()}
                           </td>
+                          <td style={{fontSize:12,color:"#8B6F47",fontWeight:600}}>{m.acv>0?"$"+Number(m.acv).toLocaleString():m.acv?"$"+m.acv:"—"}</td>
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
                                 title={fitScores[m.company].reason}>
-                                {fitScores[m.company].score}%
+                                {fitScores[m.company].score}% · {fitScores[m.company].label}
                               </div>
                             ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):sellerUrl;scoreFit(allM,sCtx);}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
-                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);setSelectedAccount(m);setSelectedOutcomes([]);setStep(4);}}>
-                              Review →
+                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);pickAccount(m);}}>
+                              Brief →
                             </button>
                           </td>
                         </tr>
