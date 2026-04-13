@@ -1728,8 +1728,7 @@ export default function App(){
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:800,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:4}],
-          messages:[{role:"user",content:researchPrompt}],
+          messages:[{role:"user",content:researchPrompt},{role:"assistant",content:"{"}],
         }),
       });
       const d1 = await r1.json();
