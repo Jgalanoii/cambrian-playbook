@@ -4600,7 +4600,7 @@ Return ONLY valid JSON:
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
-              <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(6);}}>
+              <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(7);}}>
                 Start In-Call →
               </button>
             </div>
