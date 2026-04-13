@@ -112,3 +112,99 @@ export async function callAIRaw(payload) {
   });
   return r.json();
 }
+
+export async function streamAI(prompt, onChunk, maxTok=2000) {
+  const response = await fetch('/api/claude-stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTok,
+      messages: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: '{' }
+      ],
+    }),
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '{';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6);
+      if (data === '[DONE]') continue;
+      try {
+        const event = JSON.parse(data);
+        if (event.type === 'content_block_delta' && event.delta?.text) {
+          fullText += event.delta.text;
+          onChunk(fullText); // fires on every token
+        }
+      } catch {}
+    }
+  }
+
+  // Try to parse final JSON
+  try {
+    const cleaned = fullText.trim();
+    return JSON.parse(cleaned.endsWith('}') ? cleaned : cleaned + '}');
+  } catch {
+    return null;
+  }
+}
+
+export async function streamAI(prompt, onChunk, maxTok=2000) {
+  const response = await fetch('/api/claude-stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTok,
+      messages: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: '{' }
+      ],
+    }),
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '{';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      try {
+        const event = JSON.parse(data);
+        if (event.type === 'content_block_delta' && event.delta?.text) {
+          fullText += event.delta.text;
+          onChunk(fullText);
+        }
+      } catch {}
+    }
+  }
+
+  try {
+    const cleaned = fullText.trim();
+    const lastBrace = cleaned.lastIndexOf('}');
+    return JSON.parse(lastBrace > 0 ? cleaned.slice(0, lastBrace+1) : cleaned);
+  } catch { return null; }
+}
