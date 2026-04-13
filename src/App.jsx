@@ -1713,11 +1713,8 @@ SCORING RULES (apply in order):
 - Recent funding <12mo = buying signal +8pts
 
 SELLER: `+sellerCtx.slice(0,300)+`
-`+icpContext+``SCORING CRITERIA:\n`+
-      `1. Product/industry fit — do the seller's offerings make sense for this company?\n`+
-      `2. Size fit — does this company's scale match the seller's typical customer profile?\n`+
-      `3. Similar customers — would this company fit the seller's existing customer base?\n\n`+
-      `For ownership: identify if Public (with ticker), Private, PE-backed (name the PE firm if known), or VC-backed (Series A/B/C/D/E, note lead investor if known).\n`+
+`+icpContext+`
+`+
       `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
       `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
