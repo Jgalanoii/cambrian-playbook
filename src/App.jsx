@@ -539,10 +539,10 @@ function buildCohorts(rows,mapping){
     if(!groups[band])groups[band]=[];
     groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
   });
-  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).slice(0,5)
+  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length)
     .map(([name,members],i)=>{
       const acvs=members.filter(m=>m.acv>0);
-      return{id:i,name,color:COHORT_COLORS[i],size:members.length,
+      return{id:i,name,color:COHORT_COLORS[i%COHORT_COLORS.length],size:members.length,
         pct:Math.round(members.length/rows.length*100),
         avgACV:acvs.length?Math.round(acvs.reduce((s,m)=>s+m.acv,0)/acvs.length):0,
         topInd:[...new Set(members.map(m=>m.ind))].slice(0,3),
