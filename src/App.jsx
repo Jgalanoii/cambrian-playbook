@@ -626,9 +626,9 @@ async function callAI(prompt){
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   for(let attempt=0; attempt<3; attempt++){
     try{
-      const r = await fetch("/api/claude",{
+      const r = await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:5500,
@@ -818,8 +818,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
         `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
-      const r = await fetch("/api/claude",{
-        method:"POST",headers:{"Content-Type":"application/json"},
+      const r = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:1800,
@@ -1723,8 +1723,8 @@ export default function App(){
 
     let researchCtx = "";
     try{
-      const r1 = await fetch("/api/claude",{
-        method:"POST",headers:{"Content-Type":"application/json"},
+      const r1 = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:800,
@@ -1794,8 +1794,8 @@ export default function App(){
       `"customerExamples":["Known customer logo or company type","Second","Third"]}}`;
 
     try{
-      const r2 = await fetch("/api/claude",{
-        method:"POST",headers:{"Content-Type":"application/json"},
+      const r2 = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:2500,
@@ -1843,8 +1843,8 @@ export default function App(){
 
     try{
       // Step 1: fetch the homepage content directly
-      const fetchR = await fetch("/api/claude",{
-        method:"POST", headers:{"Content-Type":"application/json"},
+      const fetchR = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:6000,
