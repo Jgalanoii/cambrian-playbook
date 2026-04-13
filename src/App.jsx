@@ -3515,9 +3515,9 @@ Return ONLY valid JSON:
 
         {/* ── STEP 3: ACCOUNT + OUTCOMES ── */}
         {step===4&&selectedCohort&&(
-          <div className="page">
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4,flexWrap:"wrap"}}>
-              <div className="page-title" style={{margin:0}}>
+          <div style={{maxWidth:1100,margin:"0 auto",padding:"16px 24px 40px",width:"100%"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12,flexWrap:"wrap"}}>
+              <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:"#1a1a18",margin:0}}>
                 {accountQueue.length>1?`Account ${queueIdx+1} of ${accountQueue.length}`:selectedAccount?selectedAccount.company:"Select Account"}
               </div>
               {accountQueue.length>1&&(
@@ -3533,13 +3533,9 @@ Return ONLY valid JSON:
                 </div>
               )}
             </div>
-            <div className="page-sub" style={{marginBottom:20}}>
-              {accountQueue.length>1
-                ? `Reviewing ${accountQueue.map(a=>a.company).join(", ")} — pick outcomes for each, then build briefs.`
-                : "Choose an account, pick your target outcomes, then build the brief."}
-            </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:20,alignItems:"start"}}>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:16,alignItems:"start"}}>
 
               {/* Left: Account list */}
               <div>
@@ -3603,7 +3599,7 @@ Return ONLY valid JSON:
                 {selectedAccount?(
                   <>
                     {/* Account Header Box */}
-                    <div className="card" style={{border:"2px solid #1a1a18",padding:"14px 16px"}}>
+                    <div className="card" style={{border:"2px solid #1a1a18",padding:"10px 12px"}}>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div style={{width:40,height:40,borderRadius:"50%",background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                           {selectedAccount.company.slice(0,2).toUpperCase()}
@@ -3714,19 +3710,17 @@ Return ONLY valid JSON:
                       <div style={{fontSize:11,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
                         Target Outcomes <span style={{color:"#aaa",fontWeight:400,fontSize:10}}>(pick up to 3)</span>
                       </div>
-                      <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:8}}>
                         {OUTCOMES.map(o=>{
                           const sel=selectedOutcomes.includes(o.title);
                           return(
                             <div key={o.id} onClick={()=>setSelectedOutcomes(p=>p.includes(o.title)?p.filter(x=>x!==o.title):p.length>=3?p:[...p,o.title])}
-                              style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,
+                              style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderRadius:7,
                                 border:"1.5px solid "+(sel?"#1a1a18":"#E8E6DF"),
                                 background:sel?"#1a1a18":"#fff",cursor:"pointer",transition:"all 0.13s"}}>
-                              <span style={{fontSize:14,flexShrink:0}}>{o.icon}</span>
-                              <div style={{flex:1}}>
-                                <div style={{fontSize:12,fontWeight:600,color:sel?"#fff":"#1a1a18"}}>{o.title}</div>
-                              </div>
-                              {sel&&<div style={{fontSize:12,color:"#8B6F47"}}>✓</div>}
+                              <span style={{fontSize:13,flexShrink:0}}>{o.icon}</span>
+                              <div style={{flex:1,fontSize:11,fontWeight:600,color:sel?"#fff":"#1a1a18"}}>{o.title}</div>
+                              {sel&&<div style={{fontSize:11,color:"#8B6F47"}}>✓</div>}
                             </div>
                           );
                         })}
@@ -3745,7 +3739,7 @@ Return ONLY valid JSON:
                       </div>
                       <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
                         disabled={selectedOutcomes.length===0}
-                        onClick={()=>generateBrief(selectedAccount)}>
+                        onClick={()=>pickAccount(selectedAccount)}>
                         Build Brief → {selectedOutcomes.length>0&&`(${selectedOutcomes.length})`}
                       </button>
                       {selectedOutcomes.length===0&&(
