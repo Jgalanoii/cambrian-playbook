@@ -3801,7 +3801,7 @@ Return ONLY valid JSON:
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
                       <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
                       <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
-                      <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(5);}}>Review Hypothesis →</button>
+                      <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                     </div>
                   </div>
                 </div>
@@ -4415,7 +4415,7 @@ Return ONLY valid JSON:
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
                   <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
                   <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
-                  <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(5);}}>Review Hypothesis →</button>
+                  <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                 </div>
               </>
             )}
