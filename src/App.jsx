@@ -1742,6 +1742,1757 @@ export default function App(){
 
     // Phase 2 — build full ICP using research + training knowledge
     const icpPrompt =
+      `You are a senior ICP strategist. Build the Ideal Customer Profile for the B2B seller at: ${c}.
+${v ? `RESEARCH FOUND:\n${v}\n` : ""}
+SELLER STAGE: ${xe || "unknown stage"}
+
+Be specific and confident. Use training knowledge about this company. No placeholders.
+
+Return ONLY raw JSON starting with {:
+{"sellerName":"Company name","sellerDescription":"2 sentences — what they sell and their core value","marketCategory":"Specific market category e.g. Digital Rewards Platform","icp":{"industries":["Primary vertical","Second","Third"],"companySize":"e.g. 500-10K employees","revenueRange":"e.g. $50M-$2B","ownershipTypes":["most common ownership"],"geographies":["Primary market"],"adoptionProfile":"Early Adopter or Early Majority — which and why","buyerPersonas":["Economic buyer title","Champion title","Technical evaluator"],"priorityInitiative":"Specific event that triggers them to act NOW","successFactors":"What winning looks like for economic buyer and champion personally","perceivedBarriers":"Top objections and switching costs","decisionCriteria":"Top 2-3 factors they use to compare options","buyerJourney":"How they move from pain to decision — who is involved","customerJobs":["Functional: specific task","Emotional: how they want to feel","Social: how they want to be seen"],"topPains":["Most urgent pain","Second","Third"],"topGains":["Top outcome","Second","Third"],"competitiveAlternatives":["Status quo / manual","Direct competitor","Build in-house"],"uniqueDifferentiators":["Most defensible differentiator","Second"],"disqualifiers":["Not a fit: situation 1","Not a fit: situation 2"],"techSignals":["Tech in use that signals fit","Second signal"],"tractionChannels":["Best channel to reach this buyer","Second","Third"],"dealSize":"Typical ACV range","salesCycle":"Typical cycle","customerExamples":["Known customer or type 1","Second","Third"]}}port React, { useState, useCallback, useRef, useEffect } from "react";
+
+const SB_URL="https://xtnidawfuaxwwwcnkewu.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmlkYXdmdWF4d3d3Y25rZXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3Njc2NzEsImV4cCI6MjA5MTM0MzY3MX0.JPTyCbsLk9Kr4AHo3ynszOo_SxvLA-XpT_5TzP8M71o";
+async function sbAuth(path,body){const r=await fetch(SB_URL+'/auth/v1/'+path,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}
+async function sbGetUser(token){const r=await fetch(SB_URL+'/auth/v1/user',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});return r.ok?r.json():null;}
+async function sbSessions(method,path,token,body){const r=await fetch(SB_URL+'/rest/v1/'+path,{method,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'},body:body?JSON.stringify(body):undefined});const t=await r.text();return t?JSON.parse(t):null;}
+
+const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');`;
+
+const css = `
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #F7F6F2; color: #1a1a18; font-size: 15px; line-height: 1.6; }
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── HEADER ──────────────────────────────────────────── */
+.header { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; flex-shrink: 0; gap: 12px; }
+.logo { font-family: 'Lora', serif; font-size: 17px; font-weight: 700; color: #1a1a18; white-space: nowrap; letter-spacing: -0.2px; }
+.logo span { color: #8B6F47; }
+.stepper { display: flex; align-items: center; overflow-x: auto; gap: 0; }
+.step-item { display: flex; align-items: center; gap: 5px; padding: 0 8px; font-size: 11px; font-weight: 700; color: #ccc; letter-spacing: 0.5px; text-transform: uppercase; cursor: default; white-space: nowrap; transition: color 0.15s; }
+.step-item.active { color: #1a1a18; }
+.step-item.done { color: #8B6F47; cursor: pointer; }
+.step-item.done:hover { color: #7A6040; }
+.step-num { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+.step-item.done .step-num { background: #8B6F47; border-color: #8B6F47; color: #fff; }
+.step-item.active .step-num { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.step-div { width: 12px; height: 1px; background: #E8E6DF; flex-shrink: 0; }
+.live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #2E6B2E; background: #EEF5EE; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.3px; }
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: #2E6B2E; animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.25} }
+
+/* ── LAYOUT ──────────────────────────────────────────── */
+.page { max-width: 860px; margin: 0 auto; padding: 32px 24px 64px; width: 100%; }
+.page-title { font-family: 'Lora', serif; font-size: 26px; font-weight: 600; margin-bottom: 5px; color: #1a1a18; letter-spacing: -0.3px; }
+.page-sub { font-size: 14px; color: #666; line-height: 1.65; margin-bottom: 24px; max-width: 560px; }
+.footer { text-align: center; padding: 20px 24px; font-size: 11px; color: #bbb; border-top: 1px solid #E8E6DF; margin-top: auto; background: #fff; }
+
+/* ── SESSION BAR ─────────────────────────────────────── */
+.session-bar { background: #fff; border-bottom: 1px solid #E8E6DF; padding: 6px 24px; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #888; flex-shrink: 0; flex-wrap: wrap; }
+.session-url { color: #8B6F47; font-weight: 600; }
+
+/* ── BUTTONS ─────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; line-height: 1.2; white-space: nowrap; }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn-primary { background: #1a1a18; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+.btn-primary:hover:not(:disabled) { background: #2d2d2b; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+.btn-secondary { background: #fff; border: 1.5px solid #D4D0C8; color: #444; }
+.btn-secondary:hover:not(:disabled) { border-color: #8B6F47; color: #8B6F47; background: #FAF8F4; }
+.btn-gold { background: #8B6F47; color: #fff; box-shadow: 0 1px 4px rgba(139,111,71,0.25); }
+.btn-gold:hover:not(:disabled) { background: #7A6040; }
+.btn-green { background: #2E6B2E; color: #fff; box-shadow: 0 1px 4px rgba(46,107,46,0.25); }
+.btn-green:hover:not(:disabled) { background: #245424; }
+.btn-navy { background: #1B3A6B; color: #fff; box-shadow: 0 1px 4px rgba(27,58,107,0.25); }
+.btn-navy:hover:not(:disabled) { background: #152d54; }
+.btn-lg { padding: 11px 22px; font-size: 15px; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.actions-row { display: flex; gap: 8px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
+
+/* ── CARDS ───────────────────────────────────────────── */
+.card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+.card-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #1a1a18; }
+
+/* ── FORMS ───────────────────────────────────────────── */
+.field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.field-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #888; }
+.field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+input[type=text], input[type=email], input[type=password], select, textarea { width: 100%; padding: 8px 11px; border: 1.5px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1a18; background: #fff; outline: none; transition: border-color 0.15s; resize: vertical; -webkit-appearance: none; }
+input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, select:focus, textarea:focus { border-color: #8B6F47; background: #fff; box-shadow: 0 0 0 3px rgba(139,111,71,0.08); }
+input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeholder { color: #bbb; }
+
+/* ── SETUP / AUTH ────────────────────────────────────── */
+.setup-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 14px; padding: 28px; max-width: 500px; margin: 48px auto 0; }
+.setup-logo { font-family: 'Lora', serif; font-size: 22px; color: #1a1a18; margin-bottom: 4px; text-align: center; }
+.setup-logo span { color: #8B6F47; }
+.setup-url-bar { display: flex; align-items: center; gap: 8px; background: #F7F6F2; border: 1.5px solid #E8E6DF; border-radius: 8px; padding: 3px 12px; margin-bottom: 8px; transition: border-color 0.15s; }
+.setup-url-bar:focus-within { border-color: #8B6F47; background: #fff; }
+.setup-url-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; white-space: nowrap; min-width: 72px; }
+.setup-url-input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1a18; outline: none; width: 100%; padding: 7px 0; }
+.pw-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #F7F6F2 0%, #EEF5EE 100%); }
+.pw-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 16px; padding: 36px; width: 100%; max-width: 400px; }
+.pw-logo { font-family: 'Lora', serif; font-size: 24px; color: #1a1a18; margin-bottom: 3px; }
+.pw-logo span { color: #8B6F47; }
+.pw-sub { font-size: 13px; color: #999; margin-bottom: 24px; }
+.pw-input { width: 100%; padding: 10px 14px; border: 1.5px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; text-align: center; letter-spacing: 2px; margin-bottom: 10px; }
+.pw-input:focus { border-color: #8B6F47; box-shadow: 0 0 0 3px rgba(139,111,71,0.08); }
+.pw-error { font-size: 13px; color: #9B2C2C; margin-bottom: 8px; min-height: 18px; }
+
+/* ── UPLOAD ──────────────────────────────────────────── */
+.upload-zone { border: 1.5px dashed #C8C4BB; border-radius: 10px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; }
+.upload-zone:hover, .upload-zone.drag { border-color: #8B6F47; background: #FAF8F4; }
+.upload-label { font-family: 'Lora', serif; font-size: 16px; color: #1a1a18; margin-bottom: 4px; }
+.upload-hint { font-size: 13px; color: #999; margin-bottom: 14px; }
+
+/* ── TABLE ───────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { background: #F5F3EE; padding: 7px 10px; text-align: left; font-weight: 700; color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; position: sticky; top: 0; }
+.tbl td { padding: 7px 10px; border-top: 1px solid #F0EDE6; color: #333; }
+.tbl tr:hover td { background: #FAF8F4; }
+
+/* ── STATS ───────────────────────────────────────────── */
+.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+.stat-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; padding: 12px; text-align: center; }
+.stat-num { font-family: 'Lora', serif; font-size: 26px; color: #8B6F47; margin-bottom: 1px; }
+.stat-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.4px; }
+
+/* ── COHORT ──────────────────────────────────────────── */
+.cohort-chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.pie-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; padding: 14px; }
+.pie-title { font-family: 'Lora', serif; font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #1a1a18; }
+.pie-wrap { display: flex; align-items: center; gap: 12px; }
+.pie-legend { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
+.pie-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend-val { margin-left: auto; font-weight: 700; color: #1a1a18; font-size: 11px; }
+.cohort-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 8px; margin-bottom: 16px; }
+.cohort-card { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 10px; padding: 13px 14px; cursor: pointer; transition: all 0.15s; }
+.cohort-card:hover, .cohort-card.selected { border-color: #8B6F47; }
+.cohort-card.selected { background: #FAF8F4; }
+.cohort-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; flex-shrink: 0; }
+.cohort-name { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; }
+.cohort-size { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+.cohort-drill { background: #fff; border: 1px solid #E8E6DF; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+.cohort-drill-hdr { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid transparent; }
+.cohort-drill-hdr:hover { background: #F7F6F2; }
+.cohort-drill-hdr.open { border-bottom-color: #E8E6DF; }
+.cohort-drill-left { display: flex; align-items: center; gap: 8px; }
+.cohort-drill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cohort-drill-name { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; }
+.cohort-drill-meta { font-size: 12px; color: #999; margin-top: 1px; }
+.cohort-drill-right { display: flex; align-items: center; gap: 10px; }
+.cohort-drill-acv { font-family: 'Lora', serif; font-size: 15px; color: #8B6F47; }
+.cohort-drill-toggle { font-size: 11px; color: #aaa; font-weight: 700; }
+.cohort-drill-body { padding: 0 14px 12px; }
+.cohort-member-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+.cohort-member-table th { background: #F5F3EE; padding: 5px 8px; text-align: left; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: #777; white-space: nowrap; }
+.cohort-member-table td { padding: 6px 8px; border-top: 1px solid #F0EDE6; color: #333; }
+.cohort-member-table tr:hover td { background: #FAF8F4; cursor: pointer; }
+
+/* ── TAGS ────────────────────────────────────────────── */
+.tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+.tag-ind { background: #EEF2F8; color: #3A5A8C; }
+.tag-size { background: #F3EDE6; color: #7A5C30; }
+.tag-src { background: #EEF5EE; color: #2E6B2E; }
+.tag-out { background: #F5EEF5; color: #6B3A7A; }
+.outcome-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: #F5EEF5; color: #6B3A7A; white-space: nowrap; }
+
+/* ── ACCOUNT LIST ────────────────────────────────────── */
+.account-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+.account-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 9px 12px; cursor: pointer; transition: all 0.12s; }
+.account-item:hover, .account-item.selected { border-color: #1a1a18; background: #FAF8F4; }
+.account-name { font-size: 15px; font-weight: 600; color: #1a1a18; }
+.account-meta { font-size: 12px; color: #999; margin-top: 1px; }
+.account-acv { font-size: 13px; font-weight: 700; color: #8B6F47; }
+
+/* ── OUTCOMES ────────────────────────────────────────── */
+.outcome-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.outcome-tile { background: #fff; border: 1.5px solid #E8E6DF; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.15s; }
+.outcome-tile:hover, .outcome-tile.selected { border-color: #8B6F47; }
+.outcome-tile.selected { background: #FAF8F4; }
+.outcome-icon { font-size: 16px; margin-bottom: 4px; }
+.outcome-title { font-size: 12px; font-weight: 700; margin-bottom: 1px; color: #1a1a18; }
+.outcome-sub { font-size: 11px; color: #999; line-height: 1.4; }
+
+/* ── BRIEF BLOCKS ────────────────────────────────────── */
+.bb { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+.bb-hdr { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #F7F6F2; border-bottom: 1px solid #E8E6DF; }
+.bb-icon { width: 24px; height: 24px; border-radius: 6px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; color: #8B6F47; flex-shrink: 0; }
+.bb-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 600; color: #1a1a18; }
+.bb-sub { font-size: 12px; color: #888; margin-top: 1px; }
+.bb-body { padding: 12px 14px; }
+.solution-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.sol-badge { font-size: 12px; font-weight: 700; background: #F0EDE6; color: #7A5C30; border: 1px solid #D4C4A8; padding: 3px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; font-family: 'Lora', serif; }
+.signal-row { display: flex; gap: 7px; margin-bottom: 6px; align-items: flex-start; }
+.sig-dot { width: 5px; height: 5px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; margin-top: 5px; }
+.contact-row { display: flex; gap: 10px; margin-bottom: 7px; background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; padding: 9px 11px; align-items: flex-start; }
+.contact-av { width: 28px; height: 28px; border-radius: 50%; background: #E8E6DF; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #555; flex-shrink: 0; }
+
+/* ── EDITABLE FIELDS ─────────────────────────────────── */
+.ef-wrap { position: relative; }
+.ef-wrap:hover .ef-hint { opacity: 1; }
+.ef-hint { position: absolute; top: -14px; right: 2px; font-size: 9px; color: #8B6F47; font-weight: 700; opacity: 0; transition: opacity 0.15s; pointer-events: none; text-transform: uppercase; letter-spacing: 0.4px; }
+.ef-display { font-size: 14px; color: #333; line-height: 1.65; padding: 5px 7px; border-radius: 6px; border: 1px solid transparent; transition: all 0.12s; min-height: 28px; cursor: text; }
+.ef-display:hover { border-color: #E8E6DF; background: #F7F6F2; }
+.ef-empty { color: #bbb; font-style: italic; }
+.ef-input { font-size: 14px; color: #333; line-height: 1.65; padding: 5px 7px; border-radius: 6px; border: 1.5px solid #8B6F47; background: #fff; width: 100%; font-family: 'DM Sans', sans-serif; outline: none; box-shadow: 0 0 0 3px rgba(139,111,71,0.08); }
+.ef-input-multi { min-height: 56px; resize: vertical; }
+
+/* ── LOADING ─────────────────────────────────────────── */
+.load-box { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 24px; margin-bottom: 12px; }
+.load-status { font-size: 13px; color: #8B6F47; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+.load-spin { width: 14px; height: 14px; border: 2px solid #E8E6DF; border-top-color: #8B6F47; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pulse-wrap { display: flex; flex-direction: column; gap: 6px; }
+.pulse-line { height: 9px; background: #EDEBE6; border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%{opacity:1}50%{opacity:0.35}100%{opacity:1} }
+
+/* ── IN-CALL ─────────────────────────────────────────── */
+.incall-wrap { max-width: 940px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
+.incall-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.incall-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #1a1a18; }
+.incall-meta { font-size: 12px; color: #999; margin-top: 1px; }
+.river-pills { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.river-pill { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 24px; border: 1.5px solid #E8E6DF; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; color: #999; transition: all 0.13s; white-space: nowrap; }
+.river-pill:hover { border-color: #8B6F47; color: #8B6F47; }
+.river-pill.active { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.river-pill.filled { border-color: #2E6B2E; color: #2E6B2E; }
+.river-pill.filled.active { background: #2E6B2E; border-color: #2E6B2E; color: #fff; }
+.river-pill-letter { font-family: 'Lora', serif; font-size: 13px; font-weight: 700; }
+.river-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #2E6B2E; flex-shrink: 0; }
+.stage-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+.stage-card-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.stage-letter-big { width: 40px; height: 40px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stage-name { font-family: 'Lora', serif; font-size: 17px; font-weight: 600; color: #1a1a18; }
+.stage-sub { font-size: 12px; color: #777; margin-top: 1px; }
+.gate-block { margin-bottom: 16px; }
+.gate-question { font-size: 14px; font-weight: 700; color: #1a1a18; margin-bottom: 10px; line-height: 1.4; }
+.gate-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.gate-choice { padding: 6px 13px; border-radius: 20px; border: 1.5px solid #E8E6DF; background: #F7F6F2; cursor: pointer; font-size: 12px; font-weight: 600; color: #555; transition: all 0.13s; font-family: 'DM Sans', sans-serif; }
+.gate-choice:hover { border-color: #8B6F47; color: #8B6F47; background: #FAF8F4; }
+.gate-choice.selected { background: #1a1a18; border-color: #1a1a18; color: #fff; }
+.gate-note { width: 100%; padding: 8px 11px; border: 1px solid #E8E6DF; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #333; background: #F7F6F2; resize: vertical; min-height: 54px; outline: none; transition: border-color 0.13s; }
+.gate-note:focus { border-color: #8B6F47; background: #fff; }
+.gate-note-lbl { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.dq-block { margin-bottom: 12px; background: #F7F6F2; border-radius: 10px; padding: 13px; border-left: 3px solid #8B6F47; }
+.dq-framework { font-size: 10px; font-weight: 700; color: #8B6F47; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.dq-question { font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 8px; line-height: 1.5; font-style: italic; }
+.dq-note { width: 100%; padding: 7px 10px; border: 1px solid #E8E6DF; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; resize: vertical; min-height: 48px; outline: none; }
+.dq-note:focus { border-color: #8B6F47; }
+.incall-sidebar { background: #fff; border: 1px solid #E8E6DF; border-radius: 12px; padding: 14px; }
+.conf-bar-wrap { margin-bottom: 14px; }
+.conf-pct { font-family: 'Lora', serif; font-size: 26px; font-weight: 600; line-height: 1; }
+.incall-grid { display: grid; grid-template-columns: 1fr 290px; gap: 16px; align-items: start; }
+@media(max-width: 800px){ .incall-grid { grid-template-columns: 1fr; } }
+.call-layout { display: flex; flex: 1; height: calc(100vh - 52px); overflow: hidden; }
+.call-left { width: 55%; border-right: 1px solid #E8E6DF; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+.call-right { width: 45%; display: flex; flex-direction: column; background: #F7F6F2; overflow: hidden; }
+.panel-hdr { padding: 10px 16px; border-bottom: 1px solid #E8E6DF; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: #fff; }
+.panel-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; }
+.panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.river-nav { display: flex; overflow-x: auto; border-bottom: 1px solid #E8E6DF; background: #F7F6F2; flex-shrink: 0; }
+.r-tab { padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; color: #bbb; border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.13s; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 4px; }
+.r-tab:hover { color: #1a1a18; }
+.r-tab.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #fff; }
+.fill-dot { width: 5px; height: 5px; border-radius: 50%; background: #2E6B2E; flex-shrink: 0; }
+.gate { background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px; margin-bottom: 7px; }
+.gate.answered { border-color: #2E6B2E; background: #F2FAF2; }
+.gate-q { font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 7px; line-height: 1.4; }
+.gate-opts { display: flex; flex-direction: column; gap: 4px; }
+.gate-opt { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 7px; border: 1px solid #E8E6DF; background: #fff; cursor: pointer; transition: all 0.13s; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #333; text-align: left; }
+.gate-opt:hover { border-color: #8B6F47; background: #FAF8F4; }
+.gate-ans { font-size: 12px; color: #2E6B2E; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+.conf-wrap { margin-bottom: 12px; }
+.conf-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.conf-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; }
+.conf-score { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; }
+.conf-track { height: 4px; background: #E8E6DF; border-radius: 2px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 2px; transition: width 0.5s, background 0.5s; }
+.right-tabs { display: flex; border-bottom: 1px solid #E8E6DF; background: #fff; flex-shrink: 0; }
+.rt { padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; color: #999; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: all 0.13s; white-space: nowrap; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.4px; }
+.rt:hover { color: #1a1a18; }
+.rt.active { color: #8B6F47; border-bottom-color: #8B6F47; background: #F7F6F2; }
+.talk-box { background: #F7F6F2; border-left: 3px solid #8B6F47; border-radius: 0 7px 7px 0; padding: 9px 12px; margin-bottom: 8px; }
+.talk-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 3px; }
+.talk-txt { font-size: 13px; color: #555; line-height: 1.6; font-style: italic; }
+.obj-item { border: 1px solid #E8E6DF; border-radius: 7px; overflow: hidden; background: #fff; margin-bottom: 5px; }
+.obj-btn { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%; text-align: left; background: none; border: none; font-family: 'DM Sans', sans-serif; color: #1a1a18; }
+.obj-ans { padding: 7px 10px 9px; font-size: 13px; color: #555; line-height: 1.5; font-style: italic; border-top: 1px solid #F0EDE6; }
+.hyp-card { background: #fff; border: 1px solid #E8E6DF; border-radius: 7px; padding: 9px 11px; margin-bottom: 5px; cursor: pointer; transition: border-color 0.13s; }
+.hyp-card:hover { border-color: #8B6F47; }
+.hyp-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8B6F47; margin-bottom: 2px; }
+.hyp-txt { font-size: 13px; color: #333; line-height: 1.5; }
+
+/* ── POST-CALL ───────────────────────────────────────── */
+.post-sec { margin-bottom: 16px; }
+.post-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+.post-content { background: #fff; border: 1px solid #E8E6DF; border-radius: 8px; padding: 12px; font-size: 14px; color: #333; line-height: 1.65; white-space: pre-wrap; }
+.copy-btn { font-size: 11px; color: #8B6F47; cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; font-weight: 700; padding: 0; }
+.copy-btn:hover { text-decoration: underline; }
+.route-card { border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; border: 1.5px solid; }
+.route-fast { background: #EEF5EE; border-color: #2E6B2E; }
+.route-nurture { background: #FEF3E2; border-color: #BA7517; }
+.route-disq { background: #FDE8E8; border-color: #9B2C2C; }
+.route-lbl { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+.route-fast .route-lbl { color: #2E6B2E; }
+.route-nurture .route-lbl { color: #92540A; }
+.route-disq .route-lbl { color: #9B2C2C; }
+.route-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.route-desc { font-size: 13px; color: #555; line-height: 1.5; }
+
+/* ── MISC ────────────────────────────────────────────── */
+.notice { background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; padding: 10px 13px; font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 12px; }
+.notice strong { color: #1a1a18; }
+.divider { height: 1px; background: #E8E6DF; margin: 14px 0; }
+.r-icon { width: 22px; height: 22px; border-radius: 5px; background: #1a1a18; display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; color: #8B6F47; flex-shrink: 0; }
+.doc-upload-zone { border: 1.5px dashed #C8C4BB; border-radius: 8px; padding: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.15s; background: #fff; flex-wrap: wrap; }
+.doc-upload-zone:hover, .doc-upload-zone.drag { border-color: #8B6F47; background: #FAF8F4; }
+.doc-upload-icon { width: 30px; height: 30px; border-radius: 7px; background: #F0EDE6; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.doc-upload-text { flex: 1; min-width: 140px; }
+.doc-upload-title { font-size: 13px; font-weight: 600; color: #1a1a18; margin-bottom: 1px; }
+.doc-upload-hint { font-size: 11px; color: #aaa; }
+.doc-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.doc-chip { display: inline-flex; align-items: center; gap: 5px; background: #1a1a18; color: #C8A87A; padding: 3px 9px 3px 7px; border-radius: 20px; font-size: 11px; font-weight: 700; max-width: 200px; }
+.doc-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-chip-x { cursor: pointer; color: #777; font-size: 12px; line-height: 1; flex-shrink: 0; }
+.doc-chip-x:hover { color: #fff; }
+.doc-chip-label { font-size: 9px; background: #333; color: #8B6F47; padding: 1px 4px; border-radius: 8px; white-space: nowrap; }
+.session-doc-chip { display: inline-flex; align-items: center; gap: 4px; background: #F0EDE6; color: #7A5C30; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+.prod-entry { display: flex; gap: 10px; padding: 9px 11px; background: #F7F6F2; border: 1px solid #E8E6DF; border-radius: 8px; margin-bottom: 6px; align-items: flex-start; }
+.prod-num { width: 20px; height: 20px; border-radius: 50%; background: #1a1a18; color: #8B6F47; font-family: 'Lora', serif; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.prod-fields { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.prod-name-input { font-size: 13px; font-weight: 600; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #1a1a18; outline: none; }
+.prod-name-input:focus { border-color: #8B6F47; }
+.prod-desc-input { font-size: 12px; padding: 5px 9px; border: 1px solid #E8E6DF; border-radius: 6px; background: #fff; font-family: 'DM Sans', sans-serif; color: #555; outline: none; resize: vertical; min-height: 44px; }
+.prod-desc-input:focus { border-color: #8B6F47; }
+.prod-remove { font-size: 13px; color: #ccc; cursor: pointer; background: none; border: none; padding: 2px; line-height: 1; }
+.prod-remove:hover { color: #9B2C2C; }
+.prod-chip { display: inline-flex; align-items: center; gap: 4px; background: #F0EDE6; color: #7A5C30; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; margin: 2px; }
+.prod-chip-dot { width: 4px; height: 4px; border-radius: 50%; background: #8B6F47; flex-shrink: 0; }
+
+/* ── PRINT ───────────────────────────────────────────── */
+@media print {
+  @page { margin: 16mm 14mm; size: A4; }
+  body { background: #fff !important; font-size: 12px !important; }
+  .header, .session-bar, .footer, .actions-row, .incall-header, button, .btn, .river-pills, .stepper, [class*="load-"], .load-box { display: none !important; }
+  .page { max-width: 100% !important; padding: 0 !important; }
+  .bb { break-inside: avoid; border: 1px solid #ddd !important; margin-bottom: 10px !important; }
+  .bb-hdr { background: #f5f5f5 !important; }
+  .contact-row { break-inside: avoid; }
+  .card { break-inside: avoid; }
+  .incall-wrap { padding: 0 !important; }
+  .incall-grid { grid-template-columns: 1fr !important; }
+  .incall-sidebar { display: none !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+`;
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+
+const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A"];
+
+// ── UNIVERSAL BUSINESS IMPERATIVES ─────────────────────────────────────────
+// Every company — regardless of industry, size, or stage — is always working on these.
+// Use these to anchor discovery, solution mapping, and hypothesis framing.
+const OUTCOMES = [
+  // ── The Six Universal Imperatives ──
+  {id:"grow",        icon:"📈", title:"Grow",                    sub:"Revenue, new logos, market share, pipeline — the universal mandate"},
+  {id:"expand",      icon:"🌐", title:"Expand",                  sub:"Existing customers, new geos, new segments, platform adoption"},
+  {id:"comply",      icon:"⚖️", title:"Stay Compliant",          sub:"Regulatory mandates, audit readiness, risk reduction, legal exposure"},
+  {id:"fraud",       icon:"🔒", title:"Reduce Fraud & Risk",     sub:"Financial exposure, trust protection, data integrity, brand safety"},
+  {id:"investors",   icon:"💼", title:"Appease Investors",       sub:"IRR, EBITDA, multiples, board narrative, PE/VC reporting"},
+  {id:"cx",          icon:"❤️", title:"Make Customers Happy",    sub:"NPS, CSAT, retention, loyalty, churn reduction, customer lifetime value"},
+  // ── Operational & Strategic ──
+  {id:"efficiency",  icon:"↻",  title:"Operational Efficiency",  sub:"Automation, cost reduction, process improvement, headcount leverage"},
+  {id:"workforce",   icon:"✦",  title:"Workforce & Talent",      sub:"HR ops, engagement, retention, performance management"},
+  {id:"ai",          icon:"◇",  title:"Data & AI Adoption",      sub:"Analytics, AI tooling, automation, insight generation"},
+  {id:"brand",       icon:"☆",  title:"Brand & Marketing",       sub:"Awareness, loyalty, campaign performance, demand generation"},
+  {id:"cost",        icon:"-",  title:"Cost Reduction",          sub:"Overhead, vendor consolidation, margin improvement"},
+  {id:"innovation",  icon:"◆",  title:"Innovation & Product",    sub:"New product lines, R&D, speed to market, competitive differentiation"},
+  {id:"transform",   icon:"◇",  title:"Strategic Transformation",sub:"Org change, M&A integration, modernization, digital transformation"},
+];
+
+// The 6 universal imperatives every company shares — used for pre-selecting baseline outcomes
+const UNIVERSAL_IMPERATIVES = ["grow","expand","comply","fraud","investors","cx"];
+
+const SAMPLE_ROWS = [
+  // ── Fortune 1000 / Public Enterprise ─────────────────────────────────────
+  {company:"Nike Inc.",industry:"Consumer Goods / Apparel",acv:"280000",lead_source:"Outbound",outcome:"Digital transformation",company_url:"nike.com",employees:"~80,000",publicPrivate:"Public (NYSE: NKE)"},
+  {company:"Target Corporation",industry:"Retail",acv:"320000",lead_source:"Partner",outcome:"Operational efficiency",company_url:"target.com",employees:"~400,000",publicPrivate:"Public (NYSE: TGT)"},
+  {company:"Marriott International",industry:"Hospitality",acv:"240000",lead_source:"Conference",outcome:"Customer experience",company_url:"marriott.com",employees:"~120,000",publicPrivate:"Public (NASDAQ: MAR)"},
+  {company:"Humana Inc.",industry:"Health Insurance",acv:"350000",lead_source:"Referral",outcome:"Member engagement",company_url:"humana.com",employees:"~60,000",publicPrivate:"Public (NYSE: HUM)"},
+  {company:"Aflac",industry:"Supplemental Insurance",acv:"190000",lead_source:"Outbound",outcome:"Digital claims",company_url:"aflac.com",employees:"~10,000",publicPrivate:"Public (NYSE: AFL)"},
+  // ── Large Private Companies ───────────────────────────────────────────────
+  {company:"Cargill",industry:"Agriculture / Food",acv:"420000",lead_source:"Referral",outcome:"Supply chain efficiency",company_url:"cargill.com",employees:"~160,000",publicPrivate:"Private"},
+  {company:"Publix Super Markets",industry:"Grocery Retail",acv:"260000",lead_source:"Partner",outcome:"Workforce productivity",company_url:"publix.com",employees:"~240,000",publicPrivate:"Private (Employee-owned)"},
+  {company:"Fidelity Investments",industry:"Financial Services",acv:"310000",lead_source:"Conference",outcome:"Advisor enablement",company_url:"fidelity.com",employees:"~70,000",publicPrivate:"Private"},
+  {company:"USAA",industry:"Insurance / Financial Services",acv:"380000",lead_source:"Referral",outcome:"Member retention",company_url:"usaa.com",employees:"~36,000",publicPrivate:"Private (Mutual)"},
+  {company:"State Farm Insurance",industry:"Insurance",acv:"290000",lead_source:"Outbound",outcome:"Agent productivity",company_url:"statefarm.com",employees:"~54,000",publicPrivate:"Private (Mutual)"},
+  // ── PE-Backed ─────────────────────────────────────────────────────────────
+  {company:"AssuredPartners",industry:"Insurance Brokerage",acv:"95000",lead_source:"Partner",outcome:"Agency consolidation",company_url:"assuredpartners.com",employees:"~9,000",publicPrivate:"PE-Backed (GTCR)"},
+  {company:"Acrisure",industry:"Insurance Agency",acv:"75000",lead_source:"Referral",outcome:"Tech-enabled growth",company_url:"acrisure.com",employees:"~17,000",publicPrivate:"PE-Backed"},
+  {company:"LifeStance Health",industry:"Behavioral Health",acv:"85000",lead_source:"Outbound",outcome:"Clinical ops",company_url:"lifestance.com",employees:"~8,000",publicPrivate:"Public (NASDAQ: LFST)"},
+  {company:"Confluent Medical",industry:"Medical Devices / Manufacturing",acv:"65000",lead_source:"Conference",outcome:"Compliance automation",company_url:"confluentmedical.com",employees:"~2,500",publicPrivate:"PE-Backed"},
+  // ── Late-Stage / Pre-IPO Startups ─────────────────────────────────────────
+  {company:"Rippling",industry:"HR / Workforce Management SaaS",acv:"55000",lead_source:"Outbound",outcome:"GTM expansion",company_url:"rippling.com",employees:"~3,000",publicPrivate:"VC-Backed (Series F)"},
+  {company:"Brex",industry:"Fintech / Corporate Cards",acv:"48000",lead_source:"Referral",outcome:"Revenue acceleration",company_url:"brex.com",employees:"~1,200",publicPrivate:"VC-Backed (Series D)"},
+  {company:"Plaid",industry:"Fintech / Open Banking",acv:"72000",lead_source:"Partner",outcome:"Partnership expansion",company_url:"plaid.com",employees:"~900",publicPrivate:"VC-Backed (Series D)"},
+  {company:"Carta",industry:"Equity Management SaaS",acv:"60000",lead_source:"Conference",outcome:"Enterprise growth",company_url:"carta.com",employees:"~1,800",publicPrivate:"VC-Backed (Series G)"},
+  {company:"Deel",industry:"Global Payroll / HR SaaS",acv:"90000",lead_source:"Outbound",outcome:"International expansion",company_url:"deel.com",employees:"~4,000",publicPrivate:"VC-Backed (Series D)"},
+  // ── YC Alumni (Operating at Scale) ────────────────────────────────────────
+  {company:"Gusto",industry:"SMB Payroll / HR",acv:"38000",lead_source:"Partner",outcome:"Partner channel growth",company_url:"gusto.com",employees:"~2,500",publicPrivate:"VC-Backed (YC W12)"},
+  {company:"Airbase",industry:"Spend Management SaaS",acv:"42000",lead_source:"Referral",outcome:"Enterprise upmarket",company_url:"airbase.com",employees:"~400",publicPrivate:"VC-Backed (YC W18)"},
+  {company:"Ramp",industry:"Fintech / Expense Management",acv:"50000",lead_source:"Outbound",outcome:"Expansion revenue",company_url:"ramp.com",employees:"~900",publicPrivate:"VC-Backed (YC S19)"},
+  // ── Regional / Mid-Market ─────────────────────────────────────────────────
+  {company:"First Business Financial",industry:"Regional Banking",acv:"140000",lead_source:"Referral",outcome:"Commercial lending growth",company_url:"firstbusiness.com",employees:"~700",publicPrivate:"Public (NASDAQ: FBIZ)"},
+  {company:"Marcum LLP",industry:"Accounting / Advisory",acv:"70000",lead_source:"Conference",outcome:"Client portal modernization",company_url:"marcumllp.com",employees:"~4,500",publicPrivate:"Private"},
+  {company:"Inland Empire Health Plan",industry:"Managed Care / Health Insurance",acv:"220000",lead_source:"Outbound",outcome:"Member services",company_url:"iehp.org",employees:"~3,000",publicPrivate:"Private (Non-profit)"},
+];
+const RIVER_STAGES = [
+  {id:"R1",letter:"R",label:"Reality",sub:"Current state — where are they broken?",
+    gates:[
+      {id:"r1_current",q:"How is the prospect handling this problem today?",options:["Manual / spreadsheets / no system","Legacy tool they've outgrown","Patchwork of multiple vendors","Competitor solution underperforming","No process at all"]},
+      {id:"r1_urgency",q:"What's driving urgency to solve this now?",options:["Executive mandate / top-down pressure","Recent failure or incident","Growth has exposed the gap","Competitive pressure","Budget cycle opening up","No clear urgency yet"]},
+      {id:"r1_mustHave",q:"Must-have or nice-to-have? (Ellis 40% Rule)",options:["Must-have — they'd be very disappointed without a solution","Strong preference — would find workarounds","Nice-to-have — helpful but not urgent","Unclear — needs more discovery"]},
+    ],
+    discovery:[
+      {id:"r_pain",label:"In their own words, what is the core pain?",hint:"Capture exact language — use verbatim in proposal"},
+      {id:"r_tried",label:"What have they already tried? Why did it fail?",hint:"Understand the graveyard before pitching"},
+    ],
+    talkTrack:'"Before I share anything about us — help me understand what this looks like for your team today. Walk me through it."',
+    objections:[
+      {q:"We already have something in place",a:'"What\'s working well — and where does it fall short? I want to understand the gap before assuming we\'re a fit."'},
+      {q:"Not sure this is a priority",a:'"What would need to change for it to become one? Is there an event or timeline that would accelerate things?"'},
+    ]},
+  {id:"I",letter:"I",label:"Impact",sub:"What does this cost them — in dollars, time, people?",
+    gates:[
+      {id:"i_cost",q:"Have they quantified the cost of this problem?",options:["Yes — hard numbers","Partial — sense of it but not exact","No — haven't calculated it","Don't think it's costing much"]},
+      {id:"i_owner",q:"Who feels this pain most acutely?",options:["C-Suite / Executive","Revenue / Sales leadership","Operations / HR leadership","Finance / CFO","End users / frontline","Multiple stakeholders equally"]},
+    ],
+    discovery:[
+      {id:"i_dollars",label:"Measurable cost of inaction? (revenue, time, headcount, churn)",hint:"Push for a number — even rough is better than nothing"},
+      {id:"i_softer",label:"Softer costs? (morale, reputation, missed opportunity)",hint:"These often matter more to champions than hard numbers"},
+    ],
+    talkTrack:'"When this breaks down, what actually happens downstream? Has anyone put a number on it yet?"',
+    objections:[
+      {q:"We don't know what it's costing us",a:'"Let\'s build that together. Headcount × time lost — what does that math look like?"'},
+      {q:"The cost seems manageable",a:'"What would make it unmanageable? What\'s your threshold?"'},
+    ]},
+  {id:"V",letter:"V",label:"Vision",sub:"What does success look like — and who owns it?",
+    gates:[
+      {id:"v_outcome",q:"Can they articulate success in 90 days?",options:["Yes — specific and measurable","Somewhat — directional not specific","No — not defined yet","Different definitions across stakeholders"]},
+      {id:"v_champion",q:"Is there a clear internal champion?",options:["Yes — identified and motivated","Potential — needs equipping","No champion yet","Multiple potential champions"]},
+    ],
+    discovery:[
+      {id:"v_success",label:"In their words: what does a win look like at Day 30, 90, Year 1?",hint:"This becomes your proposal headline — use their exact language"},
+      {id:"v_champion_detail",label:"Who is the champion? What do they personally win if this succeeds?",hint:"Champions need a personal win, not just an organizational one"},
+    ],
+    talkTrack:'"If this were working the way it should — what would that look like for your team week to week?"',
+    objections:[
+      {q:"Not sure what success looks like",a:'"That\'s the most important thing to define before you sign anything. Can we spend 10 minutes on that?"'},
+      {q:"Different stakeholders want different things",a:'"Who has final say on what success means? Is there a shared outcome everyone agrees on?"'},
+    ]},
+  {id:"E",letter:"E",label:"Entry Points",sub:"Who decides, who influences, what triggers a yes?",
+    gates:[
+      {id:"e_buyer",q:"Have you identified the economic buyer?",options:["Yes — met or confirmed","Probable — know the role","No — working through layers","Unclear org structure"]},
+      {id:"e_threading",q:"How many stakeholders are engaged? (Churn predictor)",options:["3-5 — ideal range","1-2 — single-threaded (high churn risk)","6-7 — manageable with named champion","8+ without named owner — low close probability","Unknown"]},
+      {id:"e_process",q:"What does their decision process look like?",options:["Clear — defined steps and timeline","Informal — champion can move it","Committee / consensus required","RFP or formal procurement","Unknown"]},
+    ],
+    discovery:[
+      {id:"e_stakeholders",label:"Map the buying committee: who approves, influences, can kill it?",hint:"Name every stakeholder — flag the ones you haven't met"},
+      {id:"e_timeline",label:"Realistic decision timeline? Is there a forcing function?",hint:"Budget cycle, renewal date, board review — find the date"},
+    ],
+    talkTrack:'"Who else feels this the most? And how do decisions like this typically get made here?"',
+    objections:[
+      {q:"Need to get more people involved",a:'"Who are the right people? I\'d rather get them in early. Can we set up a 30-min call this week?"'},
+      {q:"This will go through procurement",a:'"What does that process look like? I want to make sure we have everything they need ready."'},
+    ]},
+  {id:"R2",letter:"R",label:"Route",sub:"Fastest path to yes — and a successful Day 1",
+    gates:[
+      {id:"r2_fit",q:"Your honest deal assessment?",options:["Strong fit — ready to advance","Good fit — a few gaps","Uncertain — need more discovery","Weak fit — misalignment","Not a fit"]},
+      {id:"r2_blocker",q:"Single biggest risk to this deal?",options:["No internal champion","Budget not confirmed","Competitor entrenched","Timeline mismatch","Stakeholder misalignment","Technical / compliance barrier","No compelling event"]},
+    ],
+    discovery:[
+      {id:"r2_next",label:"Single most important next step?",hint:"Named action + named person + named date"},
+      {id:"r2_onboard",label:"What does a successful onboarding look like for them?",hint:"This becomes your close framing and CSM handoff brief"},
+    ],
+    talkTrack:'"Based on what you\'ve shared, here\'s what I\'d suggest as a starting point — does that feel right from where you sit?"',
+    objections:[
+      {q:"Not ready to move forward",a:'"What would need to change? Is this timing or something more fundamental?"'},
+      {q:"Need to think about it",a:'"What specifically? If I can help you work through it now, it might save us both a few weeks."'},
+    ]},
+];
+
+const BLANK_BRIEF = {
+  companySnapshot:"",sellerSnapshot:"",
+  revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",website:"",linkedIn:"",
+  keyExecutives:[],recentHeadlines:[],
+  openRoles:{summary:"",roles:[]},
+  solutionMapping:[{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""}],
+  mobilizer:{description:"",identifyingBehavior:"",teachingAngle:""},
+  caseStudies:[],
+  openingAngle:"",watchOuts:["","",""],
+  keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
+  competitors:[],recentSignals:["","",""],
+  fundingProfile:"",strategicTheme:"",growthSignals:[],sellerOpportunity:"",
+  publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:""},
+};
+
+const RKEYS = ["reality","impact","vision","entryPoints","route"];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+
+function parseACV(v){if(!v)return 0;const n=parseFloat(v.toString().replace(/[$,]/g,"").replace(/k$/i,"000"));return isNaN(n)?0:n;}
+// Cohorts now based on org size, not ACV
+function labelOrgSize(row,mapping){
+  const emp = ((mapping.employees&&row[mapping.employees])||"").toString().toLowerCase();
+  const ind = ((mapping.industry&&row[mapping.industry])||"").toString();
+  if(emp){
+    const n=parseFloat(emp.replace(/[^0-9.]/g,""));
+    if(!isNaN(n)){
+      if(n<500)   return"Small Org (<500 employees)";
+      if(n<5000)  return"Mid-Size (500–5K employees)";
+      if(n<50000) return"Large Org (5K–50K employees)";
+      return"Enterprise (50K+ employees)";
+    }
+  }
+  // Fall back to industry signals if no employee data
+  const indLow=ind.toLowerCase();
+  if(indLow.includes("university")||indLow.includes("higher ed")) return"Mid-Size (500–5K employees)";
+  return"Unknown Size";
+}
+function labelACV(v){if(v===0)return"Unknown";if(v<25000)return"SMB (<$25K)";if(v<100000)return"Mid-Market ($25K–$100K)";return"Enterprise ($100K+)";}
+function getOutcomeTheme(row,mapping){
+  const get=k=>(mapping[k]?(row[mapping[k]]||""):"").toString().toLowerCase();
+  const txt=get("outcome")+get("product");
+  if(/revenue|growth|sales|pipeline/.test(txt))return"Revenue Growth";
+  if(/efficien|automat|process|cost/.test(txt))return"Operational Efficiency";
+  if(/churn|retain|loyal/.test(txt))return"Customer Retention";
+  if(/payroll|hr|employ|workforce/.test(txt))return"Workforce Management";
+  if(/ai|ml|data|analytic/.test(txt))return"Data & AI Adoption";
+  return"Strategic Transformation";
+}
+function buildCohorts(rows,mapping){
+  if(!rows.length)return[];
+  const get=(row,key)=>(mapping[key]?(row[mapping[key]]||""):"").toString().trim();
+  const groups={};
+  rows.forEach(row=>{
+    const acv=0, // ACV removed — reps assess deal size themselves
+      ind=get(row,"industry")||"Other",
+      // Band by industry vertical for meaningful cohorts
+      band=ind||"Other",
+      src=get(row,"lead_source")||"Direct",outcome=getOutcomeTheme(row,mapping),
+      company=get(row,"company"),product=get(row,"product"),company_url=get(row,"company_url")||"",
+      employees=get(row,"employees")||"",
+      publicPrivate=get(row,"public_private")||"",
+      geography=get(row,"geography")||"";
+    if(!groups[band])groups[band]=[];
+    groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
+  });
+  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length).slice(0,5)
+    .map(([name,members],i)=>{
+      const acvs=members.filter(m=>m.acv>0);
+      return{id:i,name,color:COHORT_COLORS[i],size:members.length,
+        pct:Math.round(members.length/rows.length*100),
+        avgACV:acvs.length?Math.round(acvs.reduce((s,m)=>s+m.acv,0)/acvs.length):0,
+        topInd:[...new Set(members.map(m=>m.ind))].slice(0,3),
+        topSrc:[...new Set(members.map(m=>m.src))].slice(0,2),
+        topOut:[...new Set(members.map(m=>m.outcome))].slice(0,2),members};
+    });
+}
+function calcConfidence(gateAnswers,riverData){
+  const positive={
+    r1_urgency:["Executive mandate / top-down pressure","Recent failure or incident","Budget cycle opening up"],
+    i_cost:["Yes — hard numbers","Partial — sense of it but not exact"],
+    v_outcome:["Yes — specific and measurable","Somewhat — directional not specific"],
+    v_champion:["Yes — identified and motivated","Potential — needs equipping"],
+    e_buyer:["Yes — met or confirmed","Probable — know the role"],
+    e_process:["Clear — defined steps and timeline","Informal — champion can move it"],
+    r2_fit:["Strong fit — ready to advance","Good fit — a few gaps"],
+  };
+  let score=20;
+  Object.entries(positive).forEach(([gid,pos])=>{if(pos.includes(gateAnswers[gid]))score+=10;else if(gateAnswers[gid])score+=3;});
+  const filled=RIVER_STAGES.flatMap(s=>s.discovery).filter(p=>riverData[p.id]?.trim().length>10).length;
+  score+=filled*4;return Math.min(score,98);
+}
+function confColor(s){return s>=75?"#2E6B2E":s>=50?"#BA7517":"#9B2C2C";}
+
+// ── API CONSTANTS ─────────────────────────────────────────────────────────────
+const API_URL = "https://api.anthropic.com/v1/messages";
+const API_MODEL = "claude-haiku-4-5-20251001";
+const getHeaders = () => ({
+  "Content-Type":"application/json",
+  "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
+  "anthropic-version":"2023-06-01",
+  "anthropic-dangerous-direct-browser-access":"true",
+});
+
+function extractJSON(text){
+  try{
+    const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+    try{return JSON.parse(clean);}catch{
+      const m=clean.match(/\{[\s\S]*\}/);
+      return m?JSON.parse(m[0]):null;
+    }
+  }catch{return null;}
+}
+
+// ── SINGLE-CALL BRIEF GENERATION: web search + synthesis in one request ────────
+// Claude searches the web AND returns structured JSON in a single API call.
+// This avoids the two-step coordination problem entirely.
+// ── WEB SEARCH: recent news + jobs only (1 call, max 3 searches) ──────────────
+// ── SAFE JSON PARSER ─────────────────────────────────────────────────────────
+function safeParseJSON(text){
+  try{return JSON.parse(text);}catch{}
+  const s=text.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
+  // Also strip trailing commas before arrays/objects close
+  const noTrailing = s.replace(/,\s*([}\]])/g,"$1");
+  try{return JSON.parse(noTrailing);}catch{}
+  let out="",inStr=false,esc=false;
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    if(esc){out+=ch;esc=false;continue;}
+    if(ch==="\\"){out+=ch;esc=true;continue;}
+    if(inStr){
+      if(ch==="\n"){out+="\\n";continue;}
+      if(ch==="\r"){out+="\\r";continue;}
+      if(ch==='"'){
+        let j=i+1;
+        while(j<s.length){if("\n\r \t".includes(s[j])){j++;continue;}if(s[j]==="\\"){j+=2;continue;}break;}
+        const nxt=j<s.length?s[j]:"";
+        if(nxt===","||nxt==="}"||nxt==="]"||nxt===":"||nxt===""){inStr=false;out+=ch;}
+        else out+='\\"';
+        continue;
+      }
+      out+=ch;
+    }else{if(ch==='"'){inStr=true;out+=ch;}else out+=ch;}
+  }
+  try{return JSON.parse(out);}catch(e){console.error("JSON repair failed:",e.message);return null;}
+}
+
+
+// ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
+async function callAI(prompt, maxTok=1000){
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const r = await fetch("/api/claude",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:5500,
+          system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
+          messages:[
+            {role:"user",content:prompt},
+            {role:"assistant",content:"{"},
+          ],
+        }),
+      });
+      const d = await r.json();
+      if(d.error){
+        if(d.error.type==="rate_limit_error"){
+          console.warn("callAI rate limit, waiting 15s... attempt", attempt+1);
+          await sleep(15000);
+          continue;
+        }
+        console.error("callAI error:",d.error);
+        return null;
+      }
+      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      if(!raw) return null;
+      // If model already included the opening {, don't double up
+      const text = raw.startsWith("{") ? raw : "{" + raw;
+      console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
+
+      const last = text.lastIndexOf("}");
+      if(last<=0) return null;
+
+      const candidate = text.slice(0, last+1);
+
+      // Try 1: direct parse
+      try{return JSON.parse(candidate);}catch{}
+
+      // Try 2: unicode-only sanitize + trailing comma removal
+      const sanitized = candidate
+        .replace(/[\u2018\u2019]/g,"'")
+        .replace(/[\u201C\u201D]/g,'"')
+        .replace(/[\u2013\u2014]/g,"-")
+        .replace(/[\u2026]/g,"...")
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
+        .replace(/,\s*([}\]])/g,"$1"); // strip trailing commas
+      try{return JSON.parse(sanitized);}catch{}
+
+      // Try 3: full character-by-character JSON repair
+      // - Escapes unescaped double quotes INSIDE string values
+      // - Escapes raw newlines only inside strings (structural newlines left as-is)
+      // - Correct peek-ahead that skips escape sequences
+      const repairJSON = s => {
+        let out="", inStr=false, esc=false;
+        for(let i=0;i<s.length;i++){
+          const ch=s[i];
+          if(esc){out+=ch;esc=false;continue;}
+          if(ch==="\\"){out+=ch;esc=true;continue;}
+          if(inStr){
+            if(ch==="\n"){out+="\\n";continue;} // raw newline inside string → escape
+            if(ch==="\r"){out+="\\r";continue;}
+            if(ch==="\t"){out+="\\t";continue;}
+            if(ch==='"'){
+              // Peek ahead past whitespace+escape-seqs to classify this quote
+              let j=i+1;
+              while(j<s.length){
+                if(s[j]==="\n"||s[j]==="\r"||s[j]===" "||s[j]==="\t"){j++;continue;}
+                if(s[j]==="\\"){j+=2;continue;} // skip escape sequence
+                break;
+              }
+              const nxt=j<s.length?s[j]:"";
+              if(nxt===","||nxt==="}"||nxt==="]"||nxt===":"||nxt===""){
+                inStr=false;out+=ch; // legitimate closing quote
+              }else{
+                out+='\\"'; // interior quote — escape it
+              }
+              continue;
+            }
+            out+=ch;
+          }else{
+            if(ch==='"'){inStr=true;out+=ch;continue;}
+            out+=ch;
+          }
+        }
+        return out;
+      };
+      try{return JSON.parse(repairJSON(sanitized));}catch(e){
+        console.error("JSON repair failed:",e.message,"pos:",e.message.match(/\d+/)?.[0]);
+        console.log("Sample:",sanitized.slice(Math.max(0,parseInt(e.message.match(/\d+/)?.[0]||0)-80),parseInt(e.message.match(/\d+/)?.[0]||0)+80));
+      }
+
+      return null;
+    }catch(e){console.error("callAI fetch error:",e);return null;}
+  }
+  return null;
+}
+
+// ── GENERATE BRIEF ────────────────────────────────────────────────────────────
+async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[]){
+  const co  = member.company;
+  const url = member.company_url || co;
+
+  const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
+  const sellerCtx = sellerDocs.length>0
+    ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join("\n")
+    : "Seller: "+sellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"");
+  const prodCtx = products.filter(p=>p.name.trim()).length>0
+    ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description.slice(0,60):"")).join("; ")
+    : "";
+  // Every company always wants these — inject as baseline context even if not explicitly selected
+  const activeOutcomes = selectedOutcomes?.length>0
+    ? selectedOutcomes
+    : ["Revenue growth","Customer satisfaction","Compliance","Fraud reduction","Investor returns","Market expansion"];
+  const rankedOutcomes=activeOutcomes.slice(0,3).map((o,i)=>"#"+(i+1)+": "+o).join(", ");
+  const dealCtx=(selectedCohort?.name||"")+" | Industry: "+(member.ind||"")+" | Priority Outcomes: "+rankedOutcomes;
+  const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
+
+  // Base context injected into every prompt
+  const base =
+    `B2B sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
+    `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
+    `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
+    `${universalCtx}\n`+
+    `SIGNAL HEURISTICS: Funding <12 months = 18-month buying window; PE acquisition <18 months = cost mandate + 60-90 day budget cycle; hiring "Digital Transformation" = Early Majority; "Innovation/R&D" = Early Adopter; Glassdoor <3.5 = operational pain present.\n`+`SELLER STAGE AWARENESS: Seller is ${sellerStage||"unknown stage"}. `+`SCENARIO INTELLIGENCE (6M+ permutations, 4,634 YC companies × 1,156 targets): `+`If target is in THE WALL (Automotive avg 5.9%, Aerospace/Defense 5.8%, Telecom 6.1%, Energy 11-13%, Mass Retail 13.6%, Tier 1 Banks 12.6%): flag as near-impossible for direct startup sale regardless of stage. `+`If target is Large Private (Insurance, Professional Services, Tech): highlight as TIER 1 — avg 63-65% fit, fastest deal cycles, most underserved by startups. `+`If target is Regional Bank (not JPM/BAC/WF): strong opportunity — 59.5% avg fit, 85 targets in Fortune 1000, widely ignored by YC-stage companies. `+`If seller is Seed/Series A: avg 23-33% fit against all Fortune 1000 — recommend partner/channel motion. `+`If seller is Series D+: 35% of Fortune 1000 scenarios are strong fit — full enterprise motion viable. `+`CPG split: HPC/Beauty (P&G, KC) = 61.9% avg — YES; Food/Beverage (PepsiCo, Kraft) = 49.0% — departmental only. `+`If target has high union exposure (Automotive, Aviation, Manufacturing): scope to knowledge workers explicitly.\n`+
+    `SELLER CONTEXT (reference only):\n${sellerCtx}${prodCtx}\n`+
+    `DEAL: ${dealCtx}\n\n`;
+
+  onStatus("Researching "+co+"...");
+
+  // ── 5 MICRO-CALLS fire simultaneously, each with a tiny schema ───────────
+  // User sees the overview card the moment the fastest resolves (~2s)
+
+  // MICRO 1: Company overview card — smallest schema, shows first
+  const p1 = callAI(base+
+    `Return ONLY raw JSON (start with {) for the company overview:\n`+
+    `{"companySnapshot":"3-4 sentences: what ${co} does, revenue scale, employees, HQ, strategic direction",`+
+    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:MCD)","employeeCount":"e.g. ~200,000",`+
+    `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
+    `"fundingProfile":"Ownership: PE firm + year acquired, or Series + total raised + lead investor, or Public exchange+ticker",`+
+    `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
+    `"watchOuts":["PROCUREMENT RISK (from 6M-permutation analysis): The Wall industries are Automotive/Mfg (5.9% avg fit), Aerospace Defense Prime (5.8%), Telecom (6.1%), Energy Oil/Gas (11.3%), Energy Utilities (13.4%), Mass Market Retail Walmart/Target (13.6%), Tier 1 Banks JPM/BAC/WF (12.6%) — 100% poor-fit rate across all startup stages. Flag if this target is in these categories.","INCUMBENT RISK: which Oracle/SAP/Workday/Amex/Salesforce relationship are we displacing or landing adjacent to? Adjacent is almost always the right first motion. Series A-B cannot displace incumbents.","STAGE CREDIBILITY: Seed/Series A selling to >50K employee companies = avg 23-33% fit across all scenarios. Series C+ required for meaningful enterprise traction. PE-acquired seller has trust advantage."]}`
+  );
+
+  // MICRO 2: Executives — fires simultaneously, merges when ready
+  const p2 = callAI(base+
+    `Return ONLY raw JSON (start with {) for the 3 key executives at ${co}:\n`+
+    `{"keyExecutives":[`+
+    `{"name":"REQUIRED real current CEO name","title":"CEO","initials":"XX","background":"Prior role in 1 sentence","angle":"Board mandate and what they are measured on. 2 sentences."},`+
+    `{"name":"REQUIRED real current CHRO or CPO name","title":"exact title","initials":"XX","background":"HR/people focus 1 sentence","angle":"What winning looks like for them personally. 2 sentences."},`+
+    `{"name":"REQUIRED real current CFO or COO name","title":"exact title","initials":"XX","background":"Financial/ops focus 1 sentence","angle":"How they evaluate spend decisions. 2 sentences."}],`+
+    `"sellerSnapshot":"2 sentences on seller most relevant offerings for ${co}"}`
+  );
+
+  // MICRO 3: Strategy + opening angle — shows after execs
+  const p3 = callAI(base+
+    `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
+    `{"strategicTheme":"2-3 sentences on ${co} current strategic direction and priorities",`+
+    `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now for ${co} — the why-you-why-now",`+
+    `"openingAngle":"1-2 sharp sentences referencing something real about ${co}. Reframe an assumption. Sounds human not scripted.",`+
+    `"publicSentiment":{`+`"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name sources and tone.",`+`"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — or empty if unknown",`+`"g2Rating":"G2 product rating as a number e.g. 4.2 out of 5 — or empty if not a software company",`+`"npsSignal":"Estimated NPS signal: if you know ${co} publishes NPS or CSAT data, cite it. Otherwise describe customer loyalty signals (high churn, vocal advocates, renewal rates mentioned in press)",`+`"trustpilotRating":"Trustpilot score as a number if known — or empty",`+`"employeeScore":"Glassdoor CEO approval % or Indeed rating if known — signals culture and operational health",`+`"standoutReview":{"text":"Most revealing customer or employee quote or paraphrase — something a seller would want to know","source":"G2 / Glassdoor / Trustpilot / analyst / press","sentiment":"positive or negative"},`+`"salesAngle":"1 sentence: how the seller should use this sentiment context in the discovery conversation"}}`
+  );
+
+  // MICRO 4: Solution mapping + contacts — shows after strategy
+  const p4 = callAI(base+
+    `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
+    `Apply Dunford (Obviously Awesome) positioning and Osterwalder (Value Proposition Canvas) to map seller solutions to ${co}.\n`+`ASSUME ${co} universally wants to: grow revenue, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy.\n`+`For each solution: (1) which universal imperative does it serve? (2) what job does it do? (3) what pain does it relieve? (4) what gain does it create?\n`+`{"solutionMapping":[`+
+    `{"product":"Specific ${sellerUrl} offering","fit":"Job-to-be-done it performs (Osterwalder) → specific pain it relieves → gain it creates for ${co}. Grounded in a real signal."},`+
+    `{"product":"Second offering if applicable","fit":""},`+
+    `{"product":"Third offering if applicable","fit":""}],`+
+    `"caseStudies":[{"title":"Relevant case study or named customer","customer":"","relevance":"Why relevant to ${co}"},{"title":"","customer":"","relevance":""}],`+
+    `"keyContacts":[{"name":"VP/Director NOT C-suite — real name if known","title":"Full title","initials":"XX","angle":"Why they feel this pain daily and how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
+    `"techStack":{"crm":"if known","erp":"if known","hris":"if known","marketing":"if known","payments":"if known","analytics":"if known","infrastructure":"if known","other":[]},`+
+    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`
+  );
+
+  // MICRO 5: Live search — headlines, roles, signals
+  const p5 = (async()=>{
+    try{
+      const prompt =
+        `Search for recent information about "${co}":\n`+
+        `1. News from 2024-2025: headlines, M&A, leadership changes, funding\n`+
+        `2. Ratings and sentiment: search Glassdoor, G2, Trustpilot, and any published NPS or CSAT data for "${co}"\n`+
+        `3. Open roles on their careers page\n`+
+        `4. Growth signals or buying indicators\n`+
+        `Return ONLY raw JSON (start with {):\n`+
+        `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
+        `"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
+        `"recentSignals":["Most actionable buying signal","Second","Third"],`+
+        `"growthSignals":["Growth indicator with evidence","Second"],`+
+        `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
+        `"cultureProfile":{"coreValues":"2-3 stated company values","communicationStyle":"formal/informal","decisionMaking":"top-down/consensus/distributed","sellerLanguageHint":"the vocabulary and tone this company responds to"},`+
+        `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
+        `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
+        `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
+      const r = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:1800,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+        }),
+      });
+      const d=await r.json();
+      if(d.error) return null;
+      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+    }catch(e){console.warn("Live search failed:",e.message);return null;}
+  })();
+
+  // ── Await Micro 1 first — show overview card immediately ─────────────────
+  const r1 = await p1;
+  const brief = (r1&&typeof r1==="object")
+    ? r1
+    : {...BLANK_BRIEF,companySnapshot:co+" — "+member.ind+". Edit fields below.",_error:"Brief generation failed — try Regenerate."};
+
+  onStatus("");
+
+  // ── Return brief + a promise that merges the rest as they complete ────────
+  const mergePromise = (async()=>{
+    // Merge each micro-result as it resolves — user sees sections fill in
+    const results = await Promise.allSettled([p2,p3,p4,p5]);
+    return (prev)=>{
+      if(!prev) return prev;
+      const next={...prev};
+
+      // Micro 2: executives
+      const r2 = results[0].status==="fulfilled"?results[0].value:null;
+      if(r2?.keyExecutives?.length) next.keyExecutives=r2.keyExecutives;
+      if(r2?.sellerSnapshot) next.sellerSnapshot=r2.sellerSnapshot;
+
+      // Micro 3: strategy
+      const r3 = results[1].status==="fulfilled"?results[1].value:null;
+      if(r3?.strategicTheme) next.strategicTheme=r3.strategicTheme;
+      if(r3?.sellerOpportunity) next.sellerOpportunity=r3.sellerOpportunity;
+      if(r3?.openingAngle) next.openingAngle=r3.openingAngle;
+      if(r3?.publicSentiment?.onlineSentiment||r3?.publicSentiment?.glassdoorRating){
+        next.publicSentiment={...next.publicSentiment,...r3.publicSentiment};
+      }
+
+      // Micro 4: solutions + contacts
+      const r4 = results[2].status==="fulfilled"?results[2].value:null;
+      if(r4?.solutionMapping?.some(s=>s?.product)) next.solutionMapping=r4.solutionMapping;
+      if(r4?.caseStudies?.some(c=>c?.title)) next.caseStudies=r4.caseStudies;
+      if(r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts=r4.keyContacts;
+      if(r4?.techStack) next.techStack=r4.techStack;
+      if(r4?.processMaturity?.dmiacStage) next.processMaturity=r4.processMaturity;
+
+      // Micro 5: live search
+      const r5 = results[3].status==="fulfilled"?results[3].value:null;
+      if(r5){
+        const errorWords=["unable","cannot","search failed","not available","web search"];
+        const cleanHL=(r5.recentHeadlines||[]).filter(h=>{
+          const t=(h?.headline||"").toLowerCase();
+          return h?.headline&&h.headline.length>10&&!errorWords.some(w=>t.includes(w));
+        });
+        if(cleanHL.length) next.recentHeadlines=cleanHL;
+        if(r5.openRoles?.summary) next.openRoles=r5.openRoles;
+        if(r5.recentSignals?.some(s=>s)) next.recentSignals=r5.recentSignals;
+        if(r5.growthSignals?.some(s=>s)) next.growthSignals=r5.growthSignals;
+        const snapOk=r5.companySnapshot?.length>50&&!errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
+        if(snapOk) next.companySnapshot=r5.companySnapshot;
+        // Merge workforce, culture, incumbents from live search
+        if(r5.workforceProfile) next.workforceProfile=r5.workforceProfile;
+        if(r5.cultureProfile) next.cultureProfile=r5.cultureProfile;
+        if(r5.incumbentVendors) next.incumbentVendors=r5.incumbentVendors;
+        // Merge live sentiment scores — enrich what training knowledge returned
+        if(r5.sentimentScores){
+          const ss=r5.sentimentScores;
+          next.publicSentiment={...next.publicSentiment,
+            glassdoorRating:ss.glassdoorRating||next.publicSentiment?.glassdoorRating||"",
+            g2Rating:ss.g2Rating||"",
+            trustpilotRating:ss.trustpilotRating||"",
+            npsSignal:ss.npsSignal||"",
+            employeeScore:ss.employeeScore||"",
+            standoutReview:ss.standoutReview?.text?ss.standoutReview:next.publicSentiment?.standoutReview||{},
+          };
+        }
+      }
+
+      return next;
+    };
+  })();
+
+  return {_brief:brief, _phase2Promise:mergePromise};
+}
+
+
+function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outcomes,sellerUrl,confidence){
+  const ts=new Date().toISOString().slice(0,10);
+  const co=account?.company||"Account";
+  const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const H="font-family:Arial;font-size:11pt;font-weight:bold;background:#1a1a18;color:#ffffff;padding:5px 8px;";
+  const C="font-family:Arial;font-size:10pt;padding:5px 8px;vertical-align:top;";
+  const S="font-family:Arial;font-size:10pt;font-weight:bold;color:#8B6F47;padding:5px 8px;";
+  const mkRow=(cells,isHeader)=>'<tr>'+(Array.isArray(cells)?cells:[cells]).map((c,i)=>'<td style="'+(isHeader&&i===0?H:typeof c==="string"&&c&&c===c.toUpperCase()&&i===0&&c.length>2&&!/[a-z]/.test(c)?S:C)+'">'+esc(c)+'</td>').join('')+'</tr>';
+  const mkSheet=(name,rows)=>{
+    let t=`<table x:Name="${esc(name)}"><tbody>`;
+    rows.forEach(r=>t+=mkRow(r,false));
+    return t+`</tbody></table>`;
+  };
+
+  const sheets=[
+    {name:"Account Overview",rows:[
+      ["ACCOUNT OVERVIEW",""],["",""],
+      ["Company",co],["Industry",account?.ind||""],["Deal Size (ACV)",account?.acv>0?"$"+account.acv.toLocaleString():""],
+      ["Lead Source",account?.src||""],["Website",account?.company_url||""],
+      ["Cohort",cohort?.name||""],["Target Outcomes",outcomes.join(", ")],
+      ["Selling Org",sellerUrl||""],["Deal Confidence",`${confidence}%`],
+      ["",""],["COMPANY SNAPSHOT",""],["",brief?.companySnapshot||""],
+      ["",""],["STRATEGIC THEME",""],["",brief?.strategicTheme||""],
+      ["",""],["WHY YOU · WHY NOW (Seller Opportunity)",""],["",brief?.sellerOpportunity||""],
+      ["",""],["FUNDING PROFILE",""],["",brief?.fundingProfile||""],
+      ["",""],["INVESTORS & CAP TABLE",""],
+      ...(brief?.investorProfile||[]).filter(Boolean).map((inv,i)=>[`Investor ${i+1}`,inv]),
+      ["",""],["LEADERSHIP TEAM","","",""],
+      ["Name","Title","Background","Engagement Angle"],
+      ...(brief?.leadershipTeam||[]).filter(l=>l?.name).map(l=>[l.name||"",l.title||"",l.background||"",l.angle||""]),
+      ["",""],["RECENT HEADLINES",""],
+      ...(brief?.recentHeadlines||[]).filter(Boolean).map((h,i)=>[`Headline ${i+1}`,h]),
+      ["",""],["M&A & STRATEGIC ACTIVITY",""],["",brief?.maActivity||""],
+      ["",""],["NEW PRODUCTS & LAUNCHES",""],
+      ...(brief?.productLaunches||[]).filter(Boolean).map((p,i)=>[`Launch ${i+1}`,p]),
+      ["",""],["CUSTOMER WINS & GROWTH",""],
+      ...(brief?.customerWins||[]).filter(Boolean).map((w,i)=>[`Win ${i+1}`,w]),
+      ["",""],["GROWTH SIGNALS",""],
+      ...(brief?.growthSignals||[]).filter(Boolean).map((g,i)=>[`Signal ${i+1}`,g]),
+      ["",""],["HIRING SIGNALS",""],
+      ...(brief?.hiringSignals||[]).filter(Boolean).map((h,i)=>[`Signal ${i+1}`,h]),
+      ["",""],["TOP BUYING SIGNALS",""],
+      ...(brief?.recentSignals||[]).filter(Boolean).map((s,i)=>[`Signal ${i+1}`,s]),
+    ]},
+    {name:"RIVER Brief",rows:[
+      ["RIVER BRIEF — PRE-CALL HYPOTHESIS",""],["",""],
+      ["STAGE","HYPOTHESIS"],
+      ...RIVER_STAGES.map((s,i)=>[`${s.letter} — ${s.label}`,brief?.riverHypothesis?.[RKEYS[i]]||""]),
+      ["",""],["OPENING ANGLE",""],["",brief?.openingAngle||""],
+      ["",""],["RECENT SIGNALS",""],
+      ...(brief?.recentSignals||[]).filter(Boolean).map((s,i)=>[`Signal ${i+1}`,s]),
+    ]},
+    {name:"Solution Mapping",rows:[
+      ["SOLUTION MAPPING",""],["",""],
+      ["PRODUCT / SERVICE","FIT RATIONALE"],
+      ...(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>[s.product,s.fit]),
+      ["",""],["LIKELY COMPETITORS",""],
+      ...(brief?.competitors||[]).filter(Boolean).map(c=>[c,""]),
+      ["",""],["KEY CONTACTS","TITLE","ENGAGEMENT ANGLE"],
+      ...(brief?.keyContacts||[]).filter(c=>c?.name).map(c=>[c.name,c.title,c.angle]),
+      ["",""],["WATCH-OUTS",""],
+      ...(brief?.watchOuts||[]).filter(Boolean).map(w=>[w,""]),
+    ]},
+    {name:"Discovery Capture",rows:[
+      ["DISCOVERY CAPTURE","",""],["","",""],
+      ["STAGE","GATE QUESTION","ANSWER CAPTURED"],
+      ...RIVER_STAGES.flatMap(s=>s.gates.map(g=>[s.label,g.q,gateAnswers[g.id]||"—"])),
+      ["","",""],["STAGE","DISCOVERY PROMPT","REP NOTES"],
+      ...RIVER_STAGES.flatMap(s=>s.discovery.map(p=>[s.label,p.label,riverData[p.id]||"—"])),
+    ]},
+    {name:"RIVER Scorecard",rows:[
+      ["RIVER SCORECARD","",""],["","",""],
+      ["STAGE","PRE-CALL HYPOTHESIS","POST-CALL FINDING"],
+      ...RIVER_STAGES.map((s,i)=>[`${s.letter} — ${s.label}`,brief?.riverHypothesis?.[RKEYS[i]]||"",postCall?.riverScorecard?.[RKEYS[i]]||"Not yet completed"]),
+    ]},
+    {name:"Post-Call Route",rows:[
+      ["POST-CALL ROUTE",""],["",""],
+      ["DEAL ROUTE",postCall?.dealRoute||"Not yet generated"],
+      ["ROUTE REASON",postCall?.dealRouteReason||""],
+      ["TOP RISK",postCall?.dealRisk||""],
+      ["DEAL CONFIDENCE",`${confidence}%`],
+      ["",""],["CALL SUMMARY",""],["",postCall?.callSummary||""],
+      ["",""],["NEXT STEPS",""],
+      ...(postCall?.nextSteps||[]).map((s,i)=>[`${i+1}.`,s]),
+      ["",""],["CRM NOTE",""],["",postCall?.crmNote||""],
+      ["",""],["FOLLOW-UP EMAIL",""],
+      ["Subject",postCall?.emailSubject||""],["Body",postCall?.emailBody||""],
+    ]},
+    {name:"CRM Upload",rows:[
+      ["Company","Industry","ACV","Lead Source","Cohort","Target Outcomes","Deal Confidence","Deal Route","Top Risk","R — Reality","I — Impact","V — Vision","E — Entry Points","R — Route","Next Step 1","Next Step 2","Next Step 3","Follow-Up Subject","CRM Note"],
+      [co,account?.ind||"",account?.acv>0?account.acv:"",account?.src||"",cohort?.name||"",outcomes.join("; "),`${confidence}%`,postCall?.dealRoute||"",postCall?.dealRisk||"",brief?.riverHypothesis?.reality||"",brief?.riverHypothesis?.impact||"",brief?.riverHypothesis?.vision||"",brief?.riverHypothesis?.entryPoints||"",brief?.riverHypothesis?.route||"",postCall?.nextSteps?.[0]||"",postCall?.nextSteps?.[1]||"",postCall?.nextSteps?.[2]||"",postCall?.emailSubject||"",postCall?.crmNote||""],
+    ]},
+  ];
+
+  let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>`;
+  sheets.forEach(s=>{html+=`<x:ExcelWorksheet><x:Name>${esc(s.name)}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`;});
+  html+=`</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>`;
+  sheets.forEach(s=>{html+=mkSheet(s.name,s.rows);});
+  html+=`</body></html>`;
+
+  const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=`RIVER_${co.replace(/\s+/g,"_")}_${ts}.xls`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── BRIEF LOADER ─────────────────────────────────────────────────────────────
+const LOADER_QUIPS = [
+  "Doing the homework you definitely weren't going to do...",
+  "Figuring out what keeps their CFO up at night...",
+  "Reading the 10-K so you look like a genius...",
+  "Making you the most dangerous person in the room...",
+  "Finding the angle they didn't know they had...",
+  "Connecting dots across the org chart...",
+  "Building your unfair advantage...",
+  "Translating their problems into your opportunity...",
+  "Turning public intel into private insight...",
+  "Triangulating their priorities...",
+  "Reverse-engineering their buying criteria...",
+  "Mapping their world to your solutions...",
+  "Becoming an expert in 30 seconds...",
+  "Surfacing the signal buried in the noise...",
+  "Crafting the brief they didn't know they needed...",
+  "Almost there — this is the good part...",
+  "Preparing your strongest opening...",
+  "Making sure you walk in ready...",
+];
+function BriefLoader({ company, status }) {
+  const [quip, setQuip] = useState(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setQuip(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
+        setFade(true);
+      }, 300);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="load-box">
+      <div className="load-status">
+        <div className="load-spin"/>
+        <span>{status || "Starting..."}</span>
+      </div>
+      <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden",margin:"14px 0"}}>
+        <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
+      </div>
+      <div style={{
+        fontSize:12,color:"#8B6F47",textAlign:"center",fontStyle:"italic",
+        transition:"opacity 0.3s",opacity:fade?1:0,minHeight:20,
+      }}>
+        {quip}
+      </div>
+      <div style={{fontSize:10,color:"#bbb",textAlign:"center",marginTop:8}}>
+        Researching {company}...
+      </div>
+    </div>
+  );
+}
+
+// ── PASSWORD GATE ─────────────────────────────────────────────────────────────
+
+function PasswordGate({ onAuth }) {
+  const[mode,setMode]=React.useState("signup");
+  const[email,setEmail]=React.useState("");
+  const[pw,setPw]=React.useState("");
+  const[first,setFirst]=React.useState("");
+  const[last,setLast]=React.useState("");
+  const[err,setErr]=React.useState("");
+  const[loading,setLoading]=React.useState(false);
+  const[verifying,setVerifying]=React.useState(false);
+  const[guestOk,setGuestOk]=React.useState(false);
+
+  React.useEffect(()=>{
+    // Clear any legacy password-gate session data
+    sessionStorage.removeItem('cambrian_auth');
+    const token=localStorage.getItem('sb_token');
+    if(token){
+      sbGetUser(token).then(u=>{
+        if(u?.id){
+          onAuth(u,token); // valid token — skip gate
+        } else {
+          localStorage.removeItem('sb_token'); // stale — clear and show form
+        }
+      });
+    }
+  },[]);
+
+  if(guestOk){onAuth(null,'');return null;}
+
+  const submit=async()=>{
+    setErr("");setLoading(true);
+    if(mode==="signup"){
+      const d=await sbAuth('signup',{email,password:pw,data:{first_name:first,last_name:last,full_name:first+' '+last}});
+      if(d.access_token){localStorage.setItem('sb_token',d.access_token);onAuth(d.user,d.access_token);}
+      else if(d.id){setVerifying(true);}
+      else setErr(d.msg||d.error_description||'Sign up failed');
+    } else {
+      const d=await sbAuth('token?grant_type=password',{email,password:pw});
+      if(d.access_token){localStorage.setItem('sb_token',d.access_token);onAuth(d.user,d.access_token);}
+      else setErr(d.error_description||'Incorrect email or password');
+    }
+    setLoading(false);
+  };
+
+  if(verifying) return(
+    <div className="pw-gate"><style>{FONTS}</style>
+    <div className="pw-card" style={{textAlign:"center"}}>
+      <div style={{fontSize:32,marginBottom:12}}>📬</div>
+      <div className="pw-logo">Check your email</div>
+      <div className="pw-sub" style={{marginBottom:16}}>We sent a verification link to <strong>{email}</strong></div>
+      <div style={{fontSize:13,color:"#777",lineHeight:1.6,marginBottom:20}}>Click the link in the email, then come back and sign in.</div>
+      <button className="btn btn-secondary" onClick={()=>{setVerifying(false);setMode("signin");}}>← Sign In</button>
+    </div></div>
+  );
+
+  const inp={width:"100%",padding:"11px 14px",borderRadius:8,border:"1.5px solid #E8E6DF",fontFamily:"DM Sans,sans-serif",fontSize:14,color:"#1a1a18",boxSizing:"border-box",outline:"none",marginBottom:10,display:"block"};
+  return(
+    <div className="pw-gate"><style>{FONTS}</style>
+    <div className="pw-card" style={{maxWidth:400}}>
+      <div className="pw-logo">Cambrian <span>Catalyst</span></div>
+      <div className="pw-sub">Revenue Playbook Engine · Private Beta</div>
+      <div style={{display:"flex",background:"#F0EDE6",borderRadius:10,padding:3,marginBottom:20,marginTop:16}}>
+        {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
+          <button key={m} onClick={()=>{setMode(m);setErr("");}}
+            style={{flex:1,padding:"8px 0",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,
+              background:mode===m?"#fff":"transparent",color:mode===m?"#1a1a18":"#999",
+              boxShadow:mode===m?"0 1px 4px rgba(0,0,0,0.10)":"none",transition:"all 0.15s"}}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode==="signup"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 10px"}}>
+          <input style={inp} placeholder="First name" value={first} onChange={e=>setFirst(e.target.value)} autoFocus/>
+          <input style={inp} placeholder="Last name" value={last} onChange={e=>setLast(e.target.value)}/>
+        </div>
+      )}
+      <input style={inp} type="email" placeholder="Email (Gmail or work)" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()}/>
+      <input style={inp} type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+      {err&&<div style={{fontSize:12,color:"#9B2C2C",marginBottom:10,padding:"8px 10px",background:"#FDE8E8",borderRadius:6}}>{err}</div>}
+      <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1}}
+        onClick={submit}
+        disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
+        {loading?((mode==="signup"?"Creating account...":"Signing in...")):(mode==="signup"?"Create Account →":"Sign In →")}
+      </button>
+      <div style={{textAlign:"center",marginTop:16}}>
+        <button onClick={()=>setGuestOk(true)}
+          style={{background:"none",border:"none",fontSize:12,color:"#aaa",cursor:"pointer",textDecoration:"underline"}}>
+          Continue as guest (work won't be saved)
+        </button>
+      </div>
+    </div></div>
+  );
+}
+
+// ── PIE CHART COMPONENT ───────────────────────────────────────────────────────
+
+function PieChart({data, size=120}){
+  // data: [{label, value, color}]
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if(!total) return null;
+  const r = size/2 - 4;
+  const cx = size/2, cy = size/2;
+  let angle = -Math.PI/2;
+  const slices = data.map(d=>{
+    const pct = d.value/total;
+    const a0 = angle, a1 = angle + pct*2*Math.PI;
+    angle = a1;
+    return {...d, pct, a0, a1};
+  });
+  const arc = (a0,a1,r)=>{
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const large = a1-a0>Math.PI?1:0;
+    return `M${cx},${cy} L${x0},${y0} A${r},${r},0,${large},1,${x1},${y1} Z`;
+  };
+  return(
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{flexShrink:0}}>
+      {slices.map((s,i)=>(
+        <path key={i} d={arc(s.a0,s.a1,r)} fill={s.color} stroke="#fff" strokeWidth={1.5}/>
+      ))}
+      <circle cx={cx} cy={cy} r={r*0.42} fill="#fff"/>
+    </svg>
+  );
+}
+
+// ── COHORT DRILL-DOWN COMPONENT ───────────────────────────────────────────────
+
+function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores = {}, fitScoring = false}){
+  const [open, setOpen] = useState(selected);
+  useEffect(()=>{if(selected)setOpen(true);},[selected]);
+
+  // Compute breakdowns
+  const count = (members, key) => {
+    const map = {};
+    members.forEach(m=>{ const v=m[key]||"Unknown"; map[v]=(map[v]||0)+1; });
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value}));
+  };
+  const indCounts  = count(cohort.members,"ind");
+  const srcCounts  = count(cohort.members,"src");
+  const ppCounts   = count(cohort.members,"publicPrivate");
+  const geoCounts  = count(cohort.members,"geography");
+  const empBands   = (()=>{
+    const bands={"<500":0,"500–5K":0,"5K–50K":0,"50K+":0,"Unknown":0};
+    cohort.members.forEach(m=>{
+      const raw=(m.employees||"").replace(/[^0-9]/g,"");
+      const n=parseInt(raw)||0;
+      if(!n||!m.employees) bands["Unknown"]++;
+      else if(n<500)   bands["<500"]++;
+      else if(n<5000)  bands["500–5K"]++;
+      else if(n<50000) bands["5K–50K"]++;
+      else             bands["50K+"]++;
+    });
+    return Object.entries(bands).filter(([,v])=>v>0).map(([label,value])=>({label,value}));
+  })();
+
+  const hasACV    = cohort.members.some(m=>m.acv>0);
+  const hasPP     = cohort.members.some(m=>m.publicPrivate);
+  const hasGeo    = cohort.members.some(m=>m.geography);
+  const hasEmp    = cohort.members.some(m=>m.employees);
+
+  const IND_COLORS = ["#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#8B6F47","#4A6B8E","#6B4A6B"];
+  const SRC_COLORS = ["#2E6B2E","#8B6F47","#1B3A6B","#6B3A3A","#3A6B6B","#6B6B3A"];
+  const PP_COLORS  = ["#1B3A6B","#2E6B2E","#8B6F47","#9B2C2C","#6B3A7A"];
+  const GEO_COLORS = ["#2E6B2E","#1B3A6B","#8B6F47","#9B2C2C"];
+  const EMP_COLORS = ["#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#aaa"];
+
+  const MiniPie = ({title, data, colors}) => data.length<2?null:(
+    <div className="pie-card">
+      <div className="pie-title">{title}</div>
+      <div className="pie-wrap">
+        <PieChart size={90} data={data.slice(0,6).map((d,i)=>({...d,color:colors[i%colors.length]}))}/>
+        <div className="pie-legend">
+          {data.slice(0,5).map((d,i)=>(
+            <div key={i} className="pie-legend-item">
+              <div className="pie-legend-dot" style={{background:colors[i%colors.length]}}/>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:80}}>{d.label}</span>
+              <span className="pie-legend-val">{d.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  return(
+    <div className={`cohort-drill ${selected?"":""}`}>
+      <div className={`cohort-drill-hdr ${open?"open":""}`}
+        onClick={()=>{setOpen(o=>!o);onSelect();}}>
+        <div className="cohort-drill-left">
+          <div className="cohort-drill-dot" style={{background:cohort.color}}/>
+          <div>
+            <div className="cohort-drill-name">{cohort.name}</div>
+            <div className="cohort-drill-meta">{cohort.size} accounts · {cohort.pct}% of base</div>
+          </div>
+        </div>
+        <div className="cohort-drill-right">
+          <div className="cohort-drill-acv">{cohort.size} account{cohort.size!==1?"s":""}</div>
+          <div className="cohort-drill-toggle">{open?"▲ Collapse":"▼ Drill Down"}</div>
+        </div>
+      </div>
+
+      {open&&(
+        <div className="cohort-drill-body">
+          {/* Breakdown charts — only shown if data present */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12,margin:"12px 0"}}>
+            <MiniPie title="By Industry"    data={indCounts}  colors={IND_COLORS}/>
+            {hasPP&&<MiniPie title="Public vs Private" data={ppCounts}   colors={PP_COLORS}/>}
+            {hasGeo&&<MiniPie title="Domestic vs International" data={geoCounts} colors={GEO_COLORS}/>}
+            {hasEmp&&<MiniPie title="Org Size (Employees)" data={empBands} colors={EMP_COLORS}/>}
+            <MiniPie title="By Lead Source" data={srcCounts}  colors={SRC_COLORS}/>
+          </div>
+
+          {/* ACV distribution — only if populated */}
+          {hasACV&&(
+            <div style={{marginBottom:12}}>
+              <div className="field-label" style={{marginBottom:6}}>ACV Distribution</div>
+              <div style={{display:"flex",gap:2,height:20,borderRadius:4,overflow:"hidden"}}>
+                {cohort.members.filter(m=>m.acv>0).sort((a,b)=>a.acv-b.acv).map((m,i,arr)=>(
+                  <div key={i} title={`${m.company}: $${m.acv.toLocaleString()}`}
+                    style={{flex:1,background:cohort.color,opacity:0.3+0.7*(i/Math.max(arr.length-1,1)),cursor:"pointer"}}
+                    onClick={()=>onPickAccount&&onPickAccount(m)}/>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Account table */}
+          <table className="cohort-member-table">
+            <thead>
+              <tr>
+                <th>Company</th><th>Industry</th><th>Org Size</th><th>Ownership</th><th>Geography</th><th>Fit Check</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {cohort.members.sort((a,b)=>{
+                const sa=fitScores[a.company]?.score??50;
+                const sb=fitScores[b.company]?.score??50;
+                return sb-sa;
+              }).map((m,i)=>(
+                <tr key={i} style={{cursor:"pointer"}} onClick={()=>onPickAccount&&onPickAccount(m)}>
+                  <td style={{fontWeight:600,color:"#1a1a18"}}>
+                    {m.company}
+                    {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
+                  </td>
+                  <td style={{color:"#555"}}>{m.ind||"—"}</td>
+                  <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
+                  <td style={{fontSize:12}}>
+                    {m.publicPrivate?(()=>{
+                      const ot=(fitScores[m.company]?.ownershipType)||"";
+                      const c=ot==="public"?"#1B3A6B":ot==="pe"?"#6B3A3A":ot==="vc"?"#2E6B2E":"#555";
+                      const bg=ot==="public"?"#EEF5F9":ot==="pe"?"#FDE8E8":ot==="vc"?"#EEF5EE":"#F8F6F1";
+                      return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:8,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.publicPrivate}</span>;
+                    })():"—"}
+                  </td>
+                  <td style={{color:"#555",fontSize:12}}>{m.geography||"—"}</td>
+                  <td>{fitScores&&fitScores[m.company]?(
+                    <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:12,
+                      background:fitScores[m.company].bg,color:fitScores[m.company].color,
+                      border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap",display:"inline-block"}}
+                      title={fitScores[m.company].reason}>
+                      {fitScores[m.company].score}% · {fitScores[m.company].label}
+                    </div>
+                  ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:"—"}</td>
+                  <td><button className="btn btn-primary btn-sm" onClick={e=>{e.stopPropagation();onPickAccount&&onPickAccount(m);}}>Research →</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── RIVER FIELD CARD — Quick Summary + Expand (must be a component, not inline) ──
+function RiverFieldCard({fieldKey, label, icon, sub, color, value, onChange}){
+  const [expanded, setExpanded] = useState(false);
+  const full = typeof value === "string" ? value : (value ? String(value) : "");
+  const sentEnd = full.search(/[.!?]\s/);
+  const summary = sentEnd>0&&sentEnd<180 ? full.slice(0,sentEnd+1) : full.slice(0,160)+(full.length>160?"...":"");
+  const needsExpand = full.length > summary.length+2;
+  return(
+    <div className="bb" style={{marginBottom:10,borderLeft:"3px solid "+color,borderRadius:10}}>
+      <div className="bb-hdr" style={{paddingBottom:6}}>
+        <div style={{fontSize:18,lineHeight:1}}>{icon}</div>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:600,color:"#1a1a18"}}>{label}</div>
+          <div style={{fontSize:11,color:"#999",marginTop:1}}>{sub}</div>
+        </div>
+        {needsExpand&&(
+          <button onClick={()=>setExpanded(e=>!e)}
+            style={{fontSize:11,color:color,fontWeight:600,border:"none",cursor:"pointer",padding:"3px 10px",borderRadius:6,background:color+"22",flexShrink:0}}>
+            {expanded?"Collapse ▲":"Expand ▼"}
+          </button>
+        )}
+      </div>
+      <div className="bb-body" style={{paddingTop:0}}>
+        {!expanded?(
+          <div style={{fontSize:14,color:"#333",lineHeight:1.65}}>
+            {summary}
+            {needsExpand&&(
+              <button onClick={()=>setExpanded(true)}
+                style={{fontSize:11,color:color,fontWeight:600,background:"none",border:"none",cursor:"pointer",marginLeft:8}}>
+                read more
+              </button>
+            )}
+          </div>
+        ):(
+          <EF value={full} onChange={onChange} placeholder={"Click to edit "+label+"..."}/>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ── EDITABLE FIELD ────────────────────────────────────────────────────────────
+
+function EF({value,onChange,single=false,placeholder="Click to edit..."}){
+  const[editing,setEditing]=useState(false);
+  const[val,setVal]=useState(value||"");
+  useEffect(()=>setVal(value||""),[value]);
+  const commit=()=>{setEditing(false);if(val!=(value||""))onChange(val);};
+  if(editing){
+    return single
+      ?<input type="text" className="ef-input" value={val} onChange={e=>setVal(e.target.value)} onBlur={commit} onKeyDown={e=>e.key==="Enter"&&commit()} autoFocus/>
+      :<textarea className="ef-input ef-input-multi" value={val} onChange={e=>setVal(e.target.value)} onBlur={commit} autoFocus/>;
+  }
+  return(
+    <div className="ef-wrap" onClick={()=>setEditing(true)}>
+      <div className="ef-hint">Edit</div>
+      <div className={`ef-display${!val?" ef-empty":""}`}>{val||placeholder}</div>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────────────────────
+
+// ── ERROR BOUNDARY — catches render errors so blank page never happens ────────
+class ErrorBoundary extends React.Component {
+  constructor(props){super(props);this.state={hasError:false,error:null};}
+  static getDerivedStateFromError(e){return{hasError:true,error:e};}
+  componentDidCatch(e,info){console.error("Render error:",e,info);}
+  render(){
+    if(this.state.hasError){
+      return(
+        <div style={{padding:40,maxWidth:600,margin:"60px auto",fontFamily:"DM Sans,sans-serif"}}>
+          <div style={{background:"#FDE8E8",border:"1px solid #9B2C2C",borderRadius:12,padding:24}}>
+            <div style={{fontSize:16,fontWeight:700,color:"#9B2C2C",marginBottom:8}}>Render Error</div>
+            <div style={{fontSize:13,color:"#555",marginBottom:16}}>{this.state.error?.message||"Unknown error"}</div>
+            <button onClick={()=>this.setState({hasError:false,error:null})}
+              style={{background:"#1a1a18",color:"#fff",border:"none",padding:"8px 16px",borderRadius:8,cursor:"pointer",fontSize:13}}>
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+
+export default function App(){
+  const[authed,setAuthed]=useState(false);
+  const[sbUser,setSbUser]=useState(null);
+  const[sbToken,setSbToken]=useState('');
+
+  // Clear legacy session data on first load
+  useEffect(()=>{ sessionStorage.removeItem('cambrian_auth'); },[]);
+  const[showSavePrompt,setShowSavePrompt]=useState(false);
+  const[savedSessions,setSavedSessions]=useState([]);
+  const[currentSessionId,setCurrentSessionId]=useState(null);
+  const[sessionName,setSessionName]=useState('');
+  const[showSessions,setShowSessions]=useState(false);
+  const[saveStatus,setSaveStatus]=useState('');
+
+  // ── SESSION HELPERS (localStorage fallback for guest mode) ──────────────
+  const STORAGE_KEY = "cambrian_session_v1";
+  const clearSession = () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch{}
+    setCurrentSessionId(null); setSessionName('');
+    setSellerUrl(''); setSellerInput(''); setBrief(null); setRiverHypo(null);
+    setCohorts([]); setRows([]); setSelectedAccount(null); setPostCall(null);
+    setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
+    setStep(0);
+  };
+  const lastSaved = () => null; // reserved for future use
+  const _step_unused = null; // placeholder
+  const[_step,_setStep]=useState(0);
+  const step=_step;
+  const setStep=(n)=>{_setStep(n);window.scrollTo({top:0,behavior:"smooth"});};
+  const[sellerUrl,setSellerUrl]=useState("");
+  const[sellerInput,setSellerInput]=useState("");
+  const[sellerStage,setSellerStage]=useState(""); // Bootstrapped/Series A/B/C/D+/PE-Backed/Public
+  const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
+  const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
+  const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
+  const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
+  const[sellerICP,setSellerICP]=useState(null); // built from seller URL
+  const[icpLoading,setIcpLoading]=useState(false);
+  const[rows,setRows]=useState([]);
+  const[headers,setHeaders]=useState([]);
+  const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:"",employees:"",public_private:"",geography:""});
+  const[fileName,setFileName]=useState("");
+  const[drag,setDrag]=useState(false);
+  const[importMode,setImportMode]=useState("csv");
+  const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
+  const[dealClassification,setDealClassification]=useState(""); // "Top-Line Revenue" etc // "csv" | "quick"
+  const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
+  const[fitScores,setFitScores]=useState({}); // {company: {score, label, reason, color}}
+  const[fitScoring,setFitScoring]=useState(false);
+  const[cohorts,setCohorts]=useState([]);
+  const[selectedCohort,setSelectedCohort]=useState(null);
+  const[selectedOutcomes,setSelectedOutcomes]=useState([]);
+  const[customOutcome,setCustomOutcome]=useState(""); // free-form outcome
+  const[selectedAccount,setSelectedAccount]=useState(null);
+  const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
+  const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
+
+  // Brief state — always an object or null; never undefined
+  const[brief,setBrief]=useState(null);
+  const[briefLoading,setBriefLoading]=useState(false);
+  const[briefStatus,setBriefStatus]=useState("");
+  const[briefError,setBriefError]=useState("");
+  const[riverHypo,setRiverHypo]=useState(null);
+  const[riverHypoLoading,setRiverHypoLoading]=useState(false);
+  const[discoveryQs,setDiscoveryQs]=useState(null); // product-specific discovery questions
+  const[solutionFit,setSolutionFit]=useState(null); // post-call SA review
+  const[solutionFitLoading,setSolutionFitLoading]=useState(false);
+  const[contactRole,setContactRole]=useState("");
+
+  const[activeRiver,setActiveRiver]=useState(0);
+  const[gateAnswers,setGateAnswers]=useState({});
+  const[gateNotes,setGateNotes]=useState({}); // notes under each gate
+  const[riverData,setRiverData]=useState({});
+  const[expandedObjs,setExpandedObjs]=useState({});
+  const[rightTab,setRightTab]=useState("brief");
+  const[notes,setNotes]=useState("");
+  const[postCall,setPostCall]=useState(null);
+  const[postLoading,setPostLoading]=useState(false);
+  const[copied,setCopied]=useState("");
+  const[sellerDocs,setSellerDocs]=useState([]); // [{name, label, content}]
+  const[docDrag,setDocDrag]=useState(false);
+  const[products,setProducts]=useState([]); // [{id, name, description, category}]
+  const[prodDocDrag,setProdDocDrag]=useState(false);
+  const fileRef=useRef();
+  const docRef=useRef();
+  const prodDocRef=useRef();
+  const confidence=calcConfidence(gateAnswers,riverData);
+
+  // ── Deep-clone updater for brief ──
+  // Uses explicit field keys to avoid dot-path bugs entirely
+  const patchBrief=(updater)=>{
+    setBrief(prev=>{
+      if(!prev)return prev;
+      const next=JSON.parse(JSON.stringify(prev));
+      updater(next);
+      return next;
+    });
+  };
+
+  // ── Seller doc ingestion ──
+  const DOC_LABELS = {
+    "pitch":"Pitch Deck","deck":"Pitch Deck","overview":"Product Overview","product":"Product Overview",
+    "case":"Case Study","study":"Case Study","training":"Training","playbook":"Playbook",
+    "use":"Use Cases","guide":"Guide","brief":"Brief","one":"One-Pager","pager":"One-Pager",
+  };
+  const guessLabel = name => {
+    const low = name.toLowerCase();
+    for(const[k,v] of Object.entries(DOC_LABELS)) if(low.includes(k)) return v;
+    return "Reference Doc";
+  };
+
+  const readDocFile = file => new Promise(resolve=>{
+    const reader = new FileReader();
+    const name = file.name;
+    const ext = name.split(".").pop().toLowerCase();
+    // For binary formats we attempt text extraction; FileReader gives raw text for txt/md/csv
+    reader.onload = e => {
+      let content = "";
+      try{
+        content = e.target.result || "";
+        // Strip null bytes and obvious binary garbage; keep printable ASCII + common unicode
+        content = content.replace(/[\x00-\x08\x0b\x0e-\x1f\x7f-\x9f]/g,"")
+          .replace(/[^\x09\x0a\x0d\x20-\uFFFF]/g,"")
+          .slice(0, 12000); // cap at 12K chars per doc to manage token budget
+      }catch(e){content="";}
+      resolve({name, label:guessLabel(name), content, ext});
+    };
+    reader.onerror = ()=>resolve({name, label:guessLabel(name), content:"[Could not read file]", ext});
+    // Read as text — works well for txt, md, csv, html; gives partial content for pdf/docx
+    reader.readAsText(file);
+  });
+
+  const handleDocFiles = async files => {
+    const arr = Array.from(files).slice(0,6); // max 6 docs
+    const results = await Promise.all(arr.map(readDocFile));
+    setSellerDocs(prev=>{
+      const existing = new Set(prev.map(d=>d.name));
+      const fresh = results.filter(r=>!existing.has(r.name)&&r.content.trim().length>20);
+      return [...prev, ...fresh].slice(0,6);
+    });
+  };
+
+  // ── Product/solution catalog management ──────────────────────────────────────
+  const addProduct = () => setProducts(prev=>[...prev,{id:Date.now(),name:"",description:"",category:""}]);
+  const removeProduct = id => setProducts(prev=>prev.filter(p=>p.id!==id));
+  const updateProduct = (id,field,val) => setProducts(prev=>prev.map(p=>p.id===id?{...p,[field]:val}:p));
+
+  const parseProductDoc = async file => {
+    const doc = await readDocFile(file);
+    if(!doc.content) return;
+    const text = doc.content;
+    // Try splitting on numbered list, "Product:" headers, or double-newlines
+    const sections = text.split(/(?=\n\d+[\.\)]\s|\nProduct:|\nSolution:|\nService:|\n#{1,3}\s)/i)
+      .map(s=>s.trim()).filter(s=>s.length>15).slice(0,16);
+    if(sections.length>1){
+      const newProds = sections.map((s,i)=>{
+        const lines = s.split("\n").filter(Boolean);
+        const name = lines[0].replace(/^\d+[\.\)]\s*/,"").replace(/^#+\s*/,"").replace(/^(Product|Solution|Service):\s*/i,"").slice(0,80).trim();
+        const description = lines.slice(1).join(" ").replace(/\s+/g," ").slice(0,300).trim();
+        return {id:Date.now()+i, name, description, category:""};
+      }).filter(p=>p.name.length>2);
+      setProducts(prev=>[...prev,...newProds].slice(0,20));
+    } else {
+      setProducts(prev=>[...prev,{id:Date.now(),name:doc.name.replace(/\.[^.]+$/,"").replace(/[-_]/g," "),description:text.slice(0,400),category:""}].slice(0,20));
+    }
+  };
+
+  const parseCSV=text=>{
+    const lines=text.trim().split(/\r?\n/);
+    const hdrs=lines[0].split(",").map(h=>h.trim().replace(/^"|"$/g,""));
+    const data=lines.slice(1).map(line=>{
+      const vals=line.split(",").map(v=>v.trim().replace(/^"|"$/g,""));
+      const obj={};hdrs.forEach((h,i)=>obj[h]=vals[i]||"");return obj;
+    }).filter(r=>Object.values(r).some(v=>v));
+    setHeaders(hdrs);setRows(data);
+    const am={...mapping};const n=s=>s.toLowerCase().replace(/[\s_]/g,"");
+    hdrs.forEach(h=>{
+      const hn=n(h);
+      if(hn.includes("company")||hn.includes("account"))am.company=h;
+      if(hn.includes("industry")||hn.includes("vertical"))am.industry=h;
+      if(hn.includes("acv")||hn.includes("deal")||hn.includes("amount")||hn.includes("value"))am.acv=h;
+      if(hn.includes("lead")||hn.includes("source")||hn.includes("channel"))am.lead_source=h;
+      if(hn.includes("close")||hn.includes("date"))am.close_date=h;
+      if(hn.includes("product")||hn.includes("solution"))am.product=h;
+      if(hn.includes("outcome")||hn.includes("goal"))am.outcome=h;
+      if(hn.includes("url")||hn.includes("website")||hn.includes("web"))am.company_url=h;
+      if(hn.includes("employee")||hn.includes("headcount")||hn.includes("staff"))am.employees=h;
+      if(hn.includes("public")||hn.includes("private")||hn.includes("ownership"))am.public_private=h;
+      if(hn.includes("geo")||hn.includes("domestic")||hn.includes("international")||hn.includes("region"))am.geography=h;
+    });
+    setMapping(am);
+  };
+
+  const loadSample=()=>{
+    const hdrs=Object.keys(SAMPLE_ROWS[0]);
+    setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName("sample_25_accounts.csv");
+    const m={};hdrs.forEach(h=>m[h]=h);setMapping(m);
+  };
+  const onFile=file=>{if(!file)return;setFileName(file.name);const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);};
+  const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);},[]);
+  // ── FIT SCORING — batch evaluates all accounts against seller profile ────
+  const scoreFit = async(members, sellerCtx) => {
+    if(!members?.length) return;
+    setFitScoring(true);
+    const icpContext = sellerICP?.icp
+      ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
+      : "";
+    // Score in batches of 20 so ALL accounts get scored regardless of list size
+    const BATCH=20;
+    const batches=[];
+    for(let i=0;i<members.length;i+=BATCH) batches.push(members.slice(i,i+BATCH));
+    const allMap={};
+    const allMemberUpdates={};
+    for(const batch of batches){
+    const companies = batch.map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
+    const prompt =
+      `You are a B2B sales strategist trained in product-market fit assessment.\n`+`UNIVERSAL ASSUMPTION: Every company on this list — regardless of industry — wants to grow, expand, comply, reduce fraud/risk, satisfy investors, and make customers happy. Score fit based on how directly the seller addresses these imperatives for each account.\n`+`For each company below:\n`+`1. Score ICP fit (0-100) using Olsen's PMF Pyramid: Target Customer fit → Underserved Need fit → Value Proposition fit\n`+`2. Identify their Moore adoption profile: are they Innovators, Early Adopters, Early Majority, or Late Majority?\n`+`3. Provide firmographic data (org size, ownership)\n\n`+`SCORING HEURISTICS FROM 6,045,880-PERMUTATION ANALYSIS (4,634 YC Companies × Fortune 1000 + Top 500 Private):\n`+`\n`+`TIER 1 TARGETS — HIGHEST FIT FOR STARTUP SELLERS:\n`+`- Large Private Insurance/Finance (State Farm, TIAA, Nationwide, Northwestern Mutual): 65.2% avg — #1 overall\n`+`- Large Private Tech/Data/Media (Bloomberg, Valve, SAS, Koch Industries): 64.5% avg\n`+`- Large Private Professional Services (Deloitte US, EY, KPMG, Booz Allen): 63.3% avg\n`+`- Insurance P&C/Life/Specialty (Allstate, Progressive, Travelers, Hartford): 62.5% avg\n`+`- CPG HPC/Beauty/Consumer (P&G, Kimberly-Clark, Estee Lauder, SC Johnson): 61.9% avg\n`+`- Real Estate Commercial/REIT (CBRE, JLL, Prologis): 60.0% avg\n`+`- Regional/Community Banks (85 companies): 59.5% avg — vs Tier 1 Banks at 12.6%\n`+`- Healthcare IT / Digital Health Services: 54.9% avg\n`+`\n`+`THE WALL — INDUSTRIES WHERE 100% OF STARTUP SCENARIOS ARE POOR FIT:\n`+`- Aerospace & Defense Prime (Boeing/Lockheed/Raytheon): 5.8% avg — ITAR, clearance, FedRAMP required\n`+`- Automotive/Manufacturing (GM/Ford): 5.9% avg — 65% union, incumbent ERP impossible to displace\n`+`- Telecom (AT&T/Verizon): 6.1% avg — 50% union, 5-deep incumbent stack\n`+`- Energy Oil & Gas (ExxonMobil/Chevron): 11.3% avg — culture mismatch, union risk\n`+`- Energy Utilities: 13.4% avg — 60% union, regulatory lock-in\n`+`- Mass Market Retail >100K employees (Walmart/Target/Kroger): 13.6% avg — procurement wall\n`+`- Tier 1 Banking (JPM/BAC/Wells Fargo): 12.6% avg — incumbent depth 5/5, RFP-only\n`+`\n`+`STAGE THRESHOLDS (from 6M+ permutations):\n`+`- Seed: 23.7% avg across all F1000 — zero viable direct enterprise paths\n`+`- Series A: 33.6% avg — only specific niche targeting viable; no Tier 1 banks, no defense\n`+`- Series B: 41.8% avg — departmental landing in Insurance, Healthcare, Private companies\n`+`- Series C: 49.0% avg — first stage with real enterprise traction in top-tier targets\n`+`- Series D+: 55.6% avg — 35% of scenarios are strong fit; full enterprise motion viable\n`+`\n`+`CPG SPLIT: HPC/Beauty (P&G, Kimberly-Clark) = 61.9% avg; Food/Beverage (PepsiCo, Kraft) = 49.0% avg\n`+`Insurance insight: most underserved sector — YC companies rarely pitch insurance, yet avg 62.5% fit\n`+`Private company advantage: +5-8% fit vs public equivalents — faster decisions, no procurement theater\n`+`INDUSTRY SWEET SPOTS FOR STARTUP SELLERS:\n`+`- Healthcare (10-100K employees): avg 65% fit — best target for most B2B SaaS (low union, tech-forward, compliance urgency)\n`+`- Insurance companies: underserved, avg ~60% fit — high compliance need, receptive to modern SaaS\n`+`- Retail/Home Improvement mid-market: avg ~50% fit — departmental landing in ecomm/finance works\n`+`- CPG mid-market (10-50K employees): avg ~58% fit — finance and marketing tech lands well\n`+`- Financial Services (F500): avg 32% fit for startups — extreme incumbent entrenchment (Oracle, SAP, Amex)\n`+`- Automotive (GM, Ford): avg 31% — high union exposure, most workforce out of scope\n`+`- Defense/Aerospace: avg 36% — very high security/compliance bar, usually requires FedRAMP\n`+`- Retail giants (Walmart, Target 2M+ employees): avg 27% — procurement impossible for Series A-C\n`+`STAGE THRESHOLDS (from scenario scoring):\n`+`- Companies with >200K employees: avg fit ~30% for Series A-C sellers (procurement bar too high)\n`+`- Companies with >50% union/hourly workforce: avg fit ~25% for SaaS sellers (out-of-scope workforce)\n`+`- Series B selling to Fortune 500: restrict to departmental landing — score down 15pts for enterprise-wide\n`+`- Private companies (State Farm, Publix): score +5-8% vs public — faster decisions, less committee\n`+`- Recent funding (<12 months) = strong buying signal — add 5-10 points\n`+`- PE-backed target: 60-90 day budget cycles; VC-backed = faster decisions\n`+`- Hiring "Digital Transformation" → Early Majority; "Innovation/R&D" → Early Adopter; "Efficiency" → Late Majority\n`+`PE SELLER × SMB/MID-MARKET DYNAMICS (3,366 scenarios, 102 PE-acquired sellers × 33 SMB/mid-market segments):\n`+`- High EBITDA pressure PE sellers → SMB new logos: 51.3% avg fit — reps chase ACV not fit; SMBs oversold churn in year 2\n`+`- Vertical SaaS PE + matched vertical SMB (insurance PE → agencies, healthcare PE → practices): 95% fit\n`+`- Wealth Mgmt/RIA: 64.9% avg — RIAs are SMB-sized with enterprise compliance/reporting budget; underserved by PE sellers\n`+`- Healthcare SMB practices: 59.8% avg — #1 PE SMB vertical; founder-owned, compliance-urgent, fast decisions\n`+`- Insurance agencies SMB: 55.6% avg; carrier connectivity is the critical integration; carrier reference closes deals\n`+`- Behavioral Health SMB: 56.3% avg — ACA + mental health parity tailwinds; Netsmart can't serve sub-50-employee clinics\n`+`- MSP channel preferred for high-EBITDA PE sellers targeting SMB — MSPs aggregate SMBs, handle implementation\n\n`+icpContext+`\n`+
+      `SELLER PROFILE:\n${sellerCtx}\n\n`+
+      `SCORING CRITERIA:\n`+
+      `1. Product/industry fit — do the seller's offerings make sense for this company?\n`+
+      `2. Size fit — does this company's scale match the seller's typical customer profile?\n`+
+      `3. Similar customers — would this company fit the seller's existing customer base?\n\n`+
+      `For ownership: identify if Public (with ticker), Private, PE-backed (name the PE firm if known), or VC-backed (Series A/B/C/D/E, note lead investor if known).\n`+
+      `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
+      `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
+      `Return ONLY raw JSON, start with {:\n`+
+      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
+      `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
+      `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
+
+    const result = await callAI(prompt,1400);
+    if(result?.scores){
+      const map = {};
+      const memberUpdates = {};
+      result.scores.forEach(s=>{
+        const color = s.score>=75?"#2E6B2E":s.score>=50?"#BA7517":"#9B2C2C";
+        const bg    = s.score>=75?"#EEF5EE":s.score>=50?"#FEF6E4":"#FDE8E8";
+        // Ownership badge color
+        const ownerColor = s.ownershipType==="public"?"#1B3A6B":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"#2E6B2E":"#555";
+        map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||""};
+        memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
+      });
+      Object.assign(allMap, map);
+      Object.assign(allMemberUpdates, memberUpdates);
+    } // end forEach
+    } // end batch loop
+    if(Object.keys(allMap).length){
+      setFitScores(prev=>({...prev,...allMap}));
+      // Push orgSize + ownership back into cohort members
+      setCohorts(prev=>prev.map(c=>({
+        ...c,
+        members:c.members.map(m=>allMemberUpdates[m.company]
+          ? {...m,
+              employees:m.employees||allMemberUpdates[m.company].orgSize,
+              publicPrivate:m.publicPrivate||allMemberUpdates[m.company].ownership}
+          : m)
+      })));
+    }
+    setFitScoring(false);
+  };
+
+  // ── BUILD SELLER ICP FROM URL ────────────────────────────────────────────
+  // Fires when seller URL is entered. Uses training knowledge + web search
+  // to understand who this seller actually sells to.
+  const buildSellerICP = async(rawUrl) => {
+    const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+    setIcpLoading(true);
+
+    // Phase 1 — web search to gather seller intelligence
+    const researchPrompt =
+      `Search for information about the B2B company at ${url}:\n`+
+      `1. What do they sell? Who are their target customers?\n`+
+      `2. Look for: customer case studies, testimonials, customer logos, pricing tiers, partner pages\n`+
+      `3. Look for: job postings mentioning target industries or company sizes\n`+
+      `4. Any known enterprise customers, verticals served, or use cases\n`+
+      `Return ONLY raw JSON, start with {:\n`+
+      `{"companyName":"","tagline":"","products":["product 1","product 2"],"targetCustomers":"who they sell to in plain language","knownCustomers":["logo 1","logo 2","logo 3"],"industries":["vertical 1","vertical 2","vertical 3"],"companySize":"typical customer size","pricingHint":"any pricing signals found","useCases":["use case 1","use case 2"],"competitors":["competitor 1","competitor 2"]}`;
+
+    let researchCtx = "";
+    try{
+      const r1 = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:800,
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+          messages:[{role:"user",content:researchPrompt}],
+        }),
+      });
+      const d1 = await r1.json();
+      if(!d1.error){
+        const raw1=(d1.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+        researchCtx = raw1.slice(0,1500);
+      }
+    }catch(e){ console.warn("ICP research failed:",e.message); }
+
+    // Phase 2 — build full ICP using research + training knowledge
+    const icpPrompt =
       `You are a senior ICP strategist trained in Revella, Osterwalder, Dunford, Moore, and Weinberg frameworks.\n`+
       `Build the complete Ideal Customer Profile for the B2B seller at: ${url}\n\n`+
       (researchCtx?`RESEARCH GATHERED:\n${researchCtx}\n\n`:"")+
