@@ -3433,8 +3433,8 @@ Return ONLY valid JSON:
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
-                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);pickAccount(m);}}>
-                              Brief →
+                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);setSelectedAccount(m);setSelectedOutcomes([]);setStep(4);}}>
+                              Review →
                             </button>
                           </td>
                         </tr>
@@ -3599,63 +3599,42 @@ Return ONLY valid JSON:
               </div>
 
               {/* Right: Sticky outcomes + build panel */}
-              <div style={{position:"sticky",top:72}}>
+              <div style={{position:"sticky",top:72,display:"flex",flexDirection:"column",gap:12}}>
                 {selectedAccount?(
-                  <div className="card" style={{border:"2px solid #1a1a18"}}>
-                    {/* Selected account summary */}
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,paddingBottom:14,borderBottom:"1px solid #E8E6DF"}}>
-                      <div style={{width:40,height:40,borderRadius:"50%",background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        {selectedAccount.company.slice(0,2).toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{fontSize:15,fontWeight:700,color:"#1a1a18"}}>{selectedAccount.company}</div>
-                        <div style={{fontSize:12,color:"#777"}}>{selectedAccount.ind}</div>
-                      </div>
-                    </div>
-
-                    {/* Deal Health Signals */}
-                    {fitScores[selectedAccount?.company]&&(
-                      <div style={{marginBottom:12,padding:"10px 14px",borderRadius:10,
-                        border:"1px solid "+(fitScores[selectedAccount.company].score>=75?"#2E6B2E":fitScores[selectedAccount.company].score>=50?"#BA7517":"#9B2C2C")+"44",
-                        background:fitScores[selectedAccount.company].bg}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-                          <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.4px",color:fitScores[selectedAccount.company].color}}>
-                            PMF Fit Assessment
-                          </div>
-                          <div style={{fontSize:13,fontWeight:700,color:fitScores[selectedAccount.company].color}}>
+                  <>
+                    {/* Account Header Box */}
+                    <div className="card" style={{border:"2px solid #1a1a18",padding:"14px 16px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{width:40,height:40,borderRadius:"50%",background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                          {selectedAccount.company.slice(0,2).toUpperCase()}
+                        </div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:15,fontWeight:700,color:"#1a1a18"}}>{selectedAccount.company}</div>
+                          <div style={{fontSize:12,color:"#777"}}>{selectedAccount.ind}</div>
+                        </div>
+                        {fitScores[selectedAccount?.company]&&(
+                          <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                            background:fitScores[selectedAccount.company].bg,
+                            color:fitScores[selectedAccount.company].color,
+                            border:"1px solid "+fitScores[selectedAccount.company].color+"44",
+                            whiteSpace:"nowrap"}}>
                             {fitScores[selectedAccount.company].score}% · {fitScores[selectedAccount.company].label}
                           </div>
-                        </div>
-                        {fitScores[selectedAccount.company].reason&&(
-                          <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{fitScores[selectedAccount.company].reason}</div>
-                        )}
-                        {fitScores[selectedAccount.company].adoptionProfile&&(
-                          <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:10,color:"#aaa",fontWeight:600}}>MOORE:</span>
-                            <span style={{fontSize:11,fontWeight:700,background:"#EEF5F9",color:"#1B3A6B",borderRadius:10,padding:"2px 8px"}}>{fitScores[selectedAccount.company].adoptionProfile}</span>
-                          </div>
                         )}
                       </div>
-                    )}
-
-                    {/* ICP Match Card */}
-                    {sellerICP?.icp&&(
-                      <div style={{background:"#F8F6F1",borderRadius:10,padding:"12px 14px",marginBottom:16,borderBottom:"1px solid #E8E6DF",paddingBottom:16}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px"}}>
-                            ICP Match — {sellerICP.sellerName||sellerUrl}
-                          </div>
-                          {fitScores[selectedAccount.company]&&(
-                            <div style={{fontSize:12,fontWeight:700,padding:"2px 10px",borderRadius:20,
-                              background:fitScores[selectedAccount.company].bg,
-                              color:fitScores[selectedAccount.company].color,
-                              border:"1px solid "+fitScores[selectedAccount.company].color+"44"}}>
-                              {fitScores[selectedAccount.company].score}% Fit
-                            </div>
-                          )}
+                      {fitScores[selectedAccount?.company]?.reason&&(
+                        <div style={{fontSize:12,color:"#555",lineHeight:1.5,marginTop:8,paddingTop:8,borderTop:"1px solid #F0EDE6"}}>
+                          {fitScores[selectedAccount.company].reason}
                         </div>
+                      )}
+                    </div>
 
-                        {/* Industry match */}
+                    {/* ICP Match Box */}
+                    {sellerICP?.icp&&(
+                      <div className="card" style={{padding:"14px 16px"}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
+                          ICP Match — {sellerICP.sellerName||sellerUrl}
+                        </div>
                         {sellerICP.icp.industries?.length>0&&(
                           <div style={{marginBottom:8}}>
                             <div style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Target Industries</div>
@@ -3666,8 +3645,7 @@ Return ONLY valid JSON:
                                 return(
                                   <span key={i} style={{fontSize:11,borderRadius:10,padding:"2px 8px",
                                     background:match?"#2E6B2E":"#E8E6DF",
-                                    color:match?"#fff":"#777",
-                                    fontWeight:match?700:400}}>
+                                    color:match?"#fff":"#777",fontWeight:match?700:400}}>
                                     {match?"✓ ":""}{ind}
                                   </span>
                                 );
@@ -3675,11 +3653,9 @@ Return ONLY valid JSON:
                             </div>
                           </div>
                         )}
-
-                        {/* Buyer personas */}
                         {sellerICP.icp.buyerPersonas?.length>0&&(
                           <div style={{marginBottom:8}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Key Buyers to Target</div>
+                            <div style={{fontSize:10,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Key Buyers</div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                               {sellerICP.icp.buyerPersonas.filter(Boolean).map((p,i)=>(
                                 <span key={i} style={{fontSize:11,background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:10,padding:"2px 8px",color:"#1B3A6B"}}>{p}</span>
@@ -3687,147 +3663,96 @@ Return ONLY valid JSON:
                             </div>
                           </div>
                         )}
-
-                        {/* Trigger to buy */}
                         {sellerICP.icp.priorityInitiative&&(
-                          <div style={{marginBottom:8}}>
+                          <div style={{marginBottom:6}}>
                             <div style={{fontSize:10,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:3}}>⚡ Trigger to Buy</div>
                             <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.priorityInitiative}</div>
                           </div>
                         )}
-
-                        {/* Perceived barriers */}
                         {sellerICP.icp.perceivedBarriers&&(
-                          <div style={{marginBottom:8}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:3}}>🚧 Watch for</div>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:3}}>🚧 Watch For</div>
                             <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.perceivedBarriers}</div>
-                          </div>
-                        )}
-
-                        {/* Decision criteria */}
-                        {sellerICP.icp.decisionCriteria&&(
-                          <div style={{marginBottom:8}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:3}}>⚖️ Decision Criteria</div>
-                            <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.decisionCriteria}</div>
-                          </div>
-                        )}
-
-                        {/* Adoption profile from fit scores */}
-                        {fitScores[selectedAccount.company]?.adoptionProfile&&(
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6,paddingTop:8,borderTop:"1px solid #E8E6DF"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#555",textTransform:"uppercase",letterSpacing:"0.3px"}}>Adoption Profile:</div>
-                            <span style={{fontSize:11,fontWeight:700,background:"#EEF5F9",color:"#1B3A6B",borderRadius:10,padding:"2px 8px"}}>
-                              {fitScores[selectedAccount.company].adoptionProfile}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Fit score reason */}
-                        {fitScores[selectedAccount.company]?.reason&&(
-                          <div style={{fontSize:11,color:"#777",lineHeight:1.5,marginTop:6,fontStyle:"italic"}}>
-                            {fitScores[selectedAccount.company].reason}
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Deal Value */}
-                    <div style={{marginBottom:14}}>
-                      <div className="field-label" style={{marginBottom:6}}>Estimated Deal Value <span style={{color:"#aaa",fontWeight:400,fontSize:11,textTransform:"none",letterSpacing:0}}>(1-year contract)</span></div>
-                      <select value={dealValue} onChange={e=>setDealValue(e.target.value)} style={{width:"100%",fontSize:14}}>
-                        <option value="">— Select deal size —</option>
-                        <option>Less than $5,000</option>
-                        <option>$5,000 – $15,000</option>
-                        <option>$15,000 – $50,000</option>
-                        <option>$50,000 – $100,000</option>
-                        <option>$100,000 – $250,000</option>
-                        <option>$250,000 – $500,000</option>
-                        <option>$500,000 – $1,000,000</option>
-                        <option>$1,000,000+</option>
-                      </select>
+                    {/* Deal Context Box */}
+                    <div className="card" style={{padding:"14px 16px"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>Deal Context</div>
+                      <div style={{marginBottom:10}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#555",marginBottom:4}}>Estimated Deal Value</div>
+                        <select value={dealValue} onChange={e=>setDealValue(e.target.value)} style={{width:"100%",fontSize:13}}>
+                          <option value="">— Select deal size —</option>
+                          <option>Less than $5,000</option>
+                          <option>$5,000 – $15,000</option>
+                          <option>$15,000 – $50,000</option>
+                          <option>$50,000 – $100,000</option>
+                          <option>$100,000 – $250,000</option>
+                          <option>$250,000 – $500,000</option>
+                          <option>$500,000 – $1,000,000</option>
+                          <option>$1,000,000+</option>
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{fontSize:11,fontWeight:700,color:"#555",marginBottom:4}}>Revenue Classification</div>
+                        <select value={dealClassification} onChange={e=>setDealClassification(e.target.value)} style={{width:"100%",fontSize:13}}>
+                          <option value="">— Select classification —</option>
+                          <option>Top-Line Revenue (TCV)</option>
+                          <option>Contribution Margin</option>
+                          <option>Gross Profit</option>
+                          <option>Net New ARR</option>
+                          <option>Expansion Revenue</option>
+                          <option>Professional Services</option>
+                        </select>
+                      </div>
                     </div>
 
-                    {/* Deal Classification */}
-                    <div style={{marginBottom:16,paddingBottom:14,borderBottom:"1px solid #E8E6DF"}}>
-                      <div className="field-label" style={{marginBottom:6}}>Revenue Classification</div>
-                      <select value={dealClassification} onChange={e=>setDealClassification(e.target.value)} style={{width:"100%",fontSize:14}}>
-                        <option value="">— Select classification —</option>
-                        <option>Top-Line Revenue (TCV)</option>
-                        <option>Contribution Margin</option>
-                        <option>Gross Profit</option>
-                        <option>Net New ARR</option>
-                        <option>Expansion Revenue</option>
-                        <option>Professional Services</option>
-                      </select>
-                    </div>
-
-                    {/* Outcomes */}
-                    <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>Customer's Target Outcomes</div>
-                    <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
-                      {OUTCOMES.map(o=>{
-                        const sel=selectedOutcomes.includes(o.title);
-                        return(
-                          <div key={o.id}
-                            onClick={()=>setSelectedOutcomes(p=>p.includes(o.title)?p.filter(x=>x!==o.title):[...p,o.title])}
-                            style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:8,border:"1.5px solid "+(sel?"#1a1a18":"#E8E6DF"),background:sel?"#1a1a18":"#fff",cursor:"pointer",transition:"all 0.15s"}}>
-                            <div style={{fontSize:16,flexShrink:0}}>{o.icon}</div>
-                            <div>
-                              <div style={{fontSize:13,fontWeight:600,color:sel?"#fff":"#1a1a18"}}>{o.title}</div>
-                              <div style={{fontSize:11,color:sel?"#aaa":"#999"}}>{o.sub}</div>
+                    {/* Outcomes Box */}
+                    <div className="card" style={{padding:"14px 16px"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
+                        Target Outcomes <span style={{color:"#aaa",fontWeight:400,fontSize:10}}>(pick up to 3)</span>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
+                        {OUTCOMES.map(o=>{
+                          const sel=selectedOutcomes.includes(o.title);
+                          return(
+                            <div key={o.id} onClick={()=>setSelectedOutcomes(p=>p.includes(o.title)?p.filter(x=>x!==o.title):p.length>=3?p:[...p,o.title])}
+                              style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,
+                                border:"1.5px solid "+(sel?"#1a1a18":"#E8E6DF"),
+                                background:sel?"#1a1a18":"#fff",cursor:"pointer",transition:"all 0.13s"}}>
+                              <span style={{fontSize:14,flexShrink:0}}>{o.icon}</span>
+                              <div style={{flex:1}}>
+                                <div style={{fontSize:12,fontWeight:600,color:sel?"#fff":"#1a1a18"}}>{o.title}</div>
+                              </div>
+                              {sel&&<div style={{fontSize:12,color:"#8B6F47"}}>✓</div>}
                             </div>
-                            {sel&&<div style={{marginLeft:"auto",fontSize:14,color:"#8B6F47"}}>✓</div>}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Free-form custom outcome */}
-                    <div style={{marginBottom:12,paddingTop:8,borderTop:"1px solid #E8E6DF"}}>
-                      <div style={{fontSize:11,fontWeight:700,color:"#999",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Or describe a specific outcome</div>
-                      <div style={{display:"flex",gap:6}}>
-                        <input
-                          type="text"
-                          placeholder="e.g. Increase franchise marketing ROI..."
-                          value={customOutcome}
-                          style={{flex:1,fontSize:13,borderRadius:8,border:"1.5px solid #E8E6DF",padding:"8px 12px"}}
-                          onChange={e=>setCustomOutcome(e.target.value)}
-                          onKeyDown={e=>{
-                            if(e.key==="Enter"&&customOutcome.trim()){
-                              setSelectedOutcomes(p=>p.includes(customOutcome.trim())?p:[...p,customOutcome.trim()]);
-                              setCustomOutcome("");
-                            }
-                          }}
+                          );
+                        })}
+                      </div>
+                      {/* Custom outcome */}
+                      <div style={{display:"flex",gap:6,marginBottom:8}}>
+                        <input type="text" placeholder="Custom outcome..." value={customOutcome||""}
+                          style={{flex:1,fontSize:12,padding:"6px 10px",borderRadius:7,border:"1.5px solid #E8E6DF"}}
+                          onChange={e=>setCustomOutcome&&setCustomOutcome(e.target.value)}
+                          onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setSelectedOutcomes(p=>[...p,e.target.value.trim()]);e.target.value="";}}}
                         />
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          disabled={!customOutcome.trim()}
-                          onClick={()=>{
-                            if(customOutcome.trim()){
-                              setSelectedOutcomes(p=>p.includes(customOutcome.trim())?p:[...p,customOutcome.trim()]);
-                              setCustomOutcome("");
-                            }
-                          }}>
+                        <button className="btn btn-secondary btn-sm"
+                          onClick={()=>{const v=document.querySelector("input[placeholder=\"Custom outcome...\"]")?.value?.trim();if(v){setSelectedOutcomes(p=>[...p,v]);}}}>
                           Add
                         </button>
                       </div>
-                      {selectedOutcomes.filter(o=>!OUTCOMES.find(x=>x.title===o)).map((custom,i)=>(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginTop:6,padding:"6px 10px",background:"#1a1a18",borderRadius:8}}>
-                          <span style={{fontSize:13,color:"#fff",flex:1}}>{custom}</span>
-                          <button onClick={()=>setSelectedOutcomes(p=>p.filter(o=>o!==custom))}
-                            style={{background:"none",border:"none",color:"#8B6F47",cursor:"pointer",fontSize:14,padding:0}}>✕</button>
-                        </div>
-                      ))}
+                      <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
+                        disabled={selectedOutcomes.length===0}
+                        onClick={()=>generateBrief(selectedAccount)}>
+                        Build Brief → {selectedOutcomes.length>0&&`(${selectedOutcomes.length})`}
+                      </button>
+                      {selectedOutcomes.length===0&&(
+                        <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:6}}>Select at least one outcome</div>
+                      )}
                     </div>
-
-                    <button
-                      className="btn btn-primary btn-lg"
-                      style={{width:"100%",justifyContent:"center"}}
-                      disabled={selectedOutcomes.length===0}
-                      onClick={()=>pickAccount(selectedAccount)}>
-                      Build Brief → {selectedOutcomes.length>0&&`(${selectedOutcomes.length} outcome${selectedOutcomes.length>1?"s":""})`}
-                    </button>
-                    {selectedOutcomes.length===0&&<div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:6}}>Select at least one outcome above</div>}
-                  </div>
+                  </>
                 ):(
                   <div style={{background:"#F8F6F1",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:24,textAlign:"center"}}>
                     <div style={{fontSize:24,marginBottom:8}}>👈</div>
@@ -3836,10 +3761,7 @@ Return ONLY valid JSON:
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className="actions-row">
-              <button className="btn btn-secondary" onClick={()=>setStep(3)}>← Back</button>
             </div>
           </div>
         )}
