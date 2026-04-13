@@ -1848,7 +1848,7 @@ export default function App(){
         method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:3500,
+          max_tokens:5000,
           tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
           messages:[{role:"user",content:prompt}],
         }),
