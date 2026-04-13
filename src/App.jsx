@@ -1741,57 +1741,11 @@ export default function App(){
 
     // Phase 2 — build full ICP using research + training knowledge
     const icpPrompt =
-      `You are a senior ICP strategist trained in Revella, Osterwalder, Dunford, Moore, and Weinberg frameworks.\n`+
-      `Build the complete Ideal Customer Profile for the B2B seller at: ${url}\n\n`+
-      (researchCtx?`RESEARCH GATHERED:\n${researchCtx}\n\n`:"")+
-      `UNIVERSAL CONTEXT: Every ideal customer universally wants to: grow revenue, expand markets/customers, stay compliant, reduce fraud and risk, satisfy their investors/board, and make their customers happy. Frame the ICP pain points, success factors, and gains through these lenses.\n`+`SELLER STAGE CONTEXT: ${sellerStage||"unknown stage"}\n`+`- If Series A: ICP should be companies 10-100x seller size, not Fortune 500. Procurement at F500 will disqualify Series A on risk/compliance grounds alone.\n`+`- If Series B/C: ICP should be departmental landing in large companies — find the sub-org that behaves like a startup. Avoid enterprise-wide displacement plays.\n`+`- If Series D+/PE/Public: Full enterprise motion is appropriate. ICP can include Fortune 500 procurement cycles.\n`+`- If PE-Backed: Lead ICP with stability, compliance, and multi-year contract track record as differentiators vs VC-backed competitors.\n`+`  PE SMB intelligence (3,366 scenarios): If EBITDA pressure is high, ICP should be mid-market EXPANSION plays not SMB new logos.\n`+`  Best PE SMB verticals: Healthcare practices (59.8% avg), Insurance agencies (55.6%), Professional services (55%), Law firms (54%).\n`+`  Hidden opportunity for ALL PE sellers: Wealth Mgmt/RIA (64.9% avg) — RIAs are SMB-sized but pay enterprise prices for compliance/reporting tools.\n`+`  Vertical SaaS PE: match your vertical precisely — mismatched vertical SaaS PE + wrong SMB = 15-30% fit.\n`+
-      `CRITICAL RULES:\n`+
-      `1. The ICP describes the seller's IDEAL CUSTOMERS — NOT the seller itself\n`+
-      `2. If website data is thin, USE YOUR TRAINING KNOWLEDGE about this company, its market, and comparable B2B sellers\n`+
-      `3. You MUST populate every field with a specific, confident answer — no placeholders, no "N/A", no empty strings\n`+
-      `4. Think like a veteran sales strategist who has studied this company's positioning, wins, and customer patterns\n\n`+
-      `DATASET-DERIVED ICP HEURISTICS (apply these when building the ICP):\n`+`FROM 6,045,880 PERMUTATION ANALYSIS (4,634 YC companies × 1,156 Fortune1000+Private):\n`+`TIER 1 ICP TARGETS (highest avg fit across 6M+ scenarios):\n`+`- Large Private Insurance/Finance (State Farm 65.2%, TIAA, Nationwide, Northwestern Mutual): fastest decisions, relationship-driven, digitally hungry\n`+`- Large Private Tech/Data/Media (Bloomberg, Valve, SAS): engineering-forward, no public procurement theater\n`+`- Large Private Professional Services (Deloitte US, EY, KPMG): knowledge-worker-heavy, high compliance need\n`+`- Insurance P&C/Life/Specialty (Allstate, Progressive, Hartford, Travelers): 62.5% avg — most underserved by startups\n`+`- CPG HPC/Beauty (P&G, Kimberly-Clark, SC Johnson): 61.9% avg — knowledge workers, digital-forward, no union risk\n`+`- Regional/Community Banks (NOT Tier 1): 59.5% avg — 85 targets, widely ignored by startups\n`+`NEVER target as primary ICP (100% poor-fit rate across all scenarios):\n`+`- Automotive (GM/Ford): 65% union, incumbent ERP, avg 5.9% fit\n`+`- Defense Prime (Boeing/Raytheon/Lockheed): avg 5.8%, requires ITAR clearance + FedRAMP\n`+`- Telecom (AT&T/Verizon): avg 6.1%, 50% union, 5-deep incumbent stack\n`+`- Energy (Oil/Gas, Utilities): avg 11-13%, high union, regulatory lock-in\n`+`- Mass Market Retail (Walmart/Target/Kroger): avg 13.6%, procurement wall for anything Series C or below\n`+`- Tier 1 Banks (JPM/BAC/Wells Fargo): avg 12.6%, incumbent depth 5/5, RFP-only procurement\n`+
-      `- Company size sweet spot for most B2B SaaS: 200-1,000 employees (G2 satisfaction data). Larger enterprises have longer cycles; smaller companies churn more.\n`+
-      `- Company age sweet spot: 5-15 years old (not too early to have budget, not too entrenched to change)\n`+
-      `- Funding signal: companies that raised funding <12 months ago are 3x more likely to buy new software (Crunchbase patterns)\n`+
-      `- Traction channel priority: referral/partner leads close at 30%+ higher rates than outbound (HubSpot CRM data)\n`+
-      `- Adoption profile signals from LinkedIn hiring: "Digital Transformation" roles = Early Majority; "Innovation/R&D" = Early Adopter; "Process Improvement/Efficiency" = Late Majority\n`+
-      `- Industry is the #1 conversion predictor — be specific about which verticals actually close, not just who could theoretically use it\n`+
-      `- Disqualifiers: single-threaded prospects (one stakeholder only) churn 3x more; evaluation teams >7 people without a named champion rarely close\n\n`+
-      `Apply ALL frameworks:\n`+
-      `- Revella: 5 Rings of Buying Insight (what triggers, what success looks like, barriers, decision criteria, journey)\n`+
-      `- Osterwalder: Customer jobs-to-be-done (functional/emotional/social), top pains, top gains\n`+
-      `- Dunford: Competitive alternatives, unique differentiators, market category\n`+
-      `- Moore: Adoption lifecycle segment (Innovator/Early Adopter/Early Majority/Late Majority)\n`+
-      `- Weinberg: Best traction channels to reach this buyer\n\n`+
+      `You are a senior B2B ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}.\n`+
+      (researchCtx?`RESEARCH:\n${researchCtx.slice(0,800)}\n\n`:"")+
+      `Seller stage: ${sellerStage||"unknown"}. Be specific and confident — no placeholders.\n\n`+
       `Return ONLY raw JSON starting with {:\n`+
-      `{"sellerName":"Company name",`+
-      `"sellerDescription":"2 sharp sentences on what they sell and their differentiated value — Dunford positioning style",`+
-      `"marketCategory":"Specific market category e.g. Employee Rewards Platform, Revenue Intelligence Software",`+
-      `"icp":{`+
-      `"industries":["Most common vertical","Second","Third"],`+
-      `"companySize":"e.g. 500–10K employees, Mid-Market to Enterprise",`+
-      `"revenueRange":"e.g. $100M–$5B annual revenue",`+
-      `"ownershipTypes":["most common ownership type of ideal customer"],`+
-      `"geographies":["Primary market"],`+
-      `"adoptionProfile":"Innovators or Early Adopters or Early Majority — which segment is the core buyer and why",`+
-      `"buyerPersonas":["Economic buyer title e.g. VP HR","Champion/user title","Technical evaluator title"],`+
-      `"priorityInitiative":"Specific event or pressure that triggers a buying decision — what just happened at the company that made them look?",`+
-      `"successFactors":"What the economic buyer and champion each define as a win — personal and organizational",`+
-      `"perceivedBarriers":"Specific objections, fears, or switching costs that slow or kill deals",`+
-      `"decisionCriteria":"The 2-3 concrete factors they use to compare and choose between options",`+
-      `"buyerJourney":"How they go from pain awareness to vendor evaluation to decision — who's involved at each stage",`+
-      `"customerJobs":["Functional: the specific task or workflow they need to accomplish","Emotional: how they want to feel","Social: how they want to be seen by peers or leadership"],`+
-      `"topPains":["Most urgent frustration that drives them to act","Second pain","Third pain"],`+
-      `"topGains":["Highest-value outcome they want","Second gain","Third gain"],`+
-      `"competitiveAlternatives":["What they currently use or do instead — status quo","Direct competitor","Build in-house or manual"],`+
-      `"uniqueDifferentiators":["Most defensible thing the seller does that alternatives cannot easily replicate","Second differentiator"],`+
-      `"disqualifiers":["Company type, size, or situation where this is NOT a fit","Second disqualifier"],`+
-      `"techSignals":["Technology in use that signals fit — e.g. uses Workday, Salesforce","Second signal"],`+
-      `"tractionChannels":["Best channel to reach this exact buyer with evidence","Second channel","Third channel"],`+
-      `"dealSize":"Typical ACV or deal value range",`+
-      `"salesCycle":"Typical sales cycle from first contact to close",`+
-      `"customerExamples":["Known customer logo or company type","Second","Third"]}}`;
+      `{"sellerName":"","sellerDescription":"2 sentences on what they sell","marketCategory":"specific category","icp":{"industries":["Primary","Second","Third"],"companySize":"e.g. 500-10K employees","revenueRange":"e.g. $50M-$2B","ownershipTypes":["most common"],"geographies":["Primary"],"adoptionProfile":"Early Adopter or Early Majority","buyerPersonas":["Economic buyer","Champion","Technical evaluator"],"priorityInitiative":"what triggers them to act NOW","successFactors":"what winning looks like","perceivedBarriers":"top objections","decisionCriteria":"top 2-3 evaluation factors","buyerJourney":"awareness to decision","customerJobs":["Functional job","Emotional job","Social job"],"topPains":["Pain 1","Pain 2","Pain 3"],"topGains":["Gain 1","Gain 2","Gain 3"],"competitiveAlternatives":["Status quo","Competitor","Build in-house"],"uniqueDifferentiators":["Differentiator 1","Differentiator 2"],"disqualifiers":["Not a fit: 1","Not a fit: 2"],"techSignals":["Signal 1","Signal 2"],"tractionChannels":["Channel 1","Channel 2","Channel 3"],"dealSize":"typical ACV","salesCycle":"typical length","customerExamples":["Customer 1","Customer 2","Customer 3"]}}`;
 
     try{
       const r2 = await fetch("/api/claude",{
