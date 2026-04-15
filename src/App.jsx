@@ -1324,22 +1324,46 @@ export default function App(){
       const companies = batch.map(m => `${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
       const prompt =
         `You are a B2B sales strategist. Score ICP fit for each company below.\n\n`+
-        `SCORING RULES (apply in order):\n`+
-        `- THE WALL (score 5-15): Automotive/Mfg, Aerospace/Defense, Telecom, Energy/Utilities, Mass Retail >100K, Tier 1 Banks (JPM/BAC/WF)\n`+
-        `- TIER 1 (score 60-75): Large Private Insurance/Finance, Private Professional Services, Regional Banks, Healthcare IT\n`+
-        `- VC-backed target +5pts, PE-backed = cost angle, Private +5pts vs public equivalent\n`+
-        `- >200K employees = procurement wall for Series A-C, score down 15pts\n`+
-        `- Recent funding <12mo = buying signal +8pts\n\n`+
+        `━━━ SCORE (0-100, single integer) ━━━\n`+
+        `Band mapping — score MUST match label:\n`+
+        `  75-100 → "Strong Fit"     — clear ICP match, buyer accessible, reasonable cycle\n`+
+        `  50-74  → "Potential Fit"  — partial match, needs specific angle or workaround\n`+
+        `   0-49  → "Poor Fit"        — structural barrier (wrong size, industry, procurement, incumbent lock)\n\n`+
+        `━━━ INTERNAL SIGNALS (use to decide score — do NOT mention in 'reason') ━━━\n`+
+        `High-friction industries (score 5-25): heavy manufacturing, aerospace/defense prime contractors, telecom incumbents, energy utilities, mass-market retail >100K employees, top-5 US banks.\n`+
+        `Underserved high-fit segments (score 60-80): large private insurance/finance, private professional services, regional/community banks, healthcare IT, CPG personal care.\n`+
+        `Ownership adjustments: VC-backed +5 · PE-backed = cost/margin-driven buyer · Private company +5 vs equivalent public peer.\n`+
+        `Size penalty: >200K employees and seller is early-stage (Seed/Series A) = procurement barrier, -15.\n`+
+        `Funding signal: target raised <12 months ago = active buying window +8.\n\n`+
+        `━━━ OUTPUT LANGUAGE RULES ━━━\n`+
+        `- 'label' MUST be exactly one of: "Strong Fit" | "Potential Fit" | "Poor Fit". No variations, no extra words.\n`+
+        `- 'reason' is ONE plain-English sentence. Say WHY in terms the seller can act on (industry match, buyer size, ownership, incumbent risk, funding window). \n`+
+        `- Do NOT use the words "tier", "wall", "band", or "bucket" in 'reason'. Those are internal labels only.\n`+
+        `- Do not include the score number inside the reason.\n\n`+
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
         `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
+        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Matches fintech ICP and ~500 employee target size","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
         `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
         `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
 
       const result = await callAI(prompt);
       if (!result?.scores) return;
+
+      // Client-side label normalizer. The prompt instructs "Strong Fit" |
+      // "Potential Fit" | "Poor Fit" only, but Haiku occasionally leaks
+      // variants like "Tier 1 Fit" or "Good Fit" or "High Fit". Coerce
+      // everything to one of the three canonical labels based on the
+      // numeric score — single source of truth.
+      const canonicalLabel = (score) => score >= 75 ? "Strong Fit" : score >= 50 ? "Potential Fit" : "Poor Fit";
+      // Also strip "tier"/"wall"/"band"/"bucket" from reason text if the
+      // model leaked it anyway — those are internal scoring terminology
+      // we don't want the seller to see.
+      const cleanReason = (r) => (r || "")
+        .replace(/\b(tier\s*\d+|the\s+wall|band\s*\d+|bucket\s*\d+)\b/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
 
       const map = {};
       const memberUpdates = {};
@@ -1347,7 +1371,13 @@ export default function App(){
         const color       = s.score>=75?"var(--green)":s.score>=50?"var(--amber)":"var(--red)";
         const bg          = s.score>=75?"var(--green-bg)":s.score>=50?"var(--amber-bg)":"var(--red-bg)";
         const ownerColor  = s.ownershipType==="public"?"var(--navy)":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"var(--green)":"#555";
-        map[s.company]             = { ...s, color, bg, ownerColor, adoptionProfile: s.adoptionProfile || "" };
+        map[s.company]             = {
+          ...s,
+          label: canonicalLabel(s.score),
+          reason: cleanReason(s.reason),
+          color, bg, ownerColor,
+          adoptionProfile: s.adoptionProfile || "",
+        };
         memberUpdates[s.company]   = { orgSize: s.orgSize||"", ownership: s.ownership||"", ownershipType: s.ownershipType||"" };
       });
 
