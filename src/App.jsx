@@ -1716,29 +1716,38 @@ Return ONLY raw JSON:
 
     // Phase 1 — research (training-knowledge recall, no web_search tool yet)
     const researchPrompt =
-      `Search for information about the B2B company at ${url}:\n`+
-      `1. What do they sell? Who are their target customers?\n`+
-      `2. Look for: customer case studies, testimonials, customer logos, pricing tiers, partner pages\n`+
-      `3. Look for: job postings mentioning target industries or company sizes\n`+
-      `4. Any known enterprise customers, verticals served, or use cases\n`+
-      `Return ONLY raw JSON, start with {:\n`+
+      `You are researching the B2B company at https://${url} to inform an Ideal Customer Profile build.\n`+
+      `Use the web_search tool to find the company's actual website, press mentions, LinkedIn, and customer logos.\n`+
+      `Search queries to try:\n`+
+      `1. "${url}" products OR solutions — what they sell and to whom\n`+
+      `2. "${url}" customers OR case studies — named customer logos\n`+
+      `3. site:${url} careers OR jobs — reveals target industries and company sizes they serve\n`+
+      `After searching, return ONLY raw JSON (no prose, no commentary):\n`+
       `{"companyName":"","tagline":"","products":["product 1","product 2"],"targetCustomers":"who they sell to in plain language","knownCustomers":["logo 1","logo 2","logo 3"],"industries":["vertical 1","vertical 2","vertical 3"],"companySize":"typical customer size","pricingHint":"any pricing signals found","useCases":["use case 1","use case 2"],"competitors":["competitor 1","competitor 2"]}`;
 
+    // Phase 1 uses web_search — critical for obscure sellers Haiku wouldn't
+    // know from training data (tested: Tillo.com, Cambrian, Savvi all failed
+    // without live search). No assistant-prefill because tool-use responses
+    // can't start with a forced "{" token.
     let researchCtx = "";
     try{
       const r1 = await fetch("/api/claude",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:800,
+          max_tokens:2000,
           temperature:0,
-          messages:[{role:"user",content:researchPrompt},{role:"assistant",content:"{"}],
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+          messages:[{role:"user",content:researchPrompt}],
         }),
       });
       const d1 = await r1.json();
       if(!d1.error){
-        const raw1=(d1.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-        researchCtx = raw1.slice(0,1500);
+        const raw1 = (d1.content||[])
+          .filter(b=>b.type==="text"||b.type==="tool_result")
+          .map(b=>b.type==="text"?b.text:(b.content?.[0]?.text||""))
+          .join(" ").trim();
+        researchCtx = raw1.slice(0,2000);
       }
     }catch(e){ console.warn("ICP research failed:",e.message); }
 
@@ -1805,7 +1814,18 @@ Return ONLY raw JSON:
           const parsed = JSON.parse(m[0]);
           if(parsed.sellerName||parsed.icp){
             setSellerICP(parsed);
-            try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
+            // Only cache if the ICP is usable. "Unknown" / "Unable to determine"
+            // means web_search + training data both failed — don't persist that
+            // failure forever; let the next session retry. Also catches the
+            // case where model echoes the "PICK ONE: ..." instruction verbatim.
+            const badPattern = /unknown|unable to determine|insufficient data|n\/a|PICK ONE/i;
+            const core = [parsed.marketCategory, parsed.icp?.companySize, parsed.icp?.revenueRange, parsed.icp?.dealSize];
+            const usable = core.every(v => typeof v === "string" && v.length > 0 && !badPattern.test(v));
+            if(usable){
+              try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
+            } else {
+              console.warn("ICP built but not cached (contains Unknown/placeholder values) — will retry on next load");
+            }
           }
         }catch(e){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
       }

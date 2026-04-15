@@ -114,7 +114,7 @@ All calls go through `/api/claude` (standard) or `/api/claude-stream` (SSE). Pro
 
 | Call | Model | Max tok | Streaming | Notes |
 |---|---|---|---|---|
-| ICP phase 1 (research) | Haiku | 800 | No | Training-knowledge recall (no `web_search` tool) |
+| ICP phase 1 (research) | Haiku | 2000 | No | Uses `web_search_20250305` (max_uses:1). Critical for sellers Haiku doesn't know from training. |
 | ICP phase 2 (build) | Haiku | 6000 | Yes | Anchored enum schema (see below) |
 | `fetchRFPIntel` | Haiku | 3000 | No | Also uses training knowledge |
 | `scoreFit` batch | Haiku | 1400 | No | 20 accounts / call |
@@ -132,6 +132,8 @@ This is the defining feature of v102. The ICP used to drift wildly between runs 
 1. **Anchored enum schema** (App.jsx:1727). `companySize`, `revenueRange`, `dealSize`, `salesCycle`, `adoptionProfile`, `ownershipTypes`, `geographies` are forced to pick from fixed buckets — no free-form ranges.
 2. **localStorage cache** (App.jsx:1699). Keyed by normalized seller URL + schema version (`ICP_CACHE_VERSION = "v2"`). Once generated, reused forever for that user. Bump the version constant if you change the ICP schema shape — old cached entries fall through to regeneration.
 3. **Explicit Regenerate button** (App.jsx:2948). Confirm dialog → forces `buildSellerICP(url, {forceRefresh:true})`.
+4. **Phase 1 uses `web_search`** (App.jsx:1727). Without this, obscure sellers (Tillo, Cambrian, Savvi) returned "Unknown" for every field — Haiku's training data doesn't cover the long tail. With live search, 5/5 runs on Tillo returned identical anchored fields.
+5. **Cache quality gate** (App.jsx:1783). ICPs containing "Unknown" / "Unable to determine" / "PICK ONE" in core fields are NOT cached — next load retries. Prevents permanent failure for the first user of an obscure seller if web_search momentarily fails.
 
 ### Verifying consistency
 ```bash
