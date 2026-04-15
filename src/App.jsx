@@ -2,10 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
-import { FIT_SCORING_RULES } from "./data/prompts/fitScoring.js";
-import { ICP_FRAMEWORKS } from "./data/prompts/icpGeneration.js";
-import { JOLT_FRAMEWORK, UNIVERSAL_IMPERATIVES } from "./data/prompts/briefGeneration.js";
-import { VOSS_INJECTION, FISHER_URY_INJECTION, CIALDINI_INJECTION, SUN_TZU_INJECTION, CRUCIAL_CONVERSATIONS_INJECTION, GRAHAM_INJECTION } from "./data/prompts/negotiationInjections.js";
+
 
 const SB_URL=import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
