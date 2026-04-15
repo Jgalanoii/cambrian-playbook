@@ -12,6 +12,33 @@ async function sbAuth(path,body){const r=await fetch(SB_URL+'/auth/v1/'+path,{me
 async function sbGetUser(token){const r=await fetch(SB_URL+'/auth/v1/user',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});return r.ok?r.json():null;}
 async function sbSessions(method,path,token,body){const r=await fetch(SB_URL+'/rest/v1/'+path,{method,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'},body:body?JSON.stringify(body):undefined});const t=await r.text();return t?JSON.parse(t):null;}
 
+// One-time localStorage cleanup — removes icp:vN:* / rfp:vN:* entries
+// from prior cache versions so they don't accumulate as the schemas
+// evolve. Current-version entries are left alone. Runs once per page
+// load; cheap (LS read + loop). `CURRENT_ICP_VER` / `CURRENT_RFP_VER`
+// must match the in-component constants below.
+const CURRENT_ICP_VER = "v3";
+const CURRENT_RFP_VER = "v3";
+(function purgeStaleCaches(){
+  try {
+    if (typeof localStorage === "undefined") return;
+    const stale = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      // Matches icp:v1:*, icp:v2:*, rfp:v1:*, rfp:v2:* etc (anything
+      // versioned but not the current version).
+      const m = k.match(/^(icp|rfp):(v\d+):/);
+      if (!m) continue;
+      const [, kind, ver] = m;
+      if (kind === "icp" && ver !== CURRENT_ICP_VER) stale.push(k);
+      if (kind === "rfp" && ver !== CURRENT_RFP_VER) stale.push(k);
+    }
+    stale.forEach(k => localStorage.removeItem(k));
+    if (stale.length) console.log(`[cache] purged ${stale.length} stale entries`);
+  } catch {}
+})();
+
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
 const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#C87533","#1B3A6B","#2E6B2E","#9B2C2C","#6B3A7A","#BA7517","#3A6B6B","#6B4A9B","#A84A4A","#4A9B7A"];
@@ -1431,7 +1458,7 @@ export default function App(){
   // RFP cache: keyed by (user, seller URL, marketCategory, RFP schema
   // version). Cache TTL is implicit — the seller URL and marketCategory
   // pin the scope; a Regenerate ICP will naturally produce a new key.
-  const RFP_CACHE_VERSION = "v2";
+  const RFP_CACHE_VERSION = "v3"; // bumped 2026-04-15: tier/wall vocabulary purge
   const rfpCacheKey = () => {
     const userScope = sbUser?.id || "guest";
     const url = (sellerUrl||"").toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
@@ -1635,7 +1662,7 @@ ${isOpen
   // must NOT see each other's cached ICPs. Key includes sbUser.id (or
   // "guest" for not-logged-in). Bump ICP_CACHE_VERSION if the ICP schema
   // changes — old entries fall through to regeneration.
-  const ICP_CACHE_VERSION = "v2";
+  const ICP_CACHE_VERSION = "v3"; // bumped 2026-04-15: tier/wall vocabulary purge
   const icpCacheKey = (u) => {
     const userScope = sbUser?.id || "guest";
     const normalizedUrl = u.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
