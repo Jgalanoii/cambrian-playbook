@@ -1738,62 +1738,61 @@ export default function App(){
     const icpContext = sellerICP?.icp
       ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
       : "";
-    // Score in batches of 20 so ALL accounts get scored regardless of list size
-    const BATCH=20;
-    const batches=[];
-    for(let i=0;i<members.length;i+=BATCH) batches.push(members.slice(i,i+BATCH));
-    const allMap={};
-    const allMemberUpdates={};
-    for(const batch of batches){
-    const companies = batch.map(m=>`${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
-    const prompt =
-      `You are a B2B sales strategist. Score ICP fit for each company below.
 
-SCORING RULES (apply in order):
-- THE WALL (score 5-15): Automotive/Mfg, Aerospace/Defense, Telecom, Energy/Utilities, Mass Retail >100K, Tier 1 Banks (JPM/BAC/WF)
-- TIER 1 (score 60-75): Large Private Insurance/Finance, Private Professional Services, Regional Banks, Healthcare IT
-- VC-backed target +5pts, PE-backed = cost angle, Private +5pts vs public equivalent  
-- >200K employees = procurement wall for Series A-C, score down 15pts
-- Recent funding <12mo = buying signal +8pts
+    // v107: batches are now dispatched in PARALLEL with Promise.all, and
+    // each batch updates state as soon as it resolves (progressive). With
+    // 100 rows at BATCH=20 this is 5 concurrent Haiku calls; total wall
+    // time drops from ~5x to ~1x a single call (~3-5s) and the user sees
+    // scores fill in live instead of a silent 20-second wait.
+    const BATCH = 20;
+    const batches = [];
+    for (let i = 0; i < members.length; i += BATCH) batches.push(members.slice(i, i + BATCH));
 
-SELLER: `+sellerCtx.slice(0,300)+`
-`+icpContext+`
-`+
-      `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
-      `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
-      `Return ONLY raw JSON, start with {:\n`+
-      `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
-      `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
-      `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
+    const scoreBatch = async (batch) => {
+      const companies = batch.map(m => `${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
+      const prompt =
+        `You are a B2B sales strategist. Score ICP fit for each company below.\n\n`+
+        `SCORING RULES (apply in order):\n`+
+        `- THE WALL (score 5-15): Automotive/Mfg, Aerospace/Defense, Telecom, Energy/Utilities, Mass Retail >100K, Tier 1 Banks (JPM/BAC/WF)\n`+
+        `- TIER 1 (score 60-75): Large Private Insurance/Finance, Private Professional Services, Regional Banks, Healthcare IT\n`+
+        `- VC-backed target +5pts, PE-backed = cost angle, Private +5pts vs public equivalent\n`+
+        `- >200K employees = procurement wall for Series A-C, score down 15pts\n`+
+        `- Recent funding <12mo = buying signal +8pts\n\n`+
+        `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
+        `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
+        `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
+        `Return ONLY raw JSON, start with {:\n`+
+        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"1 sentence why","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
+        `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
+        `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
 
-    const result = await callAI(prompt);
-    if(result?.scores){
+      const result = await callAI(prompt);
+      if (!result?.scores) return;
+
       const map = {};
       const memberUpdates = {};
-      result.scores.forEach(s=>{
-        const color = s.score>=75?"var(--green)":s.score>=50?"var(--amber)":"var(--red)";
-        const bg    = s.score>=75?"var(--green-bg)":s.score>=50?"var(--amber-bg)":"var(--red-bg)";
-        // Ownership badge color
-        const ownerColor = s.ownershipType==="public"?"var(--navy)":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"var(--green)":"#555";
-        map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||""};
-        memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
+      result.scores.forEach(s => {
+        const color       = s.score>=75?"var(--green)":s.score>=50?"var(--amber)":"var(--red)";
+        const bg          = s.score>=75?"var(--green-bg)":s.score>=50?"var(--amber-bg)":"var(--red-bg)";
+        const ownerColor  = s.ownershipType==="public"?"var(--navy)":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"var(--green)":"#555";
+        map[s.company]             = { ...s, color, bg, ownerColor, adoptionProfile: s.adoptionProfile || "" };
+        memberUpdates[s.company]   = { orgSize: s.orgSize||"", ownership: s.ownership||"", ownershipType: s.ownershipType||"" };
       });
-      Object.assign(allMap, map);
-      Object.assign(allMemberUpdates, memberUpdates);
-    } // end forEach
-    } // end batch loop
-    if(Object.keys(allMap).length){
-      setFitScores(prev=>({...prev,...allMap}));
-      // Push orgSize + ownership back into cohort members
-      setCohorts(prev=>prev.map(c=>({
+
+      // Progressive state update — merge this batch's results so the table
+      // fills in as batches return rather than waiting for all batches.
+      setFitScores(prev => ({ ...prev, ...map }));
+      setCohorts(prev => prev.map(c => ({
         ...c,
-        members:c.members.map(m=>allMemberUpdates[m.company]
-          ? {...m,
-              employees:m.employees||allMemberUpdates[m.company].orgSize,
-              publicPrivate:m.publicPrivate||allMemberUpdates[m.company].ownership}
+        members: c.members.map(m => memberUpdates[m.company]
+          ? { ...m,
+              employees:     m.employees     || memberUpdates[m.company].orgSize,
+              publicPrivate: m.publicPrivate || memberUpdates[m.company].ownership }
           : m)
       })));
-    }
+    };
+
+    await Promise.all(batches.map(scoreBatch));
     setFitScoring(false);
   };
 
