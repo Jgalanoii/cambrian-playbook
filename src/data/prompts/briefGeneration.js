@@ -59,4 +59,4 @@ Apply Crucial Conversations: watch for safety signals. If they go quiet, ask "It
       `- 1 sentence max — something a rep says naturally mid-conversation\n`+
       `- Tied directly to what the seller sells, not generic consulting\n`+
       `- Curious and human in tone, not clinical or scripted\n\n`+
-      `Also name the listening principle behind each question so the rep knows WHY they're asking it.\n\`;
+      `Also name the listening principle behind each question so the rep knows WHY they're asking it.\n`;
