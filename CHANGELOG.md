@@ -6,6 +6,25 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ---
 
+## [v104-security-hardening] — 2026-04-15
+
+### Security
+- **`/api/claude` + `/api/claude-stream` proxies were open pass-throughs.** Pen test confirmed an unauthenticated caller could POST `{"model":"claude-opus-4-5","max_tokens":32000,"tools":[…]}` and the proxy would forward it to Anthropic, billing us at up to ~18× Haiku cost. Fixed by introducing `api/_guard.js` — a shared validator that builds a clean outbound body from scratch (no `…req.body` spread), allow-lists model (`claude-haiku-4-5-20251001` only), tool types (`web_search_20250305` only, `max_uses` capped at 1), caps `max_tokens` at 8000, and strips unknown fields. `temperature:0` hardcoded.
+- **Origin allow-list** on both proxies: `cambrian-playbook.vercel.app`, Vercel preview subdomains (`cambrian-playbook-*.vercel.app`), and `localhost`. Absent-Origin requests (server-side tools like our consistency harness) still permitted — real defense is the field allow-list, not Origin.
+- **User-scoped ICP cache** (`src/App.jsx`). Previous key was `icp:v2:<url>`; two users on the same browser saw each other's cached ICPs. Now `icp:v2:<userId|guest>:<url>`.
+- **Security headers** in `vercel.json`: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (deny camera/mic/geo/FLoC), `Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; form-action 'self'`. HSTS was already set by Vercel's default.
+
+### Verified
+Post-deploy pen re-test confirmed:
+- Opus request → `400 "model not permitted"`
+- 32K max_tokens → `200`, silently capped to 8000
+- `Origin: https://evil.example.com` → `403 "origin not allowed"`
+- `web_search max_uses:5` → `200`, silently capped to 1
+- Malformed body → `400` with structured error
+- Legitimate Haiku request → `200`, unchanged
+
+---
+
 ## [v103-obscure-seller-fix] — 2026-04-15
 
 ### Fixed
