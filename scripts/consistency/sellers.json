@@ -1,0 +1,10 @@
+{
+  "_comment": "Sellers to test ICP consistency against. Add/remove freely. Each seller runs N=5 iterations.",
+  "sellers": [
+    { "url": "cambriancatalyst.com", "stage": "seed", "notes": "Joe's own consulting shop" },
+    { "url": "savvi.ai", "stage": "seed", "notes": "Active client — ABM engagement" },
+    { "url": "tango.com", "stage": "series-c", "notes": "Joe's prior employer — digital rewards" },
+    { "url": "gong.io", "stage": "series-e", "notes": "Well-known revenue intelligence seller" },
+    { "url": "linear.app", "stage": "series-b", "notes": "PLG SaaS — different ICP shape" }
+  ]
+}
