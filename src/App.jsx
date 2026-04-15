@@ -1406,6 +1406,7 @@ export default function App(){
   const[icpLoading,setIcpLoading]=useState(false);
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
   const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
+  const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
   const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:"",employees:"",public_private:"",geography:""});
@@ -2981,11 +2982,25 @@ Return ONLY valid JSON:
                 )}
                 {rfpData.open.length>0&&(
                   <>
+                    {/* Toggle */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+                      <span style={{fontSize:12,fontWeight:700,color:"#555"}}>Show:</span>
+                      {[["all","All RFPs"],["private","🏢 Private / Commercial"],["government","🏛 Government"]].map(([val,label])=>(
+                        <button key={val} onClick={()=>setRfpFilter(val)}
+                          style={{padding:"5px 12px",fontSize:11,fontWeight:700,borderRadius:20,border:"1.5px solid",
+                            borderColor:rfpFilter===val?"#1a1a18":"#E8E6DF",
+                            background:rfpFilter===val?"#1a1a18":"#fff",
+                            color:rfpFilter===val?"#fff":"#555",cursor:"pointer"}}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
                     {/* Open RFPs */}
                     <div style={{marginBottom:24}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                         <div style={{fontSize:13,fontWeight:700,color:"#1a1a18"}}>🟢 Open RFPs — Active Opportunities</div>
-                        <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.length} found)</div>
+                        <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).length} shown)</div>
                         <button className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={fetchRFPIntel}>↻ Refresh</button>
                       </div>
                       <div style={{overflowX:"auto",border:"1px solid #E8E6DF",borderRadius:8}}>
@@ -3002,14 +3017,16 @@ Return ONLY valid JSON:
                             </tr>
                           </thead>
                           <tbody>
-                            {rfpData.open.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                            {rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
                               <tr key={i}>
                                 <td style={{maxWidth:280}}>
                                   <div style={{fontWeight:600,fontSize:12,color:"#1a1a18",marginBottom:2}}>{r.title}</div>
                                   <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
                                 </td>
                                 <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
-                                <td><span style={{fontSize:10,fontWeight:700,background:"#EEF5F9",color:"#1B3A6B",borderRadius:6,padding:"2px 6px"}}>{r.source}</span></td>
+                                <td><span style={{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",
+                                  background:r.isGovernment?"#EEF5F9":"#F0FDF4",
+                                  color:r.isGovernment?"#1B3A6B":"#166534"}}>{r.source}</span></td>
                                 <td style={{fontSize:12,fontWeight:600,color:"#2E6B2E",whiteSpace:"nowrap"}}>{r.value}</td>
                                 <td style={{fontSize:11,color:"#BA7517",whiteSpace:"nowrap"}}>{r.deadline}</td>
                                 <td style={{fontSize:11}}>{r.cohort}</td>
@@ -3047,7 +3064,7 @@ Return ONLY valid JSON:
                               </tr>
                             </thead>
                             <tbody>
-                              {rfpData.closed.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                              {rfpData.closed.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
                                 <tr key={i}>
                                   <td style={{maxWidth:240}}>
                                     <div style={{fontWeight:600,fontSize:12,color:"#1a1a18",marginBottom:2}}>{r.title}</div>
