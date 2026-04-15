@@ -1,6 +1,6 @@
 // src/data/prompts/fitScoring.js
 // 6M permutation fit scoring heuristics
-// Used in: scoreFit() function in App.jsx
+// Used in: scoreFit() in App.jsx
 // Model: claude-haiku-4-5-20251001 | Max tokens: 1400
 
 export const FIT_SCORING_PROMPT = `You are a B2B sales strategist. Score ICP fit for each company below.
@@ -46,24 +46,22 @@ export const FIT_SCORING_RULES = {
   },
   stageThresholds: [
     { stage: "Seed", avgFit: 23.7, note: "Zero viable direct enterprise paths" },
-    { stage: "Series A", avgFit: 33.6, note: "Niche targeting only; no Tier 1 banks, no defense" },
-    { stage: "Series B", avgFit: 41.8, note: "Departmental landing in Insurance, Healthcare, Private" },
-    { stage: "Series C", avgFit: 49.0, note: "First stage with real enterprise traction" },
-    { stage: "Series D+", avgFit: 55.6, note: "35% of scenarios are strong fit; full enterprise motion" }
+    { stage: "Series A", avgFit: 33.6, note: "Niche targeting only" },
+    { stage: "Series B", avgFit: 41.8, note: "Departmental landing only" },
+    { stage: "Series C", avgFit: 49.0, note: "First real enterprise traction" },
+    { stage: "Series D+", avgFit: 55.6, note: "Full enterprise motion viable" }
   ],
   signals: {
     positive: [
       "Recent funding <12 months = 18-month buying window (+8pts)",
       "PE acquisition <18 months = cost mandate + 60-90 day budget cycle",
-      "Private company vs public equivalent (+5-8pts)",
-      "VC-backed = faster decisions",
+      "Private vs public equivalent (+5-8pts)",
       "Hiring Digital Transformation = Early Majority",
       "Hiring Innovation/R&D = Early Adopter"
     ],
     negative: [
       ">200K employees = procurement wall for Series A-C (-15pts)",
-      ">50% union/hourly workforce = out-of-scope (-20pts)",
-      "Glassdoor <3.5 = operational pain present (not always bad)"
+      ">50% union/hourly workforce (-20pts)"
     ]
   }
 };
