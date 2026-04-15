@@ -3,6 +3,7 @@ import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
+import "./App.css";
 
 
 const SB_URL=import.meta.env.VITE_SUPABASE_URL;
@@ -10,452 +11,6 @@ const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
 async function sbAuth(path,body){const r=await fetch(SB_URL+'/auth/v1/'+path,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}
 async function sbGetUser(token){const r=await fetch(SB_URL+'/auth/v1/user',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});return r.ok?r.json():null;}
 async function sbSessions(method,path,token,body){const r=await fetch(SB_URL+'/rest/v1/'+path,{method,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'},body:body?JSON.stringify(body):undefined});const t=await r.text();return t?JSON.parse(t):null;}
-
-const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');`;
-
-const css = `
-/* ── DESIGN TOKENS ───────────────────────────────────────
-   Single source of truth. Do NOT reintroduce raw hex
-   values in CSS or inline styles without first adding the
-   corresponding token here. See CHANGELOG.md v105 notes. */
-:root {
-  /* surfaces */
-  --bg-0:       #F7F6F2;   /* app background */
-  --bg-1:       #FAF8F4;   /* raised surface · hover */
-  --bg-2:       #F0EDE6;   /* muted chip · subtle tint */
-  --surface:    #ffffff;
-
-  /* ink */
-  --ink-0:      #1a1a18;   /* primary */
-  --ink-1:      #555555;   /* secondary */
-  --ink-2:      #888888;   /* tertiary */
-  --ink-3:      #b8b6ae;   /* quaternary / placeholder */
-
-  /* brand — "tan" is the signature Cambrian accent */
-  --tan-0:      #8B6F47;   /* primary brand */
-  --tan-1:      #7A6040;   /* hover · dark */
-  --tan-2:      #D4C4A8;   /* accent border */
-  --tan-3:      #F0EDE6;   /* soft tint bg */
-  --tan-ink:    #7A5C30;   /* text on tan tint */
-
-  /* semantic */
-  --navy:       #1B3A6B;
-  --navy-dark:  #152d54;
-  --green:      #2E6B2E;
-  --green-dark: #245424;
-  --red:        #9B2C2C;
-  --amber:      #BA7517;
-  --purple:     #6B3A7A;
-
-  --green-bg:   #EEF5EE;
-  --red-bg:     #FDE8E8;
-  --amber-bg:   #FEF6E4;
-  --navy-bg:    #EEF5F9;
-  --purple-bg:  #F3EEF9;
-
-  /* lines */
-  --line-0:     #E8E6DF;   /* default border */
-  --line-1:     #F0EDE6;   /* subtle row separator */
-  --line-2:     #D4D0C8;   /* stronger border */
-
-  /* radius */
-  --r-sm:       6px;       /* chips, tags, small fields */
-  --r-md:       10px;      /* standard card, button */
-  --r-lg:       14px;      /* hero card · auth card */
-  --r-pill:     999px;
-
-  /* elevation */
-  --sh-1:       0 1px 3px rgba(26,26,24,0.06);
-  --sh-2:       0 4px 12px rgba(26,26,24,0.08);
-  --sh-3:       0 14px 40px rgba(26,26,24,0.12);
-  --sh-ring:    0 0 0 3px rgba(139,111,71,0.12);
-  --sh-focus:   0 0 0 4px rgba(26,26,24,0.08);
-
-  /* motion */
-  --ease:       cubic-bezier(.2,.8,.2,1);
-  --t-fast:     0.12s;
-  --t-med:      0.2s;
-  --t-slow:     0.35s;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg-0); color: var(--ink-0); font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-.app { min-height: 100vh; display: flex; flex-direction: column; }
-
-/* ── HEADER ──────────────────────────────────────────── */
-.header { background: var(--surface); border-bottom: 1px solid var(--line-0); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; flex-shrink: 0; gap: 16px; }
-.logo { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: var(--ink-0); white-space: nowrap; letter-spacing: -0.3px; }
-.logo span { color: var(--tan-0); }
-
-/* ── STEPPER (v105) ──────────────────────────────────────
-   Horizontal scroll-safe. Circles are the anchor; labels
-   sit below. Rails between circles fill as you progress,
-   so the user sees "I'm here" without reading numbers.   */
-.stepper { display: flex; align-items: flex-start; gap: 2px; overflow-x: auto; padding: 4px 4px 2px; scrollbar-width: none; scroll-behavior: smooth; }
-.stepper::-webkit-scrollbar { display: none; }
-.step-item { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 2px 6px; background: none; border: none; cursor: pointer; flex-shrink: 0; font-family: 'DM Sans', sans-serif; transition: opacity var(--t-med) var(--ease); min-width: 44px; }
-.step-item:disabled { opacity: 0.32; cursor: default; }
-.step-item:not(:disabled):not(.active):not(.done) { opacity: 0.6; }
-.step-item:not(:disabled):hover { opacity: 1; }
-.step-num { width: 24px; height: 24px; border-radius: var(--r-pill); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: var(--surface); border: 1.5px solid var(--line-2); color: var(--ink-2); transition: all var(--t-med) var(--ease); }
-.step-item.done .step-num { background: var(--tan-0); border-color: var(--tan-0); color: var(--surface); }
-.step-item.active .step-num { background: var(--ink-0); border-color: var(--ink-0); color: var(--surface); box-shadow: var(--sh-focus); transform: scale(1.08); }
-.step-item:not(:disabled):not(.active):hover .step-num { border-color: var(--tan-0); color: var(--tan-0); }
-.step-label { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
-.step-item.active .step-label { color: var(--ink-0); }
-.step-item.done .step-label { color: var(--tan-0); }
-.step-rail { flex: 0 0 18px; height: 2px; margin-top: 12px; background: var(--line-0); border-radius: 1px; position: relative; overflow: hidden; transition: background var(--t-med) var(--ease); }
-.step-rail.done { background: var(--tan-0); }
-.step-rail.active { background: linear-gradient(to right, var(--tan-0) 50%, var(--line-0) 50%); }
-@media (max-width: 820px) {
-  .step-label { display: none; }
-  .step-item { min-width: 0; padding: 2px 3px; }
-  .step-rail { flex-basis: 12px; margin-top: 0; }
-}
-
-.live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--green); background: var(--green-bg); padding: 3px 10px; border-radius: var(--r-pill); letter-spacing: 0.3px; }
-.live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: blink 1.2s ease-in-out infinite; }
-@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.25} }
-
-/* ── LAYOUT ──────────────────────────────────────────── */
-.page { max-width: 860px; margin: 0 auto; padding: 32px 24px 64px; width: 100%; }
-.page-title { font-family: 'Lora', serif; font-size: 28px; font-weight: 600; margin-bottom: 6px; color: var(--ink-0); letter-spacing: -0.4px; line-height: 1.2; }
-.page-sub { font-size: 14px; color: var(--ink-1); line-height: 1.65; margin-bottom: 24px; max-width: 560px; }
-.footer { text-align: center; padding: 20px 24px; font-size: 11px; color: var(--ink-3); border-top: 1px solid var(--line-0); margin-top: auto; background: var(--surface); }
-
-/* ── SESSION BAR ─────────────────────────────────────── */
-.session-bar { background: var(--surface); border-bottom: 1px solid var(--line-0); padding: 6px 24px; display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--ink-2); flex-shrink: 0; flex-wrap: wrap; }
-.session-url { color: var(--tan-0); font-weight: 600; }
-
-/* ── BUTTONS ─────────────────────────────────────────── */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--r-md); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--t-fast) var(--ease); border: none; line-height: 1.2; white-space: nowrap; }
-.btn:disabled { opacity: 0.38; cursor: not-allowed; }
-.btn-primary { background: var(--ink-0); color: var(--surface); box-shadow: var(--sh-1); }
-.btn-primary:hover:not(:disabled) { background: #2d2d2b; box-shadow: var(--sh-2); transform: translateY(-1px); }
-.btn-primary:active:not(:disabled) { transform: translateY(0); }
-.btn-secondary { background: var(--surface); border: 1.5px solid var(--line-2); color: var(--ink-1); }
-.btn-secondary:hover:not(:disabled) { border-color: var(--tan-0); color: var(--tan-0); background: var(--bg-1); }
-.btn-gold { background: var(--tan-0); color: var(--surface); box-shadow: 0 1px 4px rgba(139,111,71,0.25); }
-.btn-gold:hover:not(:disabled) { background: var(--tan-1); box-shadow: 0 3px 10px rgba(139,111,71,0.32); transform: translateY(-1px); }
-.btn-green { background: var(--green); color: var(--surface); box-shadow: 0 1px 4px rgba(46,107,46,0.25); }
-.btn-green:hover:not(:disabled) { background: var(--green-dark); transform: translateY(-1px); }
-.btn-navy { background: var(--navy); color: var(--surface); box-shadow: 0 1px 4px rgba(27,58,107,0.25); }
-.btn-navy:hover:not(:disabled) { background: var(--navy-dark); transform: translateY(-1px); }
-.btn-lg { padding: 12px 24px; font-size: 15px; }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-.actions-row { display: flex; gap: 8px; margin-top: 24px; align-items: center; flex-wrap: wrap; }
-
-/* ── CARDS ───────────────────────────────────────────── */
-.card { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 18px; margin-bottom: 12px; }
-.card-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--ink-0); }
-
-/* ── FORMS ───────────────────────────────────────────── */
-.field-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-.field-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-2); }
-.field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-input[type=text], input[type=email], input[type=password], select, textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--line-0); border-radius: var(--r-md); font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink-0); background: var(--surface); outline: none; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); resize: vertical; -webkit-appearance: none; }
-input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, select:focus, textarea:focus { border-color: var(--tan-0); box-shadow: var(--sh-ring); }
-input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeholder { color: var(--ink-3); }
-
-/* ── SETUP / AUTH ────────────────────────────────────── */
-.setup-card { background: var(--surface); border: 1.5px solid var(--line-0); border-radius: var(--r-lg); padding: 28px; max-width: 500px; margin: 48px auto 0; }
-.setup-logo { font-family: 'Lora', serif; font-size: 22px; color: var(--ink-0); margin-bottom: 4px; text-align: center; }
-.setup-logo span { color: var(--tan-0); }
-.setup-url-bar { display: flex; align-items: center; gap: 8px; background: var(--bg-0); border: 1.5px solid var(--line-0); border-radius: var(--r-md); padding: 3px 12px; margin-bottom: 8px; transition: border-color var(--t-fast) var(--ease); }
-.setup-url-bar:focus-within { border-color: var(--tan-0); background: var(--surface); }
-.setup-url-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-3); white-space: nowrap; min-width: 72px; }
-.setup-url-input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink-0); outline: none; width: 100%; padding: 7px 0; }
-
-/* ── ACCOUNT REVIEW (v106) ───────────────────────────────
-   Full-width vertical stack: horizontal account selector
-   strip at top, account hero + ICP match cards (using
-   horizontal space via grid), then deal + outcomes card
-   with Build Brief CTA. Much tighter vertically than the
-   previous 1fr/320px split. */
-.account-strip { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 8px; margin-bottom: 16px; scroll-behavior: smooth; }
-.account-strip::-webkit-scrollbar { height: 6px; }
-.account-strip::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
-.account-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: var(--r-md); border: 1.5px solid var(--line-0); background: var(--surface); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink-1); white-space: nowrap; transition: all var(--t-fast) var(--ease); flex-shrink: 0; }
-.account-chip:hover:not(.active) { border-color: var(--tan-0); }
-.account-chip.active { border-color: var(--ink-0); background: var(--bg-1); color: var(--ink-0); font-weight: 600; box-shadow: var(--sh-1); }
-.account-chip-num { width: 20px; height: 20px; border-radius: 50%; background: var(--bg-2); color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-.account-chip.active .account-chip-num { background: var(--ink-0); color: var(--tan-0); }
-
-.account-hero { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); margin-bottom: 12px; }
-.account-hero-av { width: 48px; height: 48px; border-radius: 50%; background: var(--ink-0); color: var(--tan-0); font-family: 'Lora', serif; font-weight: 700; font-size: 17px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.account-hero-body { flex: 1; min-width: 0; }
-.account-hero-name { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; color: var(--ink-0); letter-spacing: -0.3px; line-height: 1.2; }
-.account-hero-meta { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
-.account-hero-reason { font-size: 12px; color: var(--ink-1); line-height: 1.5; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-1); }
-
-.icp-match-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 20px; }
-.icp-match-col-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
-.deal-outcome-grid { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
-@media (max-width: 720px) { .deal-outcome-grid { grid-template-columns: 1fr; } }
-
-/* ── AUTH / LOGIN (v106) ─────────────────────────────────
-   Login is rendered inside the standard app shell — header,
-   .page, .page-title, .page-sub, .card. Only three helper
-   classes are specific to it: the segmented tab switcher,
-   the inline error message, and the subtle guest link. */
-.pw-tabs { display: flex; background: var(--bg-2); border-radius: var(--r-md); padding: 3px; }
-.pw-tab { flex: 1; padding: 9px 0; border-radius: calc(var(--r-md) - 3px); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; background: transparent; color: var(--ink-2); transition: all var(--t-fast) var(--ease); }
-.pw-tab.active { background: var(--surface); color: var(--ink-0); box-shadow: var(--sh-1); }
-.pw-tab:hover:not(.active) { color: var(--ink-0); }
-.pw-error { font-size: 12px; color: var(--red); background: var(--red-bg); padding: 8px 10px; border-radius: var(--r-sm); margin-bottom: 10px; }
-.pw-guest { background: none; border: none; font-size: 12px; color: var(--ink-3); cursor: pointer; font-family: inherit; }
-.pw-guest:hover { color: var(--ink-1); text-decoration: underline; }
-
-/* ── UPLOAD ──────────────────────────────────────────── */
-.upload-zone { border: 1.5px dashed var(--line-2); border-radius: var(--r-md); padding: 32px 20px; text-align: center; cursor: pointer; transition: all var(--t-med) var(--ease); background: var(--surface); }
-.upload-zone:hover, .upload-zone.drag { border-color: var(--tan-0); background: var(--bg-1); }
-.upload-label { font-family: 'Lora', serif; font-size: 16px; color: var(--ink-0); margin-bottom: 4px; }
-.upload-hint { font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
-
-/* ── TABLE ───────────────────────────────────────────── */
-.tbl-wrap { overflow-x: auto; }
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th { background: var(--bg-1); padding: 8px 10px; text-align: left; font-weight: 700; color: var(--ink-1); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; position: sticky; top: 0; }
-.tbl td { padding: 8px 10px; border-top: 1px solid var(--line-1); color: var(--ink-1); }
-.tbl tr:hover td { background: var(--bg-1); }
-
-/* ── STATS ───────────────────────────────────────────── */
-.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
-.stat-card { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 14px 12px; text-align: center; }
-.stat-num { font-family: 'Lora', serif; font-size: 28px; color: var(--tan-0); margin-bottom: 2px; letter-spacing: -0.5px; }
-.stat-label { font-size: 11px; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.4px; }
-
-/* ── COHORT ──────────────────────────────────────────── */
-.cohort-chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-.pie-card { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 14px; }
-.pie-title { font-family: 'Lora', serif; font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--ink-0); }
-.pie-wrap { display: flex; align-items: center; gap: 12px; }
-.pie-legend { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-1); }
-.pie-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.pie-legend-val { margin-left: auto; font-weight: 700; color: var(--ink-0); font-size: 11px; }
-.cohort-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 8px; margin-bottom: 16px; }
-.cohort-card { background: var(--surface); border: 1.5px solid var(--line-0); border-radius: var(--r-md); padding: 13px 14px; cursor: pointer; transition: all var(--t-fast) var(--ease); }
-.cohort-card:hover, .cohort-card.selected { border-color: var(--tan-0); }
-.cohort-card.selected { background: var(--bg-1); }
-.cohort-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; flex-shrink: 0; }
-.cohort-name { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; }
-.cohort-size { font-size: 11px; color: var(--ink-3); margin-bottom: 6px; }
-.cohort-drill { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); overflow: hidden; margin-bottom: 10px; }
-.cohort-drill-hdr { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; transition: background var(--t-fast) var(--ease); border-bottom: 1px solid transparent; }
-.cohort-drill-hdr:hover { background: var(--bg-0); }
-.cohort-drill-hdr.open { border-bottom-color: var(--line-0); }
-.cohort-drill-left { display: flex; align-items: center; gap: 8px; }
-.cohort-drill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.cohort-drill-name { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; }
-.cohort-drill-meta { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
-.cohort-drill-right { display: flex; align-items: center; gap: 10px; }
-.cohort-drill-acv { font-family: 'Lora', serif; font-size: 15px; color: var(--tan-0); }
-.cohort-drill-toggle { font-size: 11px; color: var(--ink-3); font-weight: 700; }
-.cohort-drill-body { padding: 0 14px 12px; }
-.cohort-member-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
-.cohort-member-table th { background: var(--bg-1); padding: 5px 8px; text-align: left; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-1); white-space: nowrap; }
-.cohort-member-table td { padding: 6px 8px; border-top: 1px solid var(--line-1); color: var(--ink-1); }
-.cohort-member-table tr:hover td { background: var(--bg-1); cursor: pointer; }
-
-/* ── TAGS ────────────────────────────────────────────── */
-.tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
-.tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: var(--r-pill); }
-.tag-ind { background: var(--navy-bg); color: var(--navy); }
-.tag-size { background: var(--tan-3); color: var(--tan-ink); }
-.tag-src { background: var(--green-bg); color: var(--green); }
-.tag-out { background: var(--purple-bg); color: var(--purple); }
-.outcome-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: var(--r-sm); background: var(--purple-bg); color: var(--purple); white-space: nowrap; }
-
-/* ── ACCOUNT LIST ────────────────────────────────────── */
-.account-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
-.account-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 10px 12px; cursor: pointer; transition: all var(--t-fast) var(--ease); }
-.account-item:hover, .account-item.selected { border-color: var(--ink-0); background: var(--bg-1); }
-.account-name { font-size: 15px; font-weight: 600; color: var(--ink-0); }
-.account-meta { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
-.account-acv { font-size: 13px; font-weight: 700; color: var(--tan-0); }
-
-/* ── OUTCOMES ────────────────────────────────────────── */
-.outcome-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
-.outcome-tile { background: var(--surface); border: 1.5px solid var(--line-0); border-radius: var(--r-md); padding: 12px; cursor: pointer; transition: all var(--t-fast) var(--ease); }
-.outcome-tile:hover, .outcome-tile.selected { border-color: var(--tan-0); }
-.outcome-tile.selected { background: var(--bg-1); box-shadow: var(--sh-1); }
-.outcome-icon { font-size: 16px; margin-bottom: 4px; }
-.outcome-title { font-size: 12px; font-weight: 700; margin-bottom: 1px; color: var(--ink-0); }
-.outcome-sub { font-size: 11px; color: var(--ink-2); line-height: 1.4; }
-
-/* ── BRIEF BLOCKS ────────────────────────────────────── */
-.bb { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); overflow: hidden; margin-bottom: 10px; }
-.bb-hdr { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bg-0); border-bottom: 1px solid var(--line-0); }
-.bb-icon { width: 24px; height: 24px; border-radius: var(--r-sm); background: var(--ink-0); display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; color: var(--tan-0); flex-shrink: 0; }
-.bb-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 600; color: var(--ink-0); }
-.bb-sub { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
-.bb-body { padding: 12px 14px; }
-.solution-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
-.sol-badge { font-size: 12px; font-weight: 700; background: var(--tan-3); color: var(--tan-ink); border: 1px solid var(--tan-2); padding: 3px 10px; border-radius: var(--r-sm); white-space: nowrap; flex-shrink: 0; margin-top: 1px; font-family: 'Lora', serif; }
-.signal-row { display: flex; gap: 7px; margin-bottom: 6px; align-items: flex-start; }
-.sig-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tan-0); flex-shrink: 0; margin-top: 5px; }
-.contact-row { display: flex; gap: 10px; margin-bottom: 7px; background: var(--bg-0); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 9px 11px; align-items: flex-start; }
-.contact-av { width: 28px; height: 28px; border-radius: 50%; background: var(--line-0); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--ink-1); flex-shrink: 0; }
-
-/* ── EDITABLE FIELDS ─────────────────────────────────── */
-.ef-wrap { position: relative; }
-.ef-wrap:hover .ef-hint { opacity: 1; }
-.ef-hint { position: absolute; top: -14px; right: 2px; font-size: 9px; color: var(--tan-0); font-weight: 700; opacity: 0; transition: opacity var(--t-fast) var(--ease); pointer-events: none; text-transform: uppercase; letter-spacing: 0.4px; }
-.ef-display { font-size: 14px; color: var(--ink-1); line-height: 1.65; padding: 5px 7px; border-radius: var(--r-sm); border: 1px solid transparent; transition: all var(--t-fast) var(--ease); min-height: 28px; cursor: text; }
-.ef-display:hover { border-color: var(--line-0); background: var(--bg-0); }
-.ef-empty { color: var(--ink-3); font-style: italic; }
-.ef-input { font-size: 14px; color: var(--ink-1); line-height: 1.65; padding: 5px 7px; border-radius: var(--r-sm); border: 1.5px solid var(--tan-0); background: var(--surface); width: 100%; font-family: 'DM Sans', sans-serif; outline: none; box-shadow: var(--sh-ring); }
-.ef-input-multi { min-height: 56px; resize: vertical; }
-
-/* ── LOADING ─────────────────────────────────────────── */
-.load-box { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 24px; margin-bottom: 12px; }
-.load-status { font-size: 13px; color: var(--tan-0); font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
-.load-spin { width: 14px; height: 14px; border: 2px solid var(--line-0); border-top-color: var(--tan-0); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.pulse-wrap { display: flex; flex-direction: column; gap: 6px; }
-.pulse-line { height: 9px; background: var(--line-1); border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
-@keyframes pulse { 0%{opacity:1}50%{opacity:0.35}100%{opacity:1} }
-
-/* ── IN-CALL ─────────────────────────────────────────── */
-.incall-wrap { max-width: 940px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
-.incall-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
-.incall-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--ink-0); }
-.incall-meta { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
-.river-pills { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
-.river-pill { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--r-pill); border: 1.5px solid var(--line-0); background: var(--surface); cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-2); transition: all var(--t-fast) var(--ease); white-space: nowrap; }
-.river-pill:hover { border-color: var(--tan-0); color: var(--tan-0); }
-.river-pill.active { background: var(--ink-0); border-color: var(--ink-0); color: var(--surface); }
-.river-pill.filled { border-color: var(--green); color: var(--green); }
-.river-pill.filled.active { background: var(--green); border-color: var(--green); color: var(--surface); }
-.river-pill-letter { font-family: 'Lora', serif; font-size: 13px; font-weight: 700; }
-.river-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-.stage-card { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 20px; margin-bottom: 12px; }
-.stage-card-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-.stage-letter-big { width: 40px; height: 40px; border-radius: 50%; background: var(--ink-0); color: var(--tan-0); font-family: 'Lora', serif; font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.stage-name { font-family: 'Lora', serif; font-size: 17px; font-weight: 600; color: var(--ink-0); }
-.stage-sub { font-size: 12px; color: var(--ink-1); margin-top: 1px; }
-.gate-block { margin-bottom: 16px; }
-.gate-question { font-size: 14px; font-weight: 700; color: var(--ink-0); margin-bottom: 10px; line-height: 1.4; }
-.gate-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.gate-choice { padding: 6px 13px; border-radius: var(--r-pill); border: 1.5px solid var(--line-0); background: var(--bg-0); cursor: pointer; font-size: 12px; font-weight: 600; color: var(--ink-1); transition: all var(--t-fast) var(--ease); font-family: 'DM Sans', sans-serif; }
-.gate-choice:hover { border-color: var(--tan-0); color: var(--tan-0); background: var(--bg-1); }
-.gate-choice.selected { background: var(--ink-0); border-color: var(--ink-0); color: var(--surface); }
-.gate-note { width: 100%; padding: 8px 11px; border: 1px solid var(--line-0); border-radius: var(--r-md); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink-1); background: var(--bg-0); resize: vertical; min-height: 54px; outline: none; transition: border-color var(--t-fast) var(--ease); }
-.gate-note:focus { border-color: var(--tan-0); background: var(--surface); }
-.gate-note-lbl { font-size: 10px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.dq-block { margin-bottom: 12px; background: var(--bg-0); border-radius: var(--r-md); padding: 13px; border-left: 3px solid var(--tan-0); }
-.dq-framework { font-size: 10px; font-weight: 700; color: var(--tan-0); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-.dq-question { font-size: 13px; font-weight: 600; color: var(--ink-0); margin-bottom: 8px; line-height: 1.5; font-style: italic; }
-.dq-note { width: 100%; padding: 7px 10px; border: 1px solid var(--line-0); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--surface); resize: vertical; min-height: 48px; outline: none; }
-.dq-note:focus { border-color: var(--tan-0); }
-.incall-sidebar { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 14px; }
-.conf-bar-wrap { margin-bottom: 14px; }
-.conf-pct { font-family: 'Lora', serif; font-size: 26px; font-weight: 600; line-height: 1; }
-.incall-grid { display: grid; grid-template-columns: 1fr 290px; gap: 16px; align-items: start; }
-@media(max-width: 800px){ .incall-grid { grid-template-columns: 1fr; } }
-.call-layout { display: flex; flex: 1; height: calc(100vh - 64px); overflow: hidden; }
-.call-left { width: 55%; border-right: 1px solid var(--line-0); display: flex; flex-direction: column; background: var(--surface); overflow: hidden; }
-.call-right { width: 45%; display: flex; flex-direction: column; background: var(--bg-0); overflow: hidden; }
-.panel-hdr { padding: 10px 16px; border-bottom: 1px solid var(--line-0); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--surface); }
-.panel-title { font-family: 'Lora', serif; font-size: 14px; font-weight: 600; }
-.panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
-.river-nav { display: flex; overflow-x: auto; border-bottom: 1px solid var(--line-0); background: var(--bg-0); flex-shrink: 0; }
-.r-tab { padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--ink-3); border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; transition: all var(--t-fast) var(--ease); text-transform: uppercase; letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 4px; }
-.r-tab:hover { color: var(--ink-0); }
-.r-tab.active { color: var(--tan-0); border-bottom-color: var(--tan-0); background: var(--surface); }
-.fill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-.gate { background: var(--bg-0); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 10px; margin-bottom: 7px; }
-.gate.answered { border-color: var(--green); background: #F2FAF2; }
-.gate-q { font-size: 13px; font-weight: 600; color: var(--ink-0); margin-bottom: 7px; line-height: 1.4; }
-.gate-opts { display: flex; flex-direction: column; gap: 4px; }
-.gate-opt { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: var(--r-sm); border: 1px solid var(--line-0); background: var(--surface); cursor: pointer; transition: all var(--t-fast) var(--ease); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink-1); text-align: left; }
-.gate-opt:hover { border-color: var(--tan-0); background: var(--bg-1); }
-.gate-ans { font-size: 12px; color: var(--green); font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
-.conf-wrap { margin-bottom: 12px; }
-.conf-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.conf-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-2); }
-.conf-score { font-family: 'Lora', serif; font-size: 20px; font-weight: 600; }
-.conf-track { height: 4px; background: var(--line-0); border-radius: 2px; overflow: hidden; }
-.conf-fill { height: 100%; border-radius: 2px; transition: width 0.5s, background 0.5s; }
-.right-tabs { display: flex; border-bottom: 1px solid var(--line-0); background: var(--surface); flex-shrink: 0; }
-.rt { padding: 8px 12px; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--ink-2); border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: all var(--t-fast) var(--ease); white-space: nowrap; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.4px; }
-.rt:hover { color: var(--ink-0); }
-.rt.active { color: var(--tan-0); border-bottom-color: var(--tan-0); background: var(--bg-0); }
-.talk-box { background: var(--bg-0); border-left: 3px solid var(--tan-0); border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 9px 12px; margin-bottom: 8px; }
-.talk-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--tan-0); margin-bottom: 3px; }
-.talk-txt { font-size: 13px; color: var(--ink-1); line-height: 1.6; font-style: italic; }
-.obj-item { border: 1px solid var(--line-0); border-radius: var(--r-sm); overflow: hidden; background: var(--surface); margin-bottom: 5px; }
-.obj-btn { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; cursor: pointer; font-size: 13px; font-weight: 600; width: 100%; text-align: left; background: none; border: none; font-family: 'DM Sans', sans-serif; color: var(--ink-0); }
-.obj-ans { padding: 7px 10px 9px; font-size: 13px; color: var(--ink-1); line-height: 1.5; font-style: italic; border-top: 1px solid var(--line-1); }
-.hyp-card { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-sm); padding: 9px 11px; margin-bottom: 5px; cursor: pointer; transition: border-color var(--t-fast) var(--ease); }
-.hyp-card:hover { border-color: var(--tan-0); }
-.hyp-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--tan-0); margin-bottom: 2px; }
-.hyp-txt { font-size: 13px; color: var(--ink-1); line-height: 1.5; }
-
-/* ── POST-CALL ───────────────────────────────────────── */
-.post-sec { margin-bottom: 16px; }
-.post-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-2); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
-.post-content { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 12px; font-size: 14px; color: var(--ink-1); line-height: 1.65; white-space: pre-wrap; }
-.copy-btn { font-size: 11px; color: var(--tan-0); cursor: pointer; background: none; border: none; font-family: 'DM Sans', sans-serif; font-weight: 700; padding: 0; }
-.copy-btn:hover { text-decoration: underline; }
-.route-card { border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 12px; border: 1.5px solid; }
-.route-fast { background: var(--green-bg); border-color: var(--green); }
-.route-nurture { background: var(--amber-bg); border-color: var(--amber); }
-.route-disq { background: var(--red-bg); border-color: var(--red); }
-.route-lbl { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
-.route-fast .route-lbl { color: var(--green); }
-.route-nurture .route-lbl { color: var(--amber); }
-.route-disq .route-lbl { color: var(--red); }
-.route-title { font-family: 'Lora', serif; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.route-desc { font-size: 13px; color: var(--ink-1); line-height: 1.5; }
-
-/* ── MISC ────────────────────────────────────────────── */
-.notice { background: var(--bg-0); border: 1px solid var(--line-0); border-radius: var(--r-md); padding: 10px 13px; font-size: 13px; color: var(--ink-1); line-height: 1.6; margin-bottom: 12px; }
-.notice strong { color: var(--ink-0); }
-.divider { height: 1px; background: var(--line-0); margin: 14px 0; }
-.r-icon { width: 22px; height: 22px; border-radius: var(--r-sm); background: var(--ink-0); display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; color: var(--tan-0); flex-shrink: 0; }
-.doc-upload-zone { border: 1.5px dashed var(--line-2); border-radius: var(--r-md); padding: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all var(--t-fast) var(--ease); background: var(--surface); flex-wrap: wrap; }
-.doc-upload-zone:hover, .doc-upload-zone.drag { border-color: var(--tan-0); background: var(--bg-1); }
-.doc-upload-icon { width: 30px; height: 30px; border-radius: var(--r-sm); background: var(--tan-3); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
-.doc-upload-text { flex: 1; min-width: 140px; }
-.doc-upload-title { font-size: 13px; font-weight: 600; color: var(--ink-0); margin-bottom: 1px; }
-.doc-upload-hint { font-size: 11px; color: var(--ink-3); }
-.doc-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-.doc-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--ink-0); color: var(--tan-2); padding: 3px 9px 3px 7px; border-radius: var(--r-pill); font-size: 11px; font-weight: 700; max-width: 200px; }
-.doc-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.doc-chip-x { cursor: pointer; color: var(--ink-2); font-size: 12px; line-height: 1; flex-shrink: 0; }
-.doc-chip-x:hover { color: var(--surface); }
-.doc-chip-label { font-size: 9px; background: #333; color: var(--tan-0); padding: 1px 4px; border-radius: var(--r-sm); white-space: nowrap; }
-.session-doc-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--tan-3); color: var(--tan-ink); padding: 2px 7px; border-radius: var(--r-md); font-size: 11px; font-weight: 700; }
-.prod-entry { display: flex; gap: 10px; padding: 9px 11px; background: var(--bg-0); border: 1px solid var(--line-0); border-radius: var(--r-md); margin-bottom: 6px; align-items: flex-start; }
-.prod-num { width: 20px; height: 20px; border-radius: 50%; background: var(--ink-0); color: var(--tan-0); font-family: 'Lora', serif; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
-.prod-fields { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-.prod-name-input { font-size: 13px; font-weight: 600; padding: 5px 9px; border: 1px solid var(--line-0); border-radius: var(--r-sm); background: var(--surface); font-family: 'DM Sans', sans-serif; color: var(--ink-0); outline: none; }
-.prod-name-input:focus { border-color: var(--tan-0); }
-.prod-desc-input { font-size: 12px; padding: 5px 9px; border: 1px solid var(--line-0); border-radius: var(--r-sm); background: var(--surface); font-family: 'DM Sans', sans-serif; color: var(--ink-1); outline: none; resize: vertical; min-height: 44px; }
-.prod-desc-input:focus { border-color: var(--tan-0); }
-.prod-remove { font-size: 13px; color: var(--ink-3); cursor: pointer; background: none; border: none; padding: 2px; line-height: 1; }
-.prod-remove:hover { color: var(--red); }
-.prod-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--tan-3); color: var(--tan-ink); padding: 2px 8px; border-radius: var(--r-md); font-size: 11px; font-weight: 700; margin: 2px; }
-.prod-chip-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--tan-0); flex-shrink: 0; }
-
-/* ── PRINT ───────────────────────────────────────────── */
-@media print {
-  @page { margin: 16mm 14mm; size: A4; }
-  body { background: #fff !important; font-size: 12px !important; }
-  .header, .session-bar, .footer, .actions-row, .incall-header, button, .btn, .river-pills, .stepper, [class*="load-"], .load-box { display: none !important; }
-  .page { max-width: 100% !important; padding: 0 !important; }
-  .bb { break-inside: avoid; border: 1px solid #ddd !important; margin-bottom: 10px !important; }
-  .bb-hdr { background: #f5f5f5 !important; }
-  .contact-row { break-inside: avoid; }
-  .card { break-inside: avoid; }
-  .incall-wrap { padding: 0 !important; }
-  .incall-grid { grid-template-columns: 1fr !important; }
-  .incall-sidebar { display: none !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-}
-`;
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
@@ -777,7 +332,11 @@ async function callAI(prompt){
 }
 
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
-async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[]){
+// generateBrief is NON-ASYNC so it returns skeleton + raw promises
+// immediately. pickAccount (the only caller) then renders the skeleton
+// right away and merges each micro-result as it resolves — no blocking
+// wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
+function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[]){
   const co  = member.company;
   const url = member.company_url || co;
 
@@ -893,81 +452,95 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     }catch(e){console.warn("Live search failed:",e.message);return null;}
   })();
 
-  // ── Await Micro 1 first — show overview card immediately ─────────────────
-  const r1 = await p1;
-  const brief = (r1&&typeof r1==="object")
-    ? r1
-    : {...BLANK_BRIEF,companySnapshot:co+" — "+member.ind+". Edit fields below.",_error:"Brief generation failed — try Regenerate."};
+  // Skeleton returned instantly. pickAccount renders it, then merges
+  // each micro-result as its promise resolves. No await here.
+  const skeleton = {
+    ...BLANK_BRIEF,
+    companySnapshot: `Researching ${co}...`,
+    _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true},
+  };
 
-  onStatus("");
+  // Per-section merger functions, applied via setBrief(prev => merger(prev))
+  const mergeOverview = (r1) => (prev) => {
+    if (!prev) return prev;
+    if (!r1 || typeof r1 !== "object") {
+      return {...prev, _error: (prev._error || "Brief generation partial — Overview failed. Try Regenerate."),
+              _loadingSections: {...(prev._loadingSections||{}), overview:false}};
+    }
+    return {...prev, ...r1,
+            _loadingSections: {...(prev._loadingSections||{}), overview:false}};
+  };
+  const mergeExecs = (r2) => (prev) => {
+    if (!prev) return prev;
+    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), executives:false}};
+    if (r2?.keyExecutives?.length) next.keyExecutives = r2.keyExecutives;
+    if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
+    return next;
+  };
+  const mergeStrategy = (r3) => (prev) => {
+    if (!prev) return prev;
+    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), strategy:false}};
+    if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
+    if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
+    if (r3?.openingAngle) next.openingAngle = r3.openingAngle;
+    if (r3?.publicSentiment?.onlineSentiment || r3?.publicSentiment?.glassdoorRating) {
+      next.publicSentiment = {...next.publicSentiment, ...r3.publicSentiment};
+    }
+    return next;
+  };
+  const mergeSolutions = (r4) => (prev) => {
+    if (!prev) return prev;
+    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), solutions:false}};
+    if (r4?.solutionMapping?.some(s=>s?.product)) next.solutionMapping = r4.solutionMapping;
+    if (r4?.caseStudies?.some(c=>c?.title)) next.caseStudies = r4.caseStudies;
+    if (r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts = r4.keyContacts;
+    if (r4?.techStack) next.techStack = r4.techStack;
+    if (r4?.processMaturity?.dmiacStage) next.processMaturity = r4.processMaturity;
+    return next;
+  };
+  const mergeLive = (r5) => (prev) => {
+    if (!prev) return prev;
+    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), live:false}};
+    if (!r5) return next;
+    const errorWords = ["unable","cannot","search failed","not available","web search"];
+    const cleanHL = (r5.recentHeadlines||[]).filter(h => {
+      const t = (h?.headline||"").toLowerCase();
+      return h?.headline && h.headline.length > 10 && !errorWords.some(w=>t.includes(w));
+    });
+    if (cleanHL.length) next.recentHeadlines = cleanHL;
+    if (r5.openRoles?.summary) next.openRoles = r5.openRoles;
+    if (r5.recentSignals?.some(s=>s)) next.recentSignals = r5.recentSignals;
+    if (r5.growthSignals?.some(s=>s)) next.growthSignals = r5.growthSignals;
+    const snapOk = r5.companySnapshot?.length > 50 && !errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
+    if (snapOk) next.companySnapshot = r5.companySnapshot;
+    if (r5.workforceProfile) next.workforceProfile = r5.workforceProfile;
+    if (r5.cultureProfile) next.cultureProfile = r5.cultureProfile;
+    if (r5.incumbentVendors) next.incumbentVendors = r5.incumbentVendors;
+    if (r5.sentimentScores) {
+      const ss = r5.sentimentScores;
+      next.publicSentiment = {...next.publicSentiment,
+        glassdoorRating: ss.glassdoorRating || next.publicSentiment?.glassdoorRating || "",
+        g2Rating: ss.g2Rating || "",
+        trustpilotRating: ss.trustpilotRating || "",
+        npsSignal: ss.npsSignal || "",
+        employeeScore: ss.employeeScore || "",
+        standoutReview: ss.standoutReview?.text ? ss.standoutReview : next.publicSentiment?.standoutReview || {},
+      };
+    }
+    return next;
+  };
 
-  // ── Return brief + a promise that merges the rest as they complete ────────
-  const mergePromise = (async()=>{
-    // Merge each micro-result as it resolves — user sees sections fill in
-    const results = await Promise.allSettled([p2,p3,p4,p5]);
-    return (prev)=>{
-      if(!prev) return prev;
-      const next={...prev};
-
-      // Micro 2: executives
-      const r2 = results[0].status==="fulfilled"?results[0].value:null;
-      if(r2?.keyExecutives?.length) next.keyExecutives=r2.keyExecutives;
-      if(r2?.sellerSnapshot) next.sellerSnapshot=r2.sellerSnapshot;
-
-      // Micro 3: strategy
-      const r3 = results[1].status==="fulfilled"?results[1].value:null;
-      if(r3?.strategicTheme) next.strategicTheme=r3.strategicTheme;
-      if(r3?.sellerOpportunity) next.sellerOpportunity=r3.sellerOpportunity;
-      if(r3?.openingAngle) next.openingAngle=r3.openingAngle;
-      if(r3?.publicSentiment?.onlineSentiment||r3?.publicSentiment?.glassdoorRating){
-        next.publicSentiment={...next.publicSentiment,...r3.publicSentiment};
-      }
-
-      // Micro 4: solutions + contacts
-      const r4 = results[2].status==="fulfilled"?results[2].value:null;
-      if(r4?.solutionMapping?.some(s=>s?.product)) next.solutionMapping=r4.solutionMapping;
-      if(r4?.caseStudies?.some(c=>c?.title)) next.caseStudies=r4.caseStudies;
-      if(r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts=r4.keyContacts;
-      if(r4?.techStack) next.techStack=r4.techStack;
-      if(r4?.processMaturity?.dmiacStage) next.processMaturity=r4.processMaturity;
-
-      // Micro 5: live search
-      const r5 = results[3].status==="fulfilled"?results[3].value:null;
-      if(r5){
-        const errorWords=["unable","cannot","search failed","not available","web search"];
-        const cleanHL=(r5.recentHeadlines||[]).filter(h=>{
-          const t=(h?.headline||"").toLowerCase();
-          return h?.headline&&h.headline.length>10&&!errorWords.some(w=>t.includes(w));
-        });
-        if(cleanHL.length) next.recentHeadlines=cleanHL;
-        if(r5.openRoles?.summary) next.openRoles=r5.openRoles;
-        if(r5.recentSignals?.some(s=>s)) next.recentSignals=r5.recentSignals;
-        if(r5.growthSignals?.some(s=>s)) next.growthSignals=r5.growthSignals;
-        const snapOk=r5.companySnapshot?.length>50&&!errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
-        if(snapOk) next.companySnapshot=r5.companySnapshot;
-        // Merge workforce, culture, incumbents from live search
-        if(r5.workforceProfile) next.workforceProfile=r5.workforceProfile;
-        if(r5.cultureProfile) next.cultureProfile=r5.cultureProfile;
-        if(r5.incumbentVendors) next.incumbentVendors=r5.incumbentVendors;
-        // Merge live sentiment scores — enrich what training knowledge returned
-        if(r5.sentimentScores){
-          const ss=r5.sentimentScores;
-          next.publicSentiment={...next.publicSentiment,
-            glassdoorRating:ss.glassdoorRating||next.publicSentiment?.glassdoorRating||"",
-            g2Rating:ss.g2Rating||"",
-            trustpilotRating:ss.trustpilotRating||"",
-            npsSignal:ss.npsSignal||"",
-            employeeScore:ss.employeeScore||"",
-            standoutReview:ss.standoutReview?.text?ss.standoutReview:next.publicSentiment?.standoutReview||{},
-          };
-        }
-      }
-
-      return next;
-    };
-  })();
-
-  return {_brief:brief, _phase2Promise:mergePromise};
+  return {
+    skeleton,
+    mergers: {
+      overview:  p1.then(mergeOverview).catch(e => mergeOverview(null)),
+      executives:p2.then(mergeExecs).catch(e => mergeExecs(null)),
+      strategy:  p3.then(mergeStrategy).catch(e => mergeStrategy(null)),
+      solutions: p4.then(mergeSolutions).catch(e => mergeSolutions(null)),
+      live:      p5.then(mergeLive).catch(e => mergeLive(null)),
+    },
+    allDone: Promise.allSettled([p1,p2,p3,p4,p5]),
+  };
 }
 
 
@@ -1145,7 +718,6 @@ function BriefLoader({ company, status }) {
 function AuthShell({ children }) {
   return (
     <div className="app">
-      <style>{FONTS}{css}</style>
       <header className="header">
         <div style={{display:"flex",flexDirection:"column",gap:2}}>
           <div className="logo">Cambrian <span>Catalyst</span></div>
@@ -1798,129 +1370,172 @@ export default function App(){
 
 
   // ── FETCH RFP INTEL ──────────────────────────────────────────────────────
-  const fetchRFPIntel = async () => {
-    if(!sellerICP?.icp) return;
-    setRfpData(p=>({...p,loading:true,error:null}));
+  // Shared brace-walking JSON extractor. Robust to narration before/after
+  // the JSON and to markdown code fences.
+  const extractJsonWithKey = (text, anchorKey) => {
+    const clean = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
+    const anchor = clean.indexOf(`"${anchorKey}"`);
+    if (anchor === -1) return null;
+    let start = anchor;
+    while (start > 0 && clean[start] !== "{") start--;
+    if (clean[start] !== "{") return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < clean.length; i++) {
+      const ch = clean[i];
+      if (esc) { esc = false; continue; }
+      if (ch === "\\") { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          try { return JSON.parse(clean.slice(start, i + 1)); }
+          catch { return null; }
+        }
+      }
+    }
+    return null;
+  };
 
-    const industries = sellerICP.icp.industries||[];
-    const category = sellerICP.marketCategory||"";
-    // Previously this prompt said "Focus on USA (SAM.gov/federal), EU (TED),
-    // and major multilateral orgs (World Bank, UN)." That produced only
-    // government RFPs, and no isGovernment field on the response — which
-    // made the Private filter falsely show 100% of rows (undefined !== true)
-    // and the Government filter falsely show 0%. Now we require BOTH
-    // classes, explicit isGovernment flags, and a web_search tool so
-    // "awardedTo" pulls from real SAM.gov / FPDS-NG / press instead of from
-    // Haiku's training recall.
-    const prompt = `You are a procurement intelligence analyst. For the seller below, use web_search to find REAL, recent RFP activity — both government and private/commercial — that matches their ICP.
+  // RFP cache: keyed by (user, seller URL, marketCategory, RFP schema
+  // version). Cache TTL is implicit — the seller URL and marketCategory
+  // pin the scope; a Regenerate ICP will naturally produce a new key.
+  const RFP_CACHE_VERSION = "v2";
+  const rfpCacheKey = () => {
+    const userScope = sbUser?.id || "guest";
+    const url = (sellerUrl||"").toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
+    const cat = (sellerICP?.marketCategory||"").toLowerCase().replace(/\s+/g,"-").slice(0,40);
+    return `rfp:${RFP_CACHE_VERSION}:${userScope}:${url}:${cat}`;
+  };
+
+  // Split into two parallel calls (open + closed). Each has its own
+  // web_search budget and its own prompt so the model can focus. Results
+  // render as each settles rather than waiting for both.
+  const fetchRFPIntel = async ({ forceRefresh = false } = {}) => {
+    if (!sellerICP?.icp) return;
+
+    // Cache hit — instant return with live data.
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem(rfpCacheKey());
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.open || parsed?.closed) {
+            setRfpData({ open: parsed.open || [], closed: parsed.closed || [], loading: false, error: null });
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    setRfpData({ open: [], closed: [], loading: true, error: null });
+
+    const industries = sellerICP.icp.industries || [];
+    const category = sellerICP.marketCategory || "";
+    const fixGov = r => ({ ...r, isGovernment: r.isGovernment === true || r.isGovernment === "true" });
+
+    const buildPrompt = (kind) => {
+      const isOpen = kind === "open";
+      return `You are a procurement intelligence analyst. Use web_search to find REAL, recent ${isOpen ? "ACTIVE (open) RFPs" : "AWARDED (closed) contracts from the last 18 months"} relevant to the seller below.
 
 SELLER: ${sellerUrl}
 MARKET CATEGORY: ${category}
 TARGET INDUSTRIES: ${industries.join(", ")}
 
-Return BOTH classes of RFPs — roughly balanced, not just government:
+Return 4-6 ${isOpen ? "active opportunities" : "recent awards"}, balanced between private/commercial and government sources.
 
-PRIVATE / COMMERCIAL sources to consider:
+PRIVATE / COMMERCIAL sources (set isGovernment: false):
   - Ariba Discovery, Coupa Compass, Jaggaer, SAP Fieldglass
   - Fortune 500 corporate procurement portals
-  - Industry marketplaces (GHX for healthcare, etc.)
+  - Industry marketplaces (e.g. GHX for healthcare)
   - Press releases announcing vendor selections / RFP awards
-  → set isGovernment: false
 
-GOVERNMENT sources to consider:
+GOVERNMENT sources (set isGovernment: true):
   - USA: SAM.gov (active), FPDS-NG / USAspending.gov (awarded)
-  - EU: TED Europa (cross-border public tenders)
-  - Multilateral: World Bank, UNGM, Asian Development Bank
+  - EU: TED Europa
+  - Multilateral: World Bank, UNGM, ADB
   - State/Local: DemandStar, state procurement portals
-  → set isGovernment: true
 
-DATA INTEGRITY RULES (critical):
-  - Only include RFPs you can ACTUALLY VERIFY via web_search. Do not invent titles, buyers, values, or vendor names.
-  - For closed RFPs, if the awarded vendor cannot be verified from the search results, leave "awardedTo": "" (empty string). Do not guess.
-  - Prefer awards from 2024-2025. Past ~18 months only.
-  - Value ranges should reflect what the source actually shows (e.g. "$500K-$2M" or "$1.2M"), not a guess.
-  - Every row MUST include the isGovernment boolean.
+DATA INTEGRITY:
+  - Only include RFPs you can VERIFY via web_search. Do not invent titles, buyers, values, or vendor names.
+  ${!isOpen ? "- If awarded vendor cannot be verified, leave \"awardedTo\" empty. Do not guess.\n  " : ""}- Every row MUST include the isGovernment boolean.
+  - Include the source URL in the "url" field when available.
 
-Return 5-8 OPEN and 5-8 CLOSED entries total, roughly half private / half government.
+Return ONLY raw JSON (no prose). The outer key MUST be "rows":
+${isOpen
+  ? `{"rows":[{"title":"RFP title","buyer":"Buyer","country":"USA","source":"SAM.gov or Ariba etc","isGovernment":true,"value":"$500K-$2M","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why this matches the ICP","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://..."}]}`
+  : `{"rows":[{"title":"Contract title","buyer":"Buyer","country":"USA","source":"FPDS-NG or press URL","isGovernment":true,"awardedTo":"Vendor or empty string","value":"$1.2M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Why relevant","cohort":"Financial Services","url":"https://..."}]}`
+}`;
+    };
 
-Return ONLY raw JSON (no prose):
-{"open":[{"title":"RFP title","buyer":"Buyer/Agency name","country":"USA","source":"SAM.gov or Ariba etc","isGovernment":true,"value":"$500K-$2M","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why this matches the ICP","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://actual-source-url"}],"closed":[{"title":"Contract title","buyer":"Buyer name","country":"USA","source":"FPDS-NG or press release URL","isGovernment":true,"awardedTo":"Vendor name OR empty string if unverified","value":"$1.2M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Why relevant","cohort":"Financial Services","url":"https://actual-source-url"}]}`;
+    const fetchClass = async (kind) => {
+      try {
+        const r = await fetch("/api/claude", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 2500,
+            tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+            messages: [{ role: "user", content: buildPrompt(kind) }],
+          }),
+        });
+        const d = await r.json();
+        if (d.error) return { kind, error: d.error.message || "API error" };
 
-    try {
-      const r = await fetch("/api/claude",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-haiku-4-5-20251001",
-          max_tokens:4000,
-          temperature:0,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
-          messages:[{role:"user",content:prompt}],
-        }),
-      });
-      const d = await r.json();
-      if(d.error){setRfpData(p=>({...p,loading:false,error:d.error.message}));return;}
-
-      // With tool use, response has multiple blocks: narration text,
-      // tool_use, tool_result, more text. Walk blocks in reverse and find
-      // the first one containing our JSON schema. Use brace-counting
-      // rather than regex greedy match so narration containing { and }
-      // doesn't poison the result.
-      const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
-
-      const extractJsonWithKey = (text, anchorKey) => {
-        // Strip markdown code fences first.
-        const clean = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
-        const anchor = clean.indexOf(`"${anchorKey}"`);
-        if (anchor === -1) return null;
-        // Walk backward from anchor to find the containing object's opening {
-        let start = anchor;
-        while (start > 0 && clean[start] !== "{") start--;
-        if (clean[start] !== "{") return null;
-        // Walk forward with brace/string awareness to find matching }
-        let depth = 0, inStr = false, esc = false;
-        for (let i = start; i < clean.length; i++) {
-          const ch = clean[i];
-          if (esc) { esc = false; continue; }
-          if (ch === "\\") { esc = true; continue; }
-          if (ch === '"') { inStr = !inStr; continue; }
-          if (inStr) continue;
-          if (ch === "{") depth++;
-          else if (ch === "}") {
-            depth--;
-            if (depth === 0) {
-              try { return JSON.parse(clean.slice(start, i + 1)); }
-              catch { return null; }
-            }
-          }
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        let parsed = null;
+        for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+          parsed = extractJsonWithKey(textBlocks[i], "rows");
         }
-        return null;
-      };
-
-      let parsed = null;
-      for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
-        parsed = extractJsonWithKey(textBlocks[i], "open") || extractJsonWithKey(textBlocks[i], "closed");
+        if (!parsed) {
+          console.warn(`RFP ${kind} parse failed. Content:`, d.content);
+          return { kind, error: `Couldn't parse ${kind} response` };
+        }
+        return { kind, rows: (parsed.rows || []).map(fixGov) };
+      } catch (e) {
+        console.warn(`RFP ${kind} fetch failed:`, e);
+        return { kind, error: e.message };
       }
-      if (!parsed) {
-        console.warn("RFP parse failed. Raw content blocks:", d.content);
-        const preview = textBlocks.join(" ").slice(0, 160);
-        setRfpData(p=>({...p,loading:false,error:`Could not parse RFP JSON. Response started with: "${preview}..." — try Refresh.`}));
-        return;
-      }
+    };
 
-      // Coerce isGovernment to a real boolean in case the model returns
-      // "true"/"false" strings or omits it on a row.
-      const fixGov = r => ({...r, isGovernment: r.isGovernment === true || r.isGovernment === "true"});
-      setRfpData({
-        open: (parsed.open||[]).map(fixGov),
-        closed: (parsed.closed||[]).map(fixGov),
-        loading: false,
-        error: null,
-      });
-    } catch(e){
-      setRfpData(p=>({...p,loading:false,error:"Failed to load RFP intel: "+e.message}));
+    // Launch both in parallel. Each settle updates its section of state
+    // so the user sees partial results as they arrive.
+    const openP = fetchClass("open");
+    const closedP = fetchClass("closed");
+
+    openP.then(res => {
+      if (res.rows) setRfpData(prev => ({ ...prev, open: res.rows }));
+      else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Open: ${res.error}` : `Open RFPs: ${res.error}` }));
+    });
+    closedP.then(res => {
+      if (res.rows) setRfpData(prev => ({ ...prev, closed: res.rows }));
+      else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Closed: ${res.error}` : `Closed RFPs: ${res.error}` }));
+    });
+
+    const [openRes, closedRes] = await Promise.all([openP, closedP]);
+    setRfpData(prev => ({ ...prev, loading: false }));
+
+    // Cache only if we got at least one successful class.
+    if (openRes.rows || closedRes.rows) {
+      try {
+        localStorage.setItem(rfpCacheKey(), JSON.stringify({
+          open: openRes.rows || [],
+          closed: closedRes.rows || [],
+        }));
+      } catch {}
     }
   };
+
+  // Auto-fire RFP fetch as soon as the ICP is ready, so by the time the
+  // user clicks the RFP tab the data is already loaded (or loading).
+  React.useEffect(() => {
+    if (sellerICP?.icp && !rfpData.loading && !rfpData.open.length && !rfpData.closed.length && !rfpData.error) {
+      fetchRFPIntel();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellerICP?.sellerName, sellerICP?.marketCategory]);
 
   // ── BUILD SELLER ICP FROM URL ────────────────────────────────────────────
   // Fires when seller URL is entered. Uses training knowledge + web search
@@ -2212,6 +1827,23 @@ Return ONLY raw JSON (no prose):
     if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl);
   },[sellerUrl]);
 
+  // Pre-fetch: kick off ICP build 900ms after the user stops typing a
+  // URL on the setup page — so by the time they reach the ICP step the
+  // data is already loading (or cached from a prior session). Only fires
+  // if the input LOOKS like a URL (prevents premature runs on partial
+  // input like "gon" or "cambrian"). Cache hit is instant so retyping
+  // an already-seen URL costs nothing.
+  useEffect(() => {
+    const url = (sellerInput || "").trim();
+    if (!url || sellerICP || icpLoading) return;
+    if (!/\.(com|io|ai|org|net|app|co|dev|so|gov|edu|xyz|us|uk|de|fr|eu)($|\/)/i.test(url)) return;
+    const t = setTimeout(() => {
+      if (!sellerICP && !icpLoading) buildSellerICP(url);
+    }, 900);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellerInput]);
+
   const goToCohorts=()=>{
     const b=buildCohorts(rows,mapping);
     setCohorts(b);
@@ -2262,35 +1894,52 @@ Return ONLY raw JSON (no prose):
     }
   };
 
-  const pickAccount=async member=>{
+  const pickAccount = async member => {
     setSelectedAccount(member);
-    setBrief(null);
     setBriefLoading(true);
     setBriefError("");
-    setBriefStatus("Researching "+member.company+"...");
-    setGateAnswers({});setGateNotes({});setRiverData({});setDiscoveryQs(null);setDealValue("");setDealClassification("");setNotes("");setPostCall(null);setContactRole("");setCustomOutcome("");
+    setBriefStatus("Researching " + member.company + "...");
+    setGateAnswers({}); setGateNotes({}); setRiverData({}); setDiscoveryQs(null);
+    setDealValue(""); setDealClassification(""); setNotes(""); setPostCall(null);
+    setContactRole(""); setCustomOutcome("");
     setStep(5);
 
-    const {_brief,_phase2Promise} = await generateBrief(
+    // generateBrief is now synchronous — returns skeleton + per-section
+    // merger promises. Paint the skeleton INSTANTLY, then each section
+    // fills in as its Haiku call returns.
+    const { skeleton, mergers, allDone } = generateBrief(
       member, sellerUrl, sellerDocs, products,
       selectedCohort, selectedOutcomes, productPageUrl,
-      (msg)=>setBriefStatus(msg),
+      (msg) => setBriefStatus(msg),
       productUrls
     );
-
-    if(_brief._error) setBriefError(_brief._error);
-    setBrief(_brief);
-    setBriefLoading(false);
+    setBrief(skeleton);
+    setBriefLoading(false);  // skeleton counts as "loaded" — sections show their own inline progress
     setBriefStatus("");
 
-    // Both fire in background while rep reads the brief
-    Promise.resolve().then(()=>buildRiverHypo(_brief, member));
-    Promise.resolve().then(()=>generateDiscoveryQs(_brief, member));
+    // Wire each section's merger to fire as it resolves.
+    Object.values(mergers).forEach(m => {
+      m.then(updater => { if (typeof updater === "function") setBrief(prev => updater(prev)); });
+    });
 
-    _phase2Promise.then(updater=>{
-      if(typeof updater==="function") setBrief(prev=>updater(prev));
-      console.log("Brief enriched with Part B + live search");
-    }).catch(e=>console.warn("Brief merge failed:",e.message));
+    // Buildhypothesis + discovery questions depend on the full brief, so
+    // wait for all sections to settle before kicking them off.
+    allDone.then(() => {
+      setBrief(current => {
+        if (current?._error) setBriefError(current._error);
+        return current;
+      });
+      // Use a microtask to read the freshest brief state.
+      setTimeout(() => {
+        setBrief(current => {
+          if (current) {
+            Promise.resolve().then(() => buildRiverHypo(current, member));
+            Promise.resolve().then(() => generateDiscoveryQs(current, member));
+          }
+          return current;
+        });
+      }, 0);
+    });
   };
 
   // ── BUILD RIVER HYPOTHESIS (background, after brief) ─────────────────────
@@ -2686,7 +2335,6 @@ Return ONLY valid JSON:
 
   return(
     <>
-      <style>{FONTS}{css}</style>
       <div className="app">
 
         {/* HEADER */}
@@ -3271,11 +2919,14 @@ Return ONLY valid JSON:
                   <div style={{display:"flex",gap:0,border:"1.5px solid var(--line-0)",borderRadius:8,overflow:"hidden"}}>
                     {[["icp","🎯 Your ICP"],["rfp","📡 RFP Intel"]].map(([tab,label])=>(
                       <button key={tab}
-                        onClick={()=>{setIcpTab(tab);if(tab==="rfp"&&!rfpData.open.length&&!rfpData.loading)fetchRFPIntel();}}
+                        onClick={()=>setIcpTab(tab)}
                         style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
                           background:icpTab===tab?"var(--ink-0)":"#fff",
-                          color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s"}}>
+                          color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s",position:"relative"}}>
                         {label}
+                        {tab==="rfp"&&rfpData.loading&&(
+                          <span style={{marginLeft:6,display:"inline-block",width:6,height:6,borderRadius:"50%",background:"var(--amber)",animation:"blink 1.2s ease-in-out infinite"}}/>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -3299,42 +2950,49 @@ Return ONLY valid JSON:
               </div>
             )}
 
-            {icpTab==="rfp"&&sellerICP?.icp&&(
+            {icpTab==="rfp"&&sellerICP?.icp&&(()=>{
+              const hasData = rfpData.open.length > 0 || rfpData.closed.length > 0;
+              const everything = [...rfpData.open, ...rfpData.closed];
+              return (
               <div style={{marginTop:16}}>
-                {rfpData.loading&&(
+                {/* Silent-loading first-state: only show the big spinner if we have
+                    nothing to display yet. Once partial data arrives, switch to
+                    inline section-level hints. */}
+                {rfpData.loading && !hasData && (
                   <div style={{textAlign:"center",padding:"40px 0"}}>
                     <div className="load-spin" style={{width:28,height:28,borderWidth:3,margin:"0 auto 12px"}}/>
                     <div style={{fontSize:14,color:"#555"}}>Scanning RFP sources via live web search...</div>
                     <div style={{fontSize:12,color:"#aaa",marginTop:4}}>Private: Ariba · Coupa · press releases &nbsp;·&nbsp; Gov: SAM.gov · FPDS-NG · TED Europa</div>
                   </div>
                 )}
-                {rfpData.error&&(
-                  <div style={{background:"#FFF5F5",border:"1px solid #FCA5A5",borderRadius:8,padding:12,fontSize:13,color:"var(--red)"}}>
+                {rfpData.error && !rfpData.loading && (
+                  <div style={{background:"var(--red-bg)",border:"1px solid var(--red)",borderRadius:"var(--r-md)",padding:12,fontSize:13,color:"var(--red)",marginBottom:12}}>
                     {rfpData.error}
+                    <button className="btn btn-secondary btn-sm" style={{marginLeft:10}} onClick={()=>fetchRFPIntel({forceRefresh:true})}>↻ Retry</button>
                   </div>
                 )}
-                {!rfpData.loading&&!rfpData.error&&rfpData.open.length===0&&(
+                {!rfpData.loading && !rfpData.error && !hasData && (
                   <div style={{textAlign:"center",padding:"40px 0",color:"#aaa"}}>
                     <div style={{fontSize:32,marginBottom:8}}>📡</div>
                     <div style={{fontSize:14,marginBottom:12}}>No RFP data loaded yet</div>
-                    <button className="btn btn-primary" onClick={fetchRFPIntel}>Scan RFP Databases →</button>
+                    <button className="btn btn-primary" onClick={()=>fetchRFPIntel({forceRefresh:true})}>Scan RFP Databases →</button>
                   </div>
                 )}
-                {rfpData.open.length>0&&(
+                {hasData && (
                   <>
                     {/* Data-integrity disclaimer */}
                     <div style={{background:"var(--amber-bg)",border:"1px solid var(--amber)",borderRadius:"var(--r-md)",padding:"8px 12px",marginBottom:14,fontSize:12,color:"var(--tan-ink)",lineHeight:1.5}}>
                       <strong>Verify before acting.</strong> RFP data is AI-generated from live web search over public sources. Titles, values, and award details can drift from the source. Click through source URLs (when present) to confirm.
                     </div>
 
-                    {/* Filter toggle */}
+                    {/* Filter toggle — counts combined across open + closed */}
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,flexWrap:"wrap"}}>
                       <span style={{fontSize:12,fontWeight:700,color:"#555"}}>Show:</span>
                       {(()=>{
-                        const privateCount = rfpData.open.filter(r=>r.isGovernment===false).length;
-                        const govCount     = rfpData.open.filter(r=>r.isGovernment===true).length;
+                        const privateCount = everything.filter(r=>r.isGovernment===false).length;
+                        const govCount     = everything.filter(r=>r.isGovernment===true).length;
                         return [
-                          ["all",        `All RFPs (${rfpData.open.length})`],
+                          ["all",        `All RFPs (${everything.length})`],
                           ["private",    `🏢 Private / Commercial (${privateCount})`],
                           ["government", `🏛 Government (${govCount})`],
                         ].map(([val,label])=>(
@@ -3347,6 +3005,7 @@ Return ONLY valid JSON:
                           </button>
                         ));
                       })()}
+                      <button className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={()=>fetchRFPIntel({forceRefresh:true})}>↻ Refresh</button>
                     </div>
 
                     {/* Open RFPs */}
@@ -3354,7 +3013,9 @@ Return ONLY valid JSON:
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🟢 Open RFPs — Active Opportunities</div>
                         <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).length} shown)</div>
-                        <button className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={fetchRFPIntel}>↻ Refresh</button>
+                        {rfpData.loading && rfpData.open.length===0 && (
+                          <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ still loading…</span>
+                        )}
                       </div>
                       <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
                         <table className="tbl">
@@ -3400,13 +3061,22 @@ Return ONLY valid JSON:
                       </div>
                     </div>
 
-                    {/* Closed RFPs */}
-                    {rfpData.closed.length>0&&(
+                    {/* Closed RFPs — render section even while still loading, so a "still loading…" hint shows */}
+                    {(rfpData.closed.length>0 || (rfpData.loading && rfpData.open.length>0)) && (
                       <div>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                           <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Closed RFPs — Last 18 Months (Incumbent Intel)</div>
-                          <div style={{fontSize:11,color:"#aaa"}}>({rfpData.closed.length} awards)</div>
+                          {rfpData.closed.length>0 && <div style={{fontSize:11,color:"#aaa"}}>({rfpData.closed.length} awards)</div>}
+                          {rfpData.loading && rfpData.closed.length===0 && (
+                            <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ still loading…</span>
+                          )}
                         </div>
+                        {rfpData.closed.length===0 && rfpData.loading && (
+                          <div style={{background:"var(--bg-1)",border:"1.5px dashed var(--line-2)",borderRadius:"var(--r-md)",padding:20,textAlign:"center",fontSize:12,color:"var(--ink-2)"}}>
+                            Fetching historical awards from FPDS-NG, USAspending, and press releases…
+                          </div>
+                        )}
+                        {rfpData.closed.length>0 && (<>
                         <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
                           <table className="tbl">
                             <thead>
@@ -3452,12 +3122,14 @@ Return ONLY valid JSON:
                         <div style={{fontSize:11,color:"#aaa",marginTop:8,fontStyle:"italic",lineHeight:1.5}}>
                           💡 Awarded To = your displacement target or channel partner opportunity. "— unverified" means search couldn't confirm the vendor; click the title link and check the source (FPDS-NG / USAspending / TED) directly.
                         </div>
+                        </>)}
                       </div>
                     )}
                   </>
                 )}
               </div>
-            )}
+              );
+            })()}
 
             {icpTab==="icp"&&sellerICP?.icp&&(
               <div style={{display:"flex",flexDirection:"column",gap:16}}>
