@@ -447,15 +447,10 @@ function calcConfidence(gateAnswers,riverData){
 }
 function confColor(s){return s>=75?"#2E6B2E":s>=50?"#BA7517":"#9B2C2C";}
 
-// ── API CONSTANTS ─────────────────────────────────────────────────────────────
-const API_URL = "https://api.anthropic.com/v1/messages";
-const API_MODEL = "claude-sonnet-4-20250514";
-const getHeaders = () => ({
-  "Content-Type":"application/json",
-  "x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,
-  "anthropic-version":"2023-06-01",
-  "anthropic-dangerous-direct-browser-access":"true",
-});
+// NOTE: No browser-side Anthropic client. All Claude calls route through
+// the serverless proxies at /api/claude and /api/claude-stream — they hold
+// ANTHROPIC_API_KEY server-side. Do NOT re-introduce VITE_ANTHROPIC_*; it
+// would inline the key into the browser bundle.
 
 function extractJSON(text){
   try{
