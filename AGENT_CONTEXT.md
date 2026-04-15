@@ -1,12 +1,12 @@
 # Cambrian Catalyst — RIVER Playbook Engine
-## Agent Context File — Last Updated: April 2026
+## Agent Context File — Last Updated: April 15, 2026
 
 ---
 
 ## What This App Does
-B2B sales intelligence tool for Cambrian Catalyst LLC (West Seattle). 
-Takes a seller's website + a list of target accounts, runs live AI research, 
-and produces account briefs, discovery frameworks, and post-call routing — 
+B2B sales intelligence tool for Cambrian Catalyst LLC (West Seattle).
+Takes a seller's website + a list of target accounts, runs live AI research,
+and produces account briefs, discovery frameworks, and post-call routing —
 all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route).
 
 ---
@@ -21,12 +21,11 @@ all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route
 
 ## Tech Stack
 - Frontend: React 19 + Vite 6
-- Styling: Inline CSS (single CSS string injected via style tag)
-- Fonts: Lora (serif) + DM Sans (sans) via Google Fonts
-- Auth + DB: Supabase (anon key auth, sessions table)
-- AI: Anthropic Claude via serverless proxy (/api/claude.js)
+- Styling: Inline CSS string injected via style tag + Google Fonts (Lora + DM Sans)
+- Auth + DB: Supabase (anon key auth, sessions table with RLS)
+- AI: Anthropic Claude via serverless proxy (/api/claude.js + /api/claude-stream.js)
 - Deployment: Vercel (auto-deploy from main branch)
-- Models: claude-haiku-4-5-20251001 (fast calls), claude-sonnet-4-20250514 (ICP)
+- Models: claude-haiku-4-5-20251001 (all calls), claude-sonnet-4-20250514 (reserved, not currently active)
 
 ---
 
@@ -36,12 +35,11 @@ all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route
 ## Environment Variables
 | Variable | Where | Purpose |
 |---|---|---|
-| ANTHROPIC_API_KEY | Vercel server-side | Claude API — used by /api/claude.js |
+| ANTHROPIC_API_KEY | Vercel server-side only | Claude API — /api/claude.js + /api/claude-stream.js |
 | VITE_SUPABASE_URL | Vercel + .env | Supabase project URL |
 | VITE_SUPABASE_ANON_KEY | Vercel + .env | Supabase anon key |
 
-**VITE_ prefix** = baked into browser bundle at build time
-**No prefix** = server-side only, never exposed to browser
+**CRITICAL**: ANTHROPIC_API_KEY has NO VITE_ prefix — server-side only, never in browser bundle.
 
 ---
 
@@ -51,123 +49,272 @@ all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route
 ## Key Functions in App.jsx
 | Function | Lines (approx) | Purpose |
 |---|---|---|
-| buildICP() / Il() | ~1700-1870 | Two-phase ICP: web research + Sonnet generation |
-| generateBrief() / wh() | ~700-1100 | 4 parallel micro-calls + live web search |
-| buildHypothesis() / Wt() | ~2080-2200 | RIVER hypothesis + JOLT + talk tracks |
-| scoreFit() / gl() | ~500-600 | Batch fit scoring with 6M heuristics |
-| buildCohorts() | ~400-500 | Groups accounts into max 5 industry cohorts |
-| calcConfidence() | ~40-45 | RIVER gate answers → confidence % |
-| synthesize() / Nn() | ~2600-2700 | Post-call synthesis → deal route + email |
-| buildSolutionFit() / vl() | ~2800-2900 | Solution architecture review |
-| callAI() | lib/api.js | Haiku JSON wrapper with 3x retry |
-| extractJSON() | lib/utils.js | Robust JSON repair for truncated responses |
+| buildSellerICP() | ~1750-1880 | Two-phase ICP: web research (phase 1) + streamAI generation (phase 2) |
+| fetchRFPIntel() | ~1880-1940 | Haiku call to generate open + closed RFP intel by ICP industry |
+| generateBrief() | ~770-1100 | 4 parallel Haiku calls + live web search |
+| buildRiverHypo() | ~2043-2200 | RIVER hypothesis + JOLT + talk tracks |
+| scoreFit() | ~1691-1760 | Batch fit scoring, 20 accounts/batch |
+| pickAccount() | ~2008-2040 | Brief wrapper — sets state, calls generateBrief |
+| streamAI() | ~640-680 | SSE streaming helper — ICP phase 2 uses this |
+| callAI() | ~680-720 | Haiku JSON wrapper, 3x retry |
+| buildCohorts() | lib/utils.js | Groups accounts into industry cohorts (no limit) |
+| calcConfidence() | lib/utils.js | RIVER gate answers → confidence % |
 
 ---
 
 ## AI Call Architecture
-All Claude calls flow through /api/claude.js (serverless):
-### Call inventory
-| Call | Model | Max Tokens | Purpose |
-|---|---|---|---|
-| callAI() | Haiku | 1000 (default) | Generic JSON generation |
-| scoreFit batch | Haiku | 1400 | 20 accounts per batch |
-| generateBrief p1-p4 | Haiku | varies | 4 parallel brief sections |
-| generateBrief p5 | Haiku | 1800 | Live web search |
-| buildICP phase 1 | Haiku | 800 | Web research |
-| buildICP phase 2 | Haiku | 6000 | Full ICP generation |
-| buildHypothesis | Haiku | 900 | RIVER hypothesis |
-| buildSolutionFit | Haiku | 900 | SA review |
-| synthesize | Haiku | 2000 | Post-call routing |
+All Claude calls flow through serverless proxies:
+- Standard: /api/claude.js (60s timeout)
+- Streaming: /api/claude-stream.js (120s timeout, SSE)
+
+### Call Inventory
+| Call | Model | Max Tokens | Streaming | Purpose |
+|---|---|---|---|---|
+| ICP phase 1 | Haiku | 800 | No | Web research |
+| ICP phase 2 | Haiku | 6000 | YES — streamAI() | Full ICP generation |
+| fetchRFPIntel | Haiku | 3000 | No | Open + closed RFP intel |
+| scoreFit batch | Haiku | 1400 | No | 20 accounts/batch |
+| generateBrief p1-p4 | Haiku | varies | No | 4 parallel brief sections |
+| generateBrief p5 | Haiku | 1800 | No | Live web search |
+| buildRiverHypo | Haiku | 900 | No | RIVER hypothesis |
+| buildSolutionFit | Haiku | 900 | No | SA review |
+| synthesize | Haiku | 2000 | No | Post-call routing |
 
 ---
 
 ## Data Model
 ### Supabase Tables
-**users**
-- id (uuid) — Supabase auth UID
-- email (text)
-- name (text)
-- role (text) — default "rep"
-
 **sessions**
 - id (uuid)
-- user_id (text) — FK to users, RLS: auth.uid()::text = user_id
+- user_id (text) — RLS: auth.uid()::text = user_id (cast required)
 - name (text)
-- seller_url (text)
 - data (jsonb) — full serialized app state
-- created_at, updated_at
 
-### Session data blob (stored in sessions.data jsonb)
+### Session State Blob (sessions.data)
 ```javascript
-{
-  sellerUrl, sellerInput, productUrls,
-  sellerICP,        // full ICP object
-  products,         // [{name, description}]
-  sellerDocs,       // [{name, label, content}]
-  rows,             // raw CSV rows
-  headers, mapping, fileName,
-  cohorts,          // built cohort objects
-  selectedCohort,
-  fitScores,        // {companyName: {score, label, reason}}
-  accountQueue,     // selected accounts [{...}]
-  selectedAccount,
-  selectedOutcomes, // string[]
-  dealValue, dealClassification,
-  brief,            // full brief object
-  riverHypo,        // hypothesis object
-  gateAnswers,      // {gateId: selectedOption}
-  riverData,        // {discoveryId: noteText}
-  notes,            // free-form call notes
-  postCall,         // synthesis object
-  solutionFit,      // SA review object
-  contactRole
-}
-```
-
 ---
 
 ## RIVER Framework
-5 stages, each with:
-- **Gates** — multiple choice qualification questions
-- **Discovery** — open text capture fields
-- **Talk Track** — recommended language
-- **Objections** — common objections + responses
+5 stages: Reality → Impact → Vision → Entry Points → Route
+Each stage has: Gates (multiple choice), Discovery (open text), Talk Track, Objections
+Confidence score 0-98% from calcConfidence() based on gate answers
 
-Stages: Reality → Impact → Vision → Entry Points → Route
+---
 
-Confidence score (0-98%) calculated from gate answers via calcConfidence()
+## Knowledge Layer — Negotiation & Influence Frameworks
+
+Stored in: `src/data/negotiationFrameworks.js` + `src/data/prompts/negotiationInjections.js`
+
+### Stage Mapping
+| Framework | Stage | Application |
+|---|---|---|
+| Voss — Never Split the Difference | S7 In-Call | Calibrated How/What questions, tactical empathy, mirroring, labeling, accusation audit |
+| Fisher/Ury — Getting to Yes | S7 + S8 | BATNA, interests vs positions, objective criteria, invent options |
+| Cialdini — Influence | S5 Brief + S6 Hypothesis | Social proof, authority, reciprocity, commitment, scarcity |
+| Sun Tzu — Art of War | S3 Fit + S5 Brief | Know enemy, adapt to terrain (Moore profile), find underserved stakeholder |
+| Graham — Intelligent Investor | S4 + S8 | Margin of safety (3-5x value), value vs price, disqualify fast |
+| Crucial Conversations | S7 In-Call | Safety signals, STATE method, explore before responding |
+| JOLT Effect | S6 Hypothesis | Judge/Offer/Limit/Take-risk — indecision kills 40-60% of deals |
+| Challenger Customer | S5 Brief | Mobilizers (13%), teaching angle, commercial insight |
+
+### Key Prompt Injections (in App.jsx prompts)
+- Discovery questions: Voss calibrated questions, Fisher/Ury interests, Cialdini social proof
+- Hypothesis/talk tracks: JOLT, Voss accusation audit, Sun Tzu, Cialdini scarcity
+- Brief: Gartner 17% rule, JOLT, Challenger, DMAIC mapping
+
+---
+
+## Knowledge Layer — Fit Scoring Heuristics
+
+Stored in: `src/data/prompts/fitScoring.js`
+
+### The Wall (score 5-15% — 100% poor fit for startup sellers)
+- Automotive/Manufacturing: 5.9% avg — 65% union, incumbent ERP
+- Aerospace & Defense Prime: 5.8% avg — ITAR, FedRAMP required
+- Telecom (AT&T/Verizon): 6.1% avg — 50% union, 5-deep stack
+- Energy Oil & Gas: 11.3% avg
+- Energy Utilities: 13.4% avg
+- Mass Market Retail >100K: 13.6% avg
+- Tier 1 Banks (JPM/BAC/WF): 12.6% avg
+
+### Tier 1 Targets (score 60-75%)
+- Large Private Insurance/Finance: 65.2% — State Farm, TIAA, Nationwide
+- Large Private Tech/Data/Media: 64.5% — Bloomberg, Valve, SAS
+- Large Private Professional Services: 63.3% — Deloitte US, EY, KPMG
+- Insurance P&C/Life/Specialty: 62.5% — Allstate, Progressive, Travelers
+- CPG HPC/Beauty: 61.9% — P&G, Kimberly-Clark
+- Regional/Community Banks: 59.5% — 85 targets, ignored by startups
+- Healthcare IT/Digital Health: 54.9%
+
+### Stage Thresholds
+- Seed: 23.7% avg — zero viable enterprise paths
+- Series A: 33.6% — niche only, no Tier 1 banks
+- Series B: 41.8% — departmental landing only
+- Series C: 49.0% — first real enterprise traction
+- Series D+: 55.6% — full enterprise motion viable
+
+### Buying Signals
+- Recent funding <12mo: +8pts
+- Private vs public: +5-8pts
+- >200K employees (Series A-C): -15pts
+- >50% union workforce: -20pts
+
+---
+
+## Knowledge Layer —
+---
+
+## RIVER Framework
+5 stages: Reality → Impact → Vision → Entry Points → Route
+Each stage has: Gates (multiple choice), Discovery (open text), Talk Track, Objections
+Confidence score 0-98% from calcConfidence() based on gate answers
+
+---
+
+## Knowledge Layer — Negotiation & Influence Frameworks
+
+Stored in: `src/data/negotiationFrameworks.js` + `src/data/prompts/negotiationInjections.js`
+
+### Stage Mapping
+| Framework | Stage | Application |
+|---|---|---|
+| Voss — Never Split the Difference | S7 In-Call | Calibrated How/What questions, tactical empathy, mirroring, labeling, accusation audit |
+| Fisher/Ury — Getting to Yes | S7 + S8 | BATNA, interests vs positions, objective criteria, invent options |
+| Cialdini — Influence | S5 Brief + S6 Hypothesis | Social proof, authority, reciprocity, commitment, scarcity |
+| Sun Tzu — Art of War | S3 Fit + S5 Brief | Know enemy, adapt to terrain (Moore profile), find underserved stakeholder |
+| Graham — Intelligent Investor | S4 + S8 | Margin of safety (3-5x value), value vs price, disqualify fast |
+| Crucial Conversations | S7 In-Call | Safety signals, STATE method, explore before responding |
+| JOLT Effect | S6 Hypothesis | Judge/Offer/Limit/Take-risk — indecision kills 40-60% of deals |
+| Challenger Customer | S5 Brief | Mobilizers (13%), teaching angle, commercial insight |
+
+### Key Prompt Injections (in App.jsx prompts)
+- Discovery questions: Voss calibrated questions, Fisher/Ury interests, Cialdini social proof
+- Hypothesis/talk tracks: JOLT, Voss accusation audit, Sun Tzu, Cialdini scarcity
+- Brief: Gartner 17% rule, JOLT, Challenger, DMAIC mapping
+
+---
+
+## Knowledge Layer — Fit Scoring Heuristics
+
+Stored in: `src/data/prompts/fitScoring.js`
+
+### The Wall (score 5-15% — 100% poor fit for startup sellers)
+- Automotive/Manufacturing: 5.9% avg — 65% union, incumbent ERP
+- Aerospace & Defense Prime: 5.8% avg — ITAR, FedRAMP required
+- Telecom (AT&T/Verizon): 6.1% avg — 50% union, 5-deep stack
+- Energy Oil & Gas: 11.3% avg
+- Energy Utilities: 13.4% avg
+- Mass Market Retail >100K: 13.6% avg
+- Tier 1 Banks (JPM/BAC/WF): 12.6% avg
+
+### Tier 1 Targets (score 60-75%)
+- Large Private Insurance/Finance: 65.2% — State Farm, TIAA, Nationwide
+- Large Private Tech/Data/Media: 64.5% — Bloomberg, Valve, SAS
+- Large Private Professional Services: 63.3% — Deloitte US, EY, KPMG
+- Insurance P&C/Life/Specialty: 62.5% — Allstate, Progressive, Travelers
+- CPG HPC/Beauty: 61.9% — P&G, Kimberly-Clark
+- Regional/Community Banks: 59.5% — 85 targets, ignored by startups
+- Healthcare IT/Digital Health: 54.9%
+
+### Stage Thresholds
+- Seed: 23.7% avg — zero viable enterprise paths
+- Series A: 33.6% — niche only, no Tier 1 banks
+- Series B: 41.8% — departmental landing only
+- Series C: 49.0% — first real enterprise traction
+- Series D+: 55.6% — full enterprise motion viable
+
+### Buying Signals
+- Recent funding <12mo: +8pts
+- Private vs public: +5-8pts
+- >200K employees (Series A-C): -15pts
+- >50% union workforce: -20pts
+
+---
+
+## Knowledge Layer — Global RFP Sources
+
+Stored in: `src/data/rfpSources.js`
+
+### Priority Order (non-government first per UX design)
+1. **Private/Commercial** — Fortune 500 RFPs, Ariba, Coupa, Jaggaer, SAP Fieldglass
+2. **US Federal** — SAM.gov, FPDS-NG, USASpending.gov
+3. **EU/UK** — TED Europa (27 countries), Find a Tender, Contracts Finder
+4. **Multilateral** — World Bank ($50B+/yr), UNGM (WHO/UNICEF/WFP/UNDP), ADB, IDB
+5. **US State/Local** — DemandStar, state portals
+6. **APAC** — AusTender, GeBIZ Singapore, GETS NZ, MERX Canada
+7. **LatAm** — CompraNet Mexico, Mercado Público Chile, SEACE Peru, SICE Colombia
+
+### RFP Signal Detection Rules
+- Active RFP match: +20 fit score boost (IMMEDIATE urgency)
+- Recent award in category: +10 (HIGH urgency)
+- Historical buyer: +5 (MED urgency)
+- Incumbent risk detected: -10
+
+### CPV Codes (EU TED) — Key Mappings
+- Fintech/Payments: 66000000, 66100000, 72000000
+- SaaS/Software: 72000000, 72200000, 48000000
+- AI/ML: 72212000, 72316000
+- Digital Rewards: 79342200, 79342300
+
+### NAICS Codes (USA SAM.gov) — Key Mappings
+- Fintech/Payments: 522320, 522390, 523130
+- SaaS/Software: 511210, 541511, 541512
+- AI/ML: 541715, 541511
+- Digital Rewards: 541613, 541810
+
+### RFP Intel UI (S1 — ICP & RFPs tab)
+- Toggle: All / 🏢 Private-Commercial / 🏛 Government
+- Open RFPs table: Title, Buyer, Source, Value, Deadline, Cohort, Fit %
+- Closed RFPs table: Title, Buyer, Awarded To (incumbent intel!), Value, Date, Cohort, Fit %
+- isGovernment flag on each RFP drives badge colors (blue=gov, green=private)
+
+---
+
+## Security
+- ANTHROPIC_API_KEY: server-side only (no VITE_ prefix) — never in browser bundle
+- VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY: in Vercel env + local .env (gitignored)
+- Supabase RLS: auth.uid()::text = user_id on sessions table
+- No hardcoded secrets in source (confirmed by security scan)
+- All Claude calls through /api/claude proxy — no direct browser→Anthropic calls
 
 ---
 
 ## Known Issues / Tech Debt
-- App.jsx is 5,200 lines — full modularization in progress (tag: v101-modular-foundation)
-- stages/, hooks/, components/ directories created but empty
-- ICP phase 2 prompt is ~1,260 tokens — leaves ~4,740 for response at 6000 limit
-- Accounts page shows only 5 cohorts (top 5 by size) — full list in S3 accounts table
-- Brief generation can hit Anthropic 529 (overload) during peak hours — no retry UI
-- sellerStage variable only in scope inside React component, not in generateBrief()
-- CSS is a single 400-line string in App.jsx — should move to App.css
+- App.jsx is 5,300+ lines — modularization in progress (tag: v101-modular-foundation)
+- stages/, hooks/, components/ directories empty — extraction not yet started
+- lib/ and data/ files extracted but NOT yet imported by App.jsx (knowledge layer reference only)
+- CSS is a single ~400-line string in App.jsx — should move to App.css
+- Brief still has 4 parallel calls — only ICP phase 2 streams; Brief sections do not yet stream
+- RFP Intel uses Haiku training knowledge — not live SAM.gov/TED API calls yet
+- sellerStage variable only in scope inside React component
 
 ---
 
 ## Modularization Roadmap
+
 ### Completed (tag: v101-modular-foundation)
 - [x] src/config/constants.js
-- [x] src/lib/api.js
+- [x] src/lib/api.js — callAI() + streamAI()
 - [x] src/lib/supabase.js
 - [x] src/lib/utils.js
 - [x] src/data/outcomes.js
 - [x] src/data/riverFramework.js
 - [x] src/data/sampleAccounts.js
+- [x] src/data/negotiationFrameworks.js
+- [x] src/data/rfpSources.js
+- [x] src/data/prompts/fitScoring.js
+- [x] src/data/prompts/icpGeneration.js
+- [x] src/data/prompts/briefGeneration.js
+- [x] src/data/prompts/negotiationInjections.js
 
-### Next — extract stages (safest first)
+### Next — Stage Extraction (safest first)
 - [ ] src/stages/S9_SolutionFit/
 - [ ] src/stages/S8_PostCall/
 - [ ] src/stages/S6_Hypothesis/
 - [ ] src/stages/S1_ICP/
-- [ ] src/stages/S5_Brief/  ← largest, do last
+- [ ] src/stages/S5_Brief/ ← largest, do last
 
-### Then — shared components
+### Then — Shared Components
 - [ ] src/components/UI/EditableField.jsx
 - [ ] src/components/UI/LoadingBox.jsx
 - [ ] src/components/UI/PieChart.jsx
@@ -176,97 +323,110 @@ Confidence score (0-98%) calculated from gate answers via calcConfidence()
 
 ---
 
-## Deployment
-```bash
-cd ~/Desktop/cambrian-playbook
-npm run build 2>&1 | tail -2
-git add src/App.jsx
-git commit -m "description"
-git push origin main && vercel --prod
-```
+## Git Tags
+- v99-clean — early stable
+- v100-stable — last known stable before API migration
+- v101-modular-foundation — lib/data/config extracted, knowledge layer complete
 
-**Never run vercel --prod from src/ directory — always from project root**
+---
+
+## Deployment Commands
+```bash
+**Never run vercel --prod from src/ — always from project root**
 
 ---
 
 ## Seller Context (Cambrian Catalyst)
 - Founder: Joe G — solo operator, West Seattle
-- Background: Tango (digital rewards), Grant Thornton
+- Background: Tango (digital rewards/RaaS), Grant Thornton (compliance)
 - Focus: GTM + revenue growth consulting, fintech/payments/digital incentives
 - Active client: Savvi AI (ABM engagement)
-- This tool: internal GTM intelligence for Cambrian Catalyst client engagements
+- This tool: internal GTM intelligence for client engagements
 
 ---
 
-## Git Tags
-- v99-clean — early stable
-- v100-stable — last known stable before API migration
-- v101-modular-foundation — current, lib/data/config extracted
+## Today's Session Accomplishments (April 15, 2026)
 
+### Security
+- [x] All Claude calls routed through /api/claude proxy (ANTHROPIC_API_KEY server-side)
+- [x] Supabase keys moved to env vars (SB_URL, SB_KEY → VITE_ prefixed)
+- [x] Supabase RLS policy added with auth.uid()::text cast
+- [x] Security scan clean
 
----
+### Performance
+- [x] ICP phase 2 now uses streamAI() — content appears in ~1-2s
+- [x] scoreFit prompt cut from 1,571 to ~200 tokens
+- [x] ICP prompt cut from 2,010 to ~300 tokens
+- [x] vercel.json: 60s timeout for /api/claude, 120s for /api/claude-stream
+- [x] URL scanner web_search reduced to max_uses:1
 
-## Knowledge Layer — Negotiation & Influence Frameworks
+### Features
+- [x] RFP Intel tab on ICP page (open RFPs + closed awards + private/gov toggle)
+- [x] Step renamed: "ICP" → "ICP & RFPs"
+- [x] Account Review redesigned: clean boxed sections, fits single laptop screen
+- [x] Accounts table "Brief →" → "Review →" routes to Account Review not Brief
+- [x] All cohorts shown (removed .slice(0,5) limit), 15-color array
+- [x] Build Brief button fixed (calls pickAccount() not generateBrief() directly)
+- [x] Review Hypothesis button fixed (setStep(6) not setStep(5))
+- [x] Start In-Call button fixed (setStep(7) not setStep(6))
 
-Stored in: `src/data/negotiationFrameworks.js`
-
-These frameworks are applied throughout the app — not just referenced. Each maps to a specific stage:
-
-### Stage Mapping
-| Framework | Stage | Application |
-|---|---|---|
-| Voss — Never Split the Difference | S7 In-Call | Calibrated questions, tactical empathy, mirroring, labeling |
-| Fisher/Ury — Getting to Yes | S7 + S8 | BATNA, interests vs positions, objective criteria |
-| Cialdini — Influence | S5 Brief + S6 Hypothesis | Social proof, authority, reciprocity in talk tracks |
-| Sun Tzu — Art of War | S3 Fit + S5 Brief | Know enemy (competitive intel), adapt to terrain |
-| Graham — Intelligent Investor | S4 + S8 | Margin of safety, value vs price, deal qualification |
-| Crucial Conversations | S7 In-Call | Safety signals, emotional escalation, STATE method |
-
-### Key Concepts Applied
-- **Calibrated Questions** → Discovery questions in S7 always start with "How" or "What"
-- **BATNA** → Route stage always surfaces prospect's cost of inaction
-- **Margin of Safety** → Deal qualification in S4 requires 3-5x value case
-- **Art of War — Water Principle** → Talk tracks adapt to Moore adoption profile
-- **Cialdini Social Proof** → Case studies in Brief match prospect's exact industry + size
-- **Voss Accusation Audit** → Watch-Outs section pre-empts likely objections
-
-### Pending Implementation
-- [ ] Add Voss calibrated questions to S7 In-Call discovery question generation
-- [ ] Add Cialdini social proof framing to Brief opening angle
-- [ ] Add Art of War competitive positioning to watchOuts generation
-- [ ] Add Graham margin of safety framing to S4 deal value selection
-- [ ] Add Crucial Conversations safety signals to In-Call sidebar
-
+### Knowledge Layer
+- [x] src/data/prompts/fitScoring.js — 6M permutation rules as buildFitScoringPrompt()
+- [x] src/data/prompts/icpGeneration.js — ICP frameworks (Revella/Osterwalder/Dunford/Moore)
+- [x] src/data/prompts/briefGeneration.js — JOLT, Challenger, discovery prompt
+- [x] src/data/prompts/negotiationInjections.js — Voss/Fisher/Cialdini/SunTzu/Graham/Cru
+**Never run vercel --prod from src/ — always from project root**
 
 ---
 
-## Knowledge Layer — Global RFP Sources
+## Seller Context (Cambrian Catalyst)
+- Founder: Joe G — solo operator, West Seattle
+- Background: Tango (digital rewards/RaaS), Grant Thornton (compliance)
+- Focus: GTM + revenue growth consulting, fintech/payments/digital incentives
+- Active client: Savvi AI (ABM engagement)
+- This tool: internal GTM intelligence for client engagements
 
-Stored in: `src/data/rfpSources.js`
+---
 
-### Regions Covered
-| Region | Key Sources | API Access |
-|---|---|---|
-| USA | SAM.gov, FPDS-NG, USASpending.gov, DemandStar | Free |
-| Europe | TED (27 EU countries), Find a Tender (UK), Contracts Finder | Free |
-| LatAm | CompraNet, Mercado Público, SEACE, SICE, UNOPS | Free |
-| APAC | AusTender, GeBIZ, GETS, MERX | Free |
-| Global | World Bank, UNGM, IFC/ADB, RFPMart | Free |
+## Today's Session Accomplishments (April 15, 2026)
 
-### Signal Detection
-- Active RFP match = +20 fit score boost
-- Recent award in category = +10
-- Historical buyer = +5
-- Incumbent risk detected = -10
+### Security
+- [x] All Claude calls routed through /api/claude proxy (ANTHROPIC_API_KEY server-side)
+- [x] Supabase keys moved to env vars (SB_URL, SB_KEY → VITE_ prefixed)
+- [x] Supabase RLS policy added with auth.uid()::text cast
+- [x] Security scan clean
 
-### CPV Codes (EU TED)
-Maps seller category → EU Common Procurement Vocabulary codes for filtering
+### Performance
+- [x] ICP phase 2 now uses streamAI() — content appears in ~1-2s
+- [x] scoreFit prompt cut from 1,571 to ~200 tokens
+- [x] ICP prompt cut from 2,010 to ~300 tokens
+- [x] vercel.json: 60s timeout for /api/claude, 120s for /api/claude-stream
+- [x] URL scanner web_search reduced to max_uses:1
 
-### NAICS Codes (USA SAM.gov)
-Maps seller category → North American Industry Classification codes for SAM.gov queries
+### Features
+- [x] RFP Intel tab on ICP page (open RFPs + closed awards + private/gov toggle)
+- [x] Step renamed: "ICP" → "ICP & RFPs"
+- [x] Account Review redesigned: clean boxed sections, fits single laptop screen
+- [x] Accounts table "Brief →" → "Review →" routes to Account Review not Brief
+- [x] All cohorts shown (removed .slice(0,5) limit), 15-color array
+- [x] Build Brief button fixed (calls pickAccount() not generateBrief() directly)
+- [x] Review Hypothesis button fixed (setStep(6) not setStep(5))
+- [x] Start In-Call button fixed (setStep(7) not setStep(6))
 
-### Pending Implementation
-- [ ] SAM.gov API integration in fit scoring signal detection
-- [ ] TED API integration for EU account matching
-- [ ] RFP Resource Library widget in app
-- [ ] RFP signal badge on accounts table
+### Knowledge Layer
+- [x] src/data/prompts/fitScoring.js — 6M permutation rules as buildFitScoringPrompt()
+- [x] src/data/prompts/icpGeneration.js — ICP frameworks (Revella/Osterwalder/Dunford/Moore)
+- [x] src/data/prompts/briefGeneration.js — JOLT, Challenger, discovery prompt
+- [x] src/data/prompts/negotiationInjections.js — Voss/Fisher/Cialdini/SunTzu/Graham/CrucialConv
+- [x] src/data/negotiationFrameworks.js — full framework definitions with examples
+- [x] src/data/rfpSources.js — global RFP registry, CPV/NAICS codes, signal rules
+- [x] AGENT_CONTEXT.md — comprehensive agent onboarding document
+
+### Pending (next session)
+- [ ] Add VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY to Vercel dashboard
+- [ ] Wire SAM.gov live API for real RFP signal detection
+- [ ] Wire TED Europa live API for EU account matching
+- [ ] Add RFP signal badges to accounts table fit scores
+- [ ] Extract first stage module (S9_SolutionFit)
+- [ ] Brief sections streaming (currently only ICP streams)
+- [ ] Fix accounts page showing only 5 cohorts in some views
