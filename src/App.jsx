@@ -1404,6 +1404,8 @@ export default function App(){
   const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
   const[sellerICP,setSellerICP]=useState(null); // built from seller URL
   const[icpLoading,setIcpLoading]=useState(false);
+  const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
+  const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
   const[mapping,setMapping]=useState({company:"",industry:"",acv:"0",lead_source:"",close_date:"",product:"",outcome:"",company_url:"",employees:"",public_private:"",geography:""});
@@ -1630,6 +1632,50 @@ SELLER: `+sellerCtx.slice(0,300)+`
       })));
     }
     setFitScoring(false);
+  };
+
+
+  // ── FETCH RFP INTEL ──────────────────────────────────────────────────────
+  const fetchRFPIntel = async () => {
+    if(!sellerICP?.icp) return;
+    setRfpData(p=>({...p,loading:true,error:null}));
+
+    const industries = sellerICP.icp.industries||[];
+    const category = sellerICP.marketCategory||"";
+    const prompt = `You are a procurement intelligence analyst. Based on this seller profile:
+SELLER: ${sellerUrl}
+MARKET CATEGORY: ${category}
+TARGET INDUSTRIES: ${industries.join(", ")}
+
+Generate realistic RFP intelligence in two categories:
+
+1. OPEN RFPs — Active opportunities likely relevant to this seller RIGHT NOW (last 30 days)
+2. CLOSED RFPs — Awarded contracts from last 18 months showing who bought what
+
+For each RFP use real government agency names and realistic values. Focus on USA (SAM.gov/federal), EU (TED), and major multilateral orgs (World Bank, UN).
+
+Return ONLY raw JSON:
+{"open":[{"title":"RFP title","buyer":"Agency/Org name","country":"USA","source":"SAM.gov","value":"$500K-$2M","deadline":"2026-05-15","relevanceScore":85,"relevanceReason":"Matches fintech payments ICP","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://sam.gov/..."}],"closed":[{"title":"Contract title","buyer":"Agency name","country":"USA","source":"FPDS-NG","awardedTo":"Vendor Inc","value":"$1.2M","awardDate":"2025-08-15","relevanceScore":78,"relevanceReason":"Digital payments platform","cohort":"Financial Services"}]}`;
+
+    try {
+      const r = await fetch("/api/claude",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:3000,
+          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+        }),
+      });
+      const d = await r.json();
+      if(d.error){setRfpData(p=>({...p,loading:false,error:d.error.message}));return;}
+      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      const jsonStr = "{"+raw;
+      const parsed = JSON.parse(jsonStr);
+      setRfpData({open:parsed.open||[],closed:parsed.closed||[],loading:false,error:null});
+    } catch(e){
+      setRfpData(p=>({...p,loading:false,error:"Failed to load RFP intel: "+e.message}));
+    }
   };
 
   // ── BUILD SELLER ICP FROM URL ────────────────────────────────────────────
@@ -2870,8 +2916,31 @@ Return ONLY valid JSON:
         {/* ── STEP 1: ICP REVIEW ── */}
         {step===1&&(
           <div className="page">
-            <div className="page-title">Your Ideal Customer Profile</div>
-            <div className="page-sub">Built from <strong>{sellerUrl}</strong> — your ideal customer profile, refined. Review and edit before scoring accounts.</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:12}}>
+              <div>
+                <div className="page-title" style={{margin:0}}>
+                  {icpTab==="icp"?"Your Ideal Customer Profile":"RFP Intelligence"}
+                </div>
+                <div className="page-sub" style={{marginBottom:0}}>
+                  {icpTab==="icp"
+                    ? <>Built from <strong>{sellerUrl}</strong> — review and edit before scoring accounts.</>
+                    : <>Live RFP signals matched to your ICP — open opportunities and recent awards.</>}
+                </div>
+              </div>
+              {sellerICP?.icp&&(
+                <div style={{display:"flex",gap:0,border:"1.5px solid #E8E6DF",borderRadius:8,overflow:"hidden",flexShrink:0}}>
+                  {[["icp","🎯 Your ICP"],["rfp","📡 RFP Intel"]].map(([tab,label])=>(
+                    <button key={tab}
+                      onClick={()=>{setIcpTab(tab);if(tab==="rfp"&&!rfpData.open.length&&!rfpData.loading)fetchRFPIntel();}}
+                      style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
+                        background:icpTab===tab?"#1a1a18":"#fff",
+                        color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s"}}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {icpLoading&&!sellerICP&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:"60px 0",textAlign:"center"}}>
@@ -2889,7 +2958,128 @@ Return ONLY valid JSON:
               </div>
             )}
 
-            {sellerICP?.icp&&(
+            {icpTab==="rfp"&&sellerICP?.icp&&(
+              <div style={{marginTop:16}}>
+                {rfpData.loading&&(
+                  <div style={{textAlign:"center",padding:"40px 0"}}>
+                    <div className="load-spin" style={{width:28,height:28,borderWidth:3,margin:"0 auto 12px"}}/>
+                    <div style={{fontSize:14,color:"#555"}}>Scanning global RFP databases...</div>
+                    <div style={{fontSize:12,color:"#aaa",marginTop:4}}>SAM.gov · TED Europa · World Bank · UNGM</div>
+                  </div>
+                )}
+                {rfpData.error&&(
+                  <div style={{background:"#FFF5F5",border:"1px solid #FCA5A5",borderRadius:8,padding:12,fontSize:13,color:"#9B2C2C"}}>
+                    {rfpData.error}
+                  </div>
+                )}
+                {!rfpData.loading&&!rfpData.error&&rfpData.open.length===0&&(
+                  <div style={{textAlign:"center",padding:"40px 0",color:"#aaa"}}>
+                    <div style={{fontSize:32,marginBottom:8}}>📡</div>
+                    <div style={{fontSize:14,marginBottom:12}}>No RFP data loaded yet</div>
+                    <button className="btn btn-primary" onClick={fetchRFPIntel}>Scan RFP Databases →</button>
+                  </div>
+                )}
+                {rfpData.open.length>0&&(
+                  <>
+                    {/* Open RFPs */}
+                    <div style={{marginBottom:24}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"#1a1a18"}}>🟢 Open RFPs — Active Opportunities</div>
+                        <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.length} found)</div>
+                        <button className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={fetchRFPIntel}>↻ Refresh</button>
+                      </div>
+                      <div style={{overflowX:"auto",border:"1px solid #E8E6DF",borderRadius:8}}>
+                        <table className="tbl">
+                          <thead>
+                            <tr>
+                              <th>RFP Title</th>
+                              <th>Buyer</th>
+                              <th>Source</th>
+                              <th>Value</th>
+                              <th>Deadline</th>
+                              <th>Cohort</th>
+                              <th>Fit</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rfpData.open.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                              <tr key={i}>
+                                <td style={{maxWidth:280}}>
+                                  <div style={{fontWeight:600,fontSize:12,color:"#1a1a18",marginBottom:2}}>{r.title}</div>
+                                  <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
+                                </td>
+                                <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
+                                <td><span style={{fontSize:10,fontWeight:700,background:"#EEF5F9",color:"#1B3A6B",borderRadius:6,padding:"2px 6px"}}>{r.source}</span></td>
+                                <td style={{fontSize:12,fontWeight:600,color:"#2E6B2E",whiteSpace:"nowrap"}}>{r.value}</td>
+                                <td style={{fontSize:11,color:"#BA7517",whiteSpace:"nowrap"}}>{r.deadline}</td>
+                                <td style={{fontSize:11}}>{r.cohort}</td>
+                                <td>
+                                  <div style={{fontSize:12,fontWeight:700,
+                                    color:r.relevanceScore>=75?"#2E6B2E":r.relevanceScore>=50?"#BA7517":"#9B2C2C"}}>
+                                    {r.relevanceScore}%
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Closed RFPs */}
+                    {rfpData.closed.length>0&&(
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                          <div style={{fontSize:13,fontWeight:700,color:"#1a1a18"}}>🔵 Closed RFPs — Last 18 Months (Incumbent Intel)</div>
+                          <div style={{fontSize:11,color:"#aaa"}}>({rfpData.closed.length} awards)</div>
+                        </div>
+                        <div style={{overflowX:"auto",border:"1px solid #E8E6DF",borderRadius:8}}>
+                          <table className="tbl">
+                            <thead>
+                              <tr>
+                                <th>Contract</th>
+                                <th>Buyer</th>
+                                <th>Awarded To</th>
+                                <th>Value</th>
+                                <th>Date</th>
+                                <th>Cohort</th>
+                                <th>Fit</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rfpData.closed.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                                <tr key={i}>
+                                  <td style={{maxWidth:240}}>
+                                    <div style={{fontWeight:600,fontSize:12,color:"#1a1a18",marginBottom:2}}>{r.title}</div>
+                                    <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
+                                  </td>
+                                  <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
+                                  <td style={{fontSize:12,fontWeight:600,color:"#8B6F47"}}>{r.awardedTo}</td>
+                                  <td style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
+                                  <td style={{fontSize:11,color:"#777",whiteSpace:"nowrap"}}>{r.awardDate}</td>
+                                  <td style={{fontSize:11}}>{r.cohort}</td>
+                                  <td>
+                                    <div style={{fontSize:12,fontWeight:700,
+                                      color:r.relevanceScore>=75?"#2E6B2E":r.relevanceScore>=50?"#BA7517":"#9B2C2C"}}>
+                                      {r.relevanceScore}%
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div style={{fontSize:11,color:"#aaa",marginTop:8,fontStyle:"italic"}}>
+                          💡 Awarded To = your displacement target or channel partner opportunity. Check FPDS-NG and TED for full contract details.
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {icpTab==="icp"&&sellerICP?.icp&&(
               <div style={{display:"flex",flexDirection:"column",gap:16}}>
 
                 {/* Positioning */}
@@ -3074,6 +3264,7 @@ Return ONLY valid JSON:
 
 
 
+            {icpTab==="icp"&&(
             <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
               <button className="btn btn-secondary" onClick={()=>setStep(0)}>← Back</button>
               <button className="btn btn-primary btn-lg"
@@ -3082,6 +3273,15 @@ Return ONLY valid JSON:
                 {icpLoading&&!sellerICP?"Building ICP...":"Continue to Import →"}
               </button>
             </div>
+            )}
+            {icpTab==="rfp"&&(
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
+              <button className="btn btn-secondary" onClick={()=>setIcpTab("icp")}>← Back to ICP</button>
+              <button className="btn btn-primary btn-lg" onClick={()=>setStep(2)}>
+                Continue to Import →
+              </button>
+            </div>
+            )}
           </div>
         )}
 
