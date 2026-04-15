@@ -4785,28 +4785,33 @@ Return ONLY valid JSON:
                   : "Generate your RIVER hypothesis below."}
             </div>
 
-            {/* Recommended Solutions — surface at top so rep is anchored */}
+            {/* Recommended Solutions — surface at top so rep is anchored.
+                Uses the standard .bb + .sol-badge pattern so this card matches
+                the Solution Mapping card on the Brief page (visual continuity
+                as the rep moves from Brief -> Hypothesis). */}
             {(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
-              <div style={{background:"#1B3A6B",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#B8CCE4",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>
-                  🎯 Solutions You're Selling into {selectedAccount?.company}
+              <div className="bb" style={{marginBottom:16}}>
+                <div className="bb-hdr">
+                  <div className="bb-icon" style={{fontSize:14}}>🎯</div>
+                  <div>
+                    <div className="bb-title">Solutions You're Selling into {selectedAccount?.company}</div>
+                    <div className="bb-sub">How each offering maps to what this account needs</div>
+                  </div>
                 </div>
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
                   {(brief.solutionMapping||[]).filter(s=>s?.product).map((s,i)=>(
-                    <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                      <div style={{background:"#2C5282",color:"#fff",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,whiteSpace:"nowrap",flexShrink:0,marginTop:2}}>
-                        {s.product}
-                      </div>
-                      <div style={{fontSize:13,color:"#C8D8EC",lineHeight:1.6}}>{s.fit}</div>
+                    <div key={i} className="solution-item">
+                      <div className="sol-badge">{s.product}</div>
+                      <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{s.fit}</div>
                     </div>
                   ))}
+                  {brief?.openingAngle&&(
+                    <div style={{marginTop:4,paddingTop:12,borderTop:"1px solid var(--line-1)"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5}}>Opening Angle</div>
+                      <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
+                    </div>
+                  )}
                 </div>
-                {brief?.openingAngle&&(
-                  <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #2C5282"}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Opening Angle</div>
-                    <div style={{fontSize:13,color:"#fff",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
-                  </div>
-                )}
               </div>
             )}
 
