@@ -517,33 +517,52 @@ function getOutcomeTheme(row,mapping){
   if(/ai|ml|data|analytic/.test(txt))return"Data & AI Adoption";
   return"Strategic Transformation";
 }
+// Cohorts group accounts by industry. Hard-cap at MAX_COHORTS so the UI
+// stays readable on imports with long-tail industry distributions — if
+// more distinct industries exist, the top (MAX_COHORTS - 1) are kept as
+// named cohorts and everything else rolls into a single "Other" cohort.
+// No account is ever dropped. ACV is captured on the Account Review step
+// as a salesperson input, not as a row attribute, so cohorts don't track it.
+const MAX_COHORTS = 10;
 function buildCohorts(rows,mapping){
-  if(!rows.length)return[];
+  if(!rows.length) return [];
   const get=(row,key)=>(mapping[key]?(row[mapping[key]]||""):"").toString().trim();
   const groups={};
   rows.forEach(row=>{
-    const acv=0, // ACV removed — reps assess deal size themselves
-      ind=get(row,"industry")||"Other",
-      // Band by industry vertical for meaningful cohorts
-      band=ind||"Other",
-      src=get(row,"lead_source")||"Direct",outcome=getOutcomeTheme(row,mapping),
-      company=get(row,"company"),product=get(row,"product"),company_url=get(row,"company_url")||"",
-      employees=get(row,"employees")||"",
-      publicPrivate=get(row,"public_private")||"",
-      geography=get(row,"geography")||"";
-    if(!groups[band])groups[band]=[];
-    groups[band].push({row,ind,acv,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
+    const ind      = get(row,"industry") || "Other",
+          band     = ind,
+          src      = get(row,"lead_source") || "Direct",
+          outcome  = getOutcomeTheme(row,mapping),
+          company  = get(row,"company"),
+          product  = get(row,"product"),
+          company_url   = get(row,"company_url") || "",
+          employees     = get(row,"employees")   || "",
+          publicPrivate = get(row,"public_private") || "",
+          geography     = get(row,"geography") || "";
+    if(!groups[band]) groups[band]=[];
+    groups[band].push({row,ind,band,src,outcome,company,product,company_url,employees,publicPrivate,geography});
   });
-  return Object.entries(groups).sort(([,a],[,b])=>b.length-a.length)
-    .map(([name,members],i)=>{
-      const acvs=members.filter(m=>m.acv>0);
-      return{id:i,name,color:COHORT_COLORS[i%COHORT_COLORS.length],size:members.length,
-        pct:Math.round(members.length/rows.length*100),
-        avgACV:acvs.length?Math.round(acvs.reduce((s,m)=>s+m.acv,0)/acvs.length):0,
-        topInd:[...new Set(members.map(m=>m.ind))].slice(0,3),
-        topSrc:[...new Set(members.map(m=>m.src))].slice(0,2),
-        topOut:[...new Set(members.map(m=>m.outcome))].slice(0,2),members};
-    });
+  const entries = Object.entries(groups).sort(([,a],[,b])=>b.length-a.length);
+  const makeCohort = (name, members, i) => ({
+    id: i,
+    name,
+    color: COHORT_COLORS[i % COHORT_COLORS.length],
+    size: members.length,
+    pct: Math.round(members.length / rows.length * 100),
+    topInd: [...new Set(members.map(m=>m.ind))].slice(0,3),
+    topSrc: [...new Set(members.map(m=>m.src))].slice(0,2),
+    topOut: [...new Set(members.map(m=>m.outcome))].slice(0,2),
+    members,
+  });
+  if(entries.length <= MAX_COHORTS){
+    return entries.map(([name,members],i)=>makeCohort(name,members,i));
+  }
+  const named = entries.slice(0, MAX_COHORTS - 1);
+  const rest  = entries.slice(MAX_COHORTS - 1).flatMap(([,members])=>members);
+  return [
+    ...named.map(([name,members],i)=>makeCohort(name,members,i)),
+    makeCohort("Other", rest, MAX_COHORTS - 1),
+  ];
 }
 function calcConfidence(gateAnswers,riverData){
   const positive={
@@ -1315,7 +1334,6 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
     return Object.entries(bands).filter(([,v])=>v>0).map(([label,value])=>({label,value}));
   })();
 
-  const hasACV    = cohort.members.some(m=>m.acv>0);
   const hasPP     = cohort.members.some(m=>m.publicPrivate);
   const hasGeo    = cohort.members.some(m=>m.geography);
   const hasEmp    = cohort.members.some(m=>m.employees);
@@ -1371,20 +1389,6 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
             {hasEmp&&<MiniPie title="Org Size (Employees)" data={empBands} colors={EMP_COLORS}/>}
             <MiniPie title="By Lead Source" data={srcCounts}  colors={SRC_COLORS}/>
           </div>
-
-          {/* ACV distribution — only if populated */}
-          {hasACV&&(
-            <div style={{marginBottom:12}}>
-              <div className="field-label" style={{marginBottom:6}}>ACV Distribution</div>
-              <div style={{display:"flex",gap:2,height:20,borderRadius:4,overflow:"hidden"}}>
-                {cohort.members.filter(m=>m.acv>0).sort((a,b)=>a.acv-b.acv).map((m,i,arr)=>(
-                  <div key={i} title={`${m.company}: $${m.acv.toLocaleString()}`}
-                    style={{flex:1,background:cohort.color,opacity:0.3+0.7*(i/Math.max(arr.length-1,1)),cursor:"pointer"}}
-                    onClick={()=>onPickAccount&&onPickAccount(m)}/>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Account table */}
           <table className="cohort-member-table">
@@ -3745,7 +3749,6 @@ Return ONLY valid JSON:
                       <th>Industry</th>
                       <th>Org Size</th>
                       <th>Ownership</th>
-                      <th>ACV</th>
                       <th>Fit Check</th>
                       <th></th>
                     </tr>
@@ -3788,7 +3791,6 @@ Return ONLY valid JSON:
                               return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{pp}</span>;
                             })()}
                           </td>
-                          <td style={{fontSize:12,color:"var(--tan-0)",fontWeight:600}}>{m.acv>0?"$"+Number(m.acv).toLocaleString():m.acv?"$"+m.acv:"—"}</td>
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
