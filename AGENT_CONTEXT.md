@@ -237,3 +237,36 @@ These frameworks are applied throughout the app — not just referenced. Each ma
 - [ ] Add Graham margin of safety framing to S4 deal value selection
 - [ ] Add Crucial Conversations safety signals to In-Call sidebar
 
+
+---
+
+## Knowledge Layer — Global RFP Sources
+
+Stored in: `src/data/rfpSources.js`
+
+### Regions Covered
+| Region | Key Sources | API Access |
+|---|---|---|
+| USA | SAM.gov, FPDS-NG, USASpending.gov, DemandStar | Free |
+| Europe | TED (27 EU countries), Find a Tender (UK), Contracts Finder | Free |
+| LatAm | CompraNet, Mercado Público, SEACE, SICE, UNOPS | Free |
+| APAC | AusTender, GeBIZ, GETS, MERX | Free |
+| Global | World Bank, UNGM, IFC/ADB, RFPMart | Free |
+
+### Signal Detection
+- Active RFP match = +20 fit score boost
+- Recent award in category = +10
+- Historical buyer = +5
+- Incumbent risk detected = -10
+
+### CPV Codes (EU TED)
+Maps seller category → EU Common Procurement Vocabulary codes for filtering
+
+### NAICS Codes (USA SAM.gov)
+Maps seller category → North American Industry Classification codes for SAM.gov queries
+
+### Pending Implementation
+- [ ] SAM.gov API integration in fit scoring signal detection
+- [ ] TED API integration for EU account matching
+- [ ] RFP Resource Library widget in app
+- [ ] RFP signal badge on accounts table
