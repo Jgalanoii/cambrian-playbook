@@ -1431,40 +1431,82 @@ export default function App(){
 
     setRfpData({ open: [], closed: [], loading: true, error: null });
 
-    const industries = sellerICP.icp.industries || [];
-    const category = sellerICP.marketCategory || "";
+    // Pull rich ICP context — the RFP search quality is gated on how
+    // well the prompt tells Haiku WHO to look for. Previously we passed
+    // only industries + category; now we feed the full decision profile.
+    const icp = sellerICP.icp || {};
+    const industries   = (icp.industries || []).filter(Boolean);
+    const category     = sellerICP.marketCategory || "";
+    const buyers       = (icp.buyerPersonas || []).filter(Boolean);
+    const size         = icp.companySize || "";
+    const geo          = (icp.geographies || []).filter(Boolean);
+    const trigger      = icp.priorityInitiative || "";
+    const disqual      = (icp.disqualifiers || []).filter(Boolean);
+    const deal         = icp.dealSize || "";
+    const competitors  = (icp.competitiveAlternatives || []).filter(Boolean);
+    const differ       = (icp.uniqueDifferentiators || []).filter(Boolean);
+
     const fixGov = r => ({ ...r, isGovernment: r.isGovernment === true || r.isGovernment === "true" });
 
     const buildPrompt = (kind) => {
       const isOpen = kind === "open";
-      return `You are a procurement intelligence analyst. Use web_search to find REAL, recent ${isOpen ? "ACTIVE (open) RFPs" : "AWARDED (closed) contracts from the last 18 months"} relevant to the seller below.
+      return `You are a procurement intelligence analyst helping a B2B seller find relevant RFPs. Use web_search with SPECIFIC queries. ${isOpen ? "Focus on ACTIVE (open) opportunities posted in the last 90 days." : "Focus on AWARDED (closed) contracts from the last 18 months that reveal incumbent vendors."}
 
-SELLER: ${sellerUrl}
-MARKET CATEGORY: ${category}
-TARGET INDUSTRIES: ${industries.join(", ")}
+━━━ SELLER PROFILE ━━━
+URL: ${sellerUrl}
+Market category: ${category}
+What makes them different: ${differ.slice(0,2).join(" · ") || "—"}
+They commonly displace: ${competitors.slice(0,2).join(" · ") || "—"}
 
-Return 4-6 ${isOpen ? "active opportunities" : "recent awards"}, balanced between private/commercial and government sources.
+━━━ THEIR IDEAL BUYER (this is who's posting relevant RFPs) ━━━
+Industries:       ${industries.join(", ") || "—"}
+Buyer size:       ${size || "—"}
+Typical deal:     ${deal || "—"}
+Geographies:      ${geo.join(", ") || "North America"}
+Buyer personas:   ${buyers.join(", ") || "—"}
+Priority trigger: ${trigger || "—"}
+Exclusions:       ${disqual.slice(0,3).join(" · ") || "—"}
 
-PRIVATE / COMMERCIAL sources (set isGovernment: false):
+━━━ SEARCH STRATEGY (use 2-3 of these query patterns) ━━━
+${isOpen ? `
+  - site:sam.gov "${category || industries[0] || "RFP"}" 2025
+  - "${industries[0] || "fintech"}" RFP 2025 "${buyers[0] || "CFO"}"
+  - ${category || industries[0] || "software"} procurement Ariba OR Coupa 2025
+  - site:ted.europa.eu ${industries[0] || "software"} 2025
+  - "${trigger.split(" ").slice(0,4).join(" ") || industries[0]}" RFP request for proposal
+` : `
+  - site:usaspending.gov ${category || industries[0]} contract 2024 OR 2025
+  - site:fpds.gov ${industries[0] || category} awarded 2024 OR 2025
+  - "${competitors[0] || category}" contract awarded 2024 OR 2025
+  - ${industries[0] || "SaaS"} "contract award" press release 2024 OR 2025
+  - "${buyers[0] || "CIO"}" selects vendor ${category || industries[0]} 2024 OR 2025
+`}
+
+━━━ SOURCES ━━━
+PRIVATE / COMMERCIAL (set isGovernment: false):
   - Ariba Discovery, Coupa Compass, Jaggaer, SAP Fieldglass
-  - Fortune 500 corporate procurement portals
-  - Industry marketplaces (e.g. GHX for healthcare)
+  - Fortune 500 corporate procurement portals (e.g. jpmorgan.com/procurement)
+  - Industry marketplaces (GHX healthcare, SIG for manufacturing)
   - Press releases announcing vendor selections / RFP awards
-
-GOVERNMENT sources (set isGovernment: true):
+GOVERNMENT (set isGovernment: true):
   - USA: SAM.gov (active), FPDS-NG / USAspending.gov (awarded)
-  - EU: TED Europa
-  - Multilateral: World Bank, UNGM, ADB
+  - EU: TED Europa (ted.europa.eu)
+  - Multilateral: World Bank, UNGM (un.org/ungm), ADB, IDB
   - State/Local: DemandStar, state procurement portals
+
+━━━ OUTPUT ━━━
+Return 4-6 ${isOpen ? "active opportunities" : "recent awards"}, roughly balanced between private and government.
 
 DATA INTEGRITY:
   - Only include RFPs you can VERIFY via web_search. Do not invent titles, buyers, values, or vendor names.
   ${!isOpen ? "- If awarded vendor cannot be verified, leave \"awardedTo\" empty. Do not guess.\n  " : ""}- Every row MUST include the isGovernment boolean.
-  - Include the source URL in the "url" field when available.
+  - Include the source URL in the "url" field when available — this is how the user verifies your work.
+  - relevanceReason should cite ONE specific element of the seller profile above (e.g. "matches their Financial Services focus and ~$250K deal size").
+  - Do NOT return RFPs that match any item in Exclusions.
 
 Return ONLY raw JSON (no prose). The outer key MUST be "rows":
 ${isOpen
-  ? `{"rows":[{"title":"RFP title","buyer":"Buyer","country":"USA","source":"SAM.gov or Ariba etc","isGovernment":true,"value":"$500K-$2M","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why this matches the ICP","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://..."}]}`
+  ? `{"rows":[{"title":"RFP title","buyer":"Buyer","country":"USA","source":"SAM.gov or Ariba etc","isGovernment":true,"value":"$500K-$2M","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why this matches the seller profile above","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://..."}]}`
   : `{"rows":[{"title":"Contract title","buyer":"Buyer","country":"USA","source":"FPDS-NG or press URL","isGovernment":true,"awardedTo":"Vendor or empty string","value":"$1.2M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Why relevant","cohort":"Financial Services","url":"https://..."}]}`
 }`;
     };
@@ -1528,14 +1570,29 @@ ${isOpen
     }
   };
 
-  // Auto-fire RFP fetch as soon as the ICP is ready, so by the time the
-  // user clicks the RFP tab the data is already loaded (or loading).
+  // Auto-fire RFP fetch as soon as the ICP becomes available. Keyed by a
+  // stable ICP signature so a Regenerate-ICP will correctly retrigger
+  // (with forceRefresh) and bypass whatever stale data is still in state.
+  // Previously the guard included "&& !rfpData.open.length" which meant
+  // the effect would skip forever after the first result — a regenerated
+  // ICP would render against the old RFP data until the user clicked
+  // Refresh. Fixed.
+  const icpSignature = sellerICP?.icp
+    ? `${sellerICP.sellerName||""}|${sellerICP.marketCategory||""}|${(sellerICP.icp.industries||[]).join(",")}|${sellerICP.icp.companySize||""}`
+    : "";
+  const lastIcpSigRef = React.useRef("");
   React.useEffect(() => {
-    if (sellerICP?.icp && !rfpData.loading && !rfpData.open.length && !rfpData.closed.length && !rfpData.error) {
-      fetchRFPIntel();
-    }
+    if (!icpSignature) return;
+    // Signature unchanged — ICP hasn't really changed in a way that
+    // warrants a refetch. (Handles StrictMode double-invoke too.)
+    if (icpSignature === lastIcpSigRef.current) return;
+    const wasFirstLoad = lastIcpSigRef.current === "";
+    lastIcpSigRef.current = icpSignature;
+    // First load: check localStorage cache; ICP regeneration: bypass
+    // cache (old RFP data no longer matches the regenerated ICP).
+    fetchRFPIntel({ forceRefresh: !wasFirstLoad });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sellerICP?.sellerName, sellerICP?.marketCategory]);
+  }, [icpSignature]);
 
   // ── BUILD SELLER ICP FROM URL ────────────────────────────────────────────
   // Fires when seller URL is entered. Uses training knowledge + web search
