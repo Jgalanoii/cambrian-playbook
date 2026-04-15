@@ -9,7 +9,7 @@ export default async function handler(req, res) {
       'anthropic-version': '2023-06-01',
       'anthropic-beta': 'interleaved-thinking-2025-05-14',
     },
-    body: JSON.stringify(req.body),
+    body: JSON.stringify({ ...req.body, temperature: req.body.temperature ?? 0 }),
   });
   
   const data = await response.json();

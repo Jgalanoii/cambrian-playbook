@@ -555,6 +555,7 @@ async function callAI(prompt){
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:5500,
+          temperature:0,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
             {role:"user",content:prompt},
@@ -746,6 +747,7 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:1800,
+          temperature:0,
           tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
@@ -1665,6 +1667,7 @@ Return ONLY raw JSON:
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:3000,
+          temperature:0,
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
       });
@@ -1703,6 +1706,7 @@ Return ONLY raw JSON:
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:800,
+          temperature:0,
           messages:[{role:"user",content:researchPrompt},{role:"assistant",content:"{"}],
         }),
       });
@@ -1727,6 +1731,7 @@ Return ONLY raw JSON:
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:6000,
+          temperature:0,
           messages:[
             {role:"user",content:icpPrompt},
             {role:"assistant",content:"{"},
@@ -1776,6 +1781,7 @@ Return ONLY raw JSON:
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:2000,
+          temperature:0,
           messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
         }),
       });
