@@ -1,4 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { OUTCOMES } from "./data/outcomes.js";
+import { RIVER_STAGES } from "./data/riverFramework.js";
+import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
+import { FIT_SCORING_RULES } from "./data/prompts/fitScoring.js";
+import { ICP_FRAMEWORKS } from "./data/prompts/icpGeneration.js";
+import { JOLT_FRAMEWORK, UNIVERSAL_IMPERATIVES } from "./data/prompts/briefGeneration.js";
+import { VOSS_INJECTION, FISHER_URY_INJECTION, CIALDINI_INJECTION, SUN_TZU_INJECTION, CRUCIAL_CONVERSATIONS_INJECTION, GRAHAM_INJECTION } from "./data/prompts/negotiationInjections.js";
 
 const SB_URL=import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -344,134 +351,9 @@ const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A"];
 // ── UNIVERSAL BUSINESS IMPERATIVES ─────────────────────────────────────────
 // Every company — regardless of industry, size, or stage — is always working on these.
 // Use these to anchor discovery, solution mapping, and hypothesis framing.
-const OUTCOMES = [
-  // ── The Six Universal Imperatives ──
-  {id:"grow",        icon:"📈", title:"Grow",                    sub:"Revenue, new logos, market share, pipeline — the universal mandate"},
-  {id:"expand",      icon:"🌐", title:"Expand",                  sub:"Existing customers, new geos, new segments, platform adoption"},
-  {id:"comply",      icon:"⚖️", title:"Stay Compliant",          sub:"Regulatory mandates, audit readiness, risk reduction, legal exposure"},
-  {id:"fraud",       icon:"🔒", title:"Reduce Fraud & Risk",     sub:"Financial exposure, trust protection, data integrity, brand safety"},
-  {id:"investors",   icon:"💼", title:"Appease Investors",       sub:"IRR, EBITDA, multiples, board narrative, PE/VC reporting"},
-  {id:"cx",          icon:"❤️", title:"Make Customers Happy",    sub:"NPS, CSAT, retention, loyalty, churn reduction, customer lifetime value"},
-  // ── Operational & Strategic ──
-  {id:"efficiency",  icon:"↻",  title:"Operational Efficiency",  sub:"Automation, cost reduction, process improvement, headcount leverage"},
-  {id:"workforce",   icon:"✦",  title:"Workforce & Talent",      sub:"HR ops, engagement, retention, performance management"},
-  {id:"ai",          icon:"◇",  title:"Data & AI Adoption",      sub:"Analytics, AI tooling, automation, insight generation"},
-  {id:"brand",       icon:"☆",  title:"Brand & Marketing",       sub:"Awareness, loyalty, campaign performance, demand generation"},
-  {id:"cost",        icon:"-",  title:"Cost Reduction",          sub:"Overhead, vendor consolidation, margin improvement"},
-  {id:"innovation",  icon:"◆",  title:"Innovation & Product",    sub:"New product lines, R&D, speed to market, competitive differentiation"},
-  {id:"transform",   icon:"◇",  title:"Strategic Transformation",sub:"Org change, M&A integration, modernization, digital transformation"},
-];
 
 // The 6 universal imperatives every company shares — used for pre-selecting baseline outcomes
-const UNIVERSAL_IMPERATIVES = ["grow","expand","comply","fraud","investors","cx"];
 
-const SAMPLE_ROWS = [
-  // ── Fortune 1000 / Public Enterprise ─────────────────────────────────────
-  {company:"Nike Inc.",industry:"Consumer Goods / Apparel",acv:"280000",lead_source:"Outbound",outcome:"Digital transformation",company_url:"nike.com",employees:"~80,000",publicPrivate:"Public (NYSE: NKE)"},
-  {company:"Target Corporation",industry:"Retail",acv:"320000",lead_source:"Partner",outcome:"Operational efficiency",company_url:"target.com",employees:"~400,000",publicPrivate:"Public (NYSE: TGT)"},
-  {company:"Marriott International",industry:"Hospitality",acv:"240000",lead_source:"Conference",outcome:"Customer experience",company_url:"marriott.com",employees:"~120,000",publicPrivate:"Public (NASDAQ: MAR)"},
-  {company:"Humana Inc.",industry:"Health Insurance",acv:"350000",lead_source:"Referral",outcome:"Member engagement",company_url:"humana.com",employees:"~60,000",publicPrivate:"Public (NYSE: HUM)"},
-  {company:"Aflac",industry:"Supplemental Insurance",acv:"190000",lead_source:"Outbound",outcome:"Digital claims",company_url:"aflac.com",employees:"~10,000",publicPrivate:"Public (NYSE: AFL)"},
-  // ── Large Private Companies ───────────────────────────────────────────────
-  {company:"Cargill",industry:"Agriculture / Food",acv:"420000",lead_source:"Referral",outcome:"Supply chain efficiency",company_url:"cargill.com",employees:"~160,000",publicPrivate:"Private"},
-  {company:"Publix Super Markets",industry:"Grocery Retail",acv:"260000",lead_source:"Partner",outcome:"Workforce productivity",company_url:"publix.com",employees:"~240,000",publicPrivate:"Private (Employee-owned)"},
-  {company:"Fidelity Investments",industry:"Financial Services",acv:"310000",lead_source:"Conference",outcome:"Advisor enablement",company_url:"fidelity.com",employees:"~70,000",publicPrivate:"Private"},
-  {company:"USAA",industry:"Insurance / Financial Services",acv:"380000",lead_source:"Referral",outcome:"Member retention",company_url:"usaa.com",employees:"~36,000",publicPrivate:"Private (Mutual)"},
-  {company:"State Farm Insurance",industry:"Insurance",acv:"290000",lead_source:"Outbound",outcome:"Agent productivity",company_url:"statefarm.com",employees:"~54,000",publicPrivate:"Private (Mutual)"},
-  // ── PE-Backed ─────────────────────────────────────────────────────────────
-  {company:"AssuredPartners",industry:"Insurance Brokerage",acv:"95000",lead_source:"Partner",outcome:"Agency consolidation",company_url:"assuredpartners.com",employees:"~9,000",publicPrivate:"PE-Backed (GTCR)"},
-  {company:"Acrisure",industry:"Insurance Agency",acv:"75000",lead_source:"Referral",outcome:"Tech-enabled growth",company_url:"acrisure.com",employees:"~17,000",publicPrivate:"PE-Backed"},
-  {company:"LifeStance Health",industry:"Behavioral Health",acv:"85000",lead_source:"Outbound",outcome:"Clinical ops",company_url:"lifestance.com",employees:"~8,000",publicPrivate:"Public (NASDAQ: LFST)"},
-  {company:"Confluent Medical",industry:"Medical Devices / Manufacturing",acv:"65000",lead_source:"Conference",outcome:"Compliance automation",company_url:"confluentmedical.com",employees:"~2,500",publicPrivate:"PE-Backed"},
-  // ── Late-Stage / Pre-IPO Startups ─────────────────────────────────────────
-  {company:"Rippling",industry:"HR / Workforce Management SaaS",acv:"55000",lead_source:"Outbound",outcome:"GTM expansion",company_url:"rippling.com",employees:"~3,000",publicPrivate:"VC-Backed (Series F)"},
-  {company:"Brex",industry:"Fintech / Corporate Cards",acv:"48000",lead_source:"Referral",outcome:"Revenue acceleration",company_url:"brex.com",employees:"~1,200",publicPrivate:"VC-Backed (Series D)"},
-  {company:"Plaid",industry:"Fintech / Open Banking",acv:"72000",lead_source:"Partner",outcome:"Partnership expansion",company_url:"plaid.com",employees:"~900",publicPrivate:"VC-Backed (Series D)"},
-  {company:"Carta",industry:"Equity Management SaaS",acv:"60000",lead_source:"Conference",outcome:"Enterprise growth",company_url:"carta.com",employees:"~1,800",publicPrivate:"VC-Backed (Series G)"},
-  {company:"Deel",industry:"Global Payroll / HR SaaS",acv:"90000",lead_source:"Outbound",outcome:"International expansion",company_url:"deel.com",employees:"~4,000",publicPrivate:"VC-Backed (Series D)"},
-  // ── YC Alumni (Operating at Scale) ────────────────────────────────────────
-  {company:"Gusto",industry:"SMB Payroll / HR",acv:"38000",lead_source:"Partner",outcome:"Partner channel growth",company_url:"gusto.com",employees:"~2,500",publicPrivate:"VC-Backed (YC W12)"},
-  {company:"Airbase",industry:"Spend Management SaaS",acv:"42000",lead_source:"Referral",outcome:"Enterprise upmarket",company_url:"airbase.com",employees:"~400",publicPrivate:"VC-Backed (YC W18)"},
-  {company:"Ramp",industry:"Fintech / Expense Management",acv:"50000",lead_source:"Outbound",outcome:"Expansion revenue",company_url:"ramp.com",employees:"~900",publicPrivate:"VC-Backed (YC S19)"},
-  // ── Regional / Mid-Market ─────────────────────────────────────────────────
-  {company:"First Business Financial",industry:"Regional Banking",acv:"140000",lead_source:"Referral",outcome:"Commercial lending growth",company_url:"firstbusiness.com",employees:"~700",publicPrivate:"Public (NASDAQ: FBIZ)"},
-  {company:"Marcum LLP",industry:"Accounting / Advisory",acv:"70000",lead_source:"Conference",outcome:"Client portal modernization",company_url:"marcumllp.com",employees:"~4,500",publicPrivate:"Private"},
-  {company:"Inland Empire Health Plan",industry:"Managed Care / Health Insurance",acv:"220000",lead_source:"Outbound",outcome:"Member services",company_url:"iehp.org",employees:"~3,000",publicPrivate:"Private (Non-profit)"},
-];
-const RIVER_STAGES = [
-  {id:"R1",letter:"R",label:"Reality",sub:"Current state — where are they broken?",
-    gates:[
-      {id:"r1_current",q:"How is the prospect handling this problem today?",options:["Manual / spreadsheets / no system","Legacy tool they've outgrown","Patchwork of multiple vendors","Competitor solution underperforming","No process at all"]},
-      {id:"r1_urgency",q:"What's driving urgency to solve this now?",options:["Executive mandate / top-down pressure","Recent failure or incident","Growth has exposed the gap","Competitive pressure","Budget cycle opening up","No clear urgency yet"]},
-      {id:"r1_mustHave",q:"Must-have or nice-to-have? (Ellis 40% Rule)",options:["Must-have — they'd be very disappointed without a solution","Strong preference — would find workarounds","Nice-to-have — helpful but not urgent","Unclear — needs more discovery"]},
-    ],
-    discovery:[
-      {id:"r_pain",label:"In their own words, what is the core pain?",hint:"Capture exact language — use verbatim in proposal"},
-      {id:"r_tried",label:"What have they already tried? Why did it fail?",hint:"Understand the graveyard before pitching"},
-    ],
-    talkTrack:'"Before I share anything about us — help me understand what this looks like for your team today. Walk me through it."',
-    objections:[
-      {q:"We already have something in place",a:'"What\'s working well — and where does it fall short? I want to understand the gap before assuming we\'re a fit."'},
-      {q:"Not sure this is a priority",a:'"What would need to change for it to become one? Is there an event or timeline that would accelerate things?"'},
-    ]},
-  {id:"I",letter:"I",label:"Impact",sub:"What does this cost them — in dollars, time, people?",
-    gates:[
-      {id:"i_cost",q:"Have they quantified the cost of this problem?",options:["Yes — hard numbers","Partial — sense of it but not exact","No — haven't calculated it","Don't think it's costing much"]},
-      {id:"i_owner",q:"Who feels this pain most acutely?",options:["C-Suite / Executive","Revenue / Sales leadership","Operations / HR leadership","Finance / CFO","End users / frontline","Multiple stakeholders equally"]},
-    ],
-    discovery:[
-      {id:"i_dollars",label:"Measurable cost of inaction? (revenue, time, headcount, churn)",hint:"Push for a number — even rough is better than nothing"},
-      {id:"i_softer",label:"Softer costs? (morale, reputation, missed opportunity)",hint:"These often matter more to champions than hard numbers"},
-    ],
-    talkTrack:'"When this breaks down, what actually happens downstream? Has anyone put a number on it yet?"',
-    objections:[
-      {q:"We don't know what it's costing us",a:'"Let\'s build that together. Headcount × time lost — what does that math look like?"'},
-      {q:"The cost seems manageable",a:'"What would make it unmanageable? What\'s your threshold?"'},
-    ]},
-  {id:"V",letter:"V",label:"Vision",sub:"What does success look like — and who owns it?",
-    gates:[
-      {id:"v_outcome",q:"Can they articulate success in 90 days?",options:["Yes — specific and measurable","Somewhat — directional not specific","No — not defined yet","Different definitions across stakeholders"]},
-      {id:"v_champion",q:"Is there a clear internal champion?",options:["Yes — identified and motivated","Potential — needs equipping","No champion yet","Multiple potential champions"]},
-    ],
-    discovery:[
-      {id:"v_success",label:"In their words: what does a win look like at Day 30, 90, Year 1?",hint:"This becomes your proposal headline — use their exact language"},
-      {id:"v_champion_detail",label:"Who is the champion? What do they personally win if this succeeds?",hint:"Champions need a personal win, not just an organizational one"},
-    ],
-    talkTrack:'"If this were working the way it should — what would that look like for your team week to week?"',
-    objections:[
-      {q:"Not sure what success looks like",a:'"That\'s the most important thing to define before you sign anything. Can we spend 10 minutes on that?"'},
-      {q:"Different stakeholders want different things",a:'"Who has final say on what success means? Is there a shared outcome everyone agrees on?"'},
-    ]},
-  {id:"E",letter:"E",label:"Entry Points",sub:"Who decides, who influences, what triggers a yes?",
-    gates:[
-      {id:"e_buyer",q:"Have you identified the economic buyer?",options:["Yes — met or confirmed","Probable — know the role","No — working through layers","Unclear org structure"]},
-      {id:"e_threading",q:"How many stakeholders are engaged? (Churn predictor)",options:["3-5 — ideal range","1-2 — single-threaded (high churn risk)","6-7 — manageable with named champion","8+ without named owner — low close probability","Unknown"]},
-      {id:"e_process",q:"What does their decision process look like?",options:["Clear — defined steps and timeline","Informal — champion can move it","Committee / consensus required","RFP or formal procurement","Unknown"]},
-    ],
-    discovery:[
-      {id:"e_stakeholders",label:"Map the buying committee: who approves, influences, can kill it?",hint:"Name every stakeholder — flag the ones you haven't met"},
-      {id:"e_timeline",label:"Realistic decision timeline? Is there a forcing function?",hint:"Budget cycle, renewal date, board review — find the date"},
-    ],
-    talkTrack:'"Who else feels this the most? And how do decisions like this typically get made here?"',
-    objections:[
-      {q:"Need to get more people involved",a:'"Who are the right people? I\'d rather get them in early. Can we set up a 30-min call this week?"'},
-      {q:"This will go through procurement",a:'"What does that process look like? I want to make sure we have everything they need ready."'},
-    ]},
-  {id:"R2",letter:"R",label:"Route",sub:"Fastest path to yes — and a successful Day 1",
-    gates:[
-      {id:"r2_fit",q:"Your honest deal assessment?",options:["Strong fit — ready to advance","Good fit — a few gaps","Uncertain — need more discovery","Weak fit — misalignment","Not a fit"]},
-      {id:"r2_blocker",q:"Single biggest risk to this deal?",options:["No internal champion","Budget not confirmed","Competitor entrenched","Timeline mismatch","Stakeholder misalignment","Technical / compliance barrier","No compelling event"]},
-    ],
-    discovery:[
-      {id:"r2_next",label:"Single most important next step?",hint:"Named action + named person + named date"},
-      {id:"r2_onboard",label:"What does a successful onboarding look like for them?",hint:"This becomes your close framing and CSM handoff brief"},
-    ],
-    talkTrack:'"Based on what you\'ve shared, here\'s what I\'d suggest as a starting point — does that feel right from where you sit?"',
-    objections:[
-      {q:"Not ready to move forward",a:'"What would need to change? Is this timing or something more fundamental?"'},
-      {q:"Need to think about it",a:'"What specifically? If I can help you work through it now, it might save us both a few weeks."'},
-    ]},
-];
 
 const BLANK_BRIEF = {
   companySnapshot:"",sellerSnapshot:"",
@@ -2068,11 +1950,11 @@ SELLER: `+sellerCtx.slice(0,300)+`
       "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting.\n" +
       "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
       "BUYER EXPERIENCE FRAMEWORK (Gartner 2023 — 1,700 buyers): Buyers spend only 17% of time with vendors. Every interaction must create value they can't get from online research. The rep who wins: (1) already knows their industry, (2) challenges their thinking without arrogance, (3) shows proof from similar companies, (4) makes the next step obvious and small, (5) asks about their world not their product.\n" +
-      "JOLT EFFECT (Dixon/McKenna): Indecision kills 40-60% of B2B deals.
-VOSS (Never Split the Difference): Talk tracks must use calibrated "How/What" questions. Never yes/no. Use tactical empathy — name their emotion before advancing your agenda. The Accusation Audit: name every objection they might have before they raise it.
-FISHER/URY (Getting to Yes): Surface interests not positions. When price comes up, ask "What's driving that number?" before responding. Always have a creative option ready (pilot, phased, success-based).
-SUN TZU (Art of War): Know their competitive alternatives before the call. Attack where they are unprepared — the underserved stakeholder, not the gatekeeper. Speed kills deals — recommend the smallest first step.
-CIALDINI (Influence): Open with social proof from their exact industry. Establish authority with specific data. Create legitimate scarcity with real deadlines (regulatory, budget cycle, competitive). FOMU (Fear of Messing Up) > FOMO. Route stage MUST include: J=Judge the indecision explicitly, O=Offer YOUR recommendation (one clear POV, not options), L=Limit exploration (narrow scope), T=Take risk off the table (pilot, SLA, phased rollout, reference customer).\n" +
+      "JOLT EFFECT (Dixon/McKenna): Indecision kills 40-60% of deals. FOMU > FOMO. Route: J=Judge indecision, O=One clear recommendation, L=Limit scope, T=Take risk off table (pilot/SLA/phased).\n" +
+      "VOSS: Calibrated How/What questions only. Tactical empathy — name emotion before agenda. Accusation Audit: name objections before they raise them.\n" +
+      "FISHER/URY: Surface interests not positions. When price comes up ask what is driving that number. Always have pilot/phased option ready.\n" +
+      "SUN TZU: Know competitive alternatives before call. Find underserved stakeholder not gatekeeper. Recommend smallest first step.\n" +
+      "CIALDINI: Social proof from exact industry. Authority via specific data. Real scarcity only — regulatory deadlines, budget cycles.\n" +
       "CHALLENGER CUSTOMER (CEB/Gartner): Identify the MOBILIZER — not the Talker or Blocker. Only 13% of stakeholders are Mobilizers. They ask 'how do we make this happen?'. Teach an insight to the ORGANIZATION through the Mobilizer. The teaching angle must challenge a widely-held assumption about their industry.\n" +
       "QUALIFICATION SIGNALS: referral/partner deals close 30%+ higher; funding <12 months = 18-month buying window; single-threaded prospect = 3x churn risk; SMB 30-45 day cycles, Mid-market 60-90, Enterprise 90-180; Ellis 40% must-have test is the critical qualifier.\n" +
       "TIER 1 TARGET RULES:\n" +
