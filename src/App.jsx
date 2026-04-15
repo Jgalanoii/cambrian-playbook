@@ -166,23 +166,16 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .setup-url-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-3); white-space: nowrap; min-width: 72px; }
 .setup-url-input { border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink-0); outline: none; width: 100%; padding: 7px 0; }
 
-/* ── AUTH / LOGIN (v105) ─────────────────────────────────
-   Calmer gradient; larger logo; tagline; token-native
-   inputs. Tab switcher below inherits from design system. */
-.pw-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(ellipse at top left, rgba(139,111,71,0.08) 0%, transparent 60%), radial-gradient(ellipse at bottom right, rgba(27,58,107,0.06) 0%, transparent 60%), var(--bg-0); }
-.pw-card { background: var(--surface); border: 1px solid var(--line-0); border-radius: var(--r-lg); padding: 40px 36px 28px; width: 100%; max-width: 420px; box-shadow: var(--sh-3); }
-.pw-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: var(--tan-0); background: var(--tan-3); padding: 4px 10px; border-radius: var(--r-pill); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 12px; }
-.pw-logo { font-family: 'Lora', serif; font-size: 30px; color: var(--ink-0); margin-bottom: 8px; letter-spacing: -0.4px; line-height: 1.1; }
-.pw-logo span { color: var(--tan-0); }
-.pw-tagline { font-size: 14px; color: var(--ink-1); line-height: 1.5; margin-bottom: 24px; }
-.pw-sub { font-size: 13px; color: var(--ink-2); margin-bottom: 24px; }
-.pw-tabs { display: flex; background: var(--bg-2); border-radius: var(--r-md); padding: 3px; margin-bottom: 18px; }
-.pw-tab { flex: 1; padding: 8px 0; border-radius: calc(var(--r-md) - 3px); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; background: transparent; color: var(--ink-2); transition: all var(--t-fast) var(--ease); }
+/* ── AUTH / LOGIN (v106) ─────────────────────────────────
+   Login is rendered inside the standard app shell — header,
+   .page, .page-title, .page-sub, .card. Only three helper
+   classes are specific to it: the segmented tab switcher,
+   the inline error message, and the subtle guest link. */
+.pw-tabs { display: flex; background: var(--bg-2); border-radius: var(--r-md); padding: 3px; }
+.pw-tab { flex: 1; padding: 9px 0; border-radius: calc(var(--r-md) - 3px); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; background: transparent; color: var(--ink-2); transition: all var(--t-fast) var(--ease); }
 .pw-tab.active { background: var(--surface); color: var(--ink-0); box-shadow: var(--sh-1); }
-.pw-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--line-0); border-radius: var(--r-md); font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink-0); outline: none; margin-bottom: 10px; background: var(--surface); transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
-.pw-input:focus { border-color: var(--tan-0); box-shadow: var(--sh-ring); }
+.pw-tab:hover:not(.active) { color: var(--ink-0); }
 .pw-error { font-size: 12px; color: var(--red); background: var(--red-bg); padding: 8px 10px; border-radius: var(--r-sm); margin-bottom: 10px; }
-.pw-footer { text-align: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-0); }
 .pw-guest { background: none; border: none; font-size: 12px; color: var(--ink-3); cursor: pointer; font-family: inherit; }
 .pw-guest:hover { color: var(--ink-1); text-decoration: underline; }
 
@@ -1143,57 +1136,94 @@ function PasswordGate({ onAuth }) {
     setLoading(false);
   };
 
-  if(verifying) return(
-    <div className="pw-gate"><style>{FONTS}</style>
-      <div className="pw-card" style={{textAlign:"center"}}>
-        <div style={{fontSize:36,marginBottom:14}}>📬</div>
-        <div className="pw-logo" style={{fontSize:24}}>Check your email</div>
-        <div className="pw-tagline">We sent a verification link to <strong style={{color:"var(--ink-0)"}}>{email}</strong>. Click it, then come back and sign in.</div>
-        <button className="btn btn-secondary" style={{width:"100%",justifyContent:"center"}} onClick={()=>{setVerifying(false);setMode("signin");}}>← Back to Sign In</button>
-      </div>
+  // Login is rendered in the SAME app shell as the rest of the app: the
+  // standard .header (with just the logo — no stepper because there's no
+  // session yet), the standard .page container, .page-title/.page-sub
+  // typography, and a .card for the form. Same patterns, same tokens.
+  const AppShell = ({ children }) => (
+    <div className="app">
+      <style>{FONTS}{css}</style>
+      <header className="header">
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          <div className="logo">Cambrian <span>Catalyst</span></div>
+          <div style={{fontSize:9,letterSpacing:"0.7px",color:"var(--ink-3)",fontWeight:700,textTransform:"uppercase"}}>
+            Reality · Impact · Vision · Entry · Route
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:700,color:"var(--tan-0)",letterSpacing:"0.5px",textTransform:"uppercase"}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:"var(--tan-0)"}}/>
+          Private Beta
+        </div>
+      </header>
+      {children}
+      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA</footer>
     </div>
   );
 
-  return(
-    <div className="pw-gate"><style>{FONTS}</style>
-      <div className="pw-card">
-        <div className="pw-eyebrow">● Private Beta</div>
-        <div className="pw-logo">Cambrian <span>Catalyst</span></div>
-        <div className="pw-tagline">Turn the next 1,000 accounts into your next 10 wins. AI-guided discovery from first account to closed deal.</div>
+  if(verifying) return (
+    <AppShell>
+      <div className="page" style={{maxWidth:520,paddingTop:48}}>
+        <div className="card" style={{textAlign:"center",padding:"36px 28px"}}>
+          <div style={{fontSize:38,marginBottom:12}}>📬</div>
+          <div className="page-title" style={{marginBottom:8}}>Check your email</div>
+          <div className="page-sub" style={{margin:"0 auto 20px"}}>
+            We sent a verification link to <strong style={{color:"var(--ink-0)"}}>{email}</strong>. Click it, then come back and sign in.
+          </div>
+          <button className="btn btn-secondary" onClick={()=>{setVerifying(false);setMode("signin");}}>← Back to Sign In</button>
+        </div>
+      </div>
+    </AppShell>
+  );
 
-        <div className="pw-tabs" role="tablist">
-          {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
-            <button key={m} role="tab" aria-selected={mode===m}
-              className={`pw-tab ${mode===m?"active":""}`}
-              onClick={()=>{setMode(m);setErr("");}}>
-              {label}
-            </button>
-          ))}
+  return (
+    <AppShell>
+      <div className="page" style={{maxWidth:480,paddingTop:48}}>
+        <div className="page-title">
+          {mode==="signup" ? "Create your account" : "Welcome back"}
+        </div>
+        <div className="page-sub">
+          {mode==="signup"
+            ? "Start building account briefs, RIVER hypotheses, and post-call routing in minutes. Free during the private beta."
+            : "Sign in to continue your sales intelligence work."}
         </div>
 
-        {mode==="signup" && (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <input className="pw-input" placeholder="First name" value={first} onChange={e=>setFirst(e.target.value)} autoFocus/>
-            <input className="pw-input" placeholder="Last name" value={last} onChange={e=>setLast(e.target.value)}/>
+        <div className="card" style={{padding:22}}>
+          <div className="pw-tabs" role="tablist" style={{marginBottom:18}}>
+            {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
+              <button key={m} role="tab" aria-selected={mode===m}
+                className={`pw-tab ${mode===m?"active":""}`}
+                onClick={()=>{setMode(m);setErr("");}}>
+                {label}
+              </button>
+            ))}
           </div>
-        )}
-        <input className="pw-input" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()}/>
-        <input className="pw-input" type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
-        {err && <div className="pw-error">{err}</div>}
 
-        <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}}
-          onClick={submit}
-          disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
-          {loading?(mode==="signup"?"Creating account…":"Signing in…"):(mode==="signup"?"Create Account →":"Sign In →")}
-        </button>
+          {mode==="signup" && (
+            <div className="field-grid-2" style={{marginBottom:10}}>
+              <input placeholder="First name" value={first} onChange={e=>setFirst(e.target.value)} autoFocus/>
+              <input placeholder="Last name"  value={last}  onChange={e=>setLast(e.target.value)}/>
+            </div>
+          )}
+          <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}}/>
+          <input type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>
 
-        <div className="pw-footer">
+          {err && <div className="pw-error">{err}</div>}
+
+          <button className="btn btn-primary btn-lg"
+            style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}}
+            onClick={submit}
+            disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
+            {loading ? (mode==="signup"?"Creating account…":"Signing in…") : (mode==="signup"?"Create Account →":"Sign In →")}
+          </button>
+        </div>
+
+        <div style={{textAlign:"center",marginTop:16}}>
           <button className="pw-guest" onClick={()=>setGuestOk(true)}>
             Continue as guest · work won't be saved
           </button>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 

@@ -8,6 +8,9 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ## [v105-ux-polish] — 2026-04-15
 
+### Fixed (same-day patch)
+- **Login page now uses the app shell.** First v105 shipped a bespoke gated splash (custom gradient, custom card, custom logo/tagline/eyebrow classes) that didn't share the app's design language — user feedback was "looks like it's from 1984." Rebuilt using the standard `.app` > `.header` > `.page` > `.page-title` / `.page-sub` > `.card` > `.btn` pattern that every authenticated page uses. Only three login-specific classes remain (`.pw-tabs` segmented control, `.pw-error` inline alert, `.pw-guest` subtle link). No more separate visual system. Header shows the logo + "Private Beta" badge, `.page` centers at 480px, `.card` holds the form, the footer matches the rest of the app.
+
 ### Added
 - **Design tokens** (`:root { --... }`) at the top of the stylesheet. Single source of truth for colors, radii, shadows, motion. 12 semantic tokens replace 40+ scattered hex literals. Documented inline — adding a raw hex color now means first adding a token.
 - **Redesigned stepper**: 24px filled circles, connecting rails that fill as you progress (tan when completed, half-tan-half-gray on the active rail), active step gets a subtle focus ring + slight scale. Real `<button>` elements with proper `disabled` + `aria-current` instead of clickable divs. Labels hide on small screens to keep it scrollable without crowding.
