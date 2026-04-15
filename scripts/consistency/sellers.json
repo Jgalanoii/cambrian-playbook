@@ -5,6 +5,7 @@
     { "url": "savvi.ai", "stage": "seed", "notes": "Active client — ABM engagement" },
     { "url": "tango.com", "stage": "series-c", "notes": "Joe's prior employer — digital rewards" },
     { "url": "gong.io", "stage": "series-e", "notes": "Well-known revenue intelligence seller" },
-    { "url": "linear.app", "stage": "series-b", "notes": "PLG SaaS — different ICP shape" }
+    { "url": "linear.app", "stage": "series-b", "notes": "PLG SaaS — different ICP shape" },
+    { "url": "tillo.com", "stage": "unknown", "notes": "Obscure seller — regression test for web_search Phase 1" }
   ]
 }

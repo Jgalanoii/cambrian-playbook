@@ -46,7 +46,20 @@ const N = parseInt(process.env.N || "5", 10);
 const SELLER_FILTER = process.env.SELLER || null;
 
 // ── Anthropic API call ───────────────────────────────────────────────────────
-async function anthropic({ prompt, maxTokens, assistantPrefill = "{" }) {
+// `withSearch` enables web_search tool and disables assistant-prefill (tool
+// use can't start with a forced "{"). Used for Phase 1 research.
+async function anthropic({ prompt, maxTokens, assistantPrefill = "{", withSearch = false }) {
+  const body = {
+    model: MODEL,
+    max_tokens: maxTokens,
+    temperature: 0,
+    messages: withSearch
+      ? [{ role: "user", content: prompt }]
+      : [{ role: "user", content: prompt }, { role: "assistant", content: assistantPrefill }],
+  };
+  if (withSearch) {
+    body.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }];
+  }
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -54,23 +67,19 @@ async function anthropic({ prompt, maxTokens, assistantPrefill = "{" }) {
       "x-api-key": API_KEY,
       "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: maxTokens,
-      temperature: 0,
-      messages: [
-        { role: "user", content: prompt },
-        { role: "assistant", content: assistantPrefill },
-      ],
-    }),
+    body: JSON.stringify(body),
   });
   const d = await res.json();
   if (d.error) {
     console.error("API error:", d.error);
     return { raw: "", usage: null, error: d.error };
   }
-  const raw = (d.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
-  return { raw: assistantPrefill + raw, usage: d.usage || null };
+  const raw = (d.content || [])
+    .filter(b => b.type === "text" || b.type === "tool_result")
+    .map(b => (b.type === "text" ? b.text : (b.content?.[0]?.text || "")))
+    .join(" ")
+    .trim();
+  return { raw: withSearch ? raw : assistantPrefill + raw, usage: d.usage || null };
 }
 
 function parseJSON(text) {
@@ -83,18 +92,19 @@ function parseJSON(text) {
 async function generateICP(sellerUrl, sellerStage) {
   const url = sellerUrl.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
 
-  // Phase 1 — research (no web_search tool, so just training-knowledge recall at temp:0)
+  // Phase 1 — uses web_search tool (critical for obscure sellers)
   const researchPrompt =
-    `Search for information about the B2B company at ${url}:\n` +
-    `1. What do they sell? Who are their target customers?\n` +
-    `2. Look for: customer case studies, testimonials, customer logos, pricing tiers, partner pages\n` +
-    `3. Look for: job postings mentioning target industries or company sizes\n` +
-    `4. Any known enterprise customers, verticals served, or use cases\n` +
-    `Return ONLY raw JSON, start with {:\n` +
+    `You are researching the B2B company at https://${url} to inform an Ideal Customer Profile build.\n` +
+    `Use the web_search tool to find the company's actual website, press mentions, LinkedIn, and customer logos.\n` +
+    `Search queries to try:\n` +
+    `1. "${url}" products OR solutions — what they sell and to whom\n` +
+    `2. "${url}" customers OR case studies — named customer logos\n` +
+    `3. site:${url} careers OR jobs — reveals target industries and company sizes they serve\n` +
+    `After searching, return ONLY raw JSON (no prose, no commentary):\n` +
     `{"companyName":"","tagline":"","products":["product 1","product 2"],"targetCustomers":"who they sell to in plain language","knownCustomers":["logo 1","logo 2","logo 3"],"industries":["vertical 1","vertical 2","vertical 3"],"companySize":"typical customer size","pricingHint":"any pricing signals found","useCases":["use case 1","use case 2"],"competitors":["competitor 1","competitor 2"]}`;
 
-  const r1 = await anthropic({ prompt: researchPrompt, maxTokens: 800 });
-  const researchCtx = r1.raw.slice(0, 1500);
+  const r1 = await anthropic({ prompt: researchPrompt, maxTokens: 2000, withSearch: true });
+  const researchCtx = r1.raw.slice(0, 2000);
 
   // Phase 2 — anchored schema with enum buckets for numeric/categorical fields
   const icpPrompt =
