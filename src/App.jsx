@@ -1804,20 +1804,47 @@ SELLER: `+sellerCtx.slice(0,300)+`
 
     const industries = sellerICP.icp.industries||[];
     const category = sellerICP.marketCategory||"";
-    const prompt = `You are a procurement intelligence analyst. Based on this seller profile:
+    // Previously this prompt said "Focus on USA (SAM.gov/federal), EU (TED),
+    // and major multilateral orgs (World Bank, UN)." That produced only
+    // government RFPs, and no isGovernment field on the response — which
+    // made the Private filter falsely show 100% of rows (undefined !== true)
+    // and the Government filter falsely show 0%. Now we require BOTH
+    // classes, explicit isGovernment flags, and a web_search tool so
+    // "awardedTo" pulls from real SAM.gov / FPDS-NG / press instead of from
+    // Haiku's training recall.
+    const prompt = `You are a procurement intelligence analyst. For the seller below, use web_search to find REAL, recent RFP activity — both government and private/commercial — that matches their ICP.
+
 SELLER: ${sellerUrl}
 MARKET CATEGORY: ${category}
 TARGET INDUSTRIES: ${industries.join(", ")}
 
-Generate realistic RFP intelligence in two categories:
+Return BOTH classes of RFPs — roughly balanced, not just government:
 
-1. OPEN RFPs — Active opportunities likely relevant to this seller RIGHT NOW (last 30 days)
-2. CLOSED RFPs — Awarded contracts from last 18 months showing who bought what
+PRIVATE / COMMERCIAL sources to consider:
+  - Ariba Discovery, Coupa Compass, Jaggaer, SAP Fieldglass
+  - Fortune 500 corporate procurement portals
+  - Industry marketplaces (GHX for healthcare, etc.)
+  - Press releases announcing vendor selections / RFP awards
+  → set isGovernment: false
 
-For each RFP use real government agency names and realistic values. Focus on USA (SAM.gov/federal), EU (TED), and major multilateral orgs (World Bank, UN).
+GOVERNMENT sources to consider:
+  - USA: SAM.gov (active), FPDS-NG / USAspending.gov (awarded)
+  - EU: TED Europa (cross-border public tenders)
+  - Multilateral: World Bank, UNGM, Asian Development Bank
+  - State/Local: DemandStar, state procurement portals
+  → set isGovernment: true
 
-Return ONLY raw JSON:
-{"open":[{"title":"RFP title","buyer":"Agency/Org name","country":"USA","source":"SAM.gov","value":"$500K-$2M","deadline":"2026-05-15","relevanceScore":85,"relevanceReason":"Matches fintech payments ICP","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://sam.gov/..."}],"closed":[{"title":"Contract title","buyer":"Agency name","country":"USA","source":"FPDS-NG","awardedTo":"Vendor Inc","value":"$1.2M","awardDate":"2025-08-15","relevanceScore":78,"relevanceReason":"Digital payments platform","cohort":"Financial Services"}]}`;
+DATA INTEGRITY RULES (critical):
+  - Only include RFPs you can ACTUALLY VERIFY via web_search. Do not invent titles, buyers, values, or vendor names.
+  - For closed RFPs, if the awarded vendor cannot be verified from the search results, leave "awardedTo": "" (empty string). Do not guess.
+  - Prefer awards from 2024-2025. Past ~18 months only.
+  - Value ranges should reflect what the source actually shows (e.g. "$500K-$2M" or "$1.2M"), not a guess.
+  - Every row MUST include the isGovernment boolean.
+
+Return 5-8 OPEN and 5-8 CLOSED entries total, roughly half private / half government.
+
+Return ONLY raw JSON (no prose):
+{"open":[{"title":"RFP title","buyer":"Buyer/Agency name","country":"USA","source":"SAM.gov or Ariba etc","isGovernment":true,"value":"$500K-$2M","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why this matches the ICP","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://actual-source-url"}],"closed":[{"title":"Contract title","buyer":"Buyer name","country":"USA","source":"FPDS-NG or press release URL","isGovernment":true,"awardedTo":"Vendor name OR empty string if unverified","value":"$1.2M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Why relevant","cohort":"Financial Services","url":"https://actual-source-url"}]}`;
 
     try {
       const r = await fetch("/api/claude",{
@@ -1825,17 +1852,32 @@ Return ONLY raw JSON:
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
-          max_tokens:3000,
+          max_tokens:4000,
           temperature:0,
-          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+          tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+          messages:[{role:"user",content:prompt}],
         }),
       });
       const d = await r.json();
       if(d.error){setRfpData(p=>({...p,loading:false,error:d.error.message}));return;}
-      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      const jsonStr = "{"+raw;
-      const parsed = JSON.parse(jsonStr);
-      setRfpData({open:parsed.open||[],closed:parsed.closed||[],loading:false,error:null});
+      // With tool use, response contains text + tool_result blocks. Grab the
+      // final text block that should hold our JSON.
+      const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join(" ").trim();
+      const jsonMatch = textBlocks.match(/\{[\s\S]*\}/);
+      if(!jsonMatch){
+        setRfpData(p=>({...p,loading:false,error:"RFP response did not contain JSON — try Refresh."}));
+        return;
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Coerce isGovernment to a real boolean in case the model returns
+      // "true"/"false" strings or omits it on a row.
+      const fixGov = r => ({...r, isGovernment: r.isGovernment === true || r.isGovernment === "true"});
+      setRfpData({
+        open: (parsed.open||[]).map(fixGov),
+        closed: (parsed.closed||[]).map(fixGov),
+        loading: false,
+        error: null,
+      });
     } catch(e){
       setRfpData(p=>({...p,loading:false,error:"Failed to load RFP intel: "+e.message}));
     }
@@ -3223,8 +3265,8 @@ Return ONLY valid JSON:
                 {rfpData.loading&&(
                   <div style={{textAlign:"center",padding:"40px 0"}}>
                     <div className="load-spin" style={{width:28,height:28,borderWidth:3,margin:"0 auto 12px"}}/>
-                    <div style={{fontSize:14,color:"#555"}}>Scanning global RFP databases...</div>
-                    <div style={{fontSize:12,color:"#aaa",marginTop:4}}>SAM.gov · TED Europa · World Bank · UNGM</div>
+                    <div style={{fontSize:14,color:"#555"}}>Scanning RFP sources via live web search...</div>
+                    <div style={{fontSize:12,color:"#aaa",marginTop:4}}>Private: Ariba · Coupa · press releases &nbsp;·&nbsp; Gov: SAM.gov · FPDS-NG · TED Europa</div>
                   </div>
                 )}
                 {rfpData.error&&(
@@ -3241,25 +3283,38 @@ Return ONLY valid JSON:
                 )}
                 {rfpData.open.length>0&&(
                   <>
-                    {/* Toggle */}
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+                    {/* Data-integrity disclaimer */}
+                    <div style={{background:"var(--amber-bg)",border:"1px solid var(--amber)",borderRadius:"var(--r-md)",padding:"8px 12px",marginBottom:14,fontSize:12,color:"var(--tan-ink)",lineHeight:1.5}}>
+                      <strong>Verify before acting.</strong> RFP data is AI-generated from live web search over public sources. Titles, values, and award details can drift from the source. Click through source URLs (when present) to confirm.
+                    </div>
+
+                    {/* Filter toggle */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,flexWrap:"wrap"}}>
                       <span style={{fontSize:12,fontWeight:700,color:"#555"}}>Show:</span>
-                      {[["all","All RFPs"],["private","🏢 Private / Commercial"],["government","🏛 Government"]].map(([val,label])=>(
-                        <button key={val} onClick={()=>setRfpFilter(val)}
-                          style={{padding:"5px 12px",fontSize:11,fontWeight:700,borderRadius:20,border:"1.5px solid",
-                            borderColor:rfpFilter===val?"var(--ink-0)":"var(--line-0)",
-                            background:rfpFilter===val?"var(--ink-0)":"#fff",
-                            color:rfpFilter===val?"#fff":"#555",cursor:"pointer"}}>
-                          {label}
-                        </button>
-                      ))}
+                      {(()=>{
+                        const privateCount = rfpData.open.filter(r=>r.isGovernment===false).length;
+                        const govCount     = rfpData.open.filter(r=>r.isGovernment===true).length;
+                        return [
+                          ["all",        `All RFPs (${rfpData.open.length})`],
+                          ["private",    `🏢 Private / Commercial (${privateCount})`],
+                          ["government", `🏛 Government (${govCount})`],
+                        ].map(([val,label])=>(
+                          <button key={val} onClick={()=>setRfpFilter(val)}
+                            style={{padding:"5px 12px",fontSize:11,fontWeight:700,borderRadius:20,border:"1.5px solid",
+                              borderColor:rfpFilter===val?"var(--ink-0)":"var(--line-0)",
+                              background:rfpFilter===val?"var(--ink-0)":"#fff",
+                              color:rfpFilter===val?"#fff":"#555",cursor:"pointer"}}>
+                            {label}
+                          </button>
+                        ));
+                      })()}
                     </div>
 
                     {/* Open RFPs */}
                     <div style={{marginBottom:24}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🟢 Open RFPs — Active Opportunities</div>
-                        <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).length} shown)</div>
+                        <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).length} shown)</div>
                         <button className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={fetchRFPIntel}>↻ Refresh</button>
                       </div>
                       <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
@@ -3276,10 +3331,14 @@ Return ONLY valid JSON:
                             </tr>
                           </thead>
                           <tbody>
-                            {rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                            {rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
                               <tr key={i}>
                                 <td style={{maxWidth:280}}>
-                                  <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.title}</div>
+                                  <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>
+                                    {r.url ? (
+                                      <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
+                                    ) : r.title}
+                                  </div>
                                   <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
                                 </td>
                                 <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
@@ -3323,14 +3382,20 @@ Return ONLY valid JSON:
                               </tr>
                             </thead>
                             <tbody>
-                              {rfpData.closed.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                              {rfpData.closed.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
                                 <tr key={i}>
                                   <td style={{maxWidth:240}}>
-                                    <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.title}</div>
+                                    <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>
+                                      {r.url ? (
+                                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
+                                      ) : r.title}
+                                    </div>
                                     <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
                                   </td>
                                   <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
-                                  <td style={{fontSize:12,fontWeight:600,color:"var(--tan-0)"}}>{r.awardedTo}</td>
+                                  <td style={{fontSize:12,fontWeight:600,color:r.awardedTo?"var(--tan-0)":"var(--ink-3)",fontStyle:r.awardedTo?"normal":"italic"}}>
+                                    {r.awardedTo || "— unverified"}
+                                  </td>
                                   <td style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
                                   <td style={{fontSize:11,color:"#777",whiteSpace:"nowrap"}}>{r.awardDate}</td>
                                   <td style={{fontSize:11}}>{r.cohort}</td>
@@ -3345,8 +3410,8 @@ Return ONLY valid JSON:
                             </tbody>
                           </table>
                         </div>
-                        <div style={{fontSize:11,color:"#aaa",marginTop:8,fontStyle:"italic"}}>
-                          💡 Awarded To = your displacement target or channel partner opportunity. Check FPDS-NG and TED for full contract details.
+                        <div style={{fontSize:11,color:"#aaa",marginTop:8,fontStyle:"italic",lineHeight:1.5}}>
+                          💡 Awarded To = your displacement target or channel partner opportunity. "— unverified" means search couldn't confirm the vendor; click the title link and check the source (FPDS-NG / USAspending / TED) directly.
                         </div>
                       </div>
                     )}
