@@ -1685,13 +1685,20 @@ Return ONLY raw JSON:
   // ── BUILD SELLER ICP FROM URL ────────────────────────────────────────────
   // Fires when seller URL is entered. Uses training knowledge + web search
   // to understand who this seller actually sells to.
-  // localStorage cache for ICPs — keyed by normalized URL.
+  // localStorage cache for ICPs — keyed by user + normalized URL.
   // Goal: consistency. Once an ICP is built for a seller, reuse it forever
   // unless user explicitly regenerates. Kills drift between sessions.
-  // Bump ICP_CACHE_VERSION if the ICP schema changes — old cached entries
-  // will fall through to regeneration.
+  //
+  // User scope: two users sharing the same browser (kiosk, family machine)
+  // must NOT see each other's cached ICPs. Key includes sbUser.id (or
+  // "guest" for not-logged-in). Bump ICP_CACHE_VERSION if the ICP schema
+  // changes — old entries fall through to regeneration.
   const ICP_CACHE_VERSION = "v2";
-  const icpCacheKey = (u) => `icp:${ICP_CACHE_VERSION}:${u.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"")}`;
+  const icpCacheKey = (u) => {
+    const userScope = sbUser?.id || "guest";
+    const normalizedUrl = u.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
+    return `icp:${ICP_CACHE_VERSION}:${userScope}:${normalizedUrl}`;
+  };
 
   const buildSellerICP = async(rawUrl, {forceRefresh=false}={}) => {
     const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
