@@ -6,6 +6,33 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ---
 
+## [v105-ux-polish] — 2026-04-15
+
+### Added
+- **Design tokens** (`:root { --... }`) at the top of the stylesheet. Single source of truth for colors, radii, shadows, motion. 12 semantic tokens replace 40+ scattered hex literals. Documented inline — adding a raw hex color now means first adding a token.
+- **Redesigned stepper**: 24px filled circles, connecting rails that fill as you progress (tan when completed, half-tan-half-gray on the active rail), active step gets a subtle focus ring + slight scale. Real `<button>` elements with proper `disabled` + `aria-current` instead of clickable divs. Labels hide on small screens to keep it scrollable without crowding.
+- **Login page polish**: larger logo (30px), eyebrow chip (`● Private Beta`), tagline line ("Turn the next 1,000 accounts into your next 10 wins. AI-guided discovery from first account to closed deal."), tab switcher rebuilt on design tokens, tighter input padding, radial-gradient background replacing the old solid-to-green linear. Verification email state also upgraded.
+- **Button lift**: `.btn-primary/-gold/-green/-navy` get a subtle 1px translateY on hover plus elevated shadow. Feels clickable without being flashy.
+
+### Changed
+- Header grew from 52px → 64px to accommodate the larger stepper comfortably. `calc(100vh - 52px)` updated to `-64px` in `.call-layout`.
+- Button padding: 8px 16px → 9px 16px (subtle). `.btn-lg` from 11px 22px → 12px 24px.
+- Page title: 26px → 28px with tighter letter-spacing. Slightly more confident.
+- Focus rings: all focusable inputs now use `--sh-ring` (consistent tan glow) instead of one-off box-shadows.
+- Consolidated cream backgrounds: `#F7F6F2` / `#F8F6F1` / `#FAF8F4` / `#F0EDE6` / `#FAFAF8` / `#F5F3EE` → `--bg-0` · `--bg-1` · `--bg-2`.
+- Consolidated gold shades: `#8B6F47` / `#7A6040` / `#7A5C30` / `#BA7517` / `#C87533` / `#7A5010` → `--tan-0` · `--tan-1` · `--tan-ink` · `--amber`.
+
+### Technical
+- Stepper now uses `React.Fragment` and iterates `[rail, item, rail, item, ...]` instead of nested flex divs. Semantically cleaner.
+- Fixed a pre-existing bug in stepper nav gating: had two `if(i===6)` branches (dead second) and step-index off-by-one on in-call/post-call/solution-fit requirements. Indices now match STEPS array order.
+- Removed ~180 lines of inline styles from the login page in favor of `.pw-*` classes.
+
+### Not changed (scope-limited)
+- Page internals (Brief, ICP, Account Review, In-Call panels). The tokens cascade through the existing CSS classes, so those pages pick up the color consolidation automatically without JSX changes.
+- Inline style attributes elsewhere in App.jsx (`style={{...}}`) still use raw hexes in some places. Those will migrate as stages get extracted to modules (S8 next, per roadmap).
+
+---
+
 ## [v104-security-hardening] — 2026-04-15
 
 ### Security
