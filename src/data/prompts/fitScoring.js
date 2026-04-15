@@ -1,32 +1,51 @@
 // src/data/prompts/fitScoring.js
 //
 // ⚠️ `buildFitScoringPrompt()` below is NOT IMPORTED BY App.jsx — the live
-// scoreFit() implementation at src/App.jsx ~lines 1691-1760 has its own
-// inline prompt that additionally handles batching (20 accounts/batch),
-// ICP context injection, and the orgSize/ownership enrichment fields.
+// scoreFit() implementation at src/App.jsx has its own inline prompt that
+// additionally handles batching (20 accounts/batch), ICP context injection,
+// and the orgSize/ownership enrichment fields.
 //
-// Treat this file as reference heuristics + a template sketch. Do not
-// edit buildFitScoringPrompt and expect the app behavior to change — the
-// live version must be edited in App.jsx too.
+// Treat this file as a reference map of the underlying fit heuristics. Do
+// not edit buildFitScoringPrompt and expect the app behavior to change —
+// the live version must be edited in App.jsx too.
 //
 // CANONICAL SOURCE:
-//   - scoreFit() batch prompt and response schema: src/App.jsx ~lines 1594-1660
+//   - scoreFit() batch prompt and response schema: src/App.jsx (search for
+//     "SCORE (0-100, single integer)")
 //
 // Model:       claude-haiku-4-5-20251001
 // Max tokens:  1400 per batch
 // Temperature: 0
+//
+// Output language: score is an integer 0-100. label is EXACTLY one of:
+//   "Strong Fit"     (score 75-100)
+//   "Potential Fit"  (score 50-74)
+//   "Poor Fit"       (score  0-49)
+// No "tier", "wall", "band", or "bucket" vocabulary in user-facing text.
 
 export const buildFitScoringPrompt = (sellerCtx, icpContext, companies) => {
   return `You are a B2B sales strategist. Score ICP fit for each company below.
 
-SCORING RULES (apply in order):
-- THE WALL (score 5-15): Automotive/Mfg, Aerospace/Defense, Telecom, Energy/Utilities, Mass Retail >100K, Tier 1 Banks (JPM/BAC/WF)
-- TIER 1 (score 60-75): Large Private Insurance/Finance, Private Professional Services, Regional Banks, Healthcare IT
-- VC-backed target +5pts, PE-backed = cost angle, Private +5pts vs public equivalent
-- >200K employees = procurement wall for Series A-C, score down 15pts
-- Recent funding <12mo = buying signal +8pts
+SCORE BAND → LABEL (score MUST match label):
+- 75-100 → "Strong Fit"     — clear ICP match, buyer accessible, reasonable cycle
+- 50-74  → "Potential Fit"  — partial match, needs specific angle
+- 0-49   → "Poor Fit"       — structural barrier (wrong size, industry, incumbent lock)
 
-SELLER: ${sellerCtx.slice(0,300)}
+INTERNAL SIGNALS (inform the score — do NOT echo these phrases in 'reason'):
+- High-friction industries (score 5-25): heavy manufacturing, aerospace/defense prime,
+  telecom incumbents, energy/utilities, mass-market retail >100K employees, top-5 US banks.
+- Underserved high-fit segments (score 60-80): large private insurance/finance, private
+  professional services, regional/community banks, healthcare IT, CPG personal care.
+- VC-backed target +5 · PE-backed = cost/margin-driven buyer · Private +5 vs public peer.
+- >200K employees and seller is Seed/Series A: procurement barrier, -15.
+- Target raised <12 months: active buying window +8.
+
+OUTPUT LANGUAGE RULES:
+- 'label' must be exactly one of "Strong Fit" | "Potential Fit" | "Poor Fit".
+- 'reason' is ONE plain-English sentence. No "tier", "wall", "band", "bucket".
+- Do not include the score number in the reason.
+
+SELLER: ${sellerCtx.slice(0, 300)}
 ${icpContext}
 For orgSize: provide approximate employee count range.
 
@@ -35,33 +54,34 @@ ${companies}
 `;
 };
 
-// ── 6M-permutation fit heuristics (live source of truth for human scoring) ────
-// Pulled from the underlying research dataset. These numbers are the reason
-// the ICP scoring guidance exists at all — they represent avg fit rates
-// observed across 4,634 YC companies × 1,156 enterprise targets.
+// ── Research heuristics (reference data — drives score-band decisions) ────────
+// Numbers below reflect average fit rates from the underlying dataset
+// (~4,600 YC companies × 1,150 enterprise targets). These are INTERNAL
+// guidance for how the scoreFit prompt decides a band. They are NOT exposed
+// in user-facing output — labels and reason text are plain language only.
 
 export const FIT_SCORING_RULES = {
-  wall: {
-    description: "Industries where ~100% of startup scenarios score poorly",
+  highFriction: {
+    description: "Industries where ~100% of early-stage startup scenarios score poorly",
     industries: [
-      { name: "Automotive/Manufacturing",     avgFit: 5.9,  reason: "65% union, incumbent ERP" },
-      { name: "Aerospace & Defense Prime",    avgFit: 5.8,  reason: "ITAR, clearance, FedRAMP required" },
-      { name: "Telecom (AT&T/Verizon)",       avgFit: 6.1,  reason: "50% union, 5-deep incumbent stack" },
-      { name: "Energy Oil & Gas",             avgFit: 11.3, reason: "Culture mismatch, union risk" },
-      { name: "Energy Utilities",             avgFit: 13.4, reason: "60% union, regulatory lock-in" },
-      { name: "Mass Market Retail >100K",     avgFit: 13.6, reason: "Procurement wall" },
-      { name: "Tier 1 Banks (JPM/BAC/WF)",    avgFit: 12.6, reason: "Incumbent depth 5/5, RFP-only" },
+      { name: "Heavy Manufacturing / Automotive", avgFit: 5.9,  reason: "Unionized workforce, entrenched ERP" },
+      { name: "Aerospace & Defense Prime",        avgFit: 5.8,  reason: "ITAR, security clearance, FedRAMP required" },
+      { name: "Telecom Incumbents",               avgFit: 6.1,  reason: "Unionized, 5-deep incumbent stack" },
+      { name: "Energy — Oil & Gas",               avgFit: 11.3, reason: "Culture mismatch, union risk" },
+      { name: "Energy — Utilities",               avgFit: 13.4, reason: "Unionized, regulatory lock-in" },
+      { name: "Mass-Market Retail >100K employees", avgFit: 13.6, reason: "Hardened procurement, low tolerance for novelty" },
+      { name: "Top-5 US Banks",                   avgFit: 12.6, reason: "Deep incumbents, RFP-gated procurement" },
     ],
   },
-  tier1: {
-    description: "Highest fit for startup sellers — underserved categories",
+  highFit: {
+    description: "Highest fit for startup sellers — underserved segments",
     industries: [
       { name: "Large Private Insurance/Finance",     avgFit: 65.2, examples: "State Farm, TIAA, Nationwide" },
       { name: "Large Private Tech/Data/Media",       avgFit: 64.5, examples: "Bloomberg, Valve, SAS" },
       { name: "Large Private Professional Services", avgFit: 63.3, examples: "Deloitte US, EY, KPMG" },
-      { name: "Insurance P&C/Life/Specialty",        avgFit: 62.5, examples: "Allstate, Progressive, Travelers" },
-      { name: "CPG HPC/Beauty",                      avgFit: 61.9, examples: "P&G, Kimberly-Clark, Estee Lauder" },
-      { name: "Regional/Community Banks",            avgFit: 59.5, note:     "85 Fortune-1000 targets, widely ignored by startups" },
+      { name: "Insurance (P&C / Life / Specialty)",  avgFit: 62.5, examples: "Allstate, Progressive, Travelers" },
+      { name: "CPG — Personal Care / Beauty",        avgFit: 61.9, examples: "P&G, Kimberly-Clark, Estée Lauder" },
+      { name: "Regional / Community Banks",          avgFit: 59.5, note:     "85 Fortune-1000 targets, widely ignored by startups" },
       { name: "Healthcare IT / Digital Health",      avgFit: 54.9 },
     ],
   },
@@ -81,7 +101,7 @@ export const FIT_SCORING_RULES = {
       "Hiring Innovation/R&D = Early Adopter",
     ],
     negative: [
-      ">200K employees = procurement wall for Series A-C (-15pts)",
+      ">200K employees and seller is Seed/Series A = procurement barrier (-15pts)",
       ">50% union/hourly workforce (-20pts)",
     ],
   },
