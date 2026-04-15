@@ -560,7 +560,7 @@ function calcConfidence(gateAnswers,riverData){
   const filled=RIVER_STAGES.flatMap(s=>s.discovery).filter(p=>riverData[p.id]?.trim().length>10).length;
   score+=filled*4;return Math.min(score,98);
 }
-function confColor(s){return s>=75?"#2E6B2E":s>=50?"#BA7517":"#9B2C2C";}
+function confColor(s){return s>=75?"var(--green)":s>=50?"var(--amber)":"var(--red)";}
 
 // NOTE: No browser-side Anthropic client. All Claude calls route through
 // the serverless proxies at /api/claude and /api/claude-stream — they hold
@@ -1102,11 +1102,11 @@ function BriefLoader({ company, status }) {
         <div className="load-spin"/>
         <span>{status || "Starting..."}</span>
       </div>
-      <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden",margin:"14px 0"}}>
-        <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
+      <div style={{height:3,background:"var(--tan-3)",borderRadius:2,overflow:"hidden",margin:"14px 0"}}>
+        <div style={{height:"100%",background:"linear-gradient(90deg,var(--tan-0),var(--navy),var(--green),var(--tan-0))",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
       </div>
       <div style={{
-        fontSize:12,color:"#8B6F47",textAlign:"center",fontStyle:"italic",
+        fontSize:12,color:"var(--tan-0)",textAlign:"center",fontStyle:"italic",
         transition:"opacity 0.3s",opacity:fade?1:0,minHeight:20,
       }}>
         {quip}
@@ -1400,7 +1400,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
                 return sb-sa;
               }).map((m,i)=>(
                 <tr key={i} style={{cursor:"pointer"}} onClick={()=>onPickAccount&&onPickAccount(m)}>
-                  <td style={{fontWeight:600,color:"#1a1a18"}}>
+                  <td style={{fontWeight:600,color:"var(--ink-0)"}}>
                     {m.company}
                     {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
                   </td>
@@ -1409,8 +1409,8 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
                   <td style={{fontSize:12}}>
                     {m.publicPrivate?(()=>{
                       const ot=(fitScores[m.company]?.ownershipType)||"";
-                      const c=ot==="public"?"#1B3A6B":ot==="pe"?"#6B3A3A":ot==="vc"?"#2E6B2E":"#555";
-                      const bg=ot==="public"?"#EEF5F9":ot==="pe"?"#FDE8E8":ot==="vc"?"#EEF5EE":"#F8F6F1";
+                      const c=ot==="public"?"var(--navy)":ot==="pe"?"#6B3A3A":ot==="vc"?"var(--green)":"#555";
+                      const bg=ot==="public"?"var(--navy-bg)":ot==="pe"?"var(--red-bg)":ot==="vc"?"var(--green-bg)":"var(--bg-0)";
                       return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:8,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.publicPrivate}</span>;
                     })():"—"}
                   </td>
@@ -1446,7 +1446,7 @@ function RiverFieldCard({fieldKey, label, icon, sub, color, value, onChange}){
       <div className="bb-hdr" style={{paddingBottom:6}}>
         <div style={{fontSize:18,lineHeight:1}}>{icon}</div>
         <div style={{flex:1}}>
-          <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:600,color:"#1a1a18"}}>{label}</div>
+          <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:600,color:"var(--ink-0)"}}>{label}</div>
           <div style={{fontSize:11,color:"#999",marginTop:1}}>{sub}</div>
         </div>
         {needsExpand&&(
@@ -1507,11 +1507,11 @@ class ErrorBoundary extends React.Component {
     if(this.state.hasError){
       return(
         <div style={{padding:40,maxWidth:600,margin:"60px auto",fontFamily:"DM Sans,sans-serif"}}>
-          <div style={{background:"#FDE8E8",border:"1px solid #9B2C2C",borderRadius:12,padding:24}}>
-            <div style={{fontSize:16,fontWeight:700,color:"#9B2C2C",marginBottom:8}}>Render Error</div>
+          <div style={{background:"var(--red-bg)",border:"1px solid var(--red)",borderRadius:12,padding:24}}>
+            <div style={{fontSize:16,fontWeight:700,color:"var(--red)",marginBottom:8}}>Render Error</div>
             <div style={{fontSize:13,color:"#555",marginBottom:16}}>{this.state.error?.message||"Unknown error"}</div>
             <button onClick={()=>this.setState({hasError:false,error:null})}
-              style={{background:"#1a1a18",color:"#fff",border:"none",padding:"8px 16px",borderRadius:8,cursor:"pointer",fontSize:13}}>
+              style={{background:"var(--ink-0)",color:"#fff",border:"none",padding:"8px 16px",borderRadius:8,cursor:"pointer",fontSize:13}}>
               Try Again
             </button>
           </div>
@@ -1766,10 +1766,10 @@ SELLER: `+sellerCtx.slice(0,300)+`
       const map = {};
       const memberUpdates = {};
       result.scores.forEach(s=>{
-        const color = s.score>=75?"#2E6B2E":s.score>=50?"#BA7517":"#9B2C2C";
-        const bg    = s.score>=75?"#EEF5EE":s.score>=50?"#FEF6E4":"#FDE8E8";
+        const color = s.score>=75?"var(--green)":s.score>=50?"var(--amber)":"var(--red)";
+        const bg    = s.score>=75?"var(--green-bg)":s.score>=50?"var(--amber-bg)":"var(--red-bg)";
         // Ownership badge color
-        const ownerColor = s.ownershipType==="public"?"#1B3A6B":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"#2E6B2E":"#555";
+        const ownerColor = s.ownershipType==="public"?"var(--navy)":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"var(--green)":"#555";
         map[s.company] = {...s, color, bg, ownerColor, adoptionProfile:s.adoptionProfile||""};
         memberUpdates[s.company] = {orgSize:s.orgSize||"", ownership:s.ownership||"", ownershipType:s.ownershipType||""};
       });
@@ -2154,7 +2154,7 @@ Return ONLY raw JSON:
     setMapping(syntheticMapping);
     setHeaders(["company","company_url","industry","acv","lead_source","outcome"]);
     // Build a single cohort with all entries
-    const cohort={id:"qe",name:"Quick Entry",color:"#8B6F47",size:entries.length,pct:100,avgACV:0,topInd:[],topSrc:["Quick Entry"],topOut:[],
+    const cohort={id:"qe",name:"Quick Entry",color:"var(--tan-0)",size:entries.length,pct:100,avgACV:0,topInd:[],topSrc:["Quick Entry"],topOut:[],
       members:entries.map(e=>({company:e.name.trim(),company_url:e.url.trim(),ind:"",acv:0,src:"Quick Entry",outcome:""}))};
     setCohorts([cohort]);
     setSelectedCohort(cohort);
@@ -2485,7 +2485,7 @@ Return ONLY valid JSON:
   .section-body { font-size: 14px; line-height: 1.7; color: #333; }
 
   /* Summary box */
-  .summary-box { background: #F8F6F1; border-left: 3px solid #8B6F47; border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14px; line-height: 1.7; color: #333; }
+  .summary-box { background: #F8F6F1; border-left: 3px solid var(--tan-0); border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14px; line-height: 1.7; color: #333; }
 
   /* Solutions */
   .solutions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -2504,7 +2504,7 @@ Return ONLY valid JSON:
   .step-text { font-size: 13px; color: #333; line-height: 1.5; }
 
   /* Footer */
-  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #E8E6DF; display: flex; justify-content: space-between; align-items: center; }
+  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line-0); display: flex; justify-content: space-between; align-items: center; }
   .footer-left { font-size: 11px; color: #aaa; }
   .footer-right { font-size: 11px; color: #aaa; }
   .footer-brand { font-family: 'Lora', serif; font-weight: 700; color: #1a1a18; font-size: 12px; }
@@ -2652,18 +2652,18 @@ Return ONLY valid JSON:
             {step>0&&(
               <button onClick={saveSession}
                 style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,cursor:"pointer",
-                  border:"1.5px solid "+(sbUser?"#2E6B2E":"#BA7517"),
-                  background:saveStatus==="saved"?"#EEF5EE":sbUser?"#fff":"#FEF6E4",
-                  color:sbUser?(saveStatus==="saved"?"#2E6B2E":"#2E6B2E"):"#7A5010"}}>
+                  border:"1.5px solid "+(sbUser?"var(--green)":"var(--amber)"),
+                  background:saveStatus==="saved"?"var(--green-bg)":sbUser?"#fff":"var(--amber-bg)",
+                  color:sbUser?(saveStatus==="saved"?"var(--green)":"var(--green)"):"#7A5010"}}>
                 {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":saveStatus==="saved"?"✓":"💾"} {saveStatus==="saved"?"Saved":"Save"}
               </button>
             )}
             {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
-              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid #E8E6DF",background:"#fff",color:"#555",cursor:"pointer"}}>
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
             </button>}
             {sbUser&&<button onClick={()=>{localStorage.removeItem('sb_token');window.location.reload();}}
-              style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid #E8E6DF",background:"#fff",color:"#aaa",cursor:"pointer"}}>
+              style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#aaa",cursor:"pointer"}}>
               {sbUser.user_metadata?.first_name||sbUser.email?.split('@')[0]} · Sign out
             </button>}
           </div>
@@ -2671,10 +2671,10 @@ Return ONLY valid JSON:
 
         {/* GUEST BANNER */}
         {!sbUser&&step>0&&(
-          <div style={{background:"#FEF6E4",borderBottom:"1px solid #BA751744",padding:"7px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+          <div style={{background:"var(--amber-bg)",borderBottom:"1px solid #BA751744",padding:"7px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
             <div style={{fontSize:12,color:"#7A5010"}}>👤 <strong>Guest mode</strong> — your work is not being saved.</div>
             <button onClick={()=>{setAuthed(false);}}
-              style={{fontSize:12,fontWeight:700,padding:"4px 14px",borderRadius:8,background:"#1a1a18",color:"#fff",border:"none",cursor:"pointer"}}>
+              style={{fontSize:12,fontWeight:700,padding:"4px 14px",borderRadius:8,background:"var(--ink-0)",color:"#fff",border:"none",cursor:"pointer"}}>
               Create Free Account
             </button>
           </div>
@@ -2689,11 +2689,11 @@ Return ONLY valid JSON:
               <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,marginBottom:8}}>Save your work</div>
               <div style={{fontSize:14,color:"#555",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
               <button onClick={()=>{setShowSavePrompt(false);setAuthed(false);}}
-                style={{width:"100%",padding:"13px 0",borderRadius:10,background:"#1a1a18",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",marginBottom:10}}>
+                style={{width:"100%",padding:"13px 0",borderRadius:10,background:"var(--ink-0)",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",marginBottom:10}}>
                 Create Free Account →
               </button>
               <button onClick={()=>setShowSavePrompt(false)}
-                style={{width:"100%",padding:"11px 0",borderRadius:10,background:"#fff",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid #E8E6DF",cursor:"pointer"}}>
+                style={{width:"100%",padding:"11px 0",borderRadius:10,background:"#fff",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid var(--line-0)",cursor:"pointer"}}>
                 Maybe later
               </button>
             </div>
@@ -2705,7 +2705,7 @@ Return ONLY valid JSON:
           <>
             <div onClick={()=>setShowSessions(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.2)",zIndex:999}}/>
             <div style={{position:"fixed",top:0,right:0,height:"100vh",width:320,background:"#fff",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1000,display:"flex",flexDirection:"column"}}>
-              <div style={{padding:"18px 18px 12px",borderBottom:"1px solid #E8E6DF",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{padding:"18px 18px 12px",borderBottom:"1px solid var(--line-0)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700}}>Saved Sessions</div>
                   <div style={{fontSize:11,color:"#aaa"}}>{sbUser.email}</div>
@@ -2716,11 +2716,11 @@ Return ONLY valid JSON:
                 {savedSessions.length===0&&<div style={{textAlign:"center",color:"#aaa",fontSize:13,padding:"32px 0"}}>No saved sessions yet.</div>}
                 {savedSessions.map(s=>(
                   <div key={s.id} onClick={()=>restoreSession(s)}
-                    style={{padding:"10px 12px",borderRadius:10,border:"1.5px solid "+(s.id===currentSessionId?"#1a1a18":"#E8E6DF"),background:s.id===currentSessionId?"#FAF8F4":"#fff",marginBottom:8,cursor:"pointer"}}>
+                    style={{padding:"10px 12px",borderRadius:10,border:"1.5px solid "+(s.id===currentSessionId?"var(--ink-0)":"var(--line-0)"),background:s.id===currentSessionId?"var(--bg-1)":"#fff",marginBottom:8,cursor:"pointer"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
-                        <div style={{fontSize:11,color:"#8B6F47"}}>{s.seller_url}</div>
+                        <div style={{fontSize:11,color:"var(--tan-0)"}}>{s.seller_url}</div>
                         <div style={{fontSize:10,color:"#aaa"}}>{new Date(s.updated_at).toLocaleDateString()}</div>
                       </div>
                       <button onClick={e=>{e.stopPropagation();deleteSession(s.id);}} style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:14}}>✕</button>
@@ -2728,9 +2728,9 @@ Return ONLY valid JSON:
                   </div>
                 ))}
               </div>
-              <div style={{padding:12,borderTop:"1px solid #E8E6DF"}}>
-                <input value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder={sellerUrl||"Session name..."} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid #E8E6DF",fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
-                <button onClick={saveSession} style={{width:"100%",padding:"10px",borderRadius:8,background:"#1a1a18",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"}}>
+              <div style={{padding:12,borderTop:"1px solid var(--line-0)"}}>
+                <input value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder={sellerUrl||"Session name..."} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
+                <button onClick={saveSession} style={{width:"100%",padding:"10px",borderRadius:8,background:"var(--ink-0)",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"}}>
                   {saveStatus==="saving"?"Saving...":saveStatus==="saved"?"✓ Saved":"Save Session"}
                 </button>
               </div>
@@ -2743,12 +2743,12 @@ Return ONLY valid JSON:
           <div className="session-bar">
             <span>Selling org:</span><span className="session-url">{sellerUrl}</span>
             {products.filter(p=>p.name.trim()).length>0&&(
-              <span style={{fontSize:10,color:"#8B6F47",fontWeight:600}}>
+              <span style={{fontSize:10,color:"var(--tan-0)",fontWeight:600}}>
                 {products.filter(p=>p.name.trim()).length} product{products.filter(p=>p.name.trim()).length>1?"s":""} loaded
               </span>
             )}
             {productPageUrl&&(
-            <span style={{fontSize:10,color:"#8B6F47",display:"flex",alignItems:"center",gap:4}}>
+            <span style={{fontSize:10,color:"var(--tan-0)",display:"flex",alignItems:"center",gap:4}}>
               🔗 {productPageUrl.replace(/^https?:\/\//,"").slice(0,30)}
             </span>
           )}
@@ -2758,7 +2758,7 @@ Return ONLY valid JSON:
               ))}</>
             )}
             {sellerICP?.icp?.industries?.length>0&&(
-              <span style={{fontSize:10,color:"#6B3A7A",fontWeight:600,background:"#F3EEF9",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px"}}>
+              <span style={{fontSize:10,color:"var(--purple)",fontWeight:600,background:"var(--purple-bg)",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px"}}>
                 ICP: {sellerICP.icp.industries.slice(0,2).join(", ")}
               </span>
             )}
@@ -2770,12 +2770,12 @@ Return ONLY valid JSON:
                   💾 Saved {lastSaved()}
                 </span>
               )}
-              <label style={{fontSize:10,color:"#8B6F47",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              <label style={{fontSize:10,color:"var(--tan-0)",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
                 <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
               {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
-              <button style={{fontSize:10,color:"#9B2C2C",fontWeight:600,background:"none",border:"1px solid #9B2C2C44",borderRadius:6,padding:"2px 8px",cursor:"pointer"}}
+              <button style={{fontSize:10,color:"var(--red)",fontWeight:600,background:"none",border:"1px solid #9B2C2C44",borderRadius:6,padding:"2px 8px",cursor:"pointer"}}
                 onClick={()=>{if(window.confirm("Clear session and start over?")){clearSession();window.location.reload();}}}>
                 ✕ New Session
               </button>
@@ -2788,12 +2788,12 @@ Return ONLY valid JSON:
           <div style={{padding:"40px 28px"}}>
             <div className="setup-card" style={{maxWidth:580}}>
               <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
-              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"#8B6F47",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Revenue Playbook Engine · RIVER Framework</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Revenue Playbook Engine · RIVER Framework</div>
               <div style={{textAlign:"center",marginBottom:10}}>
-                <span style={{display:"inline-block",background:"#2E6B2E",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
+                <span style={{display:"inline-block",background:"var(--green)",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
               <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
-                <div style={{fontSize:17,fontWeight:600,color:"#1a1a18",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most informed seller in the room.</div>
+                <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most informed seller in the room.</div>
                 <div style={{fontSize:14,color:"#666",lineHeight:1.7}}>Walk into every call knowing exactly what keeps your prospect up at night — their strategy, gaps, hiring signals, and the precise angle that opens doors. Powered by live research and five proven sales frameworks.</div>
               </div>
               <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
@@ -2803,7 +2803,7 @@ Return ONLY valid JSON:
                   </div>
                 ))}
               </div>
-              <div style={{height:1,background:"#E8E6DF",marginBottom:20}}/>
+              <div style={{height:1,background:"var(--line-0)",marginBottom:20}}/>
 
               {/* Seller URL */}
               <div className="field-row">
@@ -2826,15 +2826,15 @@ Return ONLY valid JSON:
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {["Bootstrapped","Series A","Series B","Series C","Series D+","PE-Backed","Public"].map(stage=>(
                       <button key={stage} onClick={()=>setSellerStage(stage)}
-                        style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"#1a1a18":"#E8E6DF"),
-                          background:sellerStage===stage?"#1a1a18":"#fff",color:sellerStage===stage?"#fff":"#555",
+                        style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"var(--ink-0)":"var(--line-0)"),
+                          background:sellerStage===stage?"var(--ink-0)":"#fff",color:sellerStage===stage?"#fff":"#555",
                           fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.13s"}}>
                         {stage}
                       </button>
                     ))}
                   </div>
                   {sellerStage&&(
-                    <div style={{fontSize:11,color:"#8B6F47",marginTop:6}}>
+                    <div style={{fontSize:11,color:"var(--tan-0)",marginTop:6}}>
                       {sellerStage==="Series A"&&"💡 Tip: Land in innovation arms or sub-divisions of large enterprises — not enterprise-wide. Channel through partners where possible."}
                       {sellerStage==="Series B"&&"💡 Tip: Departmental landing is your best motion. Find the pain closest to your sweet spot and prove ROI there first."}
                       {(sellerStage==="Series C"||sellerStage==="Series D+")&&"💡 Tip: You have enough logos and proof points for enterprise. Lead with case studies and SLA commitments."}
@@ -2848,7 +2848,7 @@ Return ONLY valid JSON:
               </div>
 
               {/* Divider */}
-              <div style={{height:1,background:"#E8E6DF",margin:"18px 0 16px"}}/>
+              <div style={{height:1,background:"var(--line-0)",margin:"18px 0 16px"}}/>
 
               {/* Internal doc upload */}
               <div className="field-row" style={{marginBottom:0}}>
@@ -2887,7 +2887,7 @@ Return ONLY valid JSON:
                 )}
 
                 {sellerDocs.length>0&&(
-                  <div style={{fontSize:11,color:"#2E6B2E",marginTop:8,display:"flex",alignItems:"center",gap:5}}>
+                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5}}>
                     <span>✓</span> {sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Claude will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.
                   </div>
                 )}
@@ -2902,28 +2902,28 @@ Return ONLY valid JSON:
 
                 {/* Scanning state */}
                 {urlScanStatus==="scanning"&&(
-                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#F8F6F1",borderRadius:8,marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"var(--bg-0)",borderRadius:8,marginBottom:10}}>
                     <div className="load-spin" style={{width:14,height:14,borderWidth:2}}/>
-                    <span style={{fontSize:13,color:"#8B6F47"}}>Scanning {sellerInput} for product pages...</span>
+                    <span style={{fontSize:13,color:"var(--tan-0)"}}>Scanning {sellerInput} for product pages...</span>
                   </div>
                 )}
 
                 {/* Found pages — confirm prompt */}
                 {urlScanStatus==="found"&&!urlScanConfirmed&&(
-                  <div style={{background:"#EEF5EE",border:"1.5px solid #2E6B2E",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"#2E6B2E",marginBottom:8}}>
+                  <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--green)",marginBottom:8}}>
                       🔍 Found {productUrls.filter(u=>u.url).length} product page{productUrls.filter(u=>u.url).length!==1?"s":""}
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:12}}>
                       {productUrls.filter(u=>u.url).map((u,i)=>(
                         <div key={i} style={{fontSize:12,color:"#333",display:"flex",alignItems:"center",gap:6}}>
-                          <span style={{color:"#2E6B2E",fontSize:14}}>🔗</span>
-                          <span style={{fontWeight:600,color:"#2E6B2E",marginRight:4}}>{u.label||"Page "+(i+1)}</span>
+                          <span style={{color:"var(--green)",fontSize:14}}>🔗</span>
+                          <span style={{fontWeight:600,color:"var(--green)",marginRight:4}}>{u.label||"Page "+(i+1)}</span>
                           <span style={{color:"#777",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
                         </div>
                       ))}
                     </div>
-                    <div style={{fontSize:13,fontWeight:600,color:"#1a1a18",marginBottom:10}}>Are these the right product pages?</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",marginBottom:10}}>Are these the right product pages?</div>
                     <div style={{display:"flex",gap:8}}>
                       <button className="btn btn-green btn-sm" onClick={()=>setUrlScanConfirmed(true)}>
                         ✓ Yes, looks right
@@ -2942,7 +2942,7 @@ Return ONLY valid JSON:
                       <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>No product pages found automatically — add them below.</div>
                     )}
                     {urlScanConfirmed&&(
-                      <div style={{fontSize:12,color:"#2E6B2E",marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
+                      <div style={{fontSize:12,color:"var(--green)",marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
                         ✓ Product pages confirmed — you can edit or add more below.
                       </div>
                     )}
@@ -2963,7 +2963,7 @@ Return ONLY valid JSON:
                               setProductUrls(p=>[...p,{url:"",label:""}]);}}
                           />
                           {item.url&&(
-                            <span style={{fontSize:10,color:"#8B6F47",cursor:"pointer",flexShrink:0}}
+                            <span style={{fontSize:10,color:"var(--tan-0)",cursor:"pointer",flexShrink:0}}
                               onClick={()=>setProductUrls(p=>p.length>1?p.filter((_,j)=>j!==i):[{url:"",label:""}])}>✕</span>
                           )}
                         </div>
@@ -2980,7 +2980,7 @@ Return ONLY valid JSON:
               </div>
 
               {/* Divider */}
-              <div style={{height:1,background:"#E8E6DF",margin:"20px 0 16px"}}/>
+              <div style={{height:1,background:"var(--line-0)",margin:"20px 0 16px"}}/>
 
               {/* Product / Solution Catalog */}
               <div className="field-row" style={{marginBottom:0}}>
@@ -3029,7 +3029,7 @@ Return ONLY valid JSON:
                 </button>
 
                 {products.filter(p=>p.name.trim()).length>0&&(
-                  <div style={{fontSize:11,color:"#2E6B2E",marginTop:8,display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
                     <span>✓</span>
                     {products.filter(p=>p.name.trim()).map((p,i)=>(
                       <span key={i} className="prod-chip"><span className="prod-chip-dot"/>{p.name}</span>
@@ -3046,14 +3046,14 @@ Return ONLY valid JSON:
                 </div>
               )}
               {sellerICP&&!icpLoading&&(
-                <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#2E6B2E",padding:"6px 0",marginTop:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"var(--green)",padding:"6px 0",marginTop:8}}>
                   <span>✓</span> ICP ready — you'll review it on the next step
                 </div>
               )}
               {false&&(
                 <div style={{marginTop:16}}>
-                  <div style={{height:1,background:"#E8E6DF",marginBottom:16}}/>
-                  <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
+                  <div style={{height:1,background:"var(--line-0)",marginBottom:16}}/>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
                     Your ICP — {sellerICP?.sellerName||sellerInput}
                   </div>
                   {icpLoading&&!sellerICP&&(
@@ -3068,77 +3068,77 @@ Return ONLY valid JSON:
                       )}
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                         {sellerICP.icp.industries?.length>0&&(
-                          <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Target Industries</div>
+                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Target Industries</div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                               {sellerICP.icp.industries.map((ind,i)=>(
-                                <span key={i} style={{fontSize:11,background:"#E8E6DF",borderRadius:10,padding:"2px 8px",color:"#555"}}>{ind}</span>
+                                <span key={i} style={{fontSize:11,background:"var(--line-0)",borderRadius:10,padding:"2px 8px",color:"#555"}}>{ind}</span>
                               ))}
                             </div>
                           </div>
                         )}
                         {sellerICP.icp.buyerPersonas?.length>0&&(
-                          <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Buyer Personas</div>
+                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Buyer Personas</div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                               {sellerICP.icp.buyerPersonas.slice(0,3).map((p,i)=>(
-                                <span key={i} style={{fontSize:11,background:"#EEF5F9",borderRadius:10,padding:"2px 8px",color:"#1B3A6B"}}>{p}</span>
+                                <span key={i} style={{fontSize:11,background:"var(--navy-bg)",borderRadius:10,padding:"2px 8px",color:"var(--navy)"}}>{p}</span>
                               ))}
                             </div>
                           </div>
                         )}
                         {(sellerICP.icp.companySize||sellerICP.icp.dealSize)&&(
-                          <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Sweet Spot</div>
+                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Sweet Spot</div>
                             {sellerICP.icp.companySize&&<div style={{fontSize:12,color:"#333"}}>{sellerICP.icp.companySize}</div>}
                             {sellerICP.icp.dealSize&&<div style={{fontSize:11,color:"#777",marginTop:2}}>{sellerICP.icp.dealSize}</div>}
                           </div>
                         )}
                         {sellerICP.icp.disqualifiers?.length>0&&(
-                          <div style={{background:"#FDE8E8",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Not a Fit</div>
+                          <div style={{background:"var(--red-bg)",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Not a Fit</div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                               {sellerICP.icp.disqualifiers.slice(0,2).map((d,i)=>(
-                                <span key={i} style={{fontSize:11,background:"#FDE8E8",borderRadius:10,padding:"2px 8px",color:"#9B2C2C"}}>{d}</span>
+                                <span key={i} style={{fontSize:11,background:"var(--red-bg)",borderRadius:10,padding:"2px 8px",color:"var(--red)"}}>{d}</span>
                               ))}
                             </div>
                           </div>
                         )}
                       </div>
                       {sellerICP.icp.painPoints?.length>0&&(
-                        <div style={{background:"#F8F6F1",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#6B3A7A",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Top Pains We Solve</div>
+                        <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--purple)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Top Pains We Solve</div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {(sellerICP.icp.topPains||sellerICP.icp.painPoints||[]).filter(Boolean).map((p,i)=>(
-                              <span key={i} style={{fontSize:11,background:"#F3EEF9",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px",color:"#6B3A7A"}}>{p}</span>
+                              <span key={i} style={{fontSize:11,background:"var(--purple-bg)",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px",color:"var(--purple)"}}>{p}</span>
                             ))}
                           </div>
                         </div>
                       )}
                       {sellerICP.icp.priorityInitiative&&(
-                        <div style={{background:"#FEF6E4",border:"1px solid #BA751744",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>⚡ Trigger to Buy (Revella)</div>
+                        <div style={{background:"var(--amber-bg)",border:"1px solid #BA751744",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>⚡ Trigger to Buy (Revella)</div>
                           <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.priorityInitiative}</div>
                         </div>
                       )}
                       {sellerICP.icp.perceivedBarriers&&(
-                        <div style={{background:"#FDE8E8",border:"1px solid #9B2C2C44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>🚧 Perceived Barriers (Revella)</div>
+                        <div style={{background:"var(--red-bg)",border:"1px solid #9B2C2C44",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>🚧 Perceived Barriers (Revella)</div>
                           <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.perceivedBarriers}</div>
                         </div>
                       )}
                       {sellerICP.icp.adoptionProfile&&(
-                        <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 Buyer Adoption Profile</div>
+                        <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B44",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 Buyer Adoption Profile</div>
                           <div style={{fontSize:12,color:"#555"}}>{sellerICP.icp.adoptionProfile}</div>
                         </div>
                       )}
                       {sellerICP.icp.uniqueDifferentiators?.filter(Boolean).length>0&&(
-                        <div style={{background:"#EEF5EE",border:"1px solid #2E6B2E44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>✦ Why We Win (Dunford)</div>
+                        <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E44",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>✦ Why We Win (Dunford)</div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {sellerICP.icp.uniqueDifferentiators.filter(Boolean).map((d,i)=>(
-                              <span key={i} style={{fontSize:11,background:"#fff",border:"1px solid #2E6B2E44",borderRadius:10,padding:"2px 8px",color:"#2E6B2E"}}>{d}</span>
+                              <span key={i} style={{fontSize:11,background:"#fff",border:"1px solid #2E6B2E44",borderRadius:10,padding:"2px 8px",color:"var(--green)"}}>{d}</span>
                             ))}
                           </div>
                         </div>
@@ -3153,7 +3153,7 @@ Return ONLY valid JSON:
                 </div>
               )}
 
-              <div style={{height:1,background:"#E8E6DF",margin:"20px 0"}}/>
+              <div style={{height:1,background:"var(--line-0)",margin:"20px 0"}}/>
               <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
                 onClick={()=>{if(sellerInput.trim()){setSellerUrl(sellerInput.trim());setStep(1);}}}
                 disabled={!sellerInput.trim()}>Start Session →</button>
@@ -3180,15 +3180,15 @@ Return ONLY valid JSON:
                   <button
                     onClick={()=>{if(confirm("Regenerate ICP from scratch? The cached version will be replaced."))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     title="Force rebuild ICP (clears cache)"
-                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid #E8E6DF",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
+                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
                     ↻ Regenerate
                   </button>
-                  <div style={{display:"flex",gap:0,border:"1.5px solid #E8E6DF",borderRadius:8,overflow:"hidden"}}>
+                  <div style={{display:"flex",gap:0,border:"1.5px solid var(--line-0)",borderRadius:8,overflow:"hidden"}}>
                     {[["icp","🎯 Your ICP"],["rfp","📡 RFP Intel"]].map(([tab,label])=>(
                       <button key={tab}
                         onClick={()=>{setIcpTab(tab);if(tab==="rfp"&&!rfpData.open.length&&!rfpData.loading)fetchRFPIntel();}}
                         style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
-                          background:icpTab===tab?"#1a1a18":"#fff",
+                          background:icpTab===tab?"var(--ink-0)":"#fff",
                           color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s"}}>
                         {label}
                       </button>
@@ -3224,7 +3224,7 @@ Return ONLY valid JSON:
                   </div>
                 )}
                 {rfpData.error&&(
-                  <div style={{background:"#FFF5F5",border:"1px solid #FCA5A5",borderRadius:8,padding:12,fontSize:13,color:"#9B2C2C"}}>
+                  <div style={{background:"#FFF5F5",border:"1px solid #FCA5A5",borderRadius:8,padding:12,fontSize:13,color:"var(--red)"}}>
                     {rfpData.error}
                   </div>
                 )}
@@ -3243,8 +3243,8 @@ Return ONLY valid JSON:
                       {[["all","All RFPs"],["private","🏢 Private / Commercial"],["government","🏛 Government"]].map(([val,label])=>(
                         <button key={val} onClick={()=>setRfpFilter(val)}
                           style={{padding:"5px 12px",fontSize:11,fontWeight:700,borderRadius:20,border:"1.5px solid",
-                            borderColor:rfpFilter===val?"#1a1a18":"#E8E6DF",
-                            background:rfpFilter===val?"#1a1a18":"#fff",
+                            borderColor:rfpFilter===val?"var(--ink-0)":"var(--line-0)",
+                            background:rfpFilter===val?"var(--ink-0)":"#fff",
                             color:rfpFilter===val?"#fff":"#555",cursor:"pointer"}}>
                           {label}
                         </button>
@@ -3254,11 +3254,11 @@ Return ONLY valid JSON:
                     {/* Open RFPs */}
                     <div style={{marginBottom:24}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                        <div style={{fontSize:13,fontWeight:700,color:"#1a1a18"}}>🟢 Open RFPs — Active Opportunities</div>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🟢 Open RFPs — Active Opportunities</div>
                         <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).length} shown)</div>
                         <button className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={fetchRFPIntel}>↻ Refresh</button>
                       </div>
-                      <div style={{overflowX:"auto",border:"1px solid #E8E6DF",borderRadius:8}}>
+                      <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
                         <table className="tbl">
                           <thead>
                             <tr>
@@ -3275,19 +3275,19 @@ Return ONLY valid JSON:
                             {rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
                               <tr key={i}>
                                 <td style={{maxWidth:280}}>
-                                  <div style={{fontWeight:600,fontSize:12,color:"#1a1a18",marginBottom:2}}>{r.title}</div>
+                                  <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.title}</div>
                                   <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
                                 </td>
                                 <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
                                 <td><span style={{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",
-                                  background:r.isGovernment?"#EEF5F9":"#F0FDF4",
-                                  color:r.isGovernment?"#1B3A6B":"#166534"}}>{r.source}</span></td>
-                                <td style={{fontSize:12,fontWeight:600,color:"#2E6B2E",whiteSpace:"nowrap"}}>{r.value}</td>
-                                <td style={{fontSize:11,color:"#BA7517",whiteSpace:"nowrap"}}>{r.deadline}</td>
+                                  background:r.isGovernment?"var(--navy-bg)":"#F0FDF4",
+                                  color:r.isGovernment?"var(--navy)":"#166534"}}>{r.source}</span></td>
+                                <td style={{fontSize:12,fontWeight:600,color:"var(--green)",whiteSpace:"nowrap"}}>{r.value}</td>
+                                <td style={{fontSize:11,color:"var(--amber)",whiteSpace:"nowrap"}}>{r.deadline}</td>
                                 <td style={{fontSize:11}}>{r.cohort}</td>
                                 <td>
                                   <div style={{fontSize:12,fontWeight:700,
-                                    color:r.relevanceScore>=75?"#2E6B2E":r.relevanceScore>=50?"#BA7517":"#9B2C2C"}}>
+                                    color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>
                                     {r.relevanceScore}%
                                   </div>
                                 </td>
@@ -3302,10 +3302,10 @@ Return ONLY valid JSON:
                     {rfpData.closed.length>0&&(
                       <div>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                          <div style={{fontSize:13,fontWeight:700,color:"#1a1a18"}}>🔵 Closed RFPs — Last 18 Months (Incumbent Intel)</div>
+                          <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Closed RFPs — Last 18 Months (Incumbent Intel)</div>
                           <div style={{fontSize:11,color:"#aaa"}}>({rfpData.closed.length} awards)</div>
                         </div>
-                        <div style={{overflowX:"auto",border:"1px solid #E8E6DF",borderRadius:8}}>
+                        <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
                           <table className="tbl">
                             <thead>
                               <tr>
@@ -3322,17 +3322,17 @@ Return ONLY valid JSON:
                               {rfpData.closed.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment)||(rfpFilter==="private"&&!r.isGovernment)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
                                 <tr key={i}>
                                   <td style={{maxWidth:240}}>
-                                    <div style={{fontWeight:600,fontSize:12,color:"#1a1a18",marginBottom:2}}>{r.title}</div>
+                                    <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.title}</div>
                                     <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
                                   </td>
                                   <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
-                                  <td style={{fontSize:12,fontWeight:600,color:"#8B6F47"}}>{r.awardedTo}</td>
+                                  <td style={{fontSize:12,fontWeight:600,color:"var(--tan-0)"}}>{r.awardedTo}</td>
                                   <td style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
                                   <td style={{fontSize:11,color:"#777",whiteSpace:"nowrap"}}>{r.awardDate}</td>
                                   <td style={{fontSize:11}}>{r.cohort}</td>
                                   <td>
                                     <div style={{fontSize:12,fontWeight:700,
-                                      color:r.relevanceScore>=75?"#2E6B2E":r.relevanceScore>=50?"#BA7517":"#9B2C2C"}}>
+                                      color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>
                                       {r.relevanceScore}%
                                     </div>
                                   </td>
@@ -3379,9 +3379,9 @@ Return ONLY valid JSON:
                       <div className="field-label" style={{marginBottom:4}}>Why We Win — Unique Differentiators</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
                         {(sellerICP.icp.uniqueDifferentiators||[]).filter(Boolean).map((d,i)=>(
-                          <span key={i} style={{background:"#EEF5EE",border:"1px solid #2E6B2E44",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#2E6B2E",display:"flex",alignItems:"center",gap:4}}>
+                          <span key={i} style={{background:"var(--green-bg)",border:"1px solid #2E6B2E44",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--green)",display:"flex",alignItems:"center",gap:4}}>
                             {d}
-                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,uniqueDifferentiators:p.icp.uniqueDifferentiators.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#2E6B2E",padding:0}}>✕</button>
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,uniqueDifferentiators:p.icp.uniqueDifferentiators.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--green)",padding:0}}>✕</button>
                           </span>
                         ))}
                       </div>
@@ -3401,7 +3401,7 @@ Return ONLY valid JSON:
                       <div className="field-label" style={{marginBottom:4}}>Target Industries</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
                         {(sellerICP.icp.industries||[]).map((ind,i)=>(
-                          <span key={i} style={{background:"#E8E6DF",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                          <span key={i} style={{background:"var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
                             {ind}
                             <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,industries:p.icp.industries.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
                           </span>
@@ -3424,7 +3424,7 @@ Return ONLY valid JSON:
                       <div className="field-label" style={{marginBottom:4}}>Not a Fit</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                         {(sellerICP.icp.disqualifiers||[]).filter(Boolean).map((d,i)=>(
-                          <span key={i} style={{background:"#FDE8E8",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#9B2C2C"}}>{d}</span>
+                          <span key={i} style={{background:"var(--red-bg)",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--red)"}}>{d}</span>
                         ))}
                       </div>
                     </div>
@@ -3443,10 +3443,10 @@ Return ONLY valid JSON:
                   </div>
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                     {(sellerICP.icp.buyerPersonas||[]).filter(Boolean).map((p,i)=>(
-                      <div key={i} style={{background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
+                      <div key={i} style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
                         <span style={{fontSize:20}}>{"💼👷🔧"[i]||"👤"}</span>
                         <div>
-                          <div style={{fontSize:13,fontWeight:700,color:"#1B3A6B"}}>{p}</div>
+                          <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>{p}</div>
                           <div style={{fontSize:10,color:"#aaa"}}>{["Economic Buyer","Champion / User","Technical Evaluator"][i]||"Stakeholder"}</div>
                         </div>
                       </div>
@@ -3462,11 +3462,11 @@ Return ONLY valid JSON:
                   </div>
                   <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                     {[
-                      {key:"priorityInitiative",label:"⚡ Ring 1 — Priority Initiative",sub:"What triggers them to act NOW",color:"#BA7517",bg:"#FEF6E4"},
-                      {key:"successFactors",label:"✓ Ring 2 — Success Factors",sub:"What winning looks like for them",color:"#2E6B2E",bg:"#EEF5EE"},
-                      {key:"perceivedBarriers",label:"🚧 Ring 3 — Perceived Barriers",sub:"What makes them hesitate or walk away",color:"#9B2C2C",bg:"#FDE8E8"},
-                      {key:"decisionCriteria",label:"⚖️ Ring 4 — Decision Criteria",sub:"How they evaluate and compare options",color:"#1B3A6B",bg:"#EEF5F9"},
-                      {key:"buyerJourney",label:"🗺 Ring 5 — Buyer Journey",sub:"How they move from awareness to decision",color:"#6B3A7A",bg:"#F3EEF9"},
+                      {key:"priorityInitiative",label:"⚡ Ring 1 — Priority Initiative",sub:"What triggers them to act NOW",color:"var(--amber)",bg:"var(--amber-bg)"},
+                      {key:"successFactors",label:"✓ Ring 2 — Success Factors",sub:"What winning looks like for them",color:"var(--green)",bg:"var(--green-bg)"},
+                      {key:"perceivedBarriers",label:"🚧 Ring 3 — Perceived Barriers",sub:"What makes them hesitate or walk away",color:"var(--red)",bg:"var(--red-bg)"},
+                      {key:"decisionCriteria",label:"⚖️ Ring 4 — Decision Criteria",sub:"How they evaluate and compare options",color:"var(--navy)",bg:"var(--navy-bg)"},
+                      {key:"buyerJourney",label:"🗺 Ring 5 — Buyer Journey",sub:"How they move from awareness to decision",color:"var(--purple)",bg:"var(--purple-bg)"},
                     ].map(({key,label,sub,color,bg})=>(
                       <div key={key} style={{background:bg,border:"1px solid "+color+"33",borderRadius:10,padding:"12px 14px"}}>
                         <div style={{fontSize:11,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>{label}</div>
@@ -3487,20 +3487,20 @@ Return ONLY valid JSON:
                     <div>
                       <div className="field-label" style={{marginBottom:6}}>Top Pains We Solve</div>
                       {(sellerICP.icp.topPains||[]).filter(Boolean).map((p,i)=>(
-                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid #F0EDE6"}}>• {p}</div>
+                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>• {p}</div>
                       ))}
                     </div>
                     <div>
                       <div className="field-label" style={{marginBottom:6}}>Top Gains We Create</div>
                       {(sellerICP.icp.topGains||[]).filter(Boolean).map((g,i)=>(
-                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid #F0EDE6"}}>• {g}</div>
+                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>• {g}</div>
                       ))}
                     </div>
                     <div style={{gridColumn:"1/-1"}}>
                       <div className="field-label" style={{marginBottom:6}}>Customer Jobs-to-be-Done</div>
                       {(sellerICP.icp.customerJobs||[]).filter(Boolean).map((j,i)=>(
-                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid #F0EDE6"}}>
-                          <span style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",marginRight:6}}>{["Functional","Emotional","Social"][i]||""}</span>{j}
+                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
+                          <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",marginRight:6}}>{["Functional","Emotional","Social"][i]||""}</span>{j}
                         </div>
                       ))}
                     </div>
@@ -3518,7 +3518,7 @@ Return ONLY valid JSON:
                       <div className="field-label" style={{marginBottom:6}}>Best Channels to Reach This Buyer</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                         {(sellerICP.icp.tractionChannels||[]).filter(Boolean).map((c,i)=>(
-                          <span key={i} style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555"}}>{c}</span>
+                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555"}}>{c}</span>
                         ))}
                       </div>
                     </div>
@@ -3537,7 +3537,7 @@ Return ONLY valid JSON:
 
 
             {icpTab==="icp"&&(
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid var(--line-0)"}}>
               <button className="btn btn-secondary" onClick={()=>setStep(0)}>← Back</button>
               <button className="btn btn-primary btn-lg"
                 onClick={()=>setStep(2)}
@@ -3547,7 +3547,7 @@ Return ONLY valid JSON:
             </div>
             )}
             {icpTab==="rfp"&&(
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid #E8E6DF"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid var(--line-0)"}}>
               <button className="btn btn-secondary" onClick={()=>setIcpTab("icp")}>← Back to ICP</button>
               <button className="btn btn-primary btn-lg" onClick={()=>setStep(2)}>
                 Continue to Import →
@@ -3564,12 +3564,12 @@ Return ONLY valid JSON:
             <div className="page-sub">Upload a CRM export, or type in companies directly — great for conferences, warm intros, or quick meeting prep.</div>
 
             {/* Mode switcher */}
-            <div style={{display:"flex",gap:0,marginBottom:24,background:"#F0EDE6",borderRadius:10,padding:3,width:"fit-content"}}>
+            <div style={{display:"flex",gap:0,marginBottom:24,background:"var(--tan-3)",borderRadius:10,padding:3,width:"fit-content"}}>
               {[["csv","📂  Upload CSV"],["quick","⚡  Quick Entry"]].map(([mode,label])=>(
                 <button key={mode} onClick={()=>setImportMode(mode)}
                   style={{padding:"8px 20px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
                     background:importMode===mode?"#fff":"transparent",
-                    color:importMode===mode?"#1a1a18":"#999",
+                    color:importMode===mode?"var(--ink-0)":"#999",
                     boxShadow:importMode===mode?"0 1px 3px rgba(0,0,0,0.1)":"none",
                     transition:"all 0.15s"}}>
                   {label}
@@ -3614,7 +3614,7 @@ Return ONLY valid JSON:
             {/* ── Quick Entry Mode ── */}
             {importMode==="quick"&&(
               <div>
-                <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",gap:10,alignItems:"flex-start"}}>
+                <div style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",gap:10,alignItems:"flex-start"}}>
                   <div style={{fontSize:18,flexShrink:0}}>💡</div>
                   <div style={{fontSize:13,color:"#555",lineHeight:1.6}}>
                     <strong>Website URLs give the best results.</strong> Paste any of: company website, LinkedIn company page, or just type the company name.
@@ -3624,7 +3624,7 @@ Return ONLY valid JSON:
 
                 {quickEntries.map((entry,i)=>(
                   <div key={i} style={{display:"flex",gap:10,marginBottom:10,alignItems:"center"}}>
-                    <div style={{width:28,height:28,borderRadius:"50%",background:"#1a1a18",color:"#8B6F47",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <div style={{width:28,height:28,borderRadius:"50%",background:"var(--ink-0)",color:"var(--tan-0)",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                       {i+1}
                     </div>
                     <input type="text" value={entry.name} placeholder="Company name"
@@ -3711,8 +3711,8 @@ Return ONLY valid JSON:
                   <div style={{fontSize:12,color:"#aaa",marginTop:2}}>Click to select · up to 5 accounts · numbered in priority order</div>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                  {fitScoring&&<div style={{fontSize:12,color:"#8B6F47"}}>⏳ Evaluating fit...</div>}
-                  {Object.keys(fitScores).length>0&&!fitScoring&&<div style={{fontSize:12,color:"#2E6B2E"}}>✓ Fit scores ready</div>}
+                  {fitScoring&&<div style={{fontSize:12,color:"var(--tan-0)"}}>⏳ Evaluating fit...</div>}
+                  {Object.keys(fitScores).length>0&&!fitScoring&&<div style={{fontSize:12,color:"var(--green)"}}>✓ Fit scores ready</div>}
                   {accountQueue.length>0&&(
                     <>
                       <button className="btn btn-secondary btn-sm" onClick={()=>setAccountQueue([])}>Clear</button>
@@ -3737,7 +3737,7 @@ Return ONLY valid JSON:
                   )}
                 </div>
               </div>
-              <div className="tbl-wrap" style={{maxHeight:"480px",overflowY:"scroll",border:"1px solid #F0EDE6",borderRadius:8}}>
+              <div className="tbl-wrap" style={{maxHeight:"480px",overflowY:"scroll",border:"1px solid var(--tan-3)",borderRadius:8}}>
                 <table className="tbl" style={{fontSize:13}}>
                   <thead style={{position:"sticky",top:0,zIndex:10,background:"#fff"}}>
                     <tr>
@@ -3759,15 +3759,15 @@ Return ONLY valid JSON:
                       const inQueue=accountQueue.some(q=>q.company===m.company);
                       const qPos=accountQueue.findIndex(q=>q.company===m.company);
                       return(
-                        <tr key={i} style={{cursor:"pointer",background:inQueue?"#FAF8F4":"",transition:"background 0.1s"}}
+                        <tr key={i} style={{cursor:"pointer",background:inQueue?"var(--bg-1)":"",transition:"background 0.1s"}}
                           onClick={()=>setAccountQueue(prev=>{
                             if(prev.some(q=>q.company===m.company)) return prev.filter(q=>q.company!==m.company);
                             if(prev.length>=5) return prev;
                             return [...prev,{...m}];
                           })}>
-                          <td style={{fontWeight:600,color:"#1a1a18"}}>
+                          <td style={{fontWeight:600,color:"var(--ink-0)"}}>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <div style={{width:20,height:20,borderRadius:4,border:"2px solid "+(inQueue?"#1a1a18":"#ddd"),background:inQueue?"#1a1a18":"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"#8B6F47",fontWeight:700}}>
+                              <div style={{width:20,height:20,borderRadius:4,border:"2px solid "+(inQueue?"var(--ink-0)":"#ddd"),background:inQueue?"var(--ink-0)":"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"var(--tan-0)",fontWeight:700}}>
                                 {inQueue?qPos+1:""}
                               </div>
                               <div>
@@ -3783,12 +3783,12 @@ Return ONLY valid JSON:
                               const pp=fitScores[m.company]?.ownership||m.publicPrivate||"";
                               if(!pp) return <span style={{color:"#aaa"}}>—</span>;
                               const low=pp.toLowerCase();
-                              const c=low.includes("public")?"#1B3A6B":low.includes("pe-backed")||low.includes("pe backed")?"#6B3A3A":low.includes("vc")||low.includes("backed")?"#2E6B2E":low.includes("private")?"#555":"#555";
-                              const bg=low.includes("public")?"#EEF5F9":low.includes("pe-backed")||low.includes("pe backed")?"#FDE8E8":low.includes("vc")||low.includes("backed")?"#EEF5EE":"#F8F6F1";
+                              const c=low.includes("public")?"var(--navy)":low.includes("pe-backed")||low.includes("pe backed")?"#6B3A3A":low.includes("vc")||low.includes("backed")?"var(--green)":low.includes("private")?"#555":"#555";
+                              const bg=low.includes("public")?"var(--navy-bg)":low.includes("pe-backed")||low.includes("pe backed")?"var(--red-bg)":low.includes("vc")||low.includes("backed")?"var(--green-bg)":"var(--bg-0)";
                               return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{pp}</span>;
                             })()}
                           </td>
-                          <td style={{fontSize:12,color:"#8B6F47",fontWeight:600}}>{m.acv>0?"$"+Number(m.acv).toLocaleString():m.acv?"$"+m.acv:"—"}</td>
+                          <td style={{fontSize:12,color:"var(--tan-0)",fontWeight:600}}>{m.acv>0?"$"+Number(m.acv).toLocaleString():m.acv?"$"+m.acv:"—"}</td>
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
@@ -4124,8 +4124,8 @@ Return ONLY valid JSON:
             {brief&&(
               <>
                 {briefError&&(
-                  <div style={{background:"#FDE8E8",border:"1.5px solid #9B2C2C",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#9B2C2C",marginBottom:8}}>⚠ Research Error — Action Required</div>
+                  <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:8}}>⚠ Research Error — Action Required</div>
                     <div style={{fontSize:11,color:"#7A2020",fontFamily:"monospace",background:"rgba(0,0,0,0.05)",padding:"8px 10px",borderRadius:6,marginBottom:10,wordBreak:"break-word",lineHeight:1.5}}>{briefError}</div>
                     <div style={{fontSize:10,color:"#7A2020",lineHeight:2}}>
                       <strong>Fix:</strong> Vercel → Project → Settings → Environment Variables<br/>
@@ -4163,25 +4163,25 @@ Return ONLY valid JSON:
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}}>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"#2E6B2E",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>Annual Revenue / ARR
+                          <span style={{background:"var(--green)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>Annual Revenue / ARR
                         </div>
                         <EF value={brief.revenue||""} onChange={v=>patchBrief(b=>{b.revenue=v;})} single placeholder="e.g. $18.8B annual revenue (FY2025)"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"#1B3A6B",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>Public / Private
+                          <span style={{background:"var(--navy)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>Public / Private
                         </div>
                         <EF value={brief.publicPrivate||""} onChange={v=>patchBrief(b=>{b.publicPrivate=v;})} single placeholder="e.g. Public (NYSE: ARMK)"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"#8B6F47",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>EMPLOYEES</span>Employee Count
+                          <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>EMPLOYEES</span>Employee Count
                         </div>
                         <EF value={brief.employeeCount||""} onChange={v=>patchBrief(b=>{b.employeeCount=v;})} single placeholder="e.g. ~270,000 globally"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"#6B3A7A",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>HQ</span>HQ · Founded
+                          <span style={{background:"var(--purple)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>HQ</span>HQ · Founded
                         </div>
                         <EF value={(brief.headquarters||(brief.founded?" · Founded "+brief.founded:""))||""} onChange={v=>patchBrief(b=>{b.headquarters=v;})} single placeholder="e.g. Philadelphia, PA · Founded 1959"/>
                       </div>
@@ -4192,7 +4192,7 @@ Return ONLY valid JSON:
                       <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>
                         {brief.website&&(
                           <a href={"https://"+brief.website.replace(/^https?:\/\//,"")} target="_blank" rel="noopener noreferrer"
-                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#1B3A6B",textDecoration:"none",background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:16,padding:"4px 12px",fontWeight:600}}>
+                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"var(--navy)",textDecoration:"none",background:"var(--navy-bg)",border:"1px solid #1B3A6B44",borderRadius:16,padding:"4px 12px",fontWeight:600}}>
                             🌐 {brief.website.replace(/^https?:\/\//,"")}
                           </a>
                         )}
@@ -4208,7 +4208,7 @@ Return ONLY valid JSON:
 
                   {/* Funding Profile */}
                   {brief.fundingProfile&&(
-                    <div style={{marginTop:10,padding:"12px 14px",background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10}}>
+                    <div style={{marginTop:10,padding:"12px 14px",background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:10}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
                         <div className="field-label" style={{margin:0}}>Funding & Ownership</div>
                         {(()=>{
@@ -4217,13 +4217,13 @@ Return ONLY valid JSON:
                           const isSeries=fp.match(/series [a-e]/i);
                           const isPublic=fp.includes("nyse:")||fp.includes("nasdaq:")||fp.includes("public (");
                           const label=isPE?"🏦 PE-Backed":isSeries?"🚀 VC-Backed ("+isSeries[0]+")":isPublic?"📈 Public Company":null;
-                          const lColor=isPE?"#9B2C2C":isSeries?"#2E6B2E":isPublic?"#1B3A6B":"";
-                          const lBg=isPE?"#FDE8E8":isSeries?"#EEF5EE":isPublic?"#EEF5F9":"";
+                          const lColor=isPE?"var(--red)":isSeries?"var(--green)":isPublic?"var(--navy)":"";
+                          const lBg=isPE?"var(--red-bg)":isSeries?"var(--green-bg)":isPublic?"var(--navy-bg)":"";
                           const recent=fp.includes("2024")||fp.includes("2025")||fp.includes("2026")||fp.includes("recently");
                           return(<span style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                             {label&&<span style={{background:lBg,color:lColor,border:"1px solid "+lColor+"44",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>{label}</span>}
-                            {recent&&isSeries&&<span style={{background:"#2E6B2E",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>⚡ 18-mo buy window</span>}
-                            {isPE&&<span style={{background:"#BA7517",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>60-90 day budget cycle</span>}
+                            {recent&&isSeries&&<span style={{background:"var(--green)",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>⚡ 18-mo buy window</span>}
+                            {isPE&&<span style={{background:"var(--amber)",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>60-90 day budget cycle</span>}
                           </span>);
                         })()}
                       </div>
@@ -4244,10 +4244,10 @@ Return ONLY valid JSON:
                         <div key={i} className="contact-row" style={{margin:0}}>
                           <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"?"}</div>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:15,fontWeight:700,color:"#1a1a18"}}>{ex.name}</div>
+                            <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)"}}>{ex.name}</div>
                             <div style={{fontSize:13,color:"#777",marginBottom:4}}>{ex.title}</div>
                             {ex.background&&<div style={{fontSize:13,color:"#555",marginBottom:8,fontStyle:"italic"}}>{ex.background}</div>}
-                            <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Executive Perspective</div>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Executive Perspective</div>
                             <EF
                               value={(ex.angle||"").replace(/^Executive Perspective:\s*/i,"").replace(/^Executive Perspective\s*[-—:]\s*/i,"")}
                               onChange={v=>patchBrief(b=>{if(!b.keyExecutives)b.keyExecutives=[];b.keyExecutives[i]={...b.keyExecutives[i],angle:v};})}
@@ -4275,12 +4275,12 @@ Return ONLY valid JSON:
                         const headline = typeof h==="string"?h:(h.headline||"");
                         const relevance = typeof h==="object"?h.relevance:"";
                         return(
-                          <div key={i} style={{padding:"8px 10px",background:"#FAFAF8",border:"1px solid #E8E6DF",borderRadius:7}}>
+                          <div key={i} style={{padding:"8px 10px",background:"#FAFAF8",border:"1px solid var(--line-0)",borderRadius:7}}>
                             <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
-                              <div style={{width:5,height:5,borderRadius:"50%",background:"#1B3A6B",flexShrink:0,marginTop:5}}/>
+                              <div style={{width:5,height:5,borderRadius:"50%",background:"var(--navy)",flexShrink:0,marginTop:5}}/>
                               <div style={{flex:1}}>
-                                <div style={{fontSize:14,fontWeight:600,color:"#1a1a18",marginBottom:relevance?4:0}}>{headline}</div>
-                                {relevance&&<div style={{fontSize:12,color:"#8B6F47",fontStyle:"italic",marginTop:2}}>{relevance}</div>}
+                                <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",marginBottom:relevance?4:0}}>{headline}</div>
+                                {relevance&&<div style={{fontSize:12,color:"var(--tan-0)",fontStyle:"italic",marginTop:2}}>{relevance}</div>}
                               </div>
                             </div>
                           </div>
@@ -4299,18 +4299,18 @@ Return ONLY valid JSON:
                     </div>
                     <div className="bb-body">
                       {brief.openRoles.summary&&(
-                        <div style={{background:"#FAF8F4",borderLeft:"4px solid #8B6F47",borderRadius:"0 10px 10px 0",padding:"14px 16px",marginBottom:14}}>
+                        <div style={{background:"var(--bg-1)",borderLeft:"4px solid var(--tan-0)",borderRadius:"0 10px 10px 0",padding:"14px 16px",marginBottom:14}}>
                           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,flexWrap:"wrap",gap:6}}>
-                            <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px"}}>Strategic Interpretation</div>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px"}}>Strategic Interpretation</div>
                             {(()=>{
                               const txt=(brief.openRoles.summary+" "+(brief.openRoles.roles||[]).map(r=>r.title+" "+r.signal).join(" ")).toLowerCase();
                               const sig=txt.includes("digital transform")||txt.includes("innovation")||txt.includes("r&d")||txt.includes("emerging")?"🔵 Early Adopter":
                                 txt.includes("process")||txt.includes("efficiency")||txt.includes("optimization")||txt.includes("cost reduction")?"⚪ Late Majority":
                                 txt.includes("growth")||txt.includes("scale")||txt.includes("platform")||txt.includes("moderniz")?"🟢 Early Majority":null;
                               return sig?(
-                                <div style={{display:"flex",alignItems:"center",gap:4,background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
-                                  <span style={{fontSize:9,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.3px"}}>LinkedIn Graph</span>
-                                  <span style={{fontSize:11,fontWeight:700,color:"#1B3A6B"}}>{sig}</span>
+                                <div style={{display:"flex",alignItems:"center",gap:4,background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
+                                  <span style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.3px"}}>LinkedIn Graph</span>
+                                  <span style={{fontSize:11,fontWeight:700,color:"var(--navy)"}}>{sig}</span>
                                 </div>
                               ):null;
                             })()}
@@ -4321,10 +4321,10 @@ Return ONLY valid JSON:
                       {(brief.openRoles.roles||[]).filter(r=>r?.title).length>0&&(
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {(brief.openRoles.roles||[]).filter(r=>r?.title).map((role,i)=>(
-                            <div key={i} style={{padding:"12px 14px",background:"#fff",border:"1px solid #E8E6DF",borderRadius:10,marginBottom:2}}>
+                            <div key={i} style={{padding:"12px 14px",background:"#fff",border:"1px solid var(--line-0)",borderRadius:10,marginBottom:2}}>
                               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:role.signal?6:0}}>
-                                <div style={{background:"#F0EDE6",color:"#7A5C30",borderRadius:5,padding:"3px 9px",fontSize:10,fontWeight:700,whiteSpace:"nowrap",flexShrink:0,border:"1px solid #D4C4A8"}}>{role.dept||"Open"}</div>
-                                <div style={{fontSize:14,fontWeight:700,color:"#1a1a18"}}>{role.title}</div>
+                                <div style={{background:"var(--tan-3)",color:"var(--tan-ink)",borderRadius:5,padding:"3px 9px",fontSize:10,fontWeight:700,whiteSpace:"nowrap",flexShrink:0,border:"1px solid #D4C4A8"}}>{role.dept||"Open"}</div>
+                                <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{role.title}</div>
                               </div>
                               {role.signal&&<div style={{fontSize:13,color:"#5A4A35",lineHeight:1.6,fontStyle:"italic",paddingLeft:2}}>→ {role.signal}</div>}
                             </div>
@@ -4359,8 +4359,8 @@ Return ONLY valid JSON:
                           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
                             {scores.map((s,i)=>{
                               const n=parseFloat(s.val);
-                              const c=isNaN(n)?"#8B6F47":n>=4?"#2E6B2E":n>=3?"#BA7517":"#9B2C2C";
-                              const bg=isNaN(n)?"#F8F6F1":n>=4?"#EEF5EE":n>=3?"#FEF6E4":"#FDE8E8";
+                              const c=isNaN(n)?"var(--tan-0)":n>=4?"var(--green)":n>=3?"var(--amber)":"var(--red)";
+                              const bg=isNaN(n)?"var(--bg-0)":n>=4?"var(--green-bg)":n>=3?"var(--amber-bg)":"var(--red-bg)";
                               return(
                                 <div key={i} style={{background:bg,border:"1px solid "+c+"44",borderRadius:10,padding:"10px 14px",textAlign:"center",minWidth:80}}>
                                   <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:c,marginBottom:4}}>{s.label}</div>
@@ -4375,8 +4375,8 @@ Return ONLY valid JSON:
 
                       {/* NPS / CSAT signal */}
                       {brief.publicSentiment.npsSignal&&(
-                        <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 NPS / Customer Loyalty Signal</div>
+                        <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 NPS / Customer Loyalty Signal</div>
                           <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{brief.publicSentiment.npsSignal}</div>
                         </div>
                       )}
@@ -4395,9 +4395,9 @@ Return ONLY valid JSON:
                         <div style={{marginBottom:10}}>
                           {(()=>{const s=brief.publicSentiment.standoutReview;
                             const isPos=s.sentiment==="positive";
-                            const borderColor=isPos?"#2E6B2E":"#9B2C2C";
+                            const borderColor=isPos?"var(--green)":"var(--red)";
                             return(
-                            <div style={{background:"#FAF8F4",borderLeft:"3px solid "+borderColor,borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
+                            <div style={{background:"var(--bg-1)",borderLeft:"3px solid "+borderColor,borderRadius:"0 8px 8px 0",padding:"10px 13px"}}>
                               {s.source&&<div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:borderColor}}>
                                 {isPos?"✓":""} {s.source}
                               </div>}
@@ -4408,7 +4408,7 @@ Return ONLY valid JSON:
                       )}
                       {/* Sales angle */}
                       {(brief.publicSentiment.salesAngle||brief.publicSentiment.sentimentSummary)&&(
-                        <div style={{background:"#F8F6F1",borderLeft:"3px solid #8B6F47",padding:"9px 12px",borderRadius:"0 7px 7px 0"}}>
+                        <div style={{background:"var(--bg-0)",borderLeft:"3px solid var(--tan-0)",padding:"9px 12px",borderRadius:"0 7px 7px 0"}}>
                           <div className="field-label" style={{marginBottom:4}}>How to Use This</div>
                           <EF value={brief.publicSentiment.salesAngle||brief.publicSentiment.sentimentSummary||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.salesAngle=v;})} single placeholder="How to reference this in your conversation..."/>
                         </div>
@@ -4429,7 +4429,7 @@ Return ONLY valid JSON:
                         <div key={i} className="contact-row" style={{margin:0}}>
                           <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontSize:11,fontWeight:700}}>{l.initials||"?"}</div>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:12,fontWeight:600,color:"#1a1a18"}}>{l.name}</div>
+                            <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)"}}>{l.name}</div>
                             <div style={{fontSize:10,color:"#777",marginBottom:3}}>{l.title}</div>
                             {l.background&&<div style={{fontSize:10,color:"#aaa",fontStyle:"italic",marginBottom:3,lineHeight:1.4}}>{l.background}</div>}
                             <EF value={l.angle||""} onChange={v=>patchBrief(b=>{if(!b.leadershipTeam)b.leadershipTeam=[];b.leadershipTeam[i]={...b.leadershipTeam[i],angle:v};})} single placeholder="Engagement angle..."/>
@@ -4451,19 +4451,19 @@ Return ONLY valid JSON:
                   </div>
                   <div className="bb-body">
                     {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
-                      <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
+                      <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid var(--tan-3)":"none"}}>
                         {/* Product header + imperative badge */}
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                          <div style={{background:"#F0EDE6",color:"#7A5C30",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
+                          <div style={{background:"var(--tan-3)",color:"var(--tan-ink)",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
                             {item.product}
                           </div>
                           {item.imperativeServed&&(
-                            <div style={{fontSize:11,fontWeight:700,background:"#EEF5EE",color:"#2E6B2E",border:"1px solid #2E6B2E44",borderRadius:20,padding:"2px 10px"}}>
+                            <div style={{fontSize:11,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",border:"1px solid #2E6B2E44",borderRadius:20,padding:"2px 10px"}}>
                               {item.imperativeServed}
                             </div>
                           )}
                           {item.buyerRole&&(
-                            <div style={{fontSize:11,fontWeight:600,background:"#EEF5F9",color:"#1B3A6B",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
+                            <div style={{fontSize:11,fontWeight:600,background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
                               👤 {item.buyerRole}
                             </div>
                           )}
@@ -4474,20 +4474,20 @@ Return ONLY valid JSON:
                         {(item.jobToBeDone||item.painRelieved||item.gainCreated)&&(
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10}}>
                             {item.jobToBeDone&&(
-                              <div style={{background:"#F7F6F2",borderRadius:8,padding:"8px 10px"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Job-to-be-Done</div>
+                              <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Job-to-be-Done</div>
                                 <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.jobToBeDone}</div>
                               </div>
                             )}
                             {item.painRelieved&&(
                               <div style={{background:"#FDE8E844",borderRadius:8,padding:"8px 10px",border:"1px solid #9B2C2C22"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Pain Relieved</div>
+                                <div style={{fontSize:9,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Pain Relieved</div>
                                 <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.painRelieved}</div>
                               </div>
                             )}
                             {item.gainCreated&&(
-                              <div style={{background:"#EEF5EE",borderRadius:8,padding:"8px 10px",border:"1px solid #2E6B2E22"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Gain Created</div>
+                              <div style={{background:"var(--green-bg)",borderRadius:8,padding:"8px 10px",border:"1px solid #2E6B2E22"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Gain Created</div>
                                 <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.gainCreated}</div>
                               </div>
                             )}
@@ -4495,21 +4495,21 @@ Return ONLY valid JSON:
                         )}
                         {/* Challenger insight */}
                         {item.challengerInsight&&(
-                          <div style={{marginTop:8,background:"#1a1a18",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}>
-                            <span style={{fontSize:11,color:"#8B6F47",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span>
+                          <div style={{marginTop:8,background:"var(--ink-0)",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}>
+                            <span style={{fontSize:11,color:"var(--tan-0)",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span>
                             <div>
-                              <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Challenger Insight</div>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Challenger Insight</div>
                               <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{item.challengerInsight}</div>
                             </div>
                           </div>
                         )}
                         {/* JOLT risk remover */}
                         {item.joltRiskRemover&&(
-                          <div style={{marginTop:6,background:"#EEF5EE",borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"flex-start",gap:6}}>
+                          <div style={{marginTop:6,background:"var(--green-bg)",borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"flex-start",gap:6}}>
                             <span style={{fontSize:11,flexShrink:0}}>🛡</span>
                             <div>
-                              <div style={{fontSize:9,fontWeight:700,color:"#2E6B2E",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Risk Remover (JOLT)</div>
-                              <div style={{fontSize:12,color:"#2E6B2E",lineHeight:1.5}}>{item.joltRiskRemover}</div>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Risk Remover (JOLT)</div>
+                              <div style={{fontSize:12,color:"var(--green)",lineHeight:1.5}}>{item.joltRiskRemover}</div>
                             </div>
                           </div>
                         )}
@@ -4518,20 +4518,20 @@ Return ONLY valid JSON:
 
                     {/* Mobilizer Intelligence */}
                     {brief.mobilizer?.description&&(
-                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid #E8E6DF"}}>
-                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#1B3A6B",marginBottom:10}}>🎯 Mobilizer Intelligence (Challenger Customer)</div>
-                        <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B33",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
-                          <div style={{fontSize:9,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Who Moves Deals — Not Talkers or Blockers</div>
+                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
+                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:10}}>🎯 Mobilizer Intelligence (Challenger Customer)</div>
+                        <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
+                          <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Who Moves Deals — Not Talkers or Blockers</div>
                           <div style={{fontSize:13,color:"#333",lineHeight:1.6,marginBottom:8}}>{brief.mobilizer.description}</div>
                           {brief.mobilizer.identifyingBehavior&&(
                             <div style={{marginBottom:8}}>
-                              <div style={{fontSize:9,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>How to Spot Them in a Meeting</div>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>How to Spot Them in a Meeting</div>
                               <div style={{fontSize:12,color:"#555",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.identifyingBehavior}</div>
                             </div>
                           )}
                           {brief.mobilizer.teachingAngle&&(
-                            <div style={{background:"#1a1a18",borderRadius:7,padding:"8px 12px"}}>
-                              <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Challenger Teaching Angle</div>
+                            <div style={{background:"var(--ink-0)",borderRadius:7,padding:"8px 12px"}}>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Challenger Teaching Angle</div>
                               <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.teachingAngle}</div>
                             </div>
                           )}
@@ -4541,16 +4541,16 @@ Return ONLY valid JSON:
 
                     {/* Relevant Case Studies */}
                     {(brief.caseStudies||[]).filter(c=>c?.title).length>0&&(
-                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid #E8E6DF"}}>
-                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:10}}>Relevant Case Studies & Customers</div>
+                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
+                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--tan-0)",marginBottom:10}}>Relevant Case Studies & Customers</div>
                         {(brief.caseStudies||[]).filter(c=>c?.title).map((cs,i)=>(
-                          <div key={i} style={{display:"flex",gap:10,marginBottom:10,padding:"9px 12px",background:"#FAF8F4",borderRadius:8,border:"1px solid #E8E6DF"}}>
+                          <div key={i} style={{display:"flex",gap:10,marginBottom:10,padding:"9px 12px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                             <div style={{fontSize:18,lineHeight:1,flexShrink:0}}>📄</div>
                             <div style={{flex:1}}>
-                              <div style={{fontSize:14,fontWeight:600,color:"#1a1a18",marginBottom:2}}>{cs.title}</div>
-                              {cs.customer&&<div style={{fontSize:12,color:"#8B6F47",fontWeight:600,marginBottom:3}}>{cs.customer}</div>}
+                              <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",marginBottom:2}}>{cs.title}</div>
+                              {cs.customer&&<div style={{fontSize:12,color:"var(--tan-0)",fontWeight:600,marginBottom:3}}>{cs.customer}</div>}
                               {cs.result&&(
-                                <div style={{fontSize:12,fontWeight:700,color:"#2E6B2E",background:"#EEF5EE",borderRadius:10,padding:"2px 8px",display:"inline-block",marginBottom:4}}>
+                                <div style={{fontSize:12,fontWeight:700,color:"var(--green)",background:"var(--green-bg)",borderRadius:10,padding:"2px 8px",display:"inline-block",marginBottom:4}}>
                                   📊 {cs.result}
                                 </div>
                               )}
@@ -4582,13 +4582,13 @@ Return ONLY valid JSON:
                           {key:"analytics",label:"Analytics"},
                           {key:"infrastructure",label:"Infra"},
                         ].filter(({key})=>brief.techStack[key]?.trim()).map(({key,label})=>(
-                          <div key={key} style={{display:"flex",alignItems:"center",gap:6,background:"#F0EDE6",border:"1px solid #D4C4A8",borderRadius:20,padding:"4px 12px"}}>
-                            <span style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.3px"}}>{label}</span>
-                            <span style={{fontSize:13,fontWeight:600,color:"#1a1a18"}}>{brief.techStack[key]}</span>
+                          <div key={key} style={{display:"flex",alignItems:"center",gap:6,background:"var(--tan-3)",border:"1px solid #D4C4A8",borderRadius:20,padding:"4px 12px"}}>
+                            <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.3px"}}>{label}</span>
+                            <span style={{fontSize:13,fontWeight:600,color:"var(--ink-0)"}}>{brief.techStack[key]}</span>
                           </div>
                         ))}
                         {(brief.techStack.other||[]).filter(Boolean).map((t,i)=>(
-                          <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:20,padding:"4px 12px"}}>
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"4px 12px"}}>
                             <span style={{fontSize:13,color:"#555"}}>{t}</span>
                           </div>
                         ))}
@@ -4609,22 +4609,22 @@ Return ONLY valid JSON:
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                         {/* Workforce */}
                         {(brief.workforceProfile?.knowledgeWorkerPct||brief.workforceProfile?.remotePolicy)&&(
-                          <div style={{background:"#F7F6F2",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>👥 Workforce</div>
+                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>👥 Workforce</div>
                             {brief.workforceProfile.knowledgeWorkerPct&&<div style={{fontSize:12,color:"#333",marginBottom:3}}>Knowledge workers: <strong>{brief.workforceProfile.knowledgeWorkerPct}</strong></div>}
-                            {brief.workforceProfile.unionizedPct&&<div style={{fontSize:12,color:"#333",marginBottom:3}}>Unionized: <strong style={{color:brief.workforceProfile.unionizedPct.includes("high")||parseFloat(brief.workforceProfile.unionizedPct)>30?"#9B2C2C":"#333"}}>{brief.workforceProfile.unionizedPct}</strong></div>}
+                            {brief.workforceProfile.unionizedPct&&<div style={{fontSize:12,color:"#333",marginBottom:3}}>Unionized: <strong style={{color:brief.workforceProfile.unionizedPct.includes("high")||parseFloat(brief.workforceProfile.unionizedPct)>30?"var(--red)":"#333"}}>{brief.workforceProfile.unionizedPct}</strong></div>}
                             {brief.workforceProfile.remotePolicy&&<div style={{fontSize:12,color:"#555"}}>{brief.workforceProfile.remotePolicy}</div>}
                             {brief.workforceProfile.avgTenure&&<div style={{fontSize:11,color:"#aaa",marginTop:3}}>Avg tenure: {brief.workforceProfile.avgTenure}</div>}
                           </div>
                         )}
                         {/* Culture */}
                         {brief.cultureProfile?.coreValues&&(
-                          <div style={{background:"#F7F6F2",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#6B3A7A",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>🎭 Culture</div>
+                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
+                            <div style={{fontSize:10,fontWeight:700,color:"var(--purple)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>🎭 Culture</div>
                             {brief.cultureProfile.coreValues&&<div style={{fontSize:12,color:"#333",marginBottom:4}}><strong>Values:</strong> {brief.cultureProfile.coreValues}</div>}
                             {brief.cultureProfile.communicationStyle&&<div style={{fontSize:12,color:"#555",marginBottom:2}}><strong>Style:</strong> {brief.cultureProfile.communicationStyle}</div>}
                             {brief.cultureProfile.sellerLanguageHint&&(
-                              <div style={{marginTop:6,padding:"5px 8px",background:"#F3EEF9",borderRadius:6,fontSize:11,color:"#6B3A7A",fontStyle:"italic"}}>
+                              <div style={{marginTop:6,padding:"5px 8px",background:"var(--purple-bg)",borderRadius:6,fontSize:11,color:"var(--purple)",fontStyle:"italic"}}>
                                 💬 {brief.cultureProfile.sellerLanguageHint}
                               </div>
                             )}
@@ -4633,7 +4633,7 @@ Return ONLY valid JSON:
                         {/* Incumbents */}
                         {(brief.incumbentVendors?.hrSystem||brief.incumbentVendors?.financeSystem||brief.incumbentVendors?.crmSystem)&&(
                           <div style={{background:"#FDE8E833",border:"1px solid #9B2C2C33",borderRadius:8,padding:"10px 12px",gridColumn:"1/-1"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>⚔️ Incumbent Vendors — Know What You're Displacing</div>
+                            <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>⚔️ Incumbent Vendors — Know What You're Displacing</div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                               {[
                                 {label:"HR/HCM",val:brief.incumbentVendors.hrSystem},
@@ -4642,8 +4642,8 @@ Return ONLY valid JSON:
                                 {label:"Cards",val:brief.incumbentVendors.cardProvider},
                               ].filter(x=>x.val).map((x,i)=>(
                                 <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:"#fff",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px"}}>
-                                  <span style={{fontSize:10,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase"}}>{x.label}</span>
-                                  <span style={{fontSize:12,fontWeight:700,color:"#1a1a18"}}>{x.val}</span>
+                                  <span style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase"}}>{x.label}</span>
+                                  <span style={{fontSize:12,fontWeight:700,color:"var(--ink-0)"}}>{x.val}</span>
                                 </div>
                               ))}
                             </div>
@@ -4681,11 +4681,11 @@ Return ONLY valid JSON:
                           const activeIdx=stages.indexOf(brief.processMaturity.dmiacStage);
                           return stages.map((stage,i)=>(
                             <div key={stage} style={{display:"flex",alignItems:"center",gap:4}}>
-                              {i>0&&<div style={{width:14,height:2,background:i<=activeIdx?colors[i]+"66":"#E8E6DF",borderRadius:1}}/>}
+                              {i>0&&<div style={{width:14,height:2,background:i<=activeIdx?colors[i]+"66":"var(--line-0)",borderRadius:1}}/>}
                               <div style={{padding:"4px 11px",borderRadius:20,fontSize:12,fontWeight:700,
-                                background:i===activeIdx?colors[i]:i<activeIdx?colors[i]+"22":"#F0EDE6",
+                                background:i===activeIdx?colors[i]:i<activeIdx?colors[i]+"22":"var(--tan-3)",
                                 color:i===activeIdx?"#fff":i<activeIdx?colors[i]:"#bbb",
-                                border:"1.5px solid "+(i<=activeIdx?colors[i]:"#E8E6DF")}}>
+                                border:"1.5px solid "+(i<=activeIdx?colors[i]:"var(--line-0)")}}>
                                 {stage}
                               </div>
                             </div>
@@ -4695,10 +4695,10 @@ Return ONLY valid JSON:
                       <EF value={brief.processMaturity.maturityNote||""} onChange={v=>patchBrief(b=>{if(!b.processMaturity)b.processMaturity={};b.processMaturity.maturityNote=v;})}/>
                       {(brief.processMaturity.processGaps||[]).filter(Boolean).length>0&&(
                         <div style={{marginTop:12}}>
-                          <div style={{fontSize:11,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Process Gaps</div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Process Gaps</div>
                           {brief.processMaturity.processGaps.filter(Boolean).map((g,i)=>(
                             <div key={i} style={{display:"flex",gap:7,marginBottom:5}}>
-                              <div style={{width:5,height:5,borderRadius:"50%",background:"#BA7517",flexShrink:0,marginTop:6}}/>
+                              <div style={{width:5,height:5,borderRadius:"50%",background:"var(--amber)",flexShrink:0,marginTop:6}}/>
                               <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{g}</div>
                             </div>
                           ))}
@@ -4717,14 +4717,14 @@ Return ONLY valid JSON:
                     </div>
                     <div className="bb-body">
                       {(brief.keyContacts||[]).filter(c=>c?.name||c?.title).map((c,i)=>(
-                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.keyContacts||[]).filter(x=>x?.name||x?.title).length-1)?"1px solid #F0EDE6":"none"}}>
+                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.keyContacts||[]).filter(x=>x?.name||x?.title).length-1)?"1px solid var(--tan-3)":"none"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                            <div style={{width:30,height:30,borderRadius:"50%",background:"#2E6B2E",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            <div style={{width:30,height:30,borderRadius:"50%",background:"var(--green)",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                               {c.initials||"?"}
                             </div>
                             <div>
-                              <div style={{fontSize:14,fontWeight:700,color:"#1a1a18"}}>{c.name||"Unknown"}</div>
-                              <div style={{fontSize:12,color:"#2E6B2E",fontWeight:600}}>{c.title||""}</div>
+                              <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{c.name||"Unknown"}</div>
+                              <div style={{fontSize:12,color:"var(--green)",fontWeight:600}}>{c.title||""}</div>
                             </div>
                           </div>
                           <EF value={c.angle||""} onChange={v=>patchBrief(b=>{b.keyContacts[i]={...b.keyContacts[i],angle:v};})} placeholder="Why they feel this pain and how to reach them..."/>
@@ -4737,7 +4737,7 @@ Return ONLY valid JSON:
                     <div className="bb-body">
                       {(brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
                         <div key={i} className="signal-row" style={{marginBottom:8}}>
-                          <div className="sig-dot" style={{background:"#9B2C2C"}}/>
+                          <div className="sig-dot" style={{background:"var(--red)"}}/>
                           <div style={{flex:1}}>
                             <EF value={w||""} onChange={v=>patchBrief(b=>{b.watchOuts[i]=v;})} single/>
                           </div>
@@ -4821,8 +4821,8 @@ Return ONLY valid JSON:
                   <div className="load-spin"/>
                   Building RIVER hypothesis...
                 </div>
-                <div style={{height:3,background:"#F0EDE6",borderRadius:2,overflow:"hidden",marginTop:12}}>
-                  <div style={{height:"100%",background:"linear-gradient(90deg,#8B6F47,#1B3A6B,#2E6B2E,#8B6F47)",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
+                <div style={{height:3,background:"var(--tan-3)",borderRadius:2,overflow:"hidden",marginTop:12}}>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,var(--tan-0),var(--navy),var(--green),var(--tan-0))",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
                 </div>
                 <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:8}}>
                   This usually finishes before you're done reading the brief
@@ -4834,11 +4834,11 @@ Return ONLY valid JSON:
               <>
                 {/* RIVER fields — Quick Summary + Expand */}
                 {[
-                  {key:"reality",    label:"R — Reality",      icon:"📍", sub:"Current state", color:"#1B3A6B"},
-                  {key:"impact",     label:"I — Impact",       icon:"💥", sub:"Cost of inaction", color:"#9B2C2C"},
-                  {key:"vision",     label:"V — Vision",       icon:"🔭", sub:"What success looks like", color:"#2E6B2E"},
-                  {key:"entryPoints",label:"E — Entry Points", icon:"🚪", sub:"Decision-makers", color:"#6B3A7A"},
-                  {key:"route",      label:"R — Route",        icon:"🗺", sub:"Fastest path to close", color:"#8B6F47"},
+                  {key:"reality",    label:"R — Reality",      icon:"📍", sub:"Current state", color:"var(--navy)"},
+                  {key:"impact",     label:"I — Impact",       icon:"💥", sub:"Cost of inaction", color:"var(--red)"},
+                  {key:"vision",     label:"V — Vision",       icon:"🔭", sub:"What success looks like", color:"var(--green)"},
+                  {key:"entryPoints",label:"E — Entry Points", icon:"🚪", sub:"Decision-makers", color:"var(--purple)"},
+                  {key:"route",      label:"R — Route",        icon:"🗺", sub:"Fastest path to close", color:"var(--tan-0)"},
                 ].map(({key,label,icon,sub,color})=>(
                   <RiverFieldCard
                     key={key}
@@ -4875,8 +4875,8 @@ Return ONLY valid JSON:
                       <div><div className="bb-title">Challenger Insight</div><div className="bb-sub">The assumption to challenge — teach this to the organization through the Mobilizer</div></div>
                     </div>
                     <div className="bb-body">
-                      <div style={{background:"#1a1a18",borderRadius:8,padding:"12px 16px"}}>
-                        <div style={{fontSize:9,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>The Insight (Challenger Customer)</div>
+                      <div style={{background:"var(--ink-0)",borderRadius:8,padding:"12px 16px"}}>
+                        <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>The Insight (Challenger Customer)</div>
                         <div style={{fontSize:14,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>"{riverHypo.challengerInsight}"</div>
                       </div>
                     </div>
@@ -4892,10 +4892,10 @@ Return ONLY valid JSON:
                     </div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
                       {[
-                        {key:"judgeIndecision",label:"J — Judge the Indecision",color:"#BA7517",bg:"#FEF6E4",icon:"🔍"},
-                        {key:"recommendation",label:"O — Offer Your Recommendation",color:"#2E6B2E",bg:"#EEF5EE",icon:"🎯"},
-                        {key:"limitExploration",label:"L — Limit the Exploration",color:"#1B3A6B",bg:"#EEF5F9",icon:"🔬"},
-                        {key:"takeRiskOff",label:"T — Take Risk Off the Table",color:"#6B3A7A",bg:"#F3EEF9",icon:"🛡"},
+                        {key:"judgeIndecision",label:"J — Judge the Indecision",color:"var(--amber)",bg:"var(--amber-bg)",icon:"🔍"},
+                        {key:"recommendation",label:"O — Offer Your Recommendation",color:"var(--green)",bg:"var(--green-bg)",icon:"🎯"},
+                        {key:"limitExploration",label:"L — Limit the Exploration",color:"var(--navy)",bg:"var(--navy-bg)",icon:"🔬"},
+                        {key:"takeRiskOff",label:"T — Take Risk Off the Table",color:"var(--purple)",bg:"var(--purple-bg)",icon:"🛡"},
                       ].map(({key,label,color,bg,icon})=>riverHypo.joltPlan[key]&&(
                         <div key={key} style={{background:bg,border:"1px solid "+color+"33",borderRadius:8,padding:"10px 12px"}}>
                           <div style={{fontSize:10,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>{icon} {label}</div>
@@ -4915,8 +4915,8 @@ Return ONLY valid JSON:
                     </div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                       {(riverHypo.talkTracks||[]).map((t,i)=>(
-                        <div key={i} style={{borderLeft:"3px solid #8B6F47",paddingLeft:12}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>{t.stage}</div>
+                        <div key={i} style={{borderLeft:"3px solid var(--tan-0)",paddingLeft:12}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>{t.stage}</div>
                           <EF
                             value={t.line||""}
                             onChange={v=>setRiverHypo(prev=>{
@@ -4936,7 +4936,7 @@ Return ONLY valid JSON:
             )}
 
             {!riverHypo&&!riverHypoLoading&&(
-              <div style={{background:"#FAF8F4",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:24,textAlign:"center",color:"#aaa",fontSize:13}}>
+              <div style={{background:"var(--bg-1)",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:24,textAlign:"center",color:"#aaa",fontSize:13}}>
                 Hypothesis not yet generated.
                 <button className="btn btn-gold" style={{marginLeft:12}} onClick={()=>buildRiverHypo(brief,selectedAccount)}>
                   Build Hypothesis
@@ -4977,7 +4977,7 @@ Return ONLY valid JSON:
             </div>
 
             {/* Confidence bar */}
-            <div style={{height:4,background:"#F0EDE6",borderRadius:2,marginBottom:24,overflow:"hidden"}}>
+            <div style={{height:4,background:"var(--tan-3)",borderRadius:2,marginBottom:24,overflow:"hidden"}}>
               <div style={{height:"100%",width:confidence+"%",background:confColor(confidence),borderRadius:2,transition:"width 0.4s"}}/>
             </div>
 
@@ -5034,7 +5034,7 @@ Return ONLY valid JSON:
                       ))}
 
                       {/* Stage nav */}
-                      <div style={{display:"flex",gap:8,marginTop:16,paddingTop:14,borderTop:"1px solid #F0EDE6"}}>
+                      <div style={{display:"flex",gap:8,marginTop:16,paddingTop:14,borderTop:"1px solid var(--tan-3)"}}>
                         {si>0&&<button className="btn btn-secondary btn-sm" onClick={()=>setActiveRiver(si-1)}>← {RIVER_STAGES[si-1].label}</button>}
                         {si<RIVER_STAGES.length-1&&<button className="btn btn-gold btn-sm" onClick={()=>setActiveRiver(si+1)}>{RIVER_STAGES[si+1].label} →</button>}
                         {si===RIVER_STAGES.length-1&&<button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>{postLoading?"Routing...":"End Call & Route Deal →"}</button>}
@@ -5043,7 +5043,7 @@ Return ONLY valid JSON:
 
                     {/* Discovery Questions — product-specific */}
                     <div className="stage-card">
-                      <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,marginBottom:16,color:"#1a1a18"}}>
+                      <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,marginBottom:16,color:"var(--ink-0)"}}>
                         🎯 Discovery Questions
                         <span style={{fontSize:11,fontWeight:400,color:"#999",marginLeft:8,fontFamily:"DM Sans,sans-serif"}}>product-specific · tailored to {selectedAccount?.company}</span>
                       </div>
@@ -5066,8 +5066,8 @@ Return ONLY valid JSON:
                         const stageKey=["reality","impact","vision","entryPoints","route"][si];
                         const qs=discoveryQs[stageKey]||[];
                         return qs.filter(q=>q?.q).map((dq,qi)=>(
-                          <div key={qi} className="dq-block" style={{borderLeftColor:"#1B3A6B"}}>
-                            <div className="dq-framework" style={{color:"#1B3A6B"}}>{dq.framework||"Active Listening"}</div>
+                          <div key={qi} className="dq-block" style={{borderLeftColor:"var(--navy)"}}>
+                            <div className="dq-framework" style={{color:"var(--navy)"}}>{dq.framework||"Active Listening"}</div>
                             <div className="dq-question">"{dq.q}"</div>
                             {dq.intent&&<div style={{fontSize:11,color:"#777",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
                             <div className="gate-note-lbl">What you're hearing</div>
@@ -5087,22 +5087,22 @@ Return ONLY valid JSON:
                     </div>
 
                     {/* Talk Track */}
-                    <div style={{background:"#1a1a18",borderRadius:12,padding:"16px 18px",marginBottom:14}}>
-                      <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Talk Track</div>
+                    <div style={{background:"var(--ink-0)",borderRadius:12,padding:"16px 18px",marginBottom:14}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Talk Track</div>
                       <div style={{fontSize:14,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>{stage.talkTrack}</div>
                     </div>
 
                     {/* Objection Handling */}
                     <div className="stage-card">
-                      <div style={{fontSize:13,fontWeight:700,color:"#9B2C2C",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>⚡ Objection Handling</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>⚡ Objection Handling</div>
                       {stage.objections.map((o,oi)=>(
                         <div key={oi} style={{marginBottom:10}}>
-                          <button style={{width:"100%",textAlign:"left",padding:"10px 14px",borderRadius:8,border:"1px solid #E8E6DF",background:"#FDE8E8",cursor:"pointer",fontSize:13,fontWeight:600,color:"#9B2C2C",fontFamily:"DM Sans,sans-serif"}}
+                          <button style={{width:"100%",textAlign:"left",padding:"10px 14px",borderRadius:8,border:"1px solid var(--line-0)",background:"var(--red-bg)",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--red)",fontFamily:"DM Sans,sans-serif"}}
                             onClick={()=>setExpandedObjs(s=>({...s,[si+"-"+oi]:!s[si+"-"+oi]}))}>
                             "{o.q}" <span style={{float:"right",color:"#bbb"}}>{expandedObjs[si+"-"+oi]?"▲":"▼"}</span>
                           </button>
                           {expandedObjs[si+"-"+oi]&&(
-                            <div style={{padding:"10px 14px",background:"#F8F6F1",borderRadius:"0 0 8px 8px",border:"1px solid #E8E6DF",borderTop:"none",fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>
+                            <div style={{padding:"10px 14px",background:"var(--bg-0)",borderRadius:"0 0 8px 8px",border:"1px solid var(--line-0)",borderTop:"none",fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>
                               {o.a}
                             </div>
                           )}
@@ -5118,8 +5118,8 @@ Return ONLY valid JSON:
               <div>
                 {/* Notes */}
                 <div className="incall-sidebar" style={{marginBottom:14}}>
-                  <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:8}}>Call Notes</div>
-                  <textarea style={{width:"100%",minHeight:160,padding:10,border:"1px solid #E8E6DF",borderRadius:8,fontSize:13,fontFamily:"DM Sans",background:"#FAFAF8",resize:"vertical"}}
+                  <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--tan-0)",marginBottom:8}}>Call Notes</div>
+                  <textarea style={{width:"100%",minHeight:160,padding:10,border:"1px solid var(--line-0)",borderRadius:8,fontSize:13,fontFamily:"DM Sans",background:"#FAFAF8",resize:"vertical"}}
                     placeholder="Free-form notes... Tab = timestamp"
                     value={notes} onChange={e=>setNotes(e.target.value)}
                     onKeyDown={e=>{if(e.key==="Tab"){e.preventDefault();const ts=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});const el=e.target;const b=el.value.slice(0,el.selectionStart);const a=el.value.slice(el.selectionStart);el.value=b+"\n["+ts+"] "+a;setNotes(el.value);}}}/>
@@ -5128,8 +5128,8 @@ Return ONLY valid JSON:
 
                 {/* Opening Angle */}
                 {brief?.openingAngle&&(
-                  <div className="incall-sidebar" style={{marginBottom:14,borderLeft:"3px solid #8B6F47"}}>
-                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#8B6F47",marginBottom:6}}>Opening Angle</div>
+                  <div className="incall-sidebar" style={{marginBottom:14,borderLeft:"3px solid var(--tan-0)"}}>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--tan-0)",marginBottom:6}}>Opening Angle</div>
                     <div style={{fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
                   </div>
                 )}
@@ -5137,10 +5137,10 @@ Return ONLY valid JSON:
                 {/* Solutions quick ref */}
                 {(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
                   <div className="incall-sidebar" style={{marginBottom:14}}>
-                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#1B3A6B",marginBottom:8}}>Solutions</div>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:8}}>Solutions</div>
                     {(brief.solutionMapping||[]).filter(s=>s?.product).map((s,i)=>(
-                      <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(brief.solutionMapping.filter(x=>x?.product).length-1)?"1px solid #F0EDE6":"none"}}>
-                        <div style={{fontSize:12,fontWeight:700,color:"#1a1a18",marginBottom:2}}>{s.product}</div>
+                      <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(brief.solutionMapping.filter(x=>x?.product).length-1)?"1px solid var(--tan-3)":"none"}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:2}}>{s.product}</div>
                         <div style={{fontSize:11,color:"#666",lineHeight:1.5}}>{s.fit}</div>
                       </div>
                     ))}
@@ -5150,9 +5150,9 @@ Return ONLY valid JSON:
                 {/* Watch-outs */}
                 {(brief?.watchOuts||[]).filter(Boolean).length>0&&(
                   <div className="incall-sidebar">
-                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#9B2C2C",marginBottom:8}}>⚠ Watch-Outs</div>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--red)",marginBottom:8}}>⚠ Watch-Outs</div>
                     {(brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
-                      <div key={i} style={{fontSize:12,color:"#555",paddingBottom:6,marginBottom:6,borderBottom:i<brief.watchOuts.filter(Boolean).length-1?"1px solid #F0EDE6":"none",lineHeight:1.5}}>
+                      <div key={i} style={{fontSize:12,color:"#555",paddingBottom:6,marginBottom:6,borderBottom:i<brief.watchOuts.filter(Boolean).length-1?"1px solid var(--tan-3)":"none",lineHeight:1.5}}>
                         {w}
                       </div>
                     ))}
@@ -5161,7 +5161,7 @@ Return ONLY valid JSON:
 
                 {brief?.processMaturity?.dmiacStage&&(
                   <div className="incall-sidebar" style={{marginTop:14}}>
-                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"#1B3A6B",marginBottom:8}}>⚙️ DMAIC Stage</div>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:8}}>⚙️ DMAIC Stage</div>
                     <div style={{display:"flex",gap:3,marginBottom:8,flexWrap:"wrap"}}>
                       {(()=>{
                         const stages=["Define","Measure","Analyze","Improve","Control"];
@@ -5169,9 +5169,9 @@ Return ONLY valid JSON:
                         const ai=stages.indexOf(brief.processMaturity.dmiacStage);
                         return stages.map((s,i)=>(
                           <span key={s} style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10,
-                            background:i===ai?colors[i]:i<ai?colors[i]+"22":"#F0EDE6",
+                            background:i===ai?colors[i]:i<ai?colors[i]+"22":"var(--tan-3)",
                             color:i===ai?"#fff":i<ai?colors[i]:"#aaa",
-                            border:"1px solid "+(i<=ai?colors[i]:"#E8E6DF")}}>
+                            border:"1px solid "+(i<=ai?colors[i]:"var(--line-0)")}}>
                             {s}
                           </span>
                         ));
@@ -5224,7 +5224,7 @@ Return ONLY valid JSON:
                 <div className="post-sec">
                   <div className="post-lbl">Follow-Up Email <button className="copy-btn" onClick={()=>copyText("Subject: "+postCall.emailSubject+"\n\n"+postCall.emailBody,"email")}>{copied==="email"?"Copied ✓":"Copy Email"}</button></div>
                   <div className="post-content" style={{fontSize:12}}>
-                    <div style={{fontWeight:600,marginBottom:9,color:"#1a1a18"}}>Subject: {postCall.emailSubject}</div>
+                    <div style={{fontWeight:600,marginBottom:9,color:"var(--ink-0)"}}>Subject: {postCall.emailSubject}</div>
                     {postCall.emailBody}
                   </div>
                 </div>
