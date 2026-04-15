@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
+import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
 
 
 const SB_URL=import.meta.env.VITE_SUPABASE_URL;
@@ -343,7 +344,7 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
-const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A"];
+const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#C87533","#1B3A6B","#2E6B2E","#9B2C2C","#6B3A7A","#BA7517","#3A6B6B","#6B4A9B","#A84A4A","#4A9B7A"];
 
 // ── UNIVERSAL BUSINESS IMPERATIVES ─────────────────────────────────────────
 // Every company — regardless of industry, size, or stage — is always working on these.
@@ -680,38 +681,41 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
   // ── 5 MICRO-CALLS fire simultaneously, each with a tiny schema ───────────
   // User sees the overview card the moment the fastest resolves (~2s)
 
-  // MICRO 1: Company overview card — smallest schema, shows first
-  const p1 = callAI(base+
+  // MICRO 1: Company overview card — smallest schema, shows first (streamed)
+  const p1 = streamAI(base+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, revenue scale, employees, HQ, strategic direction",`+
     `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:MCD)","employeeCount":"e.g. ~200,000",`+
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
     `"fundingProfile":"Ownership: PE firm + year acquired, or Series + total raised + lead investor, or Public exchange+ticker",`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
-    `"watchOuts":["PROCUREMENT RISK (from 6M-permutation analysis): The Wall industries are Automotive/Mfg (5.9% avg fit), Aerospace Defense Prime (5.8%), Telecom (6.1%), Energy Oil/Gas (11.3%), Energy Utilities (13.4%), Mass Market Retail Walmart/Target (13.6%), Tier 1 Banks JPM/BAC/WF (12.6%) — 100% poor-fit rate across all startup stages. Flag if this target is in these categories.","INCUMBENT RISK: which Oracle/SAP/Workday/Amex/Salesforce relationship are we displacing or landing adjacent to? Adjacent is almost always the right first motion. Series A-B cannot displace incumbents.","STAGE CREDIBILITY: Seed/Series A selling to >50K employee companies = avg 23-33% fit across all scenarios. Series C+ required for meaningful enterprise traction. PE-acquired seller has trust advantage."]}`
+    `"watchOuts":["PROCUREMENT RISK (from 6M-permutation analysis): The Wall industries are Automotive/Mfg (5.9% avg fit), Aerospace Defense Prime (5.8%), Telecom (6.1%), Energy Oil/Gas (11.3%), Energy Utilities (13.4%), Mass Market Retail Walmart/Target (13.6%), Tier 1 Banks JPM/BAC/WF (12.6%) — 100% poor-fit rate across all startup stages. Flag if this target is in these categories.","INCUMBENT RISK: which Oracle/SAP/Workday/Amex/Salesforce relationship are we displacing or landing adjacent to? Adjacent is almost always the right first motion. Series A-B cannot displace incumbents.","STAGE CREDIBILITY: Seed/Series A selling to >50K employee companies = avg 23-33% fit across all scenarios. Series C+ required for meaningful enterprise traction. PE-acquired seller has trust advantage."]}`,
+    ()=>{}, 1800
   );
 
-  // MICRO 2: Executives — fires simultaneously, merges when ready
-  const p2 = callAI(base+
+  // MICRO 2: Executives — fires simultaneously, merges when ready (streamed)
+  const p2 = streamAI(base+
     `Return ONLY raw JSON (start with {) for the 3 key executives at ${co}:\n`+
     `{"keyExecutives":[`+
     `{"name":"REQUIRED real current CEO name","title":"CEO","initials":"XX","background":"Prior role in 1 sentence","angle":"Board mandate and what they are measured on. 2 sentences."},`+
     `{"name":"REQUIRED real current CHRO or CPO name","title":"exact title","initials":"XX","background":"HR/people focus 1 sentence","angle":"What winning looks like for them personally. 2 sentences."},`+
     `{"name":"REQUIRED real current CFO or COO name","title":"exact title","initials":"XX","background":"Financial/ops focus 1 sentence","angle":"How they evaluate spend decisions. 2 sentences."}],`+
-    `"sellerSnapshot":"2 sentences on seller most relevant offerings for ${co}"}`
+    `"sellerSnapshot":"2 sentences on seller most relevant offerings for ${co}"}`,
+    ()=>{}, 1800
   );
 
-  // MICRO 3: Strategy + opening angle — shows after execs
-  const p3 = callAI(base+
+  // MICRO 3: Strategy + opening angle — shows after execs (streamed)
+  const p3 = streamAI(base+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
     `{"strategicTheme":"2-3 sentences on ${co} current strategic direction and priorities",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now for ${co} — the why-you-why-now",`+
     `"openingAngle":"1-2 sharp sentences referencing something real about ${co}. Reframe an assumption. Sounds human not scripted.",`+
-    `"publicSentiment":{`+`"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name sources and tone.",`+`"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — or empty if unknown",`+`"g2Rating":"G2 product rating as a number e.g. 4.2 out of 5 — or empty if not a software company",`+`"npsSignal":"Estimated NPS signal: if you know ${co} publishes NPS or CSAT data, cite it. Otherwise describe customer loyalty signals (high churn, vocal advocates, renewal rates mentioned in press)",`+`"trustpilotRating":"Trustpilot score as a number if known — or empty",`+`"employeeScore":"Glassdoor CEO approval % or Indeed rating if known — signals culture and operational health",`+`"standoutReview":{"text":"Most revealing customer or employee quote or paraphrase — something a seller would want to know","source":"G2 / Glassdoor / Trustpilot / analyst / press","sentiment":"positive or negative"},`+`"salesAngle":"1 sentence: how the seller should use this sentiment context in the discovery conversation"}}`
+    `"publicSentiment":{`+`"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name sources and tone.",`+`"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — or empty if unknown",`+`"g2Rating":"G2 product rating as a number e.g. 4.2 out of 5 — or empty if not a software company",`+`"npsSignal":"Estimated NPS signal: if you know ${co} publishes NPS or CSAT data, cite it. Otherwise describe customer loyalty signals (high churn, vocal advocates, renewal rates mentioned in press)",`+`"trustpilotRating":"Trustpilot score as a number if known — or empty",`+`"employeeScore":"Glassdoor CEO approval % or Indeed rating if known — signals culture and operational health",`+`"standoutReview":{"text":"Most revealing customer or employee quote or paraphrase — something a seller would want to know","source":"G2 / Glassdoor / Trustpilot / analyst / press","sentiment":"positive or negative"},`+`"salesAngle":"1 sentence: how the seller should use this sentiment context in the discovery conversation"}}`,
+    ()=>{}, 2200
   );
 
-  // MICRO 4: Solution mapping + contacts — shows after strategy
-  const p4 = callAI(base+
+  // MICRO 4: Solution mapping + contacts — shows after strategy (streamed)
+  const p4 = streamAI(base+
     `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
     `Apply Dunford (Obviously Awesome) positioning and Osterwalder (Value Proposition Canvas) to map seller solutions to ${co}.\n`+`ASSUME ${co} universally wants to: grow revenue, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy.\n`+`For each solution: (1) which universal imperative does it serve? (2) what job does it do? (3) what pain does it relieve? (4) what gain does it create?\n`+`{"solutionMapping":[`+
     `{"product":"Specific ${sellerUrl} offering","fit":"Job-to-be-done it performs (Osterwalder) → specific pain it relieves → gain it creates for ${co}. Grounded in a real signal."},`+
@@ -720,7 +724,8 @@ async function generateBrief(member, sellerUrl, sellerDocs, products, selectedCo
     `"caseStudies":[{"title":"Relevant case study or named customer","customer":"","relevance":"Why relevant to ${co}"},{"title":"","customer":"","relevance":""}],`+
     `"keyContacts":[{"name":"VP/Director NOT C-suite — real name if known","title":"Full title","initials":"XX","angle":"Why they feel this pain daily and how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
     `"techStack":{"crm":"if known","erp":"if known","hris":"if known","marketing":"if known","payments":"if known","analytics":"if known","infrastructure":"if known","other":[]},`+
-    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`
+    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
+    ()=>{}, 2400
   );
 
   // MICRO 5: Live search — headlines, roles, signals
@@ -1685,11 +1690,31 @@ Return ONLY raw JSON:
   // ── BUILD SELLER ICP FROM URL ────────────────────────────────────────────
   // Fires when seller URL is entered. Uses training knowledge + web search
   // to understand who this seller actually sells to.
-  const buildSellerICP = async(rawUrl) => {
+  // localStorage cache for ICPs — keyed by normalized URL.
+  // Goal: consistency. Once an ICP is built for a seller, reuse it forever
+  // unless user explicitly regenerates. Kills drift between sessions.
+  // Bump ICP_CACHE_VERSION if the ICP schema changes — old cached entries
+  // will fall through to regeneration.
+  const ICP_CACHE_VERSION = "v2";
+  const icpCacheKey = (u) => `icp:${ICP_CACHE_VERSION}:${u.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"")}`;
+
+  const buildSellerICP = async(rawUrl, {forceRefresh=false}={}) => {
     const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+
+    // Cache hit — instant, deterministic
+    if(!forceRefresh){
+      try{
+        const cached = localStorage.getItem(icpCacheKey(url));
+        if(cached){
+          const parsed = JSON.parse(cached);
+          if(parsed?.sellerName||parsed?.icp){ setSellerICP(parsed); return; }
+        }
+      }catch{}
+    }
+
     setIcpLoading(true);
 
-    // Phase 1 — web search to gather seller intelligence
+    // Phase 1 — research (training-knowledge recall, no web_search tool yet)
     const researchPrompt =
       `Search for information about the B2B company at ${url}:\n`+
       `1. What do they sell? Who are their target customers?\n`+
@@ -1717,13 +1742,45 @@ Return ONLY raw JSON:
       }
     }catch(e){ console.warn("ICP research failed:",e.message); }
 
-    // Phase 2 — build full ICP using research + training knowledge
+    // Phase 2 — build full ICP.
+    // Numeric/categorical fields are ANCHORED to fixed enums below. The model
+    // MUST pick one of the listed values verbatim — no free-form ranges.
+    // This is what kills "500-10K vs 1K-50K" drift between runs.
     const icpPrompt =
       `You are a senior B2B ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}.\n`+
       (researchCtx?`RESEARCH:\n${researchCtx.slice(0,800)}\n\n`:"")+
       `Seller stage: ${sellerStage||"unknown"}. Be specific and confident — no placeholders.\n\n`+
+      `CRITICAL — CONSISTENCY RULES:\n`+
+      `- For fields marked "PICK ONE" below, return ONLY the chosen value verbatim. No extra words, no custom ranges, no parentheticals.\n`+
+      `- Be deterministic. If a buyer fits two buckets, pick the one matching the MEDIAN customer, not the widest range.\n\n`+
       `Return ONLY raw JSON starting with {:\n`+
-      `{"sellerName":"","sellerDescription":"2 sentences on what they sell","marketCategory":"specific category","icp":{"industries":["Primary","Second","Third"],"companySize":"e.g. 500-10K employees","revenueRange":"e.g. $50M-$2B","ownershipTypes":["most common"],"geographies":["Primary"],"adoptionProfile":"Early Adopter or Early Majority","buyerPersonas":["Economic buyer","Champion","Technical evaluator"],"priorityInitiative":"what triggers them to act NOW","successFactors":"what winning looks like","perceivedBarriers":"top objections","decisionCriteria":"top 2-3 evaluation factors","buyerJourney":"awareness to decision","customerJobs":["Functional job","Emotional job","Social job"],"topPains":["Pain 1","Pain 2","Pain 3"],"topGains":["Gain 1","Gain 2","Gain 3"],"competitiveAlternatives":["Status quo","Competitor","Build in-house"],"uniqueDifferentiators":["Differentiator 1","Differentiator 2"],"disqualifiers":["Not a fit: 1","Not a fit: 2"],"techSignals":["Signal 1","Signal 2"],"tractionChannels":["Channel 1","Channel 2","Channel 3"],"dealSize":"typical ACV","salesCycle":"typical length","customerExamples":["Customer 1","Customer 2","Customer 3"]}}`;
+      `{"sellerName":"",`+
+      `"sellerDescription":"2 sentences on what they sell",`+
+      `"marketCategory":"specific category in 2-5 words",`+
+      `"icp":{`+
+      `"industries":["Primary","Second","Third"],`+
+      `"companySize":"PICK ONE: 1-49 employees | 50-499 employees | 500-4,999 employees | 5,000-49,999 employees | 50,000+ employees",`+
+      `"revenueRange":"PICK ONE: <$10M | $10M-$100M | $100M-$1B | $1B-$10B | $10B+",`+
+      `"ownershipTypes":["PICK 1-2 FROM: VC-backed private | PE-backed private | Public | Privately-held (family/founder) | Bootstrapped"],`+
+      `"geographies":["Primary region: North America | EMEA | APAC | LATAM | Global"],`+
+      `"adoptionProfile":"PICK ONE: Innovator | Early Adopter | Early Majority | Late Majority",`+
+      `"buyerPersonas":["Economic buyer role","Champion role","Technical evaluator role"],`+
+      `"priorityInitiative":"what triggers them to act NOW in 1-2 sentences",`+
+      `"successFactors":"what winning looks like in 1-2 sentences",`+
+      `"perceivedBarriers":"top objections in 1-2 sentences",`+
+      `"decisionCriteria":"top 2-3 evaluation factors",`+
+      `"buyerJourney":"awareness to decision in 1 sentence",`+
+      `"customerJobs":["Functional job","Emotional job","Social job"],`+
+      `"topPains":["Pain 1","Pain 2","Pain 3"],`+
+      `"topGains":["Gain 1","Gain 2","Gain 3"],`+
+      `"competitiveAlternatives":["Status quo","Competitor","Build in-house"],`+
+      `"uniqueDifferentiators":["Differentiator 1","Differentiator 2"],`+
+      `"disqualifiers":["Not a fit: 1","Not a fit: 2"],`+
+      `"techSignals":["Signal 1","Signal 2"],`+
+      `"tractionChannels":["Channel 1","Channel 2","Channel 3"],`+
+      `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
+      `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
+      `"customerExamples":["Customer 1","Customer 2","Customer 3"]}}`;
 
     try{
       const r2 = await fetch("/api/claude",{
@@ -1746,7 +1803,10 @@ Return ONLY raw JSON:
       if(m){
         try{
           const parsed = JSON.parse(m[0]);
-          if(parsed.sellerName||parsed.icp) setSellerICP(parsed);
+          if(parsed.sellerName||parsed.icp){
+            setSellerICP(parsed);
+            try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
+          }
         }catch(e){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
       }
     }catch(e){ console.warn("ICP build phase 2 failed:",e.message); }
@@ -2935,16 +2995,24 @@ Return ONLY valid JSON:
                 </div>
               </div>
               {sellerICP?.icp&&(
-                <div style={{display:"flex",gap:0,border:"1.5px solid #E8E6DF",borderRadius:8,overflow:"hidden",flexShrink:0}}>
-                  {[["icp","🎯 Your ICP"],["rfp","📡 RFP Intel"]].map(([tab,label])=>(
-                    <button key={tab}
-                      onClick={()=>{setIcpTab(tab);if(tab==="rfp"&&!rfpData.open.length&&!rfpData.loading)fetchRFPIntel();}}
-                      style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
-                        background:icpTab===tab?"#1a1a18":"#fff",
-                        color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s"}}>
-                      {label}
-                    </button>
-                  ))}
+                <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+                  <button
+                    onClick={()=>{if(confirm("Regenerate ICP from scratch? The cached version will be replaced."))buildSellerICP(sellerUrl,{forceRefresh:true});}}
+                    title="Force rebuild ICP (clears cache)"
+                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid #E8E6DF",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
+                    ↻ Regenerate
+                  </button>
+                  <div style={{display:"flex",gap:0,border:"1.5px solid #E8E6DF",borderRadius:8,overflow:"hidden"}}>
+                    {[["icp","🎯 Your ICP"],["rfp","📡 RFP Intel"]].map(([tab,label])=>(
+                      <button key={tab}
+                        onClick={()=>{setIcpTab(tab);if(tab==="rfp"&&!rfpData.open.length&&!rfpData.loading)fetchRFPIntel();}}
+                        style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
+                          background:icpTab===tab?"#1a1a18":"#fff",
+                          color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s"}}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -5009,240 +5077,18 @@ Return ONLY valid JSON:
           </div>
         )}
 
-        {/* ── STEP 8: SOLUTION FIT REVIEW ── */}
+        {/* ── STEP 9: SOLUTION FIT REVIEW ── */}
         {step===9&&(
-          <div className="page">
-            <div className="page-title">Solution Architecture Review</div>
-            <div className="page-sub">Post-call solution fit re-evaluation for <strong>{selectedAccount?.company}</strong> — aligned to what you actually heard, not just what you assumed.</div>
-
-            {solutionFitLoading&&(
-              <div className="card">
-                <div style={{fontSize:13,color:"#777",marginBottom:12}}>Applying Solution Architecture framework to your discovery capture...</div>
-                  <div className="pulse-wrap">{[70,90,55,80,65,75,50].map((w,i)=><div key={i} className="pulse-line" style={{width:w+"%",animationDelay:(i*0.12)+"s"}}/>)}</div>                <div style={{fontSize:12,color:"#8B6F47",marginTop:12,fontStyle:"italic"}}>
-                  Evaluating business alignment, integration complexity, and implementation phasing...
-                </div>
-              </div>
-            )}
-
-            {solutionFit&&!solutionFitLoading&&(
-              <>
-                {/* PMF Assessment */}
-                {solutionFit.pmfAssessment&&(
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:20}}>
-                    {[
-                      {label:"Target Customer Fit",val:solutionFit.pmfAssessment.targetCustomerFit},
-                      {label:"Underserved Need",val:solutionFit.pmfAssessment.underservedNeedFit},
-                      {label:"Value Prop Fit",val:solutionFit.pmfAssessment.valuePropositionFit},
-                      {label:"Overall PMF Signal",val:solutionFit.pmfAssessment.overallPMFSignal},
-                    ].filter(x=>x.val).map((x,i)=>{
-                      const isStrong=x.val?.toLowerCase().includes("strong");
-                      const isWeak=x.val?.toLowerCase().includes("weak");
-                      const c=isStrong?"#2E6B2E":isWeak?"#9B2C2C":"#BA7517";
-                      const bg=isStrong?"#EEF5EE":isWeak?"#FDE8E8":"#FEF6E4";
-                      return(
-                        <div key={i} style={{background:bg,border:"1px solid "+c+"44",borderRadius:10,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:c,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>{x.label}</div>
-                          <div style={{fontSize:13,fontWeight:700,color:c}}>{x.val}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {solutionFit.adoptionProfile&&(
-                  <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-                      <div style={{fontSize:11,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px"}}>📊 Adoption Profile (Moore)</div>
-                      <span style={{background:"#1B3A6B",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{solutionFit.adoptionProfile}</span>
-                    </div>
-                    {solutionFit.adoptionImplication&&<div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{solutionFit.adoptionImplication}</div>}
-                  </div>
-                )}
-
-                {solutionFit.dmiacStage&&(
-                  <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
-                    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,flexWrap:"wrap"}}>
-                      <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,color:"#1a1a18"}}>DMAIC Stage:</div>
-                      {(()=>{
-                        const map={Define:"#9B2C2C",Measure:"#BA7517",Analyze:"#1B3A6B",Improve:"#2E6B2E",Control:"#6B3A7A"};
-                        const bgmap={Define:"#FDE8E8",Measure:"#FEF6E4",Analyze:"#EEF5F9",Improve:"#EEF5EE",Control:"#F3EEF9"};
-                        const c=map[solutionFit.dmiacStage]||"#555";
-                        const bg=bgmap[solutionFit.dmiacStage]||"#F8F6F1";
-                        return<span style={{background:bg,color:c,border:"1.5px solid "+c+"44",borderRadius:20,padding:"4px 16px",fontSize:14,fontWeight:700}}>{solutionFit.dmiacStage}</span>;
-                      })()}
-                    </div>
-                    {solutionFit.dmiacRationale&&<div style={{fontSize:14,color:"#555",lineHeight:1.6,marginBottom:solutionFit.entryStrategy?10:0}}>{solutionFit.dmiacRationale}</div>}
-                    {solutionFit.entryStrategy&&(
-                      <div style={{background:"#1a1a18",borderRadius:8,padding:"10px 14px"}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Recommended Entry Strategy</div>
-                        <div style={{fontSize:13,color:"#fff",lineHeight:1.6}}>{solutionFit.entryStrategy}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Integration complexity badge */}
-                <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
-                  <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"#1a1a18"}}>
-                    Integration Complexity:
-                  </div>
-                  {(()=>{
-                    const ic=(solutionFit.integrationComplexity||"").split("/")[0].trim().toLowerCase();
-                    const c=ic==="low"?"#2E6B2E":ic==="medium"?"#BA7517":"#9B2C2C";
-                    const bg=ic==="low"?"#EEF5EE":ic==="medium"?"#FEF6E4":"#FDE8E8";
-                    return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"4px 14px",fontSize:14,fontWeight:700}}>
-                      {solutionFit.integrationComplexity}
-                    </span>;
-                  })()}
-                </div>
-
-                {/* Confirmed Solutions */}
-                {(solutionFit.confirmedSolutions||[]).length>0&&(
-                  <div className="bb">
-                    <div className="bb-hdr">
-                      <div className="bb-icon">✓</div>
-                      <div><div className="bb-title">Confirmed Solution Fit</div><div className="bb-sub">Solutions validated by discovery — with SA rationale</div></div>
-                    </div>
-                    <div className="bb-body">
-                      {solutionFit.confirmedSolutions.map((s,i)=>(
-                        <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<solutionFit.confirmedSolutions.length-1?"1px solid #F0EDE6":"none"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-                            <div style={{background:"#F0EDE6",color:"#7A5C30",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
-                              {s.product}
-                            </div>
-                            <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                              background:s.fitScore>=75?"#EEF5EE":s.fitScore>=50?"#FEF6E4":"#FDE8E8",
-                              color:s.fitScore>=75?"#2E6B2E":s.fitScore>=50?"#BA7517":"#9B2C2C",
-                              border:"1px solid "+(s.fitScore>=75?"#2E6B2E":s.fitScore>=50?"#BA7517":"#9B2C2C")+"44"}}>
-                              {s.fitScore}% · {s.fitLabel}
-                            </div>
-                            <div style={{fontSize:11,background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:"2px 10px",color:"#555"}}>
-                              {s.implementationPhase}
-                            </div>
-                          </div>
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                            <div>
-                              <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Business Alignment</div>
-                              <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{s.businessAlignment}</div>
-                            </div>
-                            <div>
-                              <div style={{fontSize:11,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Architecture Notes</div>
-                              <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{s.architectureNotes}</div>
-                            </div>
-                          </div>
-                          {s.risks&&(
-                            <div style={{marginTop:8,padding:"8px 10px",background:"#FDE8E8",borderRadius:6,fontSize:12,color:"#9B2C2C"}}>
-                              ⚠ {s.risks}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Revised / Changed Solutions */}
-                {(solutionFit.revisedSolutions||[]).length>0&&(
-                  <div className="bb">
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:14}}>↕</div>
-                      <div><div className="bb-title">Revised After Discovery</div><div className="bb-sub">Solutions that changed based on what you actually heard</div></div>
-                    </div>
-                    <div className="bb-body">
-                      {solutionFit.revisedSolutions.map((r,i)=>(
-                        <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",background:"#FAF8F4",borderRadius:8,marginBottom:8,border:"1px solid #E8E6DF"}}>
-                          <div style={{flex:1}}>
-                            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
-                              <span style={{fontWeight:700,fontSize:13,color:"#1a1a18"}}>{r.product}</span>
-                              <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,
-                                background:r.change==="Upgraded"?"#EEF5EE":r.change==="Removed"?"#FDE8E8":"#FEF6E4",
-                                color:r.change==="Upgraded"?"#2E6B2E":r.change==="Removed"?"#9B2C2C":"#BA7517"}}>
-                                {r.change}
-                              </span>
-                            </div>
-                            <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{r.reason}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Architecture Gaps */}
-                {(solutionFit.architectureGaps||[]).length>0&&(
-                  <div className="bb">
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:14}}>🔍</div>
-                      <div><div className="bb-title">Architecture Gaps</div><div className="bb-sub">Customer needs not fully addressed — recommendations to bridge</div></div>
-                    </div>
-                    <div className="bb-body">
-                      {solutionFit.architectureGaps.map((g,i)=>(
-                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<solutionFit.architectureGaps.length-1?"1px solid #F0EDE6":"none"}}>
-                          <div style={{fontSize:13,fontWeight:600,color:"#9B2C2C",marginBottom:4}}>Gap: {g.gap}</div>
-                          <div style={{fontSize:13,color:"#2E6B2E",lineHeight:1.5}}>→ {g.recommendation}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Implementation Roadmap */}
-                {solutionFit.implementationRoadmap&&(
-                  <div className="bb">
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:14}}>🗺</div>
-                      <div><div className="bb-title">Implementation Roadmap</div><div className="bb-sub">Recommended phasing based on their outcomes and architecture</div></div>
-                    </div>
-                    <div className="bb-body">
-                      <div style={{fontSize:14,color:"#333",lineHeight:1.7}}>{solutionFit.implementationRoadmap}</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Success Metrics */}
-                {(solutionFit.successMetrics||[]).filter(Boolean).length>0&&(
-                  <div className="bb">
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:14}}>📊</div>
-                      <div><div className="bb-title">Success Metrics</div><div className="bb-sub">What winning looks like — measurable, tied to their outcomes</div></div>
-                    </div>
-                    <div className="bb-body">
-                      {solutionFit.successMetrics.filter(Boolean).map((m,i)=>(
-                        <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}}>
-                          <div style={{width:20,height:20,borderRadius:"50%",background:"#2E6B2E",color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
-                          <div style={{fontSize:14,color:"#333",lineHeight:1.6}}>{m}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* SA Recommendation */}
-                {solutionFit.saRecommendation&&(
-                  <div style={{background:"#1a1a18",borderRadius:14,padding:"20px 22px",marginBottom:16}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>🏗 Senior SA Recommendation</div>
-                    <div style={{fontSize:15,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>"{solutionFit.saRecommendation}"</div>
-                  </div>
-                )}
-
-                <div className="actions-row">
-                  <button className="btn btn-secondary" onClick={()=>setStep(8)}>← Post-Call</button>
-                  <button className="btn btn-secondary" onClick={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}>↻ Regenerate</button>
-                  <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
-                  <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}>Next Account</button>
-                </div>
-              </>
-            )}
-
-            {!solutionFit&&!solutionFitLoading&&(
-              <div style={{background:"#FAF8F4",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:32,textAlign:"center"}}>
-                <div style={{fontSize:28,marginBottom:12}}>🏗</div>
-                <div style={{fontSize:15,fontWeight:600,color:"#1a1a18",marginBottom:6}}>Solution Architecture Review</div>
-                <div style={{fontSize:13,color:"#777",marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>Re-evaluate solution fit against what you heard in the call. Maps customer needs to your solutions using SA principles.</div>
-                <button className="btn btn-primary btn-lg" onClick={buildSolutionFit}>Run Solution Fit Review →</button>
-              </div>
-            )}
-          </div>
+          <S9SolutionFit
+            solutionFit={solutionFit}
+            solutionFitLoading={solutionFitLoading}
+            selectedAccount={selectedAccount}
+            onRun={buildSolutionFit}
+            onRegenerate={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}
+            onBack={()=>setStep(8)}
+            onExport={doExport}
+            onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}
+          />
         )}
 
       </div>
