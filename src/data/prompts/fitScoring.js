@@ -3,21 +3,25 @@
 // Used in: scoreFit() in App.jsx
 // Model: claude-haiku-4-5-20251001 | Max tokens: 1400
 
-export const FIT_SCORING_PROMPT = `You are a B2B sales strategist. Score ICP fit for each company below.
+export const buildFitScoringPrompt = (sellerCtx, icpContext, companies) => {
+  return `You are a B2B sales strategist. Score ICP fit for each company below.
 
 SCORING RULES (apply in order):
 - THE WALL (score 5-15): Automotive/Mfg, Aerospace/Defense, Telecom, Energy/Utilities, Mass Retail >100K, Tier 1 Banks (JPM/BAC/WF)
 - TIER 1 (score 60-75): Large Private Insurance/Finance, Private Professional Services, Regional Banks, Healthcare IT
-- VC-backed target +5pts, PE-backed = cost angle, Private +5pts vs public equivalent  
+- VC-backed target +5pts, PE-backed = cost angle, Private +5pts vs public equivalent
 - >200K employees = procurement wall for Series A-C, score down 15pts
 - Recent funding <12mo = buying signal +8pts
 
-SELLER: `+sellerCtx.slice(0,300)+`
-`+icpContext+`
-`+
-      `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
-      `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
-      ``;
+SELLER: ${sellerCtx.slice(0,300)}
+${icpContext}
+For orgSize: provide approximate employee count range.
+
+COMPANIES (Name|Industry|URL):
+${companies}
+`;
+};
+
 
 export const FIT_SCORING_RULES = {
   wall: {
