@@ -203,3 +203,37 @@ git push origin main && vercel --prod
 - v100-stable — last known stable before API migration
 - v101-modular-foundation — current, lib/data/config extracted
 
+
+---
+
+## Knowledge Layer — Negotiation & Influence Frameworks
+
+Stored in: `src/data/negotiationFrameworks.js`
+
+These frameworks are applied throughout the app — not just referenced. Each maps to a specific stage:
+
+### Stage Mapping
+| Framework | Stage | Application |
+|---|---|---|
+| Voss — Never Split the Difference | S7 In-Call | Calibrated questions, tactical empathy, mirroring, labeling |
+| Fisher/Ury — Getting to Yes | S7 + S8 | BATNA, interests vs positions, objective criteria |
+| Cialdini — Influence | S5 Brief + S6 Hypothesis | Social proof, authority, reciprocity in talk tracks |
+| Sun Tzu — Art of War | S3 Fit + S5 Brief | Know enemy (competitive intel), adapt to terrain |
+| Graham — Intelligent Investor | S4 + S8 | Margin of safety, value vs price, deal qualification |
+| Crucial Conversations | S7 In-Call | Safety signals, emotional escalation, STATE method |
+
+### Key Concepts Applied
+- **Calibrated Questions** → Discovery questions in S7 always start with "How" or "What"
+- **BATNA** → Route stage always surfaces prospect's cost of inaction
+- **Margin of Safety** → Deal qualification in S4 requires 3-5x value case
+- **Art of War — Water Principle** → Talk tracks adapt to Moore adoption profile
+- **Cialdini Social Proof** → Case studies in Brief match prospect's exact industry + size
+- **Voss Accusation Audit** → Watch-Outs section pre-empts likely objections
+
+### Pending Implementation
+- [ ] Add Voss calibrated questions to S7 In-Call discovery question generation
+- [ ] Add Cialdini social proof framing to Brief opening angle
+- [ ] Add Art of War competitive positioning to watchOuts generation
+- [ ] Add Graham margin of safety framing to S4 deal value selection
+- [ ] Add Crucial Conversations safety signals to In-Call sidebar
+
