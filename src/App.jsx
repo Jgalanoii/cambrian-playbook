@@ -1137,7 +1137,32 @@ function BriefLoader({ company, status }) {
   );
 }
 
-// ── PASSWORD GATE ─────────────────────────────────────────────────────────────
+// ── AUTH / PASSWORD GATE ──────────────────────────────────────────────────────
+// AuthShell is at module scope (NOT inside PasswordGate) so its component
+// identity is stable across keystroke re-renders. Defining it inside
+// PasswordGate caused React to unmount the form on every character typed —
+// manifesting as password-field focus jumping back to the email field.
+function AuthShell({ children }) {
+  return (
+    <div className="app">
+      <style>{FONTS}{css}</style>
+      <header className="header">
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          <div className="logo">Cambrian <span>Catalyst</span></div>
+          <div style={{fontSize:9,letterSpacing:"0.7px",color:"var(--ink-3)",fontWeight:700,textTransform:"uppercase"}}>
+            Reality · Impact · Vision · Entry · Route
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:700,color:"var(--tan-0)",letterSpacing:"0.5px",textTransform:"uppercase"}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:"var(--tan-0)"}}/>
+          Private Beta
+        </div>
+      </header>
+      {children}
+      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA</footer>
+    </div>
+  );
+}
 
 function PasswordGate({ onAuth }) {
   const[mode,setMode]=React.useState("signup");
@@ -1182,32 +1207,8 @@ function PasswordGate({ onAuth }) {
     setLoading(false);
   };
 
-  // Login is rendered in the SAME app shell as the rest of the app: the
-  // standard .header (with just the logo — no stepper because there's no
-  // session yet), the standard .page container, .page-title/.page-sub
-  // typography, and a .card for the form. Same patterns, same tokens.
-  const AppShell = ({ children }) => (
-    <div className="app">
-      <style>{FONTS}{css}</style>
-      <header className="header">
-        <div style={{display:"flex",flexDirection:"column",gap:2}}>
-          <div className="logo">Cambrian <span>Catalyst</span></div>
-          <div style={{fontSize:9,letterSpacing:"0.7px",color:"var(--ink-3)",fontWeight:700,textTransform:"uppercase"}}>
-            Reality · Impact · Vision · Entry · Route
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:700,color:"var(--tan-0)",letterSpacing:"0.5px",textTransform:"uppercase"}}>
-          <span style={{width:6,height:6,borderRadius:"50%",background:"var(--tan-0)"}}/>
-          Private Beta
-        </div>
-      </header>
-      {children}
-      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA</footer>
-    </div>
-  );
-
   if(verifying) return (
-    <AppShell>
+    <AuthShell>
       <div className="page" style={{maxWidth:520,paddingTop:48}}>
         <div className="card" style={{textAlign:"center",padding:"36px 28px"}}>
           <div style={{fontSize:38,marginBottom:12}}>📬</div>
@@ -1218,11 +1219,11 @@ function PasswordGate({ onAuth }) {
           <button className="btn btn-secondary" onClick={()=>{setVerifying(false);setMode("signin");}}>← Back to Sign In</button>
         </div>
       </div>
-    </AppShell>
+    </AuthShell>
   );
 
   return (
-    <AppShell>
+    <AuthShell>
       <div className="page" style={{maxWidth:480,paddingTop:48}}>
         <div className="page-title">
           {mode==="signup" ? "Create your account" : "Welcome back"}
@@ -1269,7 +1270,7 @@ function PasswordGate({ onAuth }) {
           </button>
         </div>
       </div>
-    </AppShell>
+    </AuthShell>
   );
 }
 
