@@ -1,21 +1,24 @@
+import { guard } from "./_guard.js";
+
 export const config = { maxDuration: 120 };
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  const body = guard(req, res, { stream: true });
+  if (!body) return;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
+      "Content-Type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify({ ...req.body, stream: true, temperature: req.body.temperature ?? 0 }),
+    body: JSON.stringify(body),
   });
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
