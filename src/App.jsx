@@ -1861,15 +1861,54 @@ Return ONLY raw JSON (no prose):
       });
       const d = await r.json();
       if(d.error){setRfpData(p=>({...p,loading:false,error:d.error.message}));return;}
-      // With tool use, response contains text + tool_result blocks. Grab the
-      // final text block that should hold our JSON.
-      const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join(" ").trim();
-      const jsonMatch = textBlocks.match(/\{[\s\S]*\}/);
-      if(!jsonMatch){
-        setRfpData(p=>({...p,loading:false,error:"RFP response did not contain JSON — try Refresh."}));
+
+      // With tool use, response has multiple blocks: narration text,
+      // tool_use, tool_result, more text. Walk blocks in reverse and find
+      // the first one containing our JSON schema. Use brace-counting
+      // rather than regex greedy match so narration containing { and }
+      // doesn't poison the result.
+      const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+
+      const extractJsonWithKey = (text, anchorKey) => {
+        // Strip markdown code fences first.
+        const clean = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
+        const anchor = clean.indexOf(`"${anchorKey}"`);
+        if (anchor === -1) return null;
+        // Walk backward from anchor to find the containing object's opening {
+        let start = anchor;
+        while (start > 0 && clean[start] !== "{") start--;
+        if (clean[start] !== "{") return null;
+        // Walk forward with brace/string awareness to find matching }
+        let depth = 0, inStr = false, esc = false;
+        for (let i = start; i < clean.length; i++) {
+          const ch = clean[i];
+          if (esc) { esc = false; continue; }
+          if (ch === "\\") { esc = true; continue; }
+          if (ch === '"') { inStr = !inStr; continue; }
+          if (inStr) continue;
+          if (ch === "{") depth++;
+          else if (ch === "}") {
+            depth--;
+            if (depth === 0) {
+              try { return JSON.parse(clean.slice(start, i + 1)); }
+              catch { return null; }
+            }
+          }
+        }
+        return null;
+      };
+
+      let parsed = null;
+      for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+        parsed = extractJsonWithKey(textBlocks[i], "open") || extractJsonWithKey(textBlocks[i], "closed");
+      }
+      if (!parsed) {
+        console.warn("RFP parse failed. Raw content blocks:", d.content);
+        const preview = textBlocks.join(" ").slice(0, 160);
+        setRfpData(p=>({...p,loading:false,error:`Could not parse RFP JSON. Response started with: "${preview}..." — try Refresh.`}));
         return;
       }
-      const parsed = JSON.parse(jsonMatch[0]);
+
       // Coerce isGovernment to a real boolean in case the model returns
       // "true"/"false" strings or omits it on a row.
       const fixGov = r => ({...r, isGovernment: r.isGovernment === true || r.isGovernment === "true"});
