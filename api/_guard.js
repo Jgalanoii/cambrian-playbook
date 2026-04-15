@@ -23,7 +23,10 @@ const ALLOWED_TOOL_TYPES = new Set([
 // Highest legitimate max_tokens across the app (ICP phase 2 uses 6000).
 // Clients that request more get silently capped.
 const MAX_TOKENS_CAP = 8000;
-const MAX_TOOL_USES = 1;
+// Highest legitimate max_uses across the app: RFP intel needs a few
+// searches to cover both private and government sources. ICP phase 1 and
+// Brief p5 use 1. Cap bounds per-request search cost.
+const MAX_TOOL_USES = 3;
 
 // Origin allow-list. If Origin header is absent (server-to-server, including
 // our own test harness at scripts/consistency/) we allow — the real defense
