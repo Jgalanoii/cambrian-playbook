@@ -417,11 +417,83 @@ async function callAI(prompt){
 }
 
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
+// Build the unified "Seller Proof Pack" that gets prepended to every
+// customer-facing prompt (brief, hypothesis, solution fit, fit-score).
+// This is the system's "why buy from US" thread — without it, downstream
+// prompts invent generic claims instead of citing real proof. The pack
+// composes everything the seller has captured: ICP differentiators,
+// named customers, competitive alternatives, success factors, priority
+// trigger, traction channels, uploaded docs, and product catalog.
+//
+// CRITICAL: includes explicit instructions telling Haiku to GROUND every
+// claim in this proof — cite named customers, name differentiators, flag
+// unsupported claims rather than asserting them.
+function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [] }) {
+  if (!sellerICP?.icp) return "";
+  const icp = sellerICP.icp;
+  const out = [];
+  const sellerLabel = sellerICP.sellerName || sellerICP.marketCategory || "this seller";
+  out.push(`═══ WHY BUY FROM ${sellerLabel.toUpperCase()} — ground every claim in this proof ═══`);
+  if (sellerICP.sellerDescription) out.push(`What we sell: ${sellerICP.sellerDescription}`);
+  if (sellerICP.marketCategory)    out.push(`Market category: ${sellerICP.marketCategory}`);
+
+  const diffs   = (icp.uniqueDifferentiators || []).filter(Boolean);
+  const cust    = (icp.customerExamples || []).filter(Boolean);
+  const alts    = (icp.competitiveAlternatives || []).filter(Boolean);
+  const channels= (icp.tractionChannels || []).filter(Boolean);
+
+  if (diffs.length) {
+    out.push(`\nUnique differentiators (Dunford — name these to justify "why us"):`);
+    diffs.forEach(d => out.push(`  • ${d}`));
+  }
+  if (cust.length) {
+    out.push(`\nNamed customers (Cialdini social proof — cite by name when proposing solutions; do NOT invent other customer names):`);
+    cust.forEach(c => out.push(`  • ${c}`));
+  }
+  if (alts.length) {
+    out.push(`\nCompetitive alternatives we displace/replace (know the terrain — Sun Tzu):`);
+    alts.forEach(a => out.push(`  • ${a}`));
+  }
+  if (icp.successFactors) {
+    out.push(`\nWhat winning looks like for our customers (frame outcomes in these terms):`);
+    out.push(`  ${icp.successFactors}`);
+  }
+  if (icp.priorityInitiative) {
+    out.push(`\nWhat triggers our buyers to act NOW (use this for urgency framing):`);
+    out.push(`  ${icp.priorityInitiative}`);
+  }
+  if (channels.length) {
+    out.push(`\nProven go-to-market channels:`);
+    channels.forEach(c => out.push(`  • ${c}`));
+  }
+  if (sellerDocs.length) {
+    out.push(`\nUploaded proof documents (case studies, datasheets — quote when relevant):`);
+    sellerDocs.forEach(d => out.push(`  • ${d.label}: ${(d.content || "").slice(0, 300)}${d.content && d.content.length > 300 ? "…" : ""}`));
+  }
+  const namedProducts = (products || []).filter(p => p?.name?.trim());
+  if (namedProducts.length) {
+    out.push(`\nSeller's product catalog (use these EXACT names — do NOT invent products):`);
+    namedProducts.forEach(p => out.push(`  • ${p.name}${p.description ? " — " + p.description.slice(0, 120) : ""}`));
+  }
+
+  out.push(`\n═══ HOW TO USE THIS PROOF ═══`);
+  out.push(`When you propose a solution, recommendation, talk track, or claim:`);
+  out.push(`1. Cite a SPECIFIC named customer from the list above whenever you claim "we've done this before." Never invent customer names.`);
+  out.push(`2. Use the unique differentiators above to justify "why us" — never assert generic capabilities.`);
+  out.push(`3. Frame outcomes using the success factors above — concrete, measurable, the customer's language.`);
+  out.push(`4. Quote from uploaded docs verbatim when they contain a relevant proof point or quantified outcome.`);
+  out.push(`5. Use ONLY products from the catalog above — do NOT invent product names.`);
+  out.push(`6. If you cannot ground a claim in the proof above, flag it as "[unsupported — verify with seller]" rather than asserting it as fact.`);
+  out.push(`7. The customer should feel deeply understood, that the seller knows the BEST solution, and that this is a deal where everyone wins with measurable outcomes.`);
+
+  return out.join("\n") + "\n\n";
+}
+
 // generateBrief is NON-ASYNC so it returns skeleton + raw promises
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
 // wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
-function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[]){
+function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null){
   const co  = member.company;
   const url = member.company_url || co;
 
@@ -439,6 +511,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${activeOutcomes.join(", ")}`;
   const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
+  // Inject the unified Seller Proof Pack — the "why buy from us" thread
+  // that runs through every customer-facing prompt. Without this, the
+  // brief invents generic claims instead of citing real differentiators
+  // and named customers from the seller's ICP.
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
+
   // Base context injected into every prompt
   const base =
     `B2B sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
@@ -447,6 +525,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `${universalCtx}\n`+
     `SIGNAL HEURISTICS: Funding <12 months = 18-month buying window; PE acquisition <18 months = cost mandate + 60-90 day budget cycle; hiring "Digital Transformation" = Early Majority; "Innovation/R&D" = Early Adopter; Glassdoor <3.5 = operational pain present.\n`+`SELLER STAGE AWARENESS: Seller is unknown stage. `+`SCENARIO INTELLIGENCE (plain-language categories — do NOT echo these labels in output): `+`If target is in a structurally-difficult industry (heavy manufacturing, aerospace/defense prime contractors, telecom incumbents, energy/utilities, mass-market retail with >100K employees, top-5 US banks): flag as near-impossible for a direct startup sale regardless of stage. `+`If target is a large PRIVATE company in insurance, professional services, or tech (e.g. Bloomberg, SAS, Valve): highlight as a high-fit underserved segment — fast cycles, few incumbents at the table. `+`If target is a regional bank (NOT JPMorgan/BofA/Wells/Citi/Goldman): strong opportunity — underserved by early-stage vendors, pilot-friendly culture. `+`If seller is Seed/Series A: startup-to-F1000 direct sales hover at 23-33% fit — recommend partner/channel motion as primary route. `+`If seller is Series D+: ~35% of F1000 scenarios are strong fit — full enterprise motion viable. `+`CPG split: HPC/Beauty (P&G, Kimberly-Clark) ~62% fit — YES; Food/Beverage (PepsiCo, Kraft) ~49% — departmental only. `+`If target has high union exposure (automotive, aviation, heavy manufacturing): scope explicitly to the knowledge-worker segment.\n`+
     `SELLER CONTEXT (reference only):\n${sellerCtx}${prodCtx}\n`+
+    proofPack +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -488,17 +567,21 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   );
 
   // MICRO 4: Solution mapping + contacts — shows after strategy (streamed)
+  // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
+  // and (when possible) a named customer from the seller's proof pack above.
   const p4 = streamAI(base+
     `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
-    `Apply Dunford (Obviously Awesome) positioning and Osterwalder (Value Proposition Canvas) to map seller solutions to ${co}.\n`+`ASSUME ${co} universally wants to: grow revenue, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy.\n`+`For each solution: (1) which universal imperative does it serve? (2) what job does it do? (3) what pain does it relieve? (4) what gain does it create?\n`+`{"solutionMapping":[`+
-    `{"product":"Specific ${sellerUrl} offering","fit":"Job-to-be-done it performs (Osterwalder) → specific pain it relieves → gain it creates for ${co}. Grounded in a real signal."},`+
-    `{"product":"Second offering if applicable","fit":""},`+
-    `{"product":"Third offering if applicable","fit":""}],`+
-    `"caseStudies":[{"title":"Relevant case study or named customer","customer":"","relevance":"Why relevant to ${co}"},{"title":"","customer":"","relevance":""}],`+
-    `"keyContacts":[{"name":"VP/Director NOT C-suite — real name if known","title":"Full title","initials":"XX","angle":"Why they feel this pain daily and how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
+    `Apply Dunford positioning and Osterwalder VPC to map seller solutions to ${co}.\n`+
+    `For each solution: (1) which seller PRODUCT (use exact name from catalog above), (2) what job-to-be-done it performs for ${co}, (3) what differentiator from the proof pack justifies "why us", (4) what NAMED CUSTOMER from the proof pack is similar evidence (or "[no analogue customer in our list — verify with seller]" if none fit), (5) what measurable outcome we'd target.\n`+
+    `{"solutionMapping":[`+
+    `{"product":"EXACT product name from seller catalog","fit":"Job-to-be-done → specific pain it relieves → gain for ${co}, in 2 sentences. Cite ONE differentiator by name from the proof pack to justify why us.","provenWith":"Named customer from the proof pack who's similar to ${co}, or '[no analogue — verify]'","measurableOutcome":"Specific outcome we'd target (e.g. 'Cut HR ticket volume 30% in 90 days') — quantified when possible, framed in the customer's language, NOT a feature list."},`+
+    `{"product":"","fit":"","provenWith":"","measurableOutcome":""},`+
+    `{"product":"","fit":"","provenWith":"","measurableOutcome":""}],`+
+    `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
+    `"keyContacts":[{"name":"VP/Director at ${co} — real name if known, NOT C-suite","title":"Full title","initials":"XX","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
     `"techStack":{"crm":"if known","erp":"if known","hris":"if known","marketing":"if known","payments":"if known","analytics":"if known","infrastructure":"if known","other":[]},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
-    ()=>{}, 2400
+    ()=>{}, 2600
   );
 
   // MICRO 5: Live search — headlines, roles, signals
@@ -1496,8 +1579,15 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
   const scoreFit = async(members, sellerCtx) => {
     if(!members?.length) return;
     setFitScoring(true);
+    // Lighter than the brief/hypothesis proof pack — scoreFit runs
+    // per-batch of 20 accounts and we want it fast. Inject the most
+    // decision-relevant intel: industries/size/personas/disqualifiers
+    // (existing) + named customer analogues + differentiators (so a
+    // company very similar to a known win scores higher).
     const icpContext = sellerICP?.icp
       ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
+        + (sellerICP.icp.customerExamples?.length ? `\nKNOWN CUSTOMER ANALOGUES (companies similar to these should score higher; do NOT score these themselves — they're already customers): ${sellerICP.icp.customerExamples.join(", ")}` : "")
+        + (sellerICP.icp.uniqueDifferentiators?.length ? `\nSELLER DIFFERENTIATORS (use to break ties — companies that would benefit MOST from these score higher): ${sellerICP.icp.uniqueDifferentiators.join(" · ")}` : "")
       : "";
 
     // v107: batches are now dispatched in PARALLEL with Promise.all, and
@@ -2179,7 +2269,8 @@ ${isOpen
       member, sellerUrl, sellerDocs, products,
       selectedCohort, selectedOutcomes, productPageUrl,
       (msg) => setBriefStatus(msg),
-      productUrls
+      productUrls,
+      sellerICP  // pass through so the proof pack can be built
     );
     setBrief(skeleton);
     setBriefLoading(false);  // skeleton counts as "loaded" — sections show their own inline progress
@@ -2262,9 +2353,16 @@ ${isOpen
     const mappedSolutions = (briefData.solutionMapping||[]).filter(s=>s?.product)
       .map(s=>s.product+": "+s.fit).join("\n").slice(0,400);
 
+    // Same Seller Proof Pack injected into the brief — drives the
+    // "why buy from us" thread through hypothesis talk tracks, JOLT plan,
+    // challenger insight, and route recommendation. Talk tracks should
+    // cite NAMED customers from the proof pack, not invent generic claims.
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
+
     const prompt =
+      proofPack +
       "You are a senior B2B sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
-      "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting.\n" +
+      "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting. Cite named customers from the proof pack above whenever you claim 'we've done this before.' Use unique differentiators from the proof pack to justify 'why us.'\n" +
       "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
       "BUYER EXPERIENCE FRAMEWORK (Gartner 2023 — 1,700 buyers): Buyers spend only 17% of time with vendors. Every interaction must create value they can't get from online research. The rep who wins: (1) already knows their industry, (2) challenges their thinking without arrogance, (3) shows proof from similar companies, (4) makes the next step obvious and small, (5) asks about their world not their product.\n" +
       "JOLT EFFECT (Dixon/McKenna): Indecision kills 40-60% of deals. FOMU > FOMO. Route: J=Judge indecision, O=One clear recommendation, L=Limit scope, T=Take risk off table (pilot/SLA/phased).\n" +
@@ -2310,11 +2408,11 @@ ${isOpen
           takeRiskOff:"Specific pilot scope, SLA, reference customer, or phased rollout that removes their risk",
         },
         talkTracks:[
-          {stage:"Opening",line:"1-2 natural sentences. Teach the Challenger insight about "+co+"'s industry. Make them lean in."},
+          {stage:"Opening",line:"1-2 natural sentences. Teach the Challenger insight about "+co+"'s industry. Reference a NAMED CUSTOMER from the proof pack as a brief social-proof anchor when natural."},
           {stage:"Discovery (Mom Test)",line:"One short question about their PAST BEHAVIOR around this problem — not about the future or our product. Use their language."},
           {stage:"Impact (Ellis Test)",line:"One question that tests if this is a must-have: 'If you had to go back to [old way] tomorrow, what would that mean for [specific team/metric]?'"},
-          {stage:"Vision",line:"One sentence. What good looks like in their words — specific and measurable, not a product feature."},
-          {stage:"Route (JOLT)",line:"Name the decision clearly and offer one specific recommendation: 'Based on what you've told me, I'd recommend starting with [specific pilot]. Here's why...'"},
+          {stage:"Vision",line:"One sentence. What good looks like in their words — specific and measurable. Frame using a success factor from the proof pack."},
+          {stage:"Route (JOLT)",line:"Name the decision clearly and offer one specific recommendation grounded in a named customer's path: 'Based on what you've told me, here's how [Named Customer] approached this — I'd recommend starting with [specific pilot]. Here's why...'"},
         ],
       });
 
@@ -2417,8 +2515,15 @@ ${isOpen
       return `${s.label}: ${gates} | ${disc}`;
     }).join("\n");
 
+    // Same proof pack the brief and hypothesis used. SA review should
+    // ground its "confirmedSolutions" + "saRecommendation" in the
+    // seller's actual differentiators and named customer wins, not
+    // generic SA-school theory.
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
+
     const prompt =
-      `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call.\n\n`+
+      proofPack +
+      `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call. Your recommendations MUST cite specific differentiators from the proof pack above and name analogous customers from the seller's customer list when justifying why a solution will succeed.\n\n`+
       `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
       `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
       `DEAL CONFIDENCE: ${confidence}%\n`+
