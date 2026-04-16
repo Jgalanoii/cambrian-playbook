@@ -2625,6 +2625,27 @@ Return ONLY valid JSON:
     setTimeout(()=>window.print(), 150);
   };
 
+  // Per-stage JSON download. The browser triggers a save dialog with a
+  // dated filename. Useful for piping structured data into CRM imports,
+  // BI tools, or external review.
+  const downloadStageData = (stageName, data) => {
+    if (!data) return;
+    try {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const ts = new Date().toISOString().slice(0,10);
+      const subject = (selectedAccount?.company || sellerICP?.sellerName || sellerUrl || "cambrian")
+        .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      a.href = url;
+      a.download = `${stageName.toLowerCase().replace(/\s+/g,"-")}__${subject}__${ts}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { console.error("download failed:", e); }
+  };
+
   const STEPS=["Session","ICP & RFPs","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
@@ -3208,6 +3229,18 @@ Return ONLY valid JSON:
               </div>
               {sellerICP?.icp&&(
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+                  <button
+                    onClick={doExport}
+                    title="Print this view as PDF"
+                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
+                    🖨 PDF
+                  </button>
+                  <button
+                    onClick={()=>downloadStageData(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:sellerICP)}
+                    title="Download structured data as JSON"
+                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
+                    💾 Data
+                  </button>
                   <button
                     onClick={()=>{if(confirm("Regenerate ICP from scratch? The cached version will be replaced."))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     title="Force rebuild ICP (clears cache)"
@@ -3989,6 +4022,8 @@ Return ONLY valid JSON:
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
+              <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
+              <button className="btn btn-secondary" onClick={()=>downloadStageData("Accounts",{cohorts,fitScores})}>💾 Data</button>
               <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(4);}}} disabled={!selectedCohort}>
                 Select Account → {selectedCohort?`(${selectedCohort.name})`:""}
               </button>
@@ -4005,13 +4040,13 @@ Return ONLY valid JSON:
           const fs = sa ? fitScores[sa.company] : null;
           return (
           <div className="page" style={{maxWidth:960}}>
-            {/* Title + prev/next */}
+            {/* Title + prev/next + print */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap"}}>
               <div className="page-title" style={{margin:0,fontSize:24}}>
                 {accountQueue.length>1 ? `Account ${queueIdx+1} of ${accountQueue.length}` : "Account Review"}
               </div>
-              {accountQueue.length>1 && (
-                <div style={{display:"flex",gap:6,marginLeft:"auto"}}>
+              <div style={{display:"flex",gap:6,marginLeft:"auto"}}>
+                {accountQueue.length>1 && (<>
                   <button className="btn btn-secondary btn-sm" disabled={queueIdx===0}
                     onClick={()=>{setQueueIdx(i=>i-1);setSelectedAccount(accountQueue[queueIdx-1]);setSelectedOutcomes([]);}}>
                     ← Prev
@@ -4020,8 +4055,10 @@ Return ONLY valid JSON:
                     onClick={()=>{setQueueIdx(i=>i+1);setSelectedAccount(accountQueue[queueIdx+1]);setSelectedOutcomes([]);}}>
                     Next →
                   </button>
-                </div>
-              )}
+                </>)}
+                {sa && <button className="btn btn-navy btn-sm" onClick={doExport} title="Print this account view as PDF">🖨 PDF</button>}
+                {sa && <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Account-Review",{account:sa,fit:fitScores[sa.company],icpMatch:sellerICP?.icp})} title="Download account context as JSON">💾 Data</button>}
+              </div>
             </div>
             <div className="page-sub" style={{marginBottom:14}}>
               {accountQueue.length>1 ? `${accountQueue.length} selected accounts · pick one to set up the brief.` : `${selectedCohort.name} · ${accounts.length} account${accounts.length===1?"":"s"}`}
@@ -4876,6 +4913,7 @@ Return ONLY valid JSON:
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
                   <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
                   <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
+                  <button className="btn btn-secondary" onClick={()=>downloadStageData("Brief",brief)}>💾 Data</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                 </div>
               </>
@@ -5066,6 +5104,8 @@ Return ONLY valid JSON:
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
+              <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
+              <button className="btn btn-secondary" onClick={()=>downloadStageData("Hypothesis",riverHypo)}>💾 Data</button>
               <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(7);}}>
                 Start In-Call →
               </button>
@@ -5087,6 +5127,8 @@ Return ONLY valid JSON:
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
                 <div style={{fontSize:12,color:"#aaa"}}>confidence</div>
                 <button className="btn btn-secondary btn-sm" onClick={()=>setStep(5)}>← Hypothesis</button>
+                <button className="btn btn-navy btn-sm" onClick={doExport} title="Print captured call notes">🖨 PDF</button>
+                <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("In-Call",{gateAnswers,riverData,gateNotes,notes,confidence})} title="Download captured call notes as JSON">💾 Data</button>
                 <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
                   {postLoading?"Routing...":"End Call →"}
                 </button>
@@ -5371,6 +5413,7 @@ Return ONLY valid JSON:
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Back to Call</button>
                   <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
+                  <button className="btn btn-secondary" onClick={()=>downloadStageData("Post-Call",postCall)}>💾 Data</button>
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
@@ -5396,6 +5439,7 @@ Return ONLY valid JSON:
             onRegenerate={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}
             onBack={()=>setStep(8)}
             onExport={doExport}
+            onDownloadData={()=>downloadStageData("Solution-Fit",solutionFit)}
             onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}
           />
         )}
