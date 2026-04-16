@@ -4298,11 +4298,57 @@ Return ONLY valid JSON:
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
                       <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
+                      <button className="btn btn-secondary" onClick={()=>downloadStageData("Brief",brief)}>💾 Data</button>
                       <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
                       <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                     </div>
                   </div>
                 </div>
+
+                {/* Live progress — shows while micro-calls are still streaming. Auto-hides
+                    when all 5 sections have landed. Each merger flips its flag in
+                    brief._loadingSections after its Haiku call resolves. */}
+                {(() => {
+                  const sections = brief._loadingSections || {};
+                  const order = ["overview","executives","strategy","solutions","live"];
+                  const labels = {
+                    overview:   "Company overview",
+                    executives: "Executives",
+                    strategy:   "Strategy & sentiment",
+                    solutions:  "Solutions & contacts",
+                    live:       "Live web search",
+                  };
+                  const pending = order.filter(k => sections[k]);
+                  if (!pending.length) return null;
+                  const done = order.length - pending.length;
+                  return (
+                    <div style={{
+                      display:"flex", alignItems:"center", gap:12,
+                      background:"var(--bg-1)", border:"1.5px solid var(--tan-2)",
+                      borderRadius:"var(--r-md)", padding:"10px 14px", marginBottom:14,
+                    }}>
+                      <div className="load-spin" style={{width:14,height:14,borderWidth:2}}/>
+                      <div style={{flex:1, minWidth:0}}>
+                        <div style={{fontSize:13, fontWeight:600, color:"var(--ink-0)"}}>
+                          Brief building · {done}/{order.length} sections complete
+                        </div>
+                        <div style={{fontSize:11, color:"var(--ink-2)", marginTop:2}}>
+                          Streaming: {pending.map(k => labels[k]).join(" · ")}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:3}}>
+                        {order.map(k => (
+                          <div key={k} title={labels[k] + (sections[k] ? " — loading" : " — done")}
+                            style={{
+                              width:8, height:8, borderRadius:"50%",
+                              background: sections[k] ? "var(--tan-3)" : "var(--green)",
+                              animation: sections[k] ? "pulse 1.4s ease-in-out infinite" : "none",
+                            }}/>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Company Snapshot */}
                 <div className="bb">
