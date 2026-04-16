@@ -2073,7 +2073,7 @@ ${isOpen
     if(d.selectedOutcomes?.length) setSelectedOutcomes(d.selectedOutcomes);
     if(d.dealValue) setDealValue(d.dealValue);
     if(d.brief) setBrief(d.brief);
-    if(d.riverHypo) setRiverHypo(d.riverHypo);
+    if(d.riverHypo) setRiverHypo(normalizeRiverHypo(d.riverHypo));
     if(d.gateAnswers) setGateAnswers(d.gateAnswers);
     if(d.riverData) setRiverData(d.riverData);
     if(d.notes) setNotes(d.notes);
@@ -2211,6 +2211,34 @@ ${isOpen
   };
 
   // ── BUILD RIVER HYPOTHESIS (background, after brief) ─────────────────────
+  // Some Haiku runs return RIVER fields as nested objects (especially
+  // 'route' — the prompt's "(1)... (2)... (3)..." structure encourages it).
+  // Anything stored in riverHypo's text fields must be a STRING — the
+  // EditableField components, the export, and the post-call prompt all
+  // assume strings. Flatten any object to a readable bullet list.
+  const normalizeRiverField = (v) => {
+    if (v == null) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "object" && !Array.isArray(v)) {
+      return Object.entries(v)
+        .filter(([, val]) => val)
+        .map(([k, val]) => {
+          const label = k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase()).trim();
+          const text = typeof val === "string" ? val : JSON.stringify(val);
+          return `• ${label}: ${text}`;
+        })
+        .join("\n");
+    }
+    return String(v);
+  };
+  const normalizeRiverHypo = (hypo) => {
+    if (!hypo || typeof hypo !== "object") return hypo;
+    const stringFields = ["reality","impact","vision","entryPoints","route","openingAngle","challengerInsight"];
+    const out = { ...hypo };
+    stringFields.forEach(f => { if (f in out) out[f] = normalizeRiverField(out[f]); });
+    return out;
+  };
+
   const buildRiverHypo = async(briefData, member) => {
     if(!briefData) return;
     setRiverHypoLoading(true);
@@ -2272,7 +2300,7 @@ ${isOpen
         impact:"What this problem is costing "+co+" in real business terms. One number or consequence if possible. Short and visceral — something the economic buyer feels.",
         vision:"Success in "+co+"'s words — not a product feature list. 1-2 sentences. Specific, measurable, tied to their stated business outcomes.",
         entryPoints:"The Mobilizer profile at "+co+" — NOT just any stakeholder. Who asks 'how do we make this happen?'. Name the type, title, and what they personally win.",
-        route:"JOLT-structured next step: (1) name the indecision risk explicitly, (2) give ONE clear recommendation — not options, (3) scope it small — pilot or workshop, (4) state how you take risk off the table. Stage-appropriate: Series A=partner/innovation arm, B/C=departmental pilot, D+=full enterprise.",
+        route:"STRING (not object). 3-4 prose sentences covering JOLT-structured next step: name the indecision risk, give ONE clear recommendation (not options), scope it small (pilot or workshop), state how risk is taken off the table. Stage-appropriate: Series A=partner/innovation arm, B/C=departmental pilot, D+=full enterprise. Output as flowing sentences in a single string field, NOT as a JSON sub-object.",
         openingAngle:"2 sentences max. Challenge a widely-held assumption about "+co+"'s industry. Reference something real. Human, provocative, not scripted.",
         challengerInsight:"The insight you teach the ORGANIZATION through the Mobilizer — one assumption their industry holds that "+sellerUrl+" can disprove with data or a case study.",
         joltPlan:{
@@ -2292,7 +2320,7 @@ ${isOpen
 
     const result = await callAI(prompt);
     if(result){
-      setRiverHypo(result);
+      setRiverHypo(normalizeRiverHypo(result));
     } else {
       // callAI failed — set a placeholder so the page still renders
       setRiverHypo({
