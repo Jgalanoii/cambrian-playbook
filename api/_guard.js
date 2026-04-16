@@ -12,9 +12,23 @@
 
 const ALLOWED_MODELS = new Set([
   "claude-haiku-4-5-20251001",
-  // Add Sonnet/Opus explicitly if a future feature needs it. Do not
-  // allow-list by wildcard.
+  // Sonnet 4.5 is permitted as an automatic fallback target when Haiku
+  // returns 529/overloaded_error. The proxy substitutes server-side so
+  // a client request specifying Haiku will get Sonnet on overload —
+  // see api/claude.js. Clients are NOT expected to request Sonnet
+  // directly today, but allowing it keeps the fallback path inside the
+  // model allow-list.
+  "claude-sonnet-4-5",
+  "claude-sonnet-4-5-20250929",
 ]);
+
+// Server-side fallback: if a request for a primary model returns 529, the
+// proxy retries with the mapped fallback model exactly once. Lets us stay
+// operational through Anthropic capacity blips on Haiku at the cost of a
+// 3x token rate for that single request.
+export const MODEL_FALLBACK = {
+  "claude-haiku-4-5-20251001": "claude-sonnet-4-5",
+};
 
 const ALLOWED_TOOL_TYPES = new Set([
   "web_search_20250305",

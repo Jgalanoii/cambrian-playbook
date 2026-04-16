@@ -2208,28 +2208,58 @@ ${isOpen
     const theme = (briefData.strategicTheme||"").slice(0,200);
 
     const prompt =
-      `You are a senior B2B discovery coach trained in customer development and product-market fit validation.\n`+`UNIVERSAL TRUTH: Every company — regardless of industry — universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root discovery questions in which of these six the seller can address. Every question should ultimately connect to one or more of these imperatives.\n`+`Apply Mom Test (Fitzpatrick): ask about their PAST BEHAVIOR and REAL PROBLEMS, never about your product or hypothetical futures.
-Apply Voss (Never Split the Difference): calibrated questions ONLY — every question starts with "How" or "What", never yes/no. Use mirroring and labeling to surface emotion.
-Apply Fisher/Ury: surface interests not positions. "What's driving that?" not "Do you want X?"
-Apply Cialdini: use social proof ("companies like yours...") and authority ("the data shows...") naturally.
-Apply Sun Tzu: know their terrain — ask about the competitive landscape and who else they're talking to.
-Apply Crucial Conversations: watch for safety signals. If they go quiet, ask "It seems like something I said didn't land — what's your read?"
-\n`+`Apply Blank customer development: validate the problem EXISTS and MATTERS before mentioning solutions.\n`+`Apply Olsen PMF Pyramid: questions should surface Target Customer fit → Underserved Need → Value Prop resonance.\n`+`Apply Sean Ellis 40% Rule: include at least one question that tests if this is a must-have (not nice-to-have). E.g. "If you had to go back to how you handled this 18 months ago, what would that mean for your team?"\n`+`Apply churn-inverse signals: ask who owns this problem (single-threaded = risk), how many stakeholders are involved, and whether there is executive sponsorship.\n`+
-      `Frameworks you apply: Gap Selling, Challenger Sale, plus the following listening principles:\n`+
-      `- Active Listening (Heather Younger): listen for what is NOT said; reflect back what you hear\n`+
-      `- Just Listen (Mark Goulston): make the other person feel heard before advancing your agenda\n`+
-      `- How to Know a Person (David Brooks): witness their reality with openness; ask about their world not your product\n`+
-      `- We Need to Talk (Celeste Headlee): no multitasking, no assumptions, be present and curious\n`+
-      `- The Charisma Myth (Olivia Fox Cabane): project presence, power, and warmth — make them feel seen\n\n`+
+      `You are a senior B2B discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
+
+      `═══ SALES TRACK FRAMEWORKS ═══\n`+
+      `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
+      `Mom Test (Fitzpatrick): ask about PAST BEHAVIOR and REAL PROBLEMS, never about your product or hypothetical futures.\n`+
+      `Voss: calibrated How/What questions only — never yes/no. Mirror and label.\n`+
+      `Fisher/Ury: surface interests not positions. "What's driving that?" not "Do you want X?"\n`+
+      `Cialdini: use social proof ("companies like yours...") naturally.\n`+
+      `Sun Tzu: ask about competitive landscape and who else they're talking to.\n`+
+      `Crucial Conversations: watch for safety signals; if they go quiet, ask "What's your read?"\n`+
+      `Blank customer development: validate the problem EXISTS and MATTERS before mentioning solutions.\n`+
+      `Olsen PMF Pyramid: surface Target Customer fit → Underserved Need → Value Prop resonance.\n`+
+      `Sean Ellis 40% Rule: include at least one must-have test ("If you had to go back to how you handled this 18 months ago, what would that mean?").\n`+
+      `Listening: Heather Younger (listen for what's NOT said), Mark Goulston (make them feel heard), David Brooks (witness their reality), Celeste Headlee (no multitasking), Olivia Fox Cabane (presence + warmth).\n\n`+
+
+      `═══ ARCHITECTURE TRACK FRAMEWORKS ═══\n`+
+      `Goal: capture enough technical and operational reality during the SALES call that a Solution Architect joining later starts at 70% context, not 0%. Reps without SA backgrounds can ask these — they're plain-language but they map to:\n`+
+      `Rajput (business → digital alignment): does the seller's solution map to a real business outcome they can commit to?\n`+
+      `McSweeney (stakeholder alignment): who configures, who owns budget, who can veto on security/compliance?\n`+
+      `Richards/Ford (architecture quality attributes): which of scalability, security, observability, maintainability matters most here?\n`+
+      `Fowler (integration patterns): what's the current integration topology — point-to-point sprawl, hub-and-spoke, event-driven?\n`+
+      `DMAIC maturity (Define/Measure/Analyze/Improve/Control): where are they on the operational-maturity curve for this problem?\n`+
+      `Pilot scoping: smallest meaningful slice that proves the thesis in 30 days.\n`+
+      `Adjacent-system risk: what existing tools would need to coexist, replace, or hand off to/from this?\n\n`+
+
+      `═══ INPUTS ═══\n`+
       `SELLER: ${seller} | PRODUCTS: ${products_ctx}\n`+
       `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n\n`+
-      `Generate 2 discovery questions per RIVER stage. Each question must be:\n`+
-      `- 1 sentence max — something a rep says naturally mid-conversation\n`+
-      `- Tied directly to what the seller sells, not generic consulting\n`+
-      `- Curious and human in tone, not clinical or scripted\n\n`+
-      `Also name the listening principle behind each question so the rep knows WHY they're asking it.\n\n`+
+
+      `═══ OUTPUT REQUIREMENTS ═══\n`+
+      `Per RIVER stage, generate:\n`+
+      `  - 2 SALES questions (track:"sales") rooted in the sales frameworks above\n`+
+      `  - 2 ARCHITECTURE questions (track:"architecture") rooted in the SA frameworks above\n`+
+      `Every question must be:\n`+
+      `  - 1 sentence max, conversational — something a rep says naturally mid-call (no jargon dumps)\n`+
+      `  - Tied directly to what the seller sells, not generic consulting\n`+
+      `  - SALES questions: cite a sales/listening framework in 'framework'\n`+
+      `  - ARCHITECTURE questions: cite an SA lens in 'lens' (Rajput, McSweeney, Richards/Ford, Fowler, DMAIC, Pilot scoping, Adjacent-system risk, or Quality attributes)\n`+
+      `Stage-specific architecture focus:\n`+
+      `  - Reality: current systems/tools/data flows touching this problem TODAY\n`+
+      `  - Impact: where data integrity, throughput, or quality breaks in the current flow\n`+
+      `  - Vision: what a successful Day 30 / Day 90 looks like operationally — who uses it, what changes\n`+
+      `  - Entry Points: who configures, who owns IT/security/compliance review, who owns budget\n`+
+      `  - Route: smallest 30-day pilot scope, success metric, adjacent-system handoffs\n\n`+
+
       `Return ONLY raw JSON, start with {:\n`+
-      `{"reality":[{"q":"Question?","framework":"Active Listening - reflect their reality back","intent":"Why this question works"}],"impact":[{"q":"","framework":"","intent":""}],"vision":[{"q":"","framework":"","intent":""}],"entryPoints":[{"q":"","framework":"","intent":""}],"route":[{"q":"","framework":"","intent":""}]}`;
+      `{"reality":[`+
+      `{"track":"sales","q":"Question?","framework":"Mom Test - past behavior","intent":"Why this question works"},`+
+      `{"track":"sales","q":"","framework":"","intent":""},`+
+      `{"track":"architecture","q":"","lens":"Fowler - integration topology","intent":"What this reveals to a future SA"},`+
+      `{"track":"architecture","q":"","lens":"","intent":""}`+
+      `],"impact":[/* 2 sales + 2 architecture */],"vision":[/* same */],"entryPoints":[/* same */],"route":[/* same */]}`;
 
     const result = await callAI(prompt);
     if(result) setDiscoveryQs(result);
@@ -4999,27 +5029,50 @@ Return ONLY valid JSON:
                         </div>
                       ))}
 
-                      {/* AI-generated product-specific questions */}
+                      {/* AI-generated product-specific questions — two tracks */}
                       {discoveryQs&&(()=>{
-                        const stageKey=["reality","impact","vision","entryPoints","route"][si];
-                        const qs=discoveryQs[stageKey]||[];
-                        return qs.filter(q=>q?.q).map((dq,qi)=>(
-                          <div key={qi} className="dq-block" style={{borderLeftColor:"var(--navy)"}}>
-                            <div className="dq-framework" style={{color:"var(--navy)"}}>{dq.framework||"Active Listening"}</div>
-                            <div className="dq-question">"{dq.q}"</div>
-                            {dq.intent&&<div style={{fontSize:11,color:"#777",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
-                            <div className="gate-note-lbl">What you're hearing</div>
-                            <textarea className="dq-note"
-                              placeholder="Capture their exact words..."
-                              value={riverData["dq_"+si+"_"+qi]||""}
-                              onChange={e=>setRiverData(d=>({...d,["dq_"+si+"_"+qi]:e.target.value}))}/>
-                          </div>
-                        ));
+                        const stageKey = ["reality","impact","vision","entryPoints","route"][si];
+                        const qs = discoveryQs[stageKey] || [];
+                        // Backward-compat: older runs returned questions without the 'track'
+                        // field — treat those as sales by default.
+                        const sales = qs.filter(q => q?.q && (q.track||"sales") === "sales");
+                        const arch  = qs.filter(q => q?.q && q.track === "architecture");
+                        return (<>
+                          {sales.map((dq, qi) => (
+                            <div key={"s"+qi} className="dq-block" style={{borderLeftColor:"var(--navy)"}}>
+                              <div className="dq-framework" style={{color:"var(--navy)"}}>📞 SALES · {dq.framework||"Active Listening"}</div>
+                              <div className="dq-question">"{dq.q}"</div>
+                              {dq.intent&&<div style={{fontSize:11,color:"#777",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
+                              <div className="gate-note-lbl">What you're hearing</div>
+                              <textarea className="dq-note"
+                                placeholder="Capture their exact words..."
+                                value={riverData["dq_"+si+"_"+qi]||""}
+                                onChange={e=>setRiverData(d=>({...d,["dq_"+si+"_"+qi]:e.target.value}))}/>
+                            </div>
+                          ))}
+                          {arch.length > 0 && (
+                            <div style={{margin:"6px 0 4px",fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.5px"}}>
+                              🏗 Solution Architecture Discovery — capture answers now so SA / onboarding starts at 70% context
+                            </div>
+                          )}
+                          {arch.map((dq, qi) => (
+                            <div key={"a"+qi} className="dq-block" style={{borderLeftColor:"var(--green)",background:"var(--green-bg)"}}>
+                              <div className="dq-framework" style={{color:"var(--green)"}}>🏗 ARCHITECTURE · {dq.lens||dq.framework||"SA Lens"}</div>
+                              <div className="dq-question">"{dq.q}"</div>
+                              {dq.intent&&<div style={{fontSize:11,color:"#555",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
+                              <div className="gate-note-lbl">What you're hearing</div>
+                              <textarea className="dq-note"
+                                placeholder="Capture their exact words — feeds the Solution Fit review..."
+                                value={riverData["sa_"+si+"_"+qi]||""}
+                                onChange={e=>setRiverData(d=>({...d,["sa_"+si+"_"+qi]:e.target.value}))}/>
+                            </div>
+                          ))}
+                        </>);
                       })()}
 
                       {!discoveryQs&&(
                         <div style={{fontSize:12,color:"#aaa",fontStyle:"italic",textAlign:"center",padding:"12px 0"}}>
-                          Generating product-specific questions...
+                          Generating product-specific sales + architecture questions...
                         </div>
                       )}
                     </div>
