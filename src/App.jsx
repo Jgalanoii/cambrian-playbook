@@ -1228,6 +1228,9 @@ export default function App(){
   const[fileName,setFileName]=useState("");
   const[drag,setDrag]=useState(false);
   const[importMode,setImportMode]=useState("csv");
+  const[targetGenLoading,setTargetGenLoading]=useState(false);
+  const[targetGenError,setTargetGenError]=useState("");
+  const[targetGenNote,setTargetGenNote]=useState(""); // surfaced after generation completes
   const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
   const[dealClassification,setDealClassification]=useState(""); // "Top-Line Revenue" etc // "csv" | "quick"
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
@@ -1382,6 +1385,111 @@ export default function App(){
     setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName(`sample_${SAMPLE_ROWS.length}_accounts.csv`);
     const m={};hdrs.forEach(h=>m[h]=h);setMapping(m);
   };
+
+  // ── GENERATE TARGET ACCOUNTS FROM ICP ────────────────────────────────────
+  // "Don't know who to target?" — uses the seller's ICP + web_search to
+  // surface 20 real, recognizable companies that match the buyer profile,
+  // then routes them through the standard cohort + fit-scoring pipeline.
+  // After scoring completes, surfaces a note if fewer than 10 land at
+  // Strong Fit (≥75) so the user can regenerate.
+  const generateTargets = async () => {
+    if (!sellerICP?.icp) {
+      setTargetGenError("Build your ICP first — it's the input that makes target generation possible.");
+      return;
+    }
+    setTargetGenLoading(true);
+    setTargetGenError("");
+    setTargetGenNote("");
+
+    const icp = sellerICP.icp;
+    const prompt = `You are a B2B target-account analyst. Use web_search to identify 20 REAL, well-known companies that closely match the seller's Ideal Customer Profile below. These accounts will be served to a sales rep as "high-fit candidates worth pursuing."
+
+═══ SELLER PROFILE ═══
+URL: ${sellerUrl}
+Market category: ${sellerICP.marketCategory||""}
+What they sell: ${sellerICP.sellerDescription||""}
+
+═══ IDEAL BUYER (this is who we want to find) ═══
+Target industries:    ${(icp.industries||[]).join(", ")}
+Buyer size:           ${icp.companySize||""}
+Revenue range:        ${icp.revenueRange||""}
+Geographies:          ${(icp.geographies||[]).join(", ")||"North America"}
+Buyer personas:       ${(icp.buyerPersonas||[]).join(", ")}
+Priority trigger:     ${icp.priorityInitiative||""}
+Adoption profile:     ${icp.adoptionProfile||""}
+Disqualifiers:        ${(icp.disqualifiers||[]).join("; ")}
+Known customers:      ${(icp.customerExamples||[]).join(", ")}
+
+═══ SELECTION CRITERIA — be strict ═══
+- Only return REAL, recognizable companies (Fortune 1000, prominent private companies, well-known mid-market). Do NOT invent companies.
+- Each company MUST clearly match the target industries AND buyer size AND geography above.
+- AVOID anything matching the disqualifiers — those are explicit non-fits.
+- Do NOT return companies in the "known customers" list above (those are already customers, not prospects).
+- Mix public + private. Mix industries within the seller's target list (don't return 20 banks if the ICP has 3 target industries).
+- Each entry should be a company a senior AE would say "yes, that's worth targeting" without further qualification.
+
+═══ OUTPUT (raw JSON only, 20 entries, no prose) ═══
+{"accounts":[
+  {"company":"Real company name (no inc/corp suffix unless commonly used)","industry":"One of the seller's target industries","company_url":"company.com","employees":"~5,000 or 50,000+ etc","publicPrivate":"Public (NYSE: XX) or Private or PE-backed","lead_source":"Generated","outcome":"What outcome they're likely chasing given their industry+size","why":"1 sentence: why this company fits THIS seller's ICP specifically"}
+]}`;
+
+    try {
+      const d = await claudeFetch({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4000,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+        messages: [{ role: "user", content: prompt }],
+      });
+      if (d?.error) {
+        setTargetGenError("Generation failed: " + (d.error.message || "API error"));
+        setTargetGenLoading(false);
+        return;
+      }
+      // Parse — tool use returns text + tool_result blocks; find JSON via anchor
+      const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+      let parsed = null;
+      for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+        parsed = extractJsonWithKey(textBlocks[i], "accounts");
+      }
+      if (!parsed?.accounts?.length) {
+        setTargetGenError("Couldn't parse generated targets — try again.");
+        setTargetGenLoading(false);
+        return;
+      }
+      const generated = parsed.accounts.filter(a => a?.company?.trim());
+      if (!generated.length) {
+        setTargetGenError("Generation returned no usable accounts — try again.");
+        setTargetGenLoading(false);
+        return;
+      }
+
+      // Same shape as CSV import
+      const hdrs = ["company","industry","company_url","employees","publicPrivate","lead_source","outcome"];
+      const m = {}; hdrs.forEach(h => m[h] = h);
+      setHeaders(hdrs);
+      setRows(generated);
+      setMapping(m);
+      setFileName(`generated_${generated.length}_targets.csv`);
+
+      // Build cohorts + score, just like sample-load does
+      const cohortsBuilt = buildCohorts(generated, m);
+      if (cohortsBuilt.length) {
+        setCohorts(cohortsBuilt);
+        const sel = cohortsBuilt.find(c => c.members.length > 1) || cohortsBuilt[0];
+        setSelectedCohort(sel);
+        const allMembers = cohortsBuilt.flatMap(c => c.members);
+        scoreFit(allMembers, sellerUrl);
+      }
+      setTargetGenNote(`Generated ${generated.length} ICP-matched targets. Fit scoring runs now — Strong Fit (≥75%) candidates will surface at the top.`);
+      setStep(3);
+    } catch (e) {
+      console.error("generateTargets error:", e);
+      setTargetGenError("Unexpected error: " + e.message);
+    } finally {
+      setTargetGenLoading(false);
+    }
+  };
+
   const onFile=file=>{if(!file)return;setFileName(file.name);const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);};
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);},[]);
   // ── FIT SCORING — batch evaluates all accounts against seller profile ────
@@ -3559,12 +3667,11 @@ Return ONLY valid JSON:
                   <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>onFile(e.target.files[0])}/>
                 </div>
                 <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
-                <div style={{textAlign:"center",marginBottom:22}}>
+                <div style={{textAlign:"center",marginBottom:14}}>
                   <button className="btn btn-secondary" onClick={()=>{
                     const hdrs=Object.keys(SAMPLE_ROWS[0]);
                     setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName(`sample_${SAMPLE_ROWS.length}_accounts.csv`);
                     const m={};hdrs.forEach(h=>m[h]=h);setMapping(m);
-                    // Auto-advance after a tick so state settles
                     setTimeout(()=>{
                       const b=buildCohorts(SAMPLE_ROWS,Object.fromEntries(Object.keys(SAMPLE_ROWS[0]).map(h=>[h,h])));
                       if(b.length){
@@ -3578,6 +3685,48 @@ Return ONLY valid JSON:
                     },50);
                   }}>Load Sample Data — {SAMPLE_ROWS.length} accounts</button>
                 </div>
+
+                {/* ── Find Targets — generate ICP-matched accounts ── */}
+                {sellerICP?.icp && (
+                  <>
+                    <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
+                    <div style={{background:"linear-gradient(135deg, var(--bg-1) 0%, var(--surface) 100%)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"18px 20px",textAlign:"center",marginBottom:18}}>
+                      <div style={{fontSize:22,marginBottom:6}}>✨</div>
+                      <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"var(--ink-0)",marginBottom:4}}>
+                        Don't know who to target?
+                      </div>
+                      <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5,marginBottom:14,maxWidth:440,margin:"0 auto 14px"}}>
+                        We'll use your ICP — <strong>{sellerICP.marketCategory||"your market"}</strong> selling to <strong>{(sellerICP.icp.industries||[]).slice(0,2).join(", ")||"your buyers"}</strong> — to surface 20 real, recognizable companies that match. Each gets fit-scored automatically; Strong Fit candidates rise to the top.
+                      </div>
+                      <button
+                        className="btn btn-gold btn-lg"
+                        disabled={targetGenLoading}
+                        onClick={generateTargets}>
+                        {targetGenLoading ? "✨ Building your target list…" : "✨ Build my target accounts →"}
+                      </button>
+                      {targetGenLoading && (
+                        <div style={{fontSize:12,color:"var(--ink-2)",marginTop:10,fontStyle:"italic"}}>
+                          Searching the web for ICP-matched companies… ~20-30 seconds
+                        </div>
+                      )}
+                      {targetGenError && (
+                        <div style={{background:"var(--red-bg)",border:"1px solid var(--red)",borderRadius:"var(--r-sm)",padding:"8px 12px",fontSize:12,color:"var(--red)",marginTop:12}}>
+                          {targetGenError}
+                        </div>
+                      )}
+                      {targetGenNote && !targetGenLoading && !targetGenError && (
+                        <div style={{background:"var(--green-bg)",border:"1px solid var(--green)",borderRadius:"var(--r-sm)",padding:"8px 12px",fontSize:12,color:"var(--green)",marginTop:12}}>
+                          {targetGenNote}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+                {!sellerICP?.icp && !icpLoading && (
+                  <div style={{background:"var(--bg-1)",border:"1.5px dashed var(--line-2)",borderRadius:"var(--r-md)",padding:"14px 16px",textAlign:"center",fontSize:12,color:"var(--ink-2)",marginBottom:18}}>
+                    💡 Build your ICP first (Step 2 — ICP &amp; RFPs) to unlock <strong>Build my target accounts</strong> — we'll generate 20 ICP-matched companies for you.
+                  </div>
+                )}
               </>
             )}
 
