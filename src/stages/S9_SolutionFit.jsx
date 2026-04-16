@@ -10,6 +10,7 @@ export default function S9SolutionFit({
   onRegenerate,    // click "↻ Regenerate"
   onBack,          // "← Post-Call"
   onExport,        // "🖨 Save as PDF"
+  onDownloadData,  // "💾 Data" — JSON download of solutionFit object
   onNextAccount,   // "Next Account"
 }) {
   return (
@@ -232,6 +233,7 @@ export default function S9SolutionFit({
             <button className="btn btn-secondary" onClick={onBack}>← Post-Call</button>
             <button className="btn btn-secondary" onClick={onRegenerate}>↻ Regenerate</button>
             <button className="btn btn-navy" onClick={onExport}>🖨 Save as PDF</button>
+            {onDownloadData && <button className="btn btn-secondary" onClick={onDownloadData}>💾 Data</button>}
             <button className="btn btn-primary" onClick={onNextAccount}>Next Account</button>
           </div>
         </>

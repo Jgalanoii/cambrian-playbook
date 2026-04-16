@@ -439,5 +439,17 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
   .incall-wrap { padding: 0 !important; }
   .incall-grid { grid-template-columns: 1fr !important; }
   .incall-sidebar { display: none !important; }
+  /* In-Call full-screen split-pane → linearize for print */
+  .call-layout { display: block !important; height: auto !important; overflow: visible !important; }
+  .call-left, .call-right { width: 100% !important; border-right: none !important; overflow: visible !important; }
+  .panel-body { overflow: visible !important; }
+  /* Account-strip horizontal scroller becomes wrap */
+  .account-strip { overflow: visible !important; flex-wrap: wrap !important; }
+  /* Tables that scroll horizontally on screen — let them flow naturally */
+  .tbl-wrap { overflow: visible !important; }
+  /* Hide all SVG pie charts in print (they don't add value vs the data table) */
+  .pie-card svg { display: none !important; }
+  /* Remove sticky positioning in print — sticky breaks pagination */
+  thead th { position: static !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
