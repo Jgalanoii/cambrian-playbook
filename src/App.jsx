@@ -214,19 +214,69 @@ function safeParseJSON(text){
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
+// Shared retry wrapper for non-streaming Claude calls. Handles transient
+// Anthropic errors:
+//   - overloaded_error / HTTP 529 (Anthropic capacity)  → 2s, 5s, 10s
+//   - rate_limit_error / HTTP 429 (per-account limits)  → 15s, 30s, 45s
+// Returns the parsed response body. After retries are exhausted, returns
+// { error: { type: "unavailable", ... } } so callers can surface a useful
+// message instead of a silent null.
+async function claudeFetch(body, { retries = 3 } = {}) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const r = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (d?.error) {
+        const t = d.error.type;
+        const isOverload = t === "overloaded_error" || r.status === 529;
+        const isRate     = t === "rate_limit_error" || r.status === 429;
+        if ((isOverload || isRate) && attempt < retries - 1) {
+          const wait = isOverload ? [2000, 5000, 10000][attempt] : 15000 * (attempt + 1);
+          console.warn(`[claude] ${t}, retrying in ${wait/1000}s (attempt ${attempt+1}/${retries})`);
+          await sleep(wait);
+          continue;
+        }
+        return d; // non-retryable, or out of retries — return for caller to handle
+      }
+      return d;
+    } catch (e) {
+      console.warn(`[claude] fetch failed (${attempt+1}/${retries}):`, e.message);
+      if (attempt < retries - 1) await sleep(2000 * (attempt + 1));
+    }
+  }
+  return { error: { type: "unavailable", message: "Anthropic API unavailable after retries — try again in a moment." } };
+}
+
 async function streamAI(prompt, onChunk, maxTok=2000) {
-  const response = await fetch('/api/claude-stream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: maxTok,
-      messages: [
-        { role: 'user', content: prompt },
-        { role: 'assistant', content: '{' }
-      ],
-    }),
-  });
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // Wrap the initial fetch in retry. Once the stream is open we let it run
+  // through; mid-stream failures surface as a null parse result and the
+  // caller already handles that case.
+  let response = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    response = await fetch('/api/claude-stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: maxTok,
+        messages: [
+          { role: 'user', content: prompt },
+          { role: 'assistant', content: '{' }
+        ],
+      }),
+    });
+    if (response.status !== 529 && response.status !== 429) break;
+    const wait = response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
+    console.warn(`[claude-stream] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
+    await sleep(wait);
+  }
+  if (!response || !response.body) return null;
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -277,9 +327,17 @@ async function callAI(prompt){
       });
       const d = await r.json();
       if(d.error){
-        if(d.error.type==="rate_limit_error"){
-          console.warn("callAI rate limit, waiting 15s... attempt", attempt+1);
+        if(d.error.type==="rate_limit_error" || r.status===429){
+          console.warn("[callAI] rate limit, waiting 15s... attempt", attempt+1);
           await sleep(15000);
+          continue;
+        }
+        if(d.error.type==="overloaded_error" || r.status===529){
+          // Anthropic capacity overload — typically recovers in seconds.
+          // Exp backoff: 2s, 5s, 10s.
+          const wait = [2000, 5000, 10000][attempt] || 10000;
+          console.warn(`[callAI] overloaded, retrying in ${wait/1000}s... attempt`, attempt+1);
+          await sleep(wait);
           continue;
         }
         console.error("callAI error:",d.error);
@@ -462,17 +520,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
         `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
-      const r = await fetch("/api/claude",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-haiku-4-5-20251001",
-          max_tokens:1800,
-          temperature:0,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
-          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
-        }),
+      const d = await claudeFetch({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:1800,
+        temperature:0,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
       });
-      const d=await r.json();
       if(d.error) return null;
       const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
       return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
@@ -1570,17 +1624,12 @@ ${isOpen
 
     const fetchClass = async (kind) => {
       try {
-        const r = await fetch("/api/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 2500,
-            tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
-            messages: [{ role: "user", content: buildPrompt(kind) }],
-          }),
+        const d = await claudeFetch({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 2500,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+          messages: [{ role: "user", content: buildPrompt(kind) }],
         });
-        const d = await r.json();
         if (d.error) return { kind, error: d.error.message || "API error" };
 
         const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
@@ -1702,23 +1751,21 @@ ${isOpen
     // can't start with a forced "{" token.
     let researchCtx = "";
     try{
-      const r1 = await fetch("/api/claude",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-haiku-4-5-20251001",
-          max_tokens:2000,
-          temperature:0,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
-          messages:[{role:"user",content:researchPrompt}],
-        }),
+      const d1 = await claudeFetch({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:2000,
+        temperature:0,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        messages:[{role:"user",content:researchPrompt}],
       });
-      const d1 = await r1.json();
       if(!d1.error){
         const raw1 = (d1.content||[])
           .filter(b=>b.type==="text"||b.type==="tool_result")
           .map(b=>b.type==="text"?b.text:(b.content?.[0]?.text||""))
           .join(" ").trim();
         researchCtx = raw1.slice(0,2000);
+      } else {
+        console.warn("ICP phase 1 (research) error:", d1.error);
       }
     }catch(e){ console.warn("ICP research failed:",e.message); }
 
@@ -1763,20 +1810,24 @@ ${isOpen
       `"customerExamples":["Customer 1","Customer 2","Customer 3"]}}`;
 
     try{
-      const r2 = await fetch("/api/claude",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-haiku-4-5-20251001",
-          max_tokens:6000,
-          temperature:0,
-          messages:[
-            {role:"user",content:icpPrompt},
-            {role:"assistant",content:"{"},
-          ],
-        }),
+      const d2 = await claudeFetch({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:6000,
+        temperature:0,
+        messages:[
+          {role:"user",content:icpPrompt},
+          {role:"assistant",content:"{"},
+        ],
       });
-      const d2 = await r2.json();
-      if(d2.error){ console.warn("ICP phase 2 error:",d2.error); setIcpLoading(false); return; }
+      if(d2.error){
+        console.warn("ICP phase 2 error:",d2.error);
+        // Surface a user-actionable error in state so the UI can show it.
+        if (d2.error.type === "unavailable" || d2.error.type === "overloaded_error") {
+          setSellerICP(prev => prev || ({ _error: "Anthropic is currently overloaded. Click Regenerate ICP in a moment to retry." }));
+        }
+        setIcpLoading(false);
+        return;
+      }
       const raw=(d2.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
       const jsonStr = raw.startsWith("{")? raw : "{"+raw;
       const m = jsonStr.match(/\{[\s\S]*\}/);
@@ -1826,17 +1877,12 @@ ${isOpen
       `{"pages":[{"url":"https://full-url-here","label":"Product or Solution Name"},{"url":"","label":""},{"url":"","label":""}]}`;
 
     try{
-      // Step 1: fetch the homepage content directly
-      const fetchR = await fetch("/api/claude",{
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-haiku-4-5-20251001",
-          max_tokens:2000,
-          temperature:0,
-          messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
-        }),
+      const d = await claudeFetch({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:2000,
+        temperature:0,
+        messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
       });
-      const d = await fetchR.json();
       if(d.error){console.warn("Scan error:",d.error);setUrlScanStatus("none");return;}
 
       // Extract all text blocks (web_search returns tool results + text)
