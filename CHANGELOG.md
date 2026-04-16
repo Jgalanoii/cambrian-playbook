@@ -6,6 +6,197 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ---
 
+## [v106-pipeline-quality] — 2026-04-16
+
+Major iteration spanning ~24 commits over two sessions. Focus: make the
+pipeline smarter (richer prompt context), faster (parallel execution +
+caches), more honest (tier vocabulary purge, label normalization,
+hallucination guards), and more useful (export, target generation,
+proof pack).
+
+### Resilience & infrastructure
+- **Sonnet fallback on Anthropic 529.** Server-side proxy automatically
+  retries with `claude-sonnet-4-5` when Haiku returns `overloaded_error`.
+  Adds `x-fallback-model` header + `_fallbackModel` field for
+  observability. ~3× per-call cost during fallback events; only fires
+  on overload. Sonnet added to the proxy's `ALLOWED_MODELS` allow-list
+  but cannot be requested directly by clients — substitution happens
+  server-side based on `MODEL_FALLBACK` map.
+- **Client retry on 529.** `claudeFetch()` helper introduced — handles
+  both `rate_limit_error` (429) and `overloaded_error` (529) with
+  exponential backoff (2s/5s/10s for overload, 15s/30s/45s for rate).
+  Replaces ad-hoc retry in `callAI`, `streamAI`, `scanSellerUrl`,
+  `buildSellerICP` (both phases), `fetchRFPIntel`, `generateBrief` p5.
+- **`MAX_TOOL_USES`** raised from 1 → 3 in `api/_guard.js` so RFP
+  intel can do separate searches for private + government sources.
+- **Cache version bumps** ICP/RFP `v2 → v3` after the tier vocabulary
+  purge. New `purgeStaleCaches()` IIFE on app boot removes any
+  `icp:vN:*` / `rfp:vN:*` entries that don't match the current version
+  so old data doesn't accumulate or surface stale language.
+
+### Performance
+- **Parallel fit-score batches** (`scoreFit`). Was sequential
+  for…of…await — now Promise.all. Wall time on 100 rows: ~25s → ~4s.
+  Each batch updates state as it lands so scores fade in progressively.
+- **Brief skeleton render.** `generateBrief` is now synchronous,
+  returns `{skeleton, mergers, allDone}`. The skeleton paints
+  instantly; each of the 5 micro-call mergers fires as its Haiku call
+  resolves. Time-to-first-paint dropped from ~3-5s to instant.
+- **Brief progress banner.** Live "N/5 sections complete" indicator
+  with 5 status dots, pending-section names, and a pulsing animation
+  while sections are still streaming. Auto-hides on completion.
+- **ICP debounced pre-fetch.** 900ms after the user stops typing a
+  recognizable URL on the setup page, ICP build kicks off in the
+  background. Complements the existing `onBlur` trigger.
+- **CSS extraction.** ~440-line inline `const css =` template literal
+  moved to `src/App.css`. Vite now ships separate JS + CSS bundles;
+  CSS parses in parallel and caches independently. Bundle: 486 KB JS
+  → 443 KB JS + 33 KB CSS (137 KB → 129 KB JS gzip).
+
+### RFP Intel
+- **Split into two parallel calls.** Open RFPs and Closed awards each
+  get their own Haiku call with their own `web_search` budget.
+  Each renders independently as it lands; Closed shows a skeleton while
+  still loading.
+- **Auto-trigger on ICP completion.** New `useEffect` watches a stable
+  `icpSignature`; when the ICP becomes available (or changes via
+  Regenerate) RFP fetch fires automatically. Force-refresh on ICP
+  change so stale RFP data doesn't sit against a new ICP.
+- **localStorage cache** keyed by `(userId, sellerUrl, marketCategory,
+  schema version)`. Repeat tab opens are instant. Explicit `↻ Refresh`
+  button forces a rebuild.
+- **Prompt enriched with full ICP context.** Was passing only
+  `sellerUrl` + `marketCategory` + `industries`. Now also injects
+  `companySize`, `revenueRange`, `geographies`, `buyerPersonas`,
+  `priorityInitiative`, `disqualifiers`, `dealSize`,
+  `competitiveAlternatives`, `uniqueDifferentiators`, plus
+  search-query patterns Haiku can adapt (`site:sam.gov ... 2025` etc).
+- **`isGovernment` field** required on every row. Filter UI predicates
+  tightened to strict `=== true / === false` so legacy data without
+  the field doesn't silently pass either filter. Filter buttons now
+  show live counts.
+- **Awarded-To accuracy fix.** `awardedTo` now backed by `web_search`;
+  if the vendor can't be verified, the field returns empty string and
+  the UI renders "— unverified" in italic gray. Prompt explicitly:
+  "do not invent."
+- **Robust JSON extraction** for tool-use responses (text + tool_use +
+  tool_result blocks). Walks blocks in reverse with brace + string-
+  literal-aware counting.
+- **Data-integrity disclaimer banner** above RFP tables: "Verify
+  before acting. RFP data is AI-generated from live web search."
+- **RFP titles are clickable links** to the source URL when present.
+
+### ICP / Prompts
+- **Tier 1 / The Wall vocabulary purge.** Internal scoring labels
+  ("THE WALL", "TIER 1") were leaking into Brief watchOuts and Hypothesis
+  segment-rule sections. Rewrote to plain-language categories
+  ("structurally-difficult industries", "underserved high-fit segments").
+  Updated reference module `src/data/prompts/fitScoring.js` to match.
+- **Canonical fit labels.** `scoreFit` output now strict-enum:
+  "Strong Fit" (≥75) / "Potential Fit" (50-74) / "Poor Fit" (<50).
+  Score-derived label normalizer overwrites whatever Haiku returns —
+  single source of truth = the score. Reason text scrubbed of any
+  leaked "tier"/"wall"/"band"/"bucket" vocabulary.
+- **Hypothesis 'route' field hallucination fix.** When Haiku returned
+  `route` as a nested object instead of a string, UI rendered
+  `"[object Object]"`. Two-layer fix: tightened prompt with explicit
+  "STRING (not object)", and added `normalizeRiverField` helper that
+  flattens any object-shape value to a readable bullet list. Applied
+  at both fresh-build and session-restore.
+- **Seller Proof Pack.** New `buildSellerProofPack()` helper composes
+  a uniform "why buy from us" block (differentiators, named customers,
+  competitive alternatives, success factors, priority trigger,
+  traction channels, uploaded proof docs, product catalog) and
+  prepends it to brief, hypothesis, solution-fit, and fit-score
+  prompts. Schema for `solutionMapping[]` and `caseStudies[]` updated
+  to require named-customer + differentiator citation.
+
+### UX
+- **Account Review redesign** — vertical full-width layout. Was 1fr/320px
+  split with 4 stacked cards on the right. Now single column: account
+  selector strip → hero → ICP match (4-col grid) → deal + outcomes
+  with full-width Build Brief CTA.
+- **Hypothesis "Solutions You're Selling" card** matches app language
+  (was solid navy with light-blue text — now standard `.bb` block
+  with tan `.sol-badge` chips).
+- **Color sweep** — ~500 inline-style hex literals migrated to design
+  tokens (`var(--green)`, `var(--tan-0)`, etc.). Ternary branches,
+  border shorthands, and gradients all swept.
+- **Login focus loss fix.** `AuthShell` was defined inside
+  `PasswordGate`; React saw a fresh component identity on every
+  keystroke, unmounted/remounted the form, and stole focus from the
+  password input back to email. Hoisted to module scope.
+- **Sample data + cohort cap.** Sample expanded 26 → 100 companies
+  across 19 normalized industries. `buildCohorts` capped at 10 (top 9
+  named + "Other" catch-all so no row is dropped). ACV column dropped
+  from the Accounts table — ACV is a salesperson input on Account
+  Review, not an attribute of the account.
+- **Sample-load button** copy now reflects actual `SAMPLE_ROWS.length`
+  ("Load Sample Data — 100 accounts").
+- **'Build my target accounts'** — new gold CTA on the Import step.
+  When ICP is built, generates 20 ICP-matched real companies via
+  `web_search`, routes through standard cohort + fit pipeline.
+- **In-call Solution Architecture discovery.** `generateDiscoveryQs`
+  now produces TWO tracks per RIVER stage: SALES (existing — Mom
+  Test, Voss, Cialdini etc.) and ARCHITECTURE (Rajput, McSweeney,
+  Richards/Ford, Fowler, DMAIC, pilot scoping, adjacent-system risk).
+  Architecture answers feed `buildSolutionFit` automatically via
+  `riverData` (`sa_<stage>_<idx>` keys). SA + onboarding start at ~70%
+  context instead of 0%.
+- **Print-to-PDF** on every stage. ICP, Accounts, Account Review,
+  Brief, Hypothesis, In-Call, Post-Call, Solution Fit. Print stylesheet
+  extended to handle the In-Call split-pane layout, account-strip
+  scroller, long tables, and pie charts (hidden in print).
+- **JSON data export** companion (💾 Data button) on every stage.
+  Downloads stage-specific structured data: ICP, RFP intel, accounts +
+  fit scores, brief, hypothesis, in-call notes, post-call, solution
+  fit. Dated filenames (`brief__usaa__2026-04-16.json`).
+
+### Data integrity / business
+- **Cost model + P&L scenario script.** New `docs/cost-model.md` with
+  Anthropic pricing, per-stage cost breakdown calibrated against
+  measured token data, persona scenarios (Light/Medium/Heavy/Power),
+  pricing tier proposal, sensitivity analysis. Runnable
+  `scripts/pl.mjs` with CLI overrides (`--users`, `--fallback`,
+  `--haiku-mult`, etc.). Headline: 96% gross margin at 1K users with
+  default mix.
+- **Pipeline-wide consistency harness.** Three new scripts join
+  existing `test-icp.mjs`:
+  - `test-fit.mjs` — fit-score variance per (seller, account)
+  - `test-brief.mjs` — brief field drift across runs (4 micro-calls
+    in parallel)
+  - `test-pipeline.mjs` — hypothesis + discovery consistency using
+    fixed brief input
+  Cost: ~$4 for full sweep across 8 sellers × N=3.
+
+### Verified post-deploy
+Daily security pen-test against production: all 11 probes pass —
+- Security headers (HSTS / CSP / X-Frame / X-CTO / Referrer / Permissions)
+- Opus injection → 400 "model not permitted"
+- Cross-origin from evil domain → 403 "origin not allowed"
+- `max_uses: 10` → silently capped to 3
+- GET → 405
+- Malformed body → 400
+- Missing messages → 400
+- Localhost / Vercel preview origins → 200
+
+### Known issues / not yet addressed
+- Brief Phase 2 (Executives) name hallucination — fix is to add
+  `web_search` to that micro-call. Not yet done.
+- Fit-score boundary hysteresis — accounts hovering at score 50 flip
+  between Potential and Poor across runs. Either widen the threshold
+  (≥55 for Potential) or surface the numeric score more prominently.
+- Narrative ICP fields (topPains, priorityInitiative, etc.) still
+  drift run-to-run — anchoring deferred until users complain.
+- Post-call routing + Solution Fit consistency tests — need synthetic
+  call data to test.
+- `/api/claude*` no Supabase JWT auth — current allow-list bounds
+  per-request cost but not requests-per-second.
+- Briefs/Hypotheses saved to Supabase before today still carry tier
+  vocabulary; only ICP/RFP got cache versioning + auto-purge.
+
+---
+
 ## [v105-ux-polish] — 2026-04-15
 
 ### Fixed (same-day patch)
