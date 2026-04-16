@@ -1,5 +1,5 @@
 # Cambrian Catalyst — RIVER Playbook Engine
-**Agent onboarding context. Last updated: 2026-04-15 (tag `v102-icp-consistency`)**
+**Agent onboarding context. Last updated: 2026-04-16 (tag `v106-pipeline-quality`)**
 
 ---
 
@@ -21,50 +21,60 @@ all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route
 
 ## Tech stack
 - Frontend: React 19 + Vite 6
-- Styling: inline CSS string injected via `<style>` + Google Fonts (Lora + DM Sans)
+- Styling: `src/App.css` (extracted in v106), Google Fonts (Lora + DM Sans) loaded via `@import` in App.css
 - Auth + DB: Supabase (anon key auth, `sessions` table with RLS)
 - AI: Anthropic Claude via serverless proxies (`/api/claude.js`, `/api/claude-stream.js`)
 - Deployment: Vercel (auto-deploy from `main`)
-- Models: `claude-haiku-4-5-20251001` (all calls). Sonnet reserved but not wired.
+- Models: `claude-haiku-4-5-20251001` (primary). `claude-sonnet-4-5` allow-listed as **automatic fallback** when Haiku returns 529 — substitution happens server-side in the proxy.
 
 ---
 
 ## Repository layout
 ```
 src/
-  App.jsx                ~5,034 lines — the monolith (extraction in progress)
-  App.css                (mostly unused; styling lives in App.jsx string)
+  App.jsx                ~5,150 lines — the monolith (extraction in progress)
+  App.css                ~440 lines — design tokens + all class styles + print rules
+                         (extracted from App.jsx in v106)
   main.jsx               entry
   config/constants.js    COHORT_COLORS (15), MAX_OUTCOMES, MAX_DOCS, MAX_PRODUCTS
   lib/
-    api.js               callAI + streamAI wrappers (NOT yet imported by App.jsx)
+    api.js               callAI + streamAI wrappers (NOT yet imported by App.jsx — duplicates exist)
     supabase.js          sbAuth / sbGetUser / sbSessions helpers (likewise)
     utils.js             parseACV, labelOrgSize, buildCohorts, calcConfidence, etc.
   data/
     outcomes.js          universal business imperatives
     riverFramework.js    RIVER_STAGES (imported by App.jsx)
-    sampleAccounts.js    demo data
+    sampleAccounts.js    100 sample companies across 19 industries
     negotiationFrameworks.js
     rfpSources.js        global RFP registry + CPV/NAICS codes
     prompts/
-      fitScoring.js
-      icpGeneration.js
-      briefGeneration.js
+      fitScoring.js      reference module — sync'd through v105 then drifted
+      icpGeneration.js   reference module — drifted
+      briefGeneration.js reference module — drifted
       negotiationInjections.js
   stages/
     S9_SolutionFit.jsx   EXTRACTED — presentational component
-    (S1/S5/S6/S8 still inline in App.jsx)
+                         (S1/S5/S6/S8 still inline in App.jsx)
   components/             (empty — extraction not yet started)
   hooks/                  (empty)
 api/
-  claude.js               60s timeout, forces temperature:0 server-side
-  claude-stream.js        120s timeout, SSE, forces temperature:0 server-side
+  claude.js               60s timeout. temperature:0 enforced. Sonnet fallback on 529.
+  claude-stream.js        120s timeout, SSE. Same fallback before stream starts.
+  _guard.js               Shared validator: model allow-list, max_tokens cap (8000),
+                          tool allow-list, max_uses cap (3), origin allow-list.
+                          Exports MODEL_FALLBACK = { haiku-4-5 → sonnet-4-5 }.
 scripts/
   consistency/
-    test-icp.mjs          Node harness for ICP drift measurement
-    sellers.json          golden seller list for tests
+    test-icp.mjs          ICP drift measurement (per-seller, N runs)
+    test-fit.mjs          Fit-score consistency per (seller, account) pair
+    test-brief.mjs        Brief field drift across N runs (4 micro-calls in parallel)
+    test-pipeline.mjs     Hypothesis + Discovery consistency with fixed brief input
+    sellers.json          golden seller list — currently 8 digital-rewards sellers
     README.md             how to run
     results/              gitignored — regenerated per run
+  pl.mjs                  Runnable P&L scenario calculator (--users, --fallback, etc.)
+docs/
+  cost-model.md           Cost model + pricing tier proposal + sensitivity analysis
 ```
 
 ---
@@ -84,65 +94,122 @@ scripts/
 0. Auth (Supabase)
 1. Seller URL → ICP build
 2. ICP review + RFP Intel tab
-3. Account import (CSV) → cohort build
+3. Account import (CSV / sample / **Build my target accounts**) → cohort build
 4. Accounts table → fit scoring
 5. Account Review → Brief generation
 6. RIVER hypothesis + talk tracks
-7. In-call discovery capture
+7. In-call discovery capture (sales + architecture tracks)
 8. Post-call routing + email
-9. **Solution Fit Review** (now in `src/stages/S9_SolutionFit.jsx`)
+9. **Solution Fit Review** (in `src/stages/S9_SolutionFit.jsx`)
+
+Each stage has Print-to-PDF + JSON Data export buttons (v106).
 
 ---
 
 ## Key functions in App.jsx
 | Function | Approx lines | Purpose |
 |---|---|---|
-| `buildSellerICP()` | 1699–1790 | Two-phase ICP: research + anchored generation. Caches to localStorage. |
-| `fetchRFPIntel()` | ~1880 | Haiku call to generate open + closed RFP intel by ICP industry |
-| `generateBrief()` | 651–838 | 5 micro-calls (p1-p4 stream via `streamAI`, p5 uses web_search) |
-| `buildRiverHypo()` | ~2043 | RIVER hypothesis + JOLT + talk tracks |
-| `scoreFit()` | ~1691 | Batch fit scoring, 20 accounts/batch |
-| `pickAccount()` | ~2008 | Brief wrapper — sets state, calls `generateBrief` |
-| `buildSolutionFit()` | ~2112 | Post-call SA review. Renders via `<S9SolutionFit/>` |
-| `streamAI()` | 506 | SSE streaming helper |
-| `callAI()` | 549 | Non-streaming Haiku JSON wrapper, 3x retry |
+| `claudeFetch()` | 195 | Shared retry wrapper for /api/claude. Handles 429 + 529 with exp backoff. |
+| `streamAI()` | 250 | SSE streaming helper. Retries initial POST on 529. |
+| `callAI()` | 290 | Non-streaming Haiku JSON wrapper. 3× retry incl. 529. |
+| `buildSellerProofPack()` | 425 | Composes "why buy from us" block — diffs, customers, alts, success factors, etc. Prepended to brief/hypothesis/solution-fit/fit-score prompts. |
+| `generateBrief()` | 495 | NON-ASYNC. Returns `{skeleton, mergers, allDone}`. 5 micro-calls fire in parallel; pickAccount paints skeleton instantly + merges sections progressively. |
+| `scoreFit()` | 1577 | Parallel batch scoring (Promise.all). Canonical Strong/Potential/Poor labels enforced via score-derived normalizer. |
+| `generateTargets()` | 1648 | "Build my target accounts" — 20 ICP-matched real companies via web_search; routes through standard cohort + fit pipeline. |
+| `fetchRFPIntel()` | 1758 | Two parallel calls (open + closed) with web_search; localStorage cache; auto-trigger on ICP change. |
+| `buildSellerICP()` | 2118 | Two-phase ICP: research (web_search) + anchored generation. localStorage cache by user+url+v3. |
+| `pickAccount()` | 2256 | Brief wrapper — paints skeleton, merges micro-results, fires hypothesis + discovery in background. |
+| `buildRiverHypo()` | 2318 | RIVER hypothesis + JOLT + talk tracks. normalizeRiverField guards against object-shape leaks. |
+| `generateDiscoveryQs()` | 2497 | TWO tracks per RIVER stage: SALES (Mom Test/Voss/Cialdini) + ARCHITECTURE (Rajput/McSweeney/Richards-Ford/Fowler/DMAIC). |
+| `runPostCall()` | 2570 | Synthesize call → routing decision (FAST_TRACK/NURTURE/DISQUALIFY) + CRM note + follow-up email. |
+| `buildSolutionFit()` | 2620 | Post-call SA review. Renders via `<S9SolutionFit/>`. Now grounded in seller proof pack. |
 
 ---
 
 ## AI call inventory
 All calls go through `/api/claude` (standard) or `/api/claude-stream` (SSE). Proxies force `temperature:0`.
+Server-side fallback: any 529 from Haiku triggers automatic retry with `claude-sonnet-4-5`.
 
-| Call | Model | Max tok | Streaming | Notes |
-|---|---|---|---|---|
-| ICP phase 1 (research) | Haiku | 2000 | No | Uses `web_search_20250305` (max_uses:1). Critical for sellers Haiku doesn't know from training. |
-| ICP phase 2 (build) | Haiku | 6000 | Yes | Anchored enum schema (see below) |
-| `fetchRFPIntel` | Haiku | 3000 | No | Also uses training knowledge |
-| `scoreFit` batch | Haiku | 1400 | No | 20 accounts / call |
-| `generateBrief` p1–p4 | Haiku | 1800–2400 | **Yes** (streamed) | Overview, execs, strategy, solutions |
-| `generateBrief` p5 | Haiku | 1800 | No | Uses `web_search_20250305` tool |
-| `buildRiverHypo` | Haiku | 900 | No | |
-| `buildSolutionFit` | Haiku | 5500 | No | |
-| `synthesize` (post-call) | Haiku | 2000 | No | |
+| Call | Model | Max tok | Streaming | Tools | Notes |
+|---|---|---|---|---|---|
+| ICP phase 1 (research) | Haiku | 2000 | No | `web_search` (×1) | Critical for sellers Haiku doesn't know from training. |
+| ICP phase 2 (build) | Haiku | 6000 | Yes (streamAI) | — | Anchored enum schema. |
+| `fetchRFPIntel` open | Haiku | 2500 | No | `web_search` (×2) | One of two parallel calls. |
+| `fetchRFPIntel` closed | Haiku | 2500 | No | `web_search` (×2) | Companion parallel call. |
+| `generateTargets` | Haiku | 4000 | No | `web_search` (×2) | "Build my target accounts" CTA. |
+| `scoreFit` batch | Haiku | 5500 | No | — | 20 accounts/batch, all batches in parallel. |
+| `generateBrief` p1–p4 | Haiku | 1200–2600 | Yes (streamAI) | — | Overview, execs, strategy, solutions. |
+| `generateBrief` p5 | Haiku | 1800 | No | `web_search` (×1) | Live news/sentiment. |
+| `buildRiverHypo` | Haiku | 5500 | No | — | RIVER + JOLT + talk tracks. |
+| `generateDiscoveryQs` | Haiku | 5500 | No | — | Sales + architecture tracks. |
+| `runPostCall` | Haiku | 5500 | No | — | Routing + email + CRM note. |
+| `buildSolutionFit` | Haiku | 5500 | No | — | SA review. |
 
 ---
 
-## ICP consistency system (as of v102)
-This is the defining feature of v102. The ICP used to drift wildly between runs (17–19 of 20 fields unstable, size ranges swinging 200–50K ↔ 500–10K between runs). Now:
+## Resilience (v106)
 
-1. **Anchored enum schema** (App.jsx:1727). `companySize`, `revenueRange`, `dealSize`, `salesCycle`, `adoptionProfile`, `ownershipTypes`, `geographies` are forced to pick from fixed buckets — no free-form ranges.
-2. **localStorage cache** (App.jsx:1699). Keyed by normalized seller URL + schema version (`ICP_CACHE_VERSION = "v2"`). Once generated, reused forever for that user. Bump the version constant if you change the ICP schema shape — old cached entries fall through to regeneration.
-3. **Explicit Regenerate button** (App.jsx:2948). Confirm dialog → forces `buildSellerICP(url, {forceRefresh:true})`.
-4. **Phase 1 uses `web_search`** (App.jsx:1727). Without this, obscure sellers (Tillo, Cambrian, Savvi) returned "Unknown" for every field — Haiku's training data doesn't cover the long tail. With live search, 5/5 runs on Tillo returned identical anchored fields.
-5. **Cache quality gate** (App.jsx:1783). ICPs containing "Unknown" / "Unable to determine" / "PICK ONE" in core fields are NOT cached — next load retries. Prevents permanent failure for the first user of an obscure seller if web_search momentarily fails.
+### Sonnet fallback on Anthropic 529
+When Anthropic returns `overloaded_error`, the proxy automatically retries the same request with Sonnet 4.5 substituted in. Cost: ~3× per affected call. Headers/body tag: `x-fallback-model: claude-sonnet-4-5` and `_fallbackModel` field. Verified live during the 2026-04-16 Haiku capacity event.
+
+### Client-side retry
+`claudeFetch()` wraps the user-facing fetches with exponential backoff:
+- 529 / overloaded_error: 2s → 5s → 10s
+- 429 / rate_limit_error: 15s → 30s → 45s
+- Network errors: 2s/4s/6s
+- Returns `{error: {type:"unavailable", message:"..."}}` after retries exhausted so callers can surface a friendly error.
+
+Applied at: `scanSellerUrl`, `buildSellerICP` (both phases), `fetchRFPIntel` (per-class), `generateBrief` p5, `generateTargets`. `callAI` and `streamAI` have their own equivalent retry baked in.
+
+---
+
+## Seller Proof Pack (v106)
+
+`buildSellerProofPack({sellerICP, sellerDocs, products})` produces a unified "why buy from us" block prepended to every customer-facing prompt:
+- What we sell + market category
+- Unique differentiators (cite to justify "why us")
+- Named customers (Cialdini social proof — never invent)
+- Competitive alternatives (Sun Tzu — know terrain)
+- Success factors (frame outcomes in customer's language)
+- Priority trigger (urgency framing)
+- Traction channels
+- Uploaded proof docs (case studies — quote when relevant)
+- Product catalog (use exact names; never invent)
+
+Plus explicit instructions: cite specific named customers, use real differentiators, flag unsupported claims as `[unsupported — verify with seller]` rather than asserting them.
+
+Injected into: `generateBrief` base context, `buildRiverHypo` prompt, `buildSolutionFit` prompt, and (lighter) `scoreFit`. Brief schema for `solutionMapping[]` and `caseStudies[]` updated to require named-customer + differentiator citation per item.
+
+---
+
+## ICP consistency system
+
+1. **Anchored enum schema** — `companySize`, `revenueRange`, `dealSize`, `salesCycle`, `adoptionProfile`, `ownershipTypes`, `geographies` are PICK-ONE from fixed buckets.
+2. **localStorage cache** keyed by `icp:v3:<userId>:<url>`. Bumped to v3 in the tier-vocabulary purge. Old keys auto-purged on app boot via `purgeStaleCaches()`.
+3. **Explicit Regenerate button** (forceRefresh:true).
+4. **Phase 1 uses `web_search`** — critical for obscure sellers.
+5. **Cache quality gate** — ICPs containing "Unknown" / "Unable to determine" / "PICK ONE" in core fields are NOT persisted.
 
 ### Verifying consistency
 ```bash
-node scripts/consistency/test-icp.mjs            # N=5, all sellers, ~$0.25
-N=3 SELLER=gong.io node scripts/consistency/test-icp.mjs
+node scripts/consistency/test-icp.mjs            # ~$0.55 for 8 sellers × 3 runs
+node scripts/consistency/test-fit.mjs            # ~$2 for fit consistency on 25 accounts
+node scripts/consistency/test-brief.mjs          # ~$1 for brief field drift
+node scripts/consistency/test-pipeline.mjs       # hypothesis + discovery
 ```
-Reports drift per field. Current baseline (v102): 4 core numeric fields 100% stable on known sellers (Gong, Tango, Savvi); narrative fields (`topPains`, `priorityInitiative`, etc.) still vary and are the next candidates for anchoring if needed.
+Update prompts in `App.jsx` then sync the harnesses or tests won't reflect reality.
 
-If you change the Phase 2 prompt in App.jsx, also update `generateICP()` in `scripts/consistency/test-icp.mjs` or the tests won't reflect reality.
+---
+
+## RFP Intel system (v106 rewrite)
+
+- **Two parallel Haiku calls** — one for OPEN RFPs, one for CLOSED awards. Each with its own `web_search` budget (max_uses:2). Each renders independently.
+- **Auto-trigger** on ICP completion via `useEffect` watching a stable `icpSignature`. When the user clicks the RFP tab, data is usually already loaded.
+- **localStorage cache** keyed by `rfp:v3:<userId>:<url>:<marketCategory>`. Force-refresh on ICP change so stale RFP doesn't sit against new ICP.
+- **Prompt enriched** with full ICP context (industries/size/revenue/geography/personas/trigger/disqualifiers/competitors/differentiators) + concrete search-query patterns.
+- **`isGovernment` boolean required** on every row. Filter predicates strict `=== true / === false`. Filter buttons show live counts.
+- **`awardedTo` accuracy** — only populated if `web_search` confirms the vendor. Otherwise empty → UI renders "— unverified".
+- **Data-integrity disclaimer** above tables. **Source URLs clickable** when present.
 
 ---
 
@@ -160,6 +227,12 @@ Session blob fields: `sellerUrl, sellerInput, productUrls, sellerICP, products, 
 
 ## RIVER framework
 5 stages: Reality → Impact → Vision → Entry Points → Route. Each has Gates (MC), Discovery (text), Talk Track, Objections. Confidence 0–98% via `calcConfidence()` (gate answers + discovery text length).
+
+In-call discovery now produces TWO question tracks per stage (v106):
+- **SALES** (Mom Test, Voss calibrated questions, Cialdini social proof, etc.)
+- **ARCHITECTURE** (Rajput business→digital alignment, McSweeney stakeholder alignment, Richards/Ford quality attributes, Fowler integration patterns, DMAIC maturity, pilot scoping, adjacent-system risk)
+
+Architecture answers feed `buildSolutionFit` automatically via `riverData` (`sa_<stage>_<idx>` keys). SA + onboarding start at ~70% context instead of 0%.
 
 ---
 
@@ -181,10 +254,12 @@ Defined in `src/data/negotiationFrameworks.js` + `src/data/prompts/negotiationIn
 
 ## Knowledge layer — fit scoring (`src/data/prompts/fitScoring.js`)
 
-### "The Wall" (score 5–15% — 100% poor fit for startup sellers)
-Automotive/Mfg 5.9% · Aerospace & Defense Prime 5.8% · Telecom 6.1% · Energy Oil/Gas 11.3% · Energy Utilities 13.4% · Mass Market Retail 13.6% · Tier 1 Banks (JPM/BAC/WF) 12.6%.
+After v106 the public-facing vocabulary is "high-friction industries" / "underserved high-fit segments" — the `Tier 1` / `The Wall` labels were purged from all customer-facing prompts.
 
-### Tier 1 targets (60–75%)
+### High-friction (score 5–25%)
+Heavy manufacturing 5.9% · Aerospace & Defense Prime 5.8% · Telecom 6.1% · Energy Oil/Gas 11.3% · Energy Utilities 13.4% · Mass Market Retail 13.6% · Top-5 US Banks (JPM/BAC/WF/Citi/Goldman) 12.6%.
+
+### Underserved high-fit (score 60–80%)
 Large Private Insurance/Finance 65.2% · Large Private Tech/Data/Media 64.5% · Large Private Professional Services 63.3% · P&C/Life/Specialty 62.5% · CPG HPC/Beauty 61.9% · Regional/Community Banks 59.5% · Healthcare IT/Digital Health 54.9%.
 
 ### Stage thresholds
@@ -209,45 +284,69 @@ Priority order (non-government first per UX):
 ### RFP signal scoring
 Active match +20 · Recent award +10 · Historical buyer +5 · Incumbent risk −10.
 
-### Code mappings (samples)
-- Fintech/Payments: CPV 66000000/66100000/72000000 · NAICS 522320/522390/523130
-- SaaS/Software: CPV 72000000/72200000/48000000 · NAICS 511210/541511/541512
-- AI/ML: CPV 72212000/72316000 · NAICS 541715/541511
-
-### RFP Intel UI (S1 tab)
-Toggle: All / 🏢 Private-Commercial / 🏛 Government. Tables for open RFPs (Title/Buyer/Source/Value/Deadline/Cohort/Fit%) and closed awards (adds Awarded To — incumbent intel). `isGovernment` flag drives badge colors.
-
 ---
 
 ## Security
+
+### Current posture (verified daily)
 - `ANTHROPIC_API_KEY`: server-side only, no VITE_ prefix
-- Supabase anon key: VITE_ prefixed, in Vercel env + `.env.local` (gitignored)
+- Supabase anon key: VITE_ prefixed (intentional — anon keys are public)
 - RLS on sessions: `auth.uid()::text = user_id`
 - All Claude calls via proxy — no direct browser→Anthropic
-- `/api/claude` + `/api/claude-stream` enforce `temperature:0` server-side regardless of request body
+- `temperature:0` enforced server-side regardless of client request body
+- Model allow-list: `claude-haiku-4-5-20251001`, `claude-sonnet-4-5` (fallback only — clients can't request Sonnet directly)
+- Tool allow-list: `web_search_20250305` only, max_uses capped at 3
+- max_tokens capped at 8000
+- Origin allow-list: `cambrian-playbook.vercel.app`, `cambrian-playbook-*.vercel.app` (Vercel previews), `localhost`
+- Security headers: HSTS, CSP frame-ancestors:none, X-Frame-Options:DENY, X-Content-Type-Options:nosniff, Referrer-Policy, Permissions-Policy
+
+### Verified daily
+```bash
+# 11-probe pen test against production
+URL=https://cambrian-playbook.vercel.app
+# See `git log` commit b2c... or rerun the probe block from prior conversation
+```
+
+### Known gaps
+- No JWT auth on `/api/claude*` — model/tool allow-list bounds per-request cost but not requests-per-second
+- No Sonnet-fallback telemetry (count/cost) — hard to track weekly fallback impact
+- No rate limiting (would use `@upstash/ratelimit` on Vercel)
+
+---
+
+## Cost model
+See `docs/cost-model.md` for the full analysis. Headlines:
+- Light user (5 deals/mo): ~$0.57/mo COGS
+- Medium user (20 deals/mo): ~$2.47/mo
+- Heavy user (50 deals/mo): ~$6.84/mo
+- Power user (100+ deals/mo): ~$16.45/mo
+- Tier margins (Starter $39 → Enterprise $299): 91-98% gross margin
+- Sonnet fallback adds ~3× per affected call
+
+Run scenarios: `node scripts/pl.mjs --users=5000 --fallback=0.10`
 
 ---
 
 ## Known tech debt
-- `App.jsx` is ~5,034 lines. Only S9 extracted. `S1/S5/S6/S8` still inline.
-- `src/lib/*` and `src/data/*` files exist but are NOT imported by App.jsx (reference only). See modularization roadmap.
-- CSS is a ~400-line string inside App.jsx. Should migrate to App.css.
-- Brief `p5` (live search) is still non-streaming because of `web_search` tool constraint.
-- RFP Intel uses Haiku training knowledge — not live SAM.gov / TED API.
-- ICP narrative fields (`topPains`, `priorityInitiative`, `uniqueDifferentiators`) still drift run-to-run — only anchored fields are stable.
+- `App.jsx` is ~5,150 lines. Only S9 extracted. `S1/S5/S6/S8` still inline.
+- `src/lib/api.js`, `src/lib/supabase.js`, `src/lib/utils.js` — exist but App.jsx has duplicate implementations. Once stages extract, wire imports and delete duplicates.
+- `src/data/prompts/*.js` reference modules — drifted from live App.jsx prompts. Sync after each prompt change OR mark as canonical-source-only.
+- `exportToExcel` schema — built for old brief shape; hasn't been updated for new fields (`provenWith`, `measurableOutcome`, etc.)
+- Brief Phase 2 (Executives) name hallucination — fix is to add `web_search` to that micro-call. Not yet shipped.
+- Fit-score boundary hysteresis — accounts hovering at score 50 flip between Potential/Poor across runs.
+- Narrative ICP fields (`topPains`, `priorityInitiative`, `uniqueDifferentiators`) still drift run-to-run — only enum-anchored fields are stable.
 - `sellerStage` variable is in scope only inside the React component (not accessible to extracted prompts).
+- Briefs/Hypotheses saved to Supabase before v106 still carry tier vocabulary; only ICP/RFP got cache versioning + auto-purge.
 
 ---
 
 ## Modularization roadmap
 ### Done
-- `src/config/constants.js`
-- `src/lib/api.js` (callAI, streamAI, callAIRaw) — *not yet imported by App.jsx*
-- `src/lib/supabase.js` — *not yet imported*
-- `src/lib/utils.js` — *not yet imported*
+- `src/config/constants.js`, `src/lib/api.js`, `src/lib/supabase.js`, `src/lib/utils.js` (extracted but App.jsx has duplicates — not yet imported)
 - `src/data/outcomes.js`, `riverFramework.js`, `sampleAccounts.js`, `negotiationFrameworks.js`, `rfpSources.js`
-- `src/data/prompts/fitScoring.js`, `icpGeneration.js`, `briefGeneration.js`, `negotiationInjections.js`
-- **`src/stages/S9_SolutionFit.jsx`** ✅ (v102)
+- `src/data/prompts/fitScoring.js`, `icpGeneration.js`, `briefGeneration.js`, `negotiationInjections.js` (drifted)
+- `src/App.css` (extracted in v106)
+- `src/stages/S9_SolutionFit.jsx` (extracted in v102)
 
 ### Next — stage extraction (safest → largest)
 - [ ] `src/stages/S8_PostCall/`
@@ -259,7 +358,7 @@ Toggle: All / 🏢 Private-Commercial / 🏛 Government. Tables for open RFPs (T
 - [ ] `components/UI/EditableField.jsx`
 - [ ] `components/UI/LoadingBox.jsx`
 - [ ] `components/UI/PieChart.jsx`
-- [ ] `components/Auth/AuthGate.jsx`
+- [ ] `components/Auth/AuthShell.jsx` (already standalone — just move file)
 - [ ] `components/Layout/Header.jsx`
 
 ---
@@ -268,12 +367,18 @@ Toggle: All / 🏢 Private-Commercial / 🏛 Government. Tables for open RFPs (T
 - `v99-clean` — early stable
 - `v100-stable` — last stable before API migration
 - `v101-modular-foundation` — lib/data/config extracted, knowledge layer complete
-- **`v102-icp-consistency`** — anchored ICP schema + localStorage cache + S9 extract + Brief streaming + consistency harness
+- `v102-icp-consistency` — anchored ICP schema + localStorage cache + S9 extract + Brief streaming + consistency harness
+- `v103-obscure-seller-fix` — web_search Phase 1 + cache quality gate
+- `v104-security-hardening` — model/tool allow-list + origin check + security headers
+- `v105-ux-polish` — design tokens + stepper redesign + login on app shell
+- **`v106-pipeline-quality`** — RFP rewrite, Sonnet fallback, brief skeleton, target generation, proof pack, print/export, cost model, tier vocabulary purge, canonical fit labels
 
 ---
 
 ## Deployment
 Vercel auto-deploys from `main`. **Never** run `vercel --prod` from `src/` — always from project root.
+
+Daily security verification: 11-probe pen test (see CHANGELOG v106 entry). All passing as of 2026-04-16.
 
 ---
 
@@ -286,12 +391,32 @@ Vercel auto-deploys from `main`. **Never** run `vercel --prod` from `src/` — a
 
 ---
 
-## Pending for next session
-- [ ] Wire SAM.gov live API for real RFP signal detection
-- [ ] Wire TED Europa live API for EU account matching
-- [ ] Add RFP signal badges to accounts table fit scores
-- [ ] Extract next stage module (S8 PostCall suggested next)
-- [ ] Migrate App.jsx to actually `import` from `src/lib/api.js`, `lib/supabase.js`, `lib/utils.js` (currently duplicate implementations)
-- [ ] CSS string → App.css migration
-- [ ] Consider anchoring narrative ICP fields (`topPains`, `priorityInitiative`) if users complain about drift
-- [ ] Verify `VITE_SUPABASE_*` env vars are set in Vercel dashboard (manual)
+## Pending — awaiting user direction
+- [ ] **Agent/Assistant UX** — Patterns A/B/C/D outlined; user picking target persona (rep mid-flow / rep prepping / rep on live call)
+- [ ] **Personal LinkedIn + connection mapping** — Idea 1 (LinkedIn input) + Path A (inferred warm-intro signals) ready to build
+- [ ] **Field-level appropriateness audit** — three interpretations (schema/reasonableness/semantic) — user picking scope
+- [ ] **Manual proof-point entry UI** on setup page (ROI numbers, awards, case-study links)
+
+## Pending — quality fixes flagged but not shipped
+- [ ] Brief Executives micro-call hallucination — add `web_search`
+- [ ] Fit-score boundary hysteresis (≥55 for Potential, OR show numeric prominently)
+- [ ] Narrative ICP field anchoring (topPains, priorityInitiative, etc.)
+- [ ] Find Targets — quality regenerate loop if <10 Strong Fits
+- [ ] Find Targets — dedupe against rows[] in addition to ICP customerExamples
+
+## Pending — operational
+- [ ] Supabase JWT auth on `/api/claude*`
+- [ ] Sonnet-fallback telemetry (count, cost, by-route)
+- [ ] Rate limiting (@upstash/ratelimit)
+- [ ] Brief/Hypothesis cache versioning + auto-purge for old tier-vocabulary sessions
+
+## Pending — test coverage
+- [ ] Post-call routing consistency (needs synthetic RIVER notes)
+- [ ] Solution Fit consistency (same dependency)
+- [ ] LLM-as-judge for narrative semantic accuracy
+
+## Pending — modularization
+- [ ] Extract S8 PostCall (next natural stage after S9)
+- [ ] Wire `src/lib/*` imports + delete duplicates from App.jsx
+- [ ] Refresh `src/data/prompts/*.js` to match current App.jsx prompts (or mark App.jsx as canonical)
+- [ ] Update `exportToExcel` for the new brief schema (`provenWith`, `measurableOutcome`, etc.)
