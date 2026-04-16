@@ -1,11 +1,13 @@
 {
-  "_comment": "Sellers to test ICP consistency against. Add/remove freely. Each seller runs N=5 iterations.",
+  "_comment": "8-seller consistency cohort — digital rewards / incentives vertical. Used by test-icp.mjs and test-fit.mjs.",
   "sellers": [
-    { "url": "cambriancatalyst.com", "stage": "seed", "notes": "Joe's own consulting shop" },
-    { "url": "savvi.ai", "stage": "seed", "notes": "Active client — ABM engagement" },
-    { "url": "tango.com", "stage": "series-c", "notes": "Joe's prior employer — digital rewards" },
-    { "url": "gong.io", "stage": "series-e", "notes": "Well-known revenue intelligence seller" },
-    { "url": "linear.app", "stage": "series-b", "notes": "PLG SaaS — different ICP shape" },
-    { "url": "tillo.com", "stage": "unknown", "notes": "Obscure seller — regression test for web_search Phase 1" }
+    { "url": "neocurrency.com",       "stage": "unknown", "notes": "digital rewards platform" },
+    { "url": "tillo.com",             "stage": "unknown", "notes": "UK digital gift / rewards platform" },
+    { "url": "tangocard.com",         "stage": "series-c", "notes": "digital rewards / RaaS" },
+    { "url": "blackhawknetwork.com",  "stage": "private",  "notes": "branded payments / gift card networks" },
+    { "url": "incomm.com",            "stage": "private",  "notes": "prepaid + payments" },
+    { "url": "savvai.com",            "stage": "unknown",  "notes": "as provided — verify spelling vs savvi.ai" },
+    { "url": "evermoreoutcomes.com",  "stage": "seed",     "notes": "outcomes platform" },
+    { "url": "awardco.com",           "stage": "series-b", "notes": "employee recognition platform" }
   ]
 }
