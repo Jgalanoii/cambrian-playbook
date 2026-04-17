@@ -508,7 +508,7 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
 // wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
-function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null){
+function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}){
   const co  = member.company;
   const url = member.company_url || co;
 
@@ -526,7 +526,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${activeOutcomes.join(", ")}`;
   const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
+  // For the Brief, use a TRIMMED proof pack — LinkedIn + full proof-point
+  // detail slows down p3/p4 without adding value at this stage (relationship
+  // signals + verbatim proof citations matter more in hypothesis/talk tracks).
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs: sellerDocs.slice(0,2), products });
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
@@ -548,11 +551,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // ── 5 MICRO-CALLS fire simultaneously, each with a tiny schema ───────────
   // User sees the overview card the moment the fastest resolves (~2s)
 
-  // MICRO 1: Company overview — check pre-cache first (fires on account select).
-  // If cached, resolves instantly. If not, fires streamAI as before.
-  const preCache = briefPreCacheRef?.current?.[co];
-  const p1 = (preCache?.overview && preCache.overview !== "loading")
-    ? Promise.resolve(preCache.overview)
+  // MICRO 1: Company overview — reuse pre-cache promise/result. Never duplicate.
+  const preCache = caches.brief || {};
+  const overviewCache = preCache.overview;
+  const p1 = overviewCache
+    ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
     : streamAI(baseLight+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, revenue scale, employees, HQ, strategic direction",`+
@@ -564,25 +567,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ()=>{}, 1800
   );
 
-  // MICRO 2: Executives — pre-fetched in background when account is selected
-  // (step 4). If cache hit, resolves instantly. If miss (user went straight
-  // to Brief), fires the web_search inline. Either way: verified names, no
-  // hallucination.
-  const p2 = (async()=>{
-    // Check pre-fetch cache first
-    const cached = execCacheRef.current[co];
-    if (cached && cached !== "loading" && typeof cached === "object") {
-      return cached;
-    }
-    // If still loading from pre-fetch, wait for it (poll briefly)
-    if (cached === "loading") {
-      for (let w = 0; w < 20; w++) {
-        await new Promise(r => setTimeout(r, 500));
-        const val = execCacheRef.current[co];
-        if (val && val !== "loading") return typeof val === "object" ? val : null;
-      }
-    }
-    // Cache miss — fire inline (same call as pre-fetch)
+  // MICRO 2: Executives — reuse pre-cache promise/result. Never duplicate.
+  const execCache = caches.execs;
+  const p2 = execCache
+    ? (execCache instanceof Promise ? execCache : Promise.resolve(execCache))
+    : (async()=>{
+    // No pre-cache — fire inline
     try {
       const d = await claudeFetch({
         model:"claude-haiku-4-5-20251001",
@@ -602,12 +592,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for(let i=textBlocks.length-1;i>=0;i--){
         const parsed=extractJsonWithKey(textBlocks[i],"keyExecutives");
-        if(parsed){ execCacheRef.current[co]=parsed; return parsed; }
+        if(parsed) return parsed;
       }
       const raw=textBlocks.join("").trim();
-      const parsed=safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
-      if(parsed) execCacheRef.current[co]=parsed;
-      return parsed;
+      return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
     }catch(e){console.warn("Exec search failed:",e.message);return null;}
   })();
 
@@ -620,9 +608,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"publicSentiment":{`+`"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name sources and tone.",`+`"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — or empty if unknown",`+`"g2Rating":"G2 product rating as a number e.g. 4.2 out of 5 — or empty if not a software company",`+`"npsSignal":"Estimated NPS signal: if you know ${co} publishes NPS or CSAT data, cite it. Otherwise describe customer loyalty signals (high churn, vocal advocates, renewal rates mentioned in press)",`+`"trustpilotRating":"Trustpilot score as a number if known — or empty",`+`"employeeScore":"Glassdoor CEO approval % or Indeed rating if known — signals culture and operational health",`+`"standoutReview":{"text":"Most revealing customer or employee quote or paraphrase — something a seller would want to know","source":"G2 / Glassdoor / Trustpilot / analyst / press","sentiment":"positive or negative"},`+`"salesAngle":"1 sentence: how the seller should use this sentiment context in the discovery conversation"}}`,
     ()=>{}, 2400
   );
-  // Patch: if sellerLinkedIn is set, append relationshipSignals to p3's
-  // schema. Done as a wrapper since the streamAI call above can't be
-  // conditionally extended mid-chain. We'll inject via mergeStrategy instead.
+  // relationshipSignals (LinkedIn) now fires as a separate post-brief call
 
   // MICRO 4: Solution mapping + contacts — shows after strategy (streamed)
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
@@ -642,10 +628,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ()=>{}, 2600
   );
 
-  // MICRO 5: Live search — check pre-cache first. If cached from account
-  // selection on step 4, resolves instantly. Otherwise fires web_search.
-  const p5 = (preCache?.live && preCache.live !== "loading")
-    ? Promise.resolve(preCache.live)
+  // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
+  const liveCache = preCache.live;
+  const p5 = liveCache
+    ? (liveCache instanceof Promise ? liveCache : Promise.resolve(liveCache))
     : (async()=>{
     try{
       const prompt =
@@ -739,7 +725,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r3?.publicSentiment?.onlineSentiment || r3?.publicSentiment?.glassdoorRating) {
       next.publicSentiment = {...next.publicSentiment, ...r3.publicSentiment};
     }
-    if (r3?.relationshipSignals) next.relationshipSignals = r3.relationshipSignals;
+    // relationshipSignals removed from p3 — fires as a separate post-brief call
     return next;
   };
   const mergeSolutions = (r4) => (prev) => {
@@ -2661,12 +2647,19 @@ ${isOpen
     // generateBrief is now synchronous — returns skeleton + per-section
     // merger promises. Paint the skeleton INSTANTLY, then each section
     // fills in as its Haiku call returns.
+    // Pass pre-cached data (or in-flight promises) so generateBrief reuses
+    // them instead of firing duplicate API calls. Promises are awaited inside
+    // generateBrief's micro-call wrappers; resolved objects hit instantly.
+    const co = member.company;
+    const cachedExecs = execCacheRef.current[co] || null;   // promise, object, or null
+    const cachedBrief = briefPreCacheRef.current[co] || {}; // {overview: promise|obj, live: promise|obj}
     const { skeleton, mergers, allDone } = generateBrief(
       member, sellerUrl, sellerDocs, products,
       selectedCohort, selectedOutcomes, productPageUrl,
       (msg) => setBriefStatus(msg),
       productUrls,
-      sellerICP  // pass through so the proof pack can be built
+      sellerICP,
+      { execs: cachedExecs, brief: cachedBrief }
     );
     setBrief(skeleton);
     setBriefLoading(false);  // skeleton counts as "loaded" — sections show their own inline progress
@@ -3178,12 +3171,15 @@ Return ONLY valid JSON:
   // ── PRE-FETCH: executives search fires when account is selected (step 4)
   // So by the time the user clicks "Build Brief" (step 5), exec data is
   // already cached. Eliminates the ~10-15s web_search bottleneck from p2.
+  // ── PRE-FETCH: executives ─────────────────────────────────────────────────
+  // Stores the PROMISE (not "loading" string) so generateBrief can await
+  // an in-flight call instead of duplicating it. Once resolved, the ref
+  // holds the parsed result object for instant cache hits.
   useEffect(() => {
     if (!selectedAccount?.company || !sellerUrl) return;
     const co = selectedAccount.company;
-    if (execCacheRef.current[co]) return; // already cached
-    execCacheRef.current[co] = "loading";
-    (async () => {
+    if (execCacheRef.current[co]) return; // already cached or in-flight
+    const promise = (async () => {
       try {
         const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\n`;
         const d = await claudeFetch({
@@ -3198,7 +3194,7 @@ Return ONLY valid JSON:
             `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
           }],
         });
-        if (d.error) { execCacheRef.current[co] = null; return; }
+        if (d.error) { execCacheRef.current[co] = null; return null; }
         const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
         let parsed = null;
         for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
@@ -3208,40 +3204,37 @@ Return ONLY valid JSON:
           const raw = textBlocks.join("").trim();
           parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
         }
-        execCacheRef.current[co] = parsed || null;
-      } catch { execCacheRef.current[co] = null; }
+        execCacheRef.current[co] = parsed || null; // overwrite promise with result
+        return parsed || null;
+      } catch { execCacheRef.current[co] = null; return null; }
     })();
+    execCacheRef.current[co] = promise; // store promise while in-flight
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount?.company]);
 
   // ── PRE-FETCH: static brief sections (overview + live search) ─────────────
-  // 75% of accounts that reach Account Review will need a brief. Pre-fetch
-  // the STATIC parts (company research that doesn't depend on outcomes/deal
-  // context) while the user picks outcomes on step 4. When they click
-  // "Build Brief", p1 + p5 resolve instantly from cache. Only p3 (strategy)
-  // and p4 (solutions) need the user's input — those 2 calls take ~5s.
+  // Stores PROMISES so generateBrief can await in-flight calls (no duplicates).
+  // Once resolved, the ref holds {overview: object, live: object} for instant hits.
   useEffect(() => {
     if (!selectedAccount?.company || !sellerUrl) return;
     const co = selectedAccount.company;
-    const url = selectedAccount.company_url || co;
     if (briefPreCacheRef.current[co]) return;
-    briefPreCacheRef.current[co] = { overview: "loading", live: "loading" };
 
-    // Pre-fetch p1 (overview) — lightweight, no web_search
-    (async () => {
+    const light = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown.\nCONSISTENCY: Return EXACTLY the structure shown.\n\n`;
+
+    // p1 pre-fetch (overview) — lightweight, no web_search
+    const overviewPromise = (async () => {
       try {
-        const light = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown.\nCONSISTENCY: Return EXACTLY the structure shown.\n\n`;
-        const r = await streamAI(light +
+        return await streamAI(light +
           `Return ONLY raw JSON (start with {) for the company overview:\n` +
           `{"companySnapshot":"3-4 sentences","revenue":"","publicPrivate":"","employeeCount":"","headquarters":"","founded":"","website":"","linkedIn":"","fundingProfile":"","competitors":["","",""],"watchOuts":["",""]}`,
           () => {}, 1800
-        );
-        briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], overview: r || null };
-      } catch { briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], overview: null }; }
+        ) || null;
+      } catch { return null; }
     })();
 
-    // Pre-fetch p5 (live search) — web_search for careers/news/sentiment
-    (async () => {
+    // p5 pre-fetch (live search) — web_search for careers/news/sentiment
+    const livePromise = (async () => {
       try {
         const prompt =
           `Search for recent information about "${co}". PRIORITY ORDER — search for open roles FIRST:\n\n` +
@@ -3256,7 +3249,7 @@ Return ONLY valid JSON:
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
           messages: [{ role: "user", content: prompt }],
         });
-        if (d.error) { briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], live: null }; return; }
+        if (d.error) return null;
         const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
         let parsed = null;
         for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
@@ -3265,9 +3258,17 @@ Return ONLY valid JSON:
                 || extractJsonWithKey(textBlocks[i], "recentSignals");
         }
         if (!parsed) { const raw = textBlocks.join("").trim(); parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw); }
-        briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], live: parsed || null };
-      } catch { briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], live: null }; }
+        return parsed || null;
+      } catch { return null; }
     })();
+
+    // Store promises — generateBrief can await these if still in-flight.
+    // Once both resolve, overwrite with plain objects for instant cache hits.
+    const entry = { overview: overviewPromise, live: livePromise };
+    briefPreCacheRef.current[co] = entry;
+    Promise.all([overviewPromise, livePromise]).then(([ov, lv]) => {
+      briefPreCacheRef.current[co] = { overview: ov, live: lv };
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount?.company]);
 
