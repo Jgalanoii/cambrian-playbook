@@ -545,16 +545,36 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ()=>{}, 1800
   );
 
-  // MICRO 2: Executives — fires simultaneously, merges when ready (streamed)
-  const p2 = streamAI(base+
-    `Return ONLY raw JSON (start with {) for the 3 key executives at ${co}:\n`+
-    `{"keyExecutives":[`+
-    `{"name":"REQUIRED real current CEO name","title":"CEO","initials":"XX","background":"Prior role in 1 sentence","angle":"Board mandate and what they are measured on. 2 sentences."},`+
-    `{"name":"REQUIRED real current CHRO or CPO name","title":"exact title","initials":"XX","background":"HR/people focus 1 sentence","angle":"What winning looks like for them personally. 2 sentences."},`+
-    `{"name":"REQUIRED real current CFO or COO name","title":"exact title","initials":"XX","background":"Financial/ops focus 1 sentence","angle":"How they evaluate spend decisions. 2 sentences."}],`+
-    `"sellerSnapshot":"2 sentences on seller most relevant offerings for ${co}"}`,
-    ()=>{}, 1800
-  );
+  // MICRO 2: Executives — switched from streamAI to claudeFetch + web_search.
+  // Consistency tests showed executive names hallucinating across runs (USAA CFO
+  // was "Brent Loncar" / "Rohan Duliba" / "Rowen Zetterman" — all fabricated).
+  // web_search lets Haiku verify names against LinkedIn/press before returning.
+  const p2 = (async()=>{
+    try {
+      const d = await claudeFetch({
+        model:"claude-haiku-4-5-20251001",
+        max_tokens:1800,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        messages:[{role:"user",content:base+
+          `Search for the CURRENT C-suite leadership of ${co}. These names will be shown to a sales rep who may email or call them — ACCURACY IS CRITICAL. Do not guess. If you cannot verify a name via search, return "Verify at LinkedIn" instead of inventing one.\n\n`+
+          `Return ONLY raw JSON:\n`+
+          `{"keyExecutives":[`+
+          `{"name":"VERIFIED current CEO full name","title":"CEO","initials":"XX","background":"Prior role in 1 sentence","angle":"Board mandate and what they are measured on. 2 sentences."},`+
+          `{"name":"VERIFIED current CHRO/CPO full name or 'Verify at LinkedIn'","title":"exact title","initials":"XX","background":"HR/people focus 1 sentence","angle":"What winning looks like for them personally. 2 sentences."},`+
+          `{"name":"VERIFIED current CFO/COO full name or 'Verify at LinkedIn'","title":"exact title","initials":"XX","background":"Financial/ops focus 1 sentence","angle":"How they evaluate spend decisions. 2 sentences."}],`+
+          `"sellerSnapshot":"2 sentences on seller most relevant offerings for ${co}"}`
+        }],
+      });
+      if(d.error) return null;
+      const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+      for(let i=textBlocks.length-1;i>=0;i--){
+        const parsed=extractJsonWithKey(textBlocks[i],"keyExecutives");
+        if(parsed) return parsed;
+      }
+      const raw=textBlocks.join("").trim();
+      return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+    }catch(e){console.warn("Exec search failed:",e.message);return null;}
+  })();
 
   // MICRO 3: Strategy + opening angle — shows after execs (streamed)
   const p3 = streamAI(base+
@@ -1777,8 +1797,8 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `━━━ SCORE (0-100, single integer) ━━━\n`+
         `Band mapping — score MUST match label:\n`+
         `  75-100 → "Strong Fit"     — clear ICP match, buyer accessible, reasonable cycle\n`+
-        `  50-74  → "Potential Fit"  — partial match, needs specific angle or workaround\n`+
-        `   0-49  → "Poor Fit"        — structural barrier (wrong size, industry, procurement, incumbent lock)\n\n`+
+        `  55-74  → "Potential Fit"  — partial match, needs specific angle or workaround\n`+
+        `   0-54  → "Poor Fit"        — structural barrier (wrong size, industry, procurement, incumbent lock)\n\n`+
         `━━━ INTERNAL SIGNALS (use to decide score — do NOT mention in 'reason') ━━━\n`+
         `High-friction industries (score 5-25): heavy manufacturing, aerospace/defense prime contractors, telecom incumbents, energy utilities, mass-market retail >100K employees, top-5 US banks.\n`+
         `Underserved high-fit segments (score 60-80): large private insurance/finance, private professional services, regional/community banks, healthcare IT, CPG personal care.\n`+
@@ -1806,7 +1826,12 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       // variants like "Tier 1 Fit" or "Good Fit" or "High Fit". Coerce
       // everything to one of the three canonical labels based on the
       // numeric score — single source of truth.
-      const canonicalLabel = (score) => score >= 75 ? "Strong Fit" : score >= 50 ? "Potential Fit" : "Poor Fit";
+      // Hysteresis: Potential Fit starts at 55 (not 50) so accounts hovering
+      // around the boundary don't flip labels between runs. Consistency tests
+      // showed State Farm/USAA/Allstate swinging [48,52,55] across runs —
+      // at threshold 50 that's a label flip; at 55 they're consistently Poor Fit
+      // until the score is clearly in the Potential range.
+      const canonicalLabel = (score) => score >= 75 ? "Strong Fit" : score >= 55 ? "Potential Fit" : "Poor Fit";
       // Also strip "tier"/"wall"/"band"/"bucket" from reason text if the
       // model leaked it anyway — those are internal scoring terminology
       // we don't want the seller to see.
@@ -1818,8 +1843,8 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       const map = {};
       const memberUpdates = {};
       result.scores.forEach(s => {
-        const color       = s.score>=75?"var(--green)":s.score>=50?"var(--amber)":"var(--red)";
-        const bg          = s.score>=75?"var(--green-bg)":s.score>=50?"var(--amber-bg)":"var(--red-bg)";
+        const color       = s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
+        const bg          = s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
         const ownerColor  = s.ownershipType==="public"?"var(--navy)":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"var(--green)":"#555";
         map[s.company]             = {
           ...s,
