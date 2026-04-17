@@ -428,7 +428,7 @@ async function callAI(prompt){
 // CRITICAL: includes explicit instructions telling Haiku to GROUND every
 // claim in this proof — cite named customers, name differentiators, flag
 // unsupported claims rather than asserting them.
-function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [] }) {
+function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], sellerLinkedIn = "", sellerProofPoints = [] }) {
   if (!sellerICP?.icp) return "";
   const icp = sellerICP.icp;
   const out = [];
@@ -476,6 +476,20 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [] }) {
     namedProducts.forEach(p => out.push(`  • ${p.name}${p.description ? " — " + p.description.slice(0, 120) : ""}`));
   }
 
+  // Seller's personal LinkedIn — for relationship signals + warm-path inference
+  if (sellerLinkedIn) {
+    const liSlug = sellerLinkedIn.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//,"").replace(/\/.*/,"");
+    out.push(`\nSeller's personal LinkedIn: linkedin.com/in/${liSlug}`);
+    out.push(`When building briefs or hypotheses for a target, look for OVERLAP between the seller's background and the target company: shared former employers, mutual connections' companies, same university, same industry experience. Surface these as "Relationship Signals" — warm intro paths the rep can use.`);
+  }
+
+  // Manually-entered proof points (case studies, ROI metrics, awards, etc.)
+  const validProofs = (sellerProofPoints || []).filter(p => p?.content?.trim());
+  if (validProofs.length) {
+    out.push(`\nVerified proof points (entered by the seller — cite these VERBATIM when relevant):`);
+    validProofs.forEach(p => out.push(`  • [${p.type}] ${p.content}`));
+  }
+
   out.push(`\n═══ HOW TO USE THIS PROOF ═══`);
   out.push(`When you propose a solution, recommendation, talk track, or claim:`);
   out.push(`1. Cite a SPECIFIC named customer from the list above whenever you claim "we've done this before." Never invent customer names.`);
@@ -515,7 +529,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // that runs through every customer-facing prompt. Without this, the
   // brief invents generic claims instead of citing real differentiators
   // and named customers from the seller's ICP.
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
 
   // Base context injected into every prompt
   const base =
@@ -583,8 +597,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now for ${co} — the why-you-why-now",`+
     `"openingAngle":"1-2 sharp sentences referencing something real about ${co}. Reframe an assumption. Sounds human not scripted.",`+
     `"publicSentiment":{`+`"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name sources and tone.",`+`"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — or empty if unknown",`+`"g2Rating":"G2 product rating as a number e.g. 4.2 out of 5 — or empty if not a software company",`+`"npsSignal":"Estimated NPS signal: if you know ${co} publishes NPS or CSAT data, cite it. Otherwise describe customer loyalty signals (high churn, vocal advocates, renewal rates mentioned in press)",`+`"trustpilotRating":"Trustpilot score as a number if known — or empty",`+`"employeeScore":"Glassdoor CEO approval % or Indeed rating if known — signals culture and operational health",`+`"standoutReview":{"text":"Most revealing customer or employee quote or paraphrase — something a seller would want to know","source":"G2 / Glassdoor / Trustpilot / analyst / press","sentiment":"positive or negative"},`+`"salesAngle":"1 sentence: how the seller should use this sentiment context in the discovery conversation"}}`,
-    ()=>{}, 2200
+    ()=>{}, 2400
   );
+  // Patch: if sellerLinkedIn is set, append relationshipSignals to p3's
+  // schema. Done as a wrapper since the streamAI call above can't be
+  // conditionally extended mid-chain. We'll inject via mergeStrategy instead.
 
   // MICRO 4: Solution mapping + contacts — shows after strategy (streamed)
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
@@ -698,6 +715,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r3?.publicSentiment?.onlineSentiment || r3?.publicSentiment?.glassdoorRating) {
       next.publicSentiment = {...next.publicSentiment, ...r3.publicSentiment};
     }
+    if (r3?.relationshipSignals) next.relationshipSignals = r3.relationshipSignals;
     return next;
   };
   const mergeSolutions = (r4) => (prev) => {
@@ -1538,6 +1556,8 @@ export default function App(){
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
   const[sellerStage,setSellerStage]=useState(""); // Bootstrapped/Series A/B/C/D+/PE-Backed/Public
+  const[sellerLinkedIn,setSellerLinkedIn]=useState(""); // personal LinkedIn URL
+  const[sellerProofPoints,setSellerProofPoints]=useState([]); // [{type:"Case Study"|"ROI Metric"|..., content:"text"}]
   const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
   const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
   const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
@@ -2421,7 +2441,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,productUrls,sellerICP,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,productUrls,sellerICP,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerLinkedIn,sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -2449,6 +2469,8 @@ ${isOpen
   const restoreSession=(s)=>{
     const d=s.data;setCurrentSessionId(s.id);setSessionName(s.name);
     if(d.sellerUrl){setSellerUrl(d.sellerUrl);setSellerInput(d.sellerUrl);}
+    if(d.sellerLinkedIn) setSellerLinkedIn(d.sellerLinkedIn);
+    if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
     if(d.sellerICP) setSellerICP(d.sellerICP);
     if(d.products?.length) setProducts(d.products);
@@ -2705,7 +2727,7 @@ ${isOpen
     // "why buy from us" thread through hypothesis talk tracks, JOLT plan,
     // challenger insight, and route recommendation. Talk tracks should
     // cite NAMED customers from the proof pack, not invent generic claims.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
 
     const prompt =
       proofPack +
@@ -2867,7 +2889,7 @@ ${isOpen
     // ground its "confirmedSolutions" + "saRecommendation" in the
     // seller's actual differentiators and named customer wins, not
     // generic SA-school theory.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
 
     const prompt =
       proofPack +
@@ -3185,7 +3207,7 @@ Return ONLY valid JSON:
       brief?.openingAngle ? `Opening angle: ${brief.openingAngle.slice(0,150)}` : "",
       riverHypo?.reality ? `Hypothesis (Reality): ${riverHypo.reality.slice(0,100)}` : "",
       notes ? `Rep notes: ${notes.slice(0,200)}` : "",
-      buildSellerProofPack({sellerICP, sellerDocs, products}).slice(0, 600),
+      buildSellerProofPack({sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints}).slice(0, 600),
     ].filter(Boolean).join("\n");
 
     // Build conversation history (last 6 turns max)
@@ -3503,6 +3525,19 @@ Return ONLY valid JSON:
                 />
                 </div>
 
+                {/* Personal LinkedIn */}
+                <div style={{marginTop:12}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5}}>
+                    Your LinkedIn Profile <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"#bbb"}}>optional</span>
+                  </div>
+                  <div className="setup-url-bar">
+                    <div className="setup-url-label" style={{minWidth:62}}>LinkedIn</div>
+                    <input className="setup-url-input" type="text" placeholder="linkedin.com/in/yourname"
+                      value={sellerLinkedIn} onChange={e=>setSellerLinkedIn(e.target.value)}/>
+                  </div>
+                  <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Used to find shared connections and personalize outreach for each target account.</div>
+                </div>
+
                 {/* Seller Stage */}
                 <div style={{marginTop:12}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
@@ -3572,6 +3607,48 @@ Return ONLY valid JSON:
                 {sellerDocs.length>0&&(
                   <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5}}>
                     <span>✓</span> {sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Claude will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.
+                  </div>
+                )}
+              </div>
+
+              {/* Proof Points — case studies, ROI metrics, awards, wins */}
+              <div style={{height:1,background:"var(--line-0)",margin:"16px 0 14px"}}/>
+              <div className="field-row" style={{marginBottom:0}}>
+                <div className="field-label" style={{marginBottom:8}}>
+                  Proof Points
+                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — dramatically improves brief quality)</span>
+                </div>
+                <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:10,lineHeight:1.5}}>
+                  Add specific wins, metrics, and credentials. These get cited <strong>by name</strong> in briefs, hypotheses, and talk tracks — the difference between "we can help" and "here's exactly how we helped someone like you."
+                </div>
+                {sellerProofPoints.map((pp,i)=>(
+                  <div key={i} className="prod-entry" style={{marginBottom:6}}>
+                    <select value={pp.type} onChange={e=>setSellerProofPoints(prev=>prev.map((p,j)=>j===i?{...p,type:e.target.value}:p))} style={{width:140,fontSize:12,flexShrink:0}}>
+                      <option value="Case Study">📋 Case Study</option>
+                      <option value="ROI Metric">📊 ROI Metric</option>
+                      <option value="Customer Win">🏆 Customer Win</option>
+                      <option value="Award">⭐ Award</option>
+                      <option value="Partnership">🤝 Partnership</option>
+                      <option value="Certification">✅ Certification</option>
+                    </select>
+                    <input type="text" placeholder={
+                      pp.type==="Case Study"?"e.g. Cut HR ticket volume 40% for State Farm in 90 days":
+                      pp.type==="ROI Metric"?"e.g. Average 3.2x ROI within 12 months":
+                      pp.type==="Customer Win"?"e.g. Won USAA over Blackhawk Network — 18-month displacement":
+                      pp.type==="Award"?"e.g. Gartner Cool Vendor 2025 in Employee Experience":
+                      pp.type==="Partnership"?"e.g. Salesforce AppExchange Partner — integrated rewards":
+                      "e.g. SOC 2 Type II certified"
+                    } value={pp.content} onChange={e=>setSellerProofPoints(prev=>prev.map((p,j)=>j===i?{...p,content:e.target.value}:p))} style={{flex:1,fontSize:12}}/>
+                    <button className="prod-remove" onClick={()=>setSellerProofPoints(prev=>prev.filter((_,j)=>j!==i))} title="Remove">✕</button>
+                  </div>
+                ))}
+                <button className="btn btn-secondary btn-sm" style={{marginTop:4}}
+                  onClick={()=>setSellerProofPoints(prev=>[...prev,{type:"Case Study",content:""}])}>
+                  + Add proof point
+                </button>
+                {sellerProofPoints.filter(p=>p.content.trim()).length>0&&(
+                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5}}>
+                    <span>✓</span> {sellerProofPoints.filter(p=>p.content.trim()).length} proof point{sellerProofPoints.filter(p=>p.content.trim()).length>1?"s":""} loaded — these will be cited verbatim in briefs, hypotheses, and talk tracks.
                   </div>
                 )}
               </div>
@@ -5655,6 +5732,28 @@ Return ONLY valid JSON:
                   </div>
                 )}
 
+                {/* Relationship Signals — inferred warm paths from seller's LinkedIn */}
+                {sellerLinkedIn && (
+                  <div className="bb" style={{marginBottom:14}}>
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>🤝</div>
+                      <div>
+                        <div className="bb-title">Relationship Signals</div>
+                        <div className="bb-sub">Potential warm paths between you and {selectedAccount?.company}</div>
+                      </div>
+                    </div>
+                    <div className="bb-body">
+                      {brief.relationshipSignals ? (
+                        <EF value={brief.relationshipSignals} onChange={v=>patchBrief(b=>{b.relationshipSignals=v;})}/>
+                      ) : (
+                        <div style={{fontSize:12,color:"var(--ink-2)",fontStyle:"italic"}}>
+                          Relationship signals will be inferred from your LinkedIn profile when the brief builds. Make sure your LinkedIn URL is set on the Session page.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Contacts + Watch-outs */}
                 <div className="field-grid-2" style={{gap:12,marginBottom:14}}>
                   <div className="bb" style={{margin:0}}>
@@ -6192,7 +6291,7 @@ Return ONLY valid JSON:
                       `You are a senior sales coach analyzing a recorded sales call transcript. Apply the RIVER framework (Reality, Impact, Vision, Entry Points, Route) to synthesize what happened.\n\n`+
                       `SELLER: ${sellerUrl} (${sellerICP?.marketCategory||""})\n`+
                       `PROSPECT: ${selectedAccount?.company||"Unknown"} (${selectedAccount?.ind||""})\n`+
-                      buildSellerProofPack({sellerICP,sellerDocs,products}).slice(0,400)+`\n`+
+                      buildSellerProofPack({sellerICP,sellerDocs,products,sellerLinkedIn,sellerProofPoints}).slice(0,400)+`\n`+
                       `TRANSCRIPT:\n${cleaned.slice(0,8000)}\n\n`+
                       `Return ONLY raw JSON:\n`+
                       `{"callSummary":"3-4 sentence narrative","riverScorecard":{"reality":"what was confirmed","impact":"cost/impact surfaced","vision":"success in their words","entryPoints":"buying process learned","route":"recommended next move"},"dealRoute":"FAST_TRACK or NURTURE or DISQUALIFY","dealRouteReason":"1 sentence","dealRisk":"single biggest risk","nextSteps":["Step 1","Step 2","Step 3"],"crmNote":"4-5 sentence CRM note","emailSubject":"follow-up subject","emailBody":"full follow-up email"}`;
