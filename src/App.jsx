@@ -3102,9 +3102,10 @@ Return ONLY valid JSON:
             })}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <button onClick={()=>setCmdOpen(true)} title="Command palette (⌘K)"
-              style={{padding:"4px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:11,color:"var(--ink-3)",fontFamily:"monospace",display:"flex",alignItems:"center",gap:4}}>
-              ⌘K
+            <button onClick={()=>setCmdOpen(true)} title="Search (⌘K)"
+              style={{padding:"4px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:13,color:"var(--ink-3)",display:"flex",alignItems:"center",gap:5}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span style={{fontSize:11,fontFamily:"monospace",color:"var(--ink-3)"}}>⌘K</span>
             </button>
             <button onClick={()=>setDarkMode(d=>!d)} title={darkMode?"Light mode":"Dark mode"}
               style={{padding:"4px 8px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:13,lineHeight:1}}>
