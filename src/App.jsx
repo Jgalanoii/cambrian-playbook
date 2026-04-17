@@ -603,15 +603,27 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
         `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
+      // No assistant prefill ("{") when using tools — the prefill prevents
+      // Haiku from calling web_search and forces training-knowledge-only output.
+      // Without the prefill, Haiku searches first then returns JSON.
       const d = await claudeFetch({
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
-        messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+        messages:[{role:"user",content:prompt}],
       });
       if(d.error) return null;
-      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      // With tool use, response has multiple blocks. Find JSON in last text block.
+      const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+      for (let i = textBlocks.length - 1; i >= 0; i--) {
+        const parsed = extractJsonWithKey(textBlocks[i], "recentHeadlines")
+                    || extractJsonWithKey(textBlocks[i], "openRoles")
+                    || extractJsonWithKey(textBlocks[i], "recentSignals");
+        if (parsed) return parsed;
+      }
+      // Fallback: try old-style parse on concatenated text
+      const raw = textBlocks.join("").trim();
       return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
     }catch(e){console.warn("Live search failed:",e.message);return null;}
   })();
@@ -672,7 +684,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       return h?.headline && h.headline.length > 10 && !errorWords.some(w=>t.includes(w));
     });
     if (cleanHL.length) next.recentHeadlines = cleanHL;
-    if (r5.openRoles?.summary) next.openRoles = r5.openRoles;
+    if (r5.openRoles?.summary || r5.openRoles?.roles?.some(r=>r?.title)) next.openRoles = r5.openRoles;
     if (r5.recentSignals?.some(s=>s)) next.recentSignals = r5.recentSignals;
     if (r5.growthSignals?.some(s=>s)) next.growthSignals = r5.growthSignals;
     const snapOk = r5.companySnapshot?.length > 50 && !errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
