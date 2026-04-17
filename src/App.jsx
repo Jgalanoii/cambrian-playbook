@@ -1402,7 +1402,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
                     <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:12,
                       background:fitScores[m.company].bg,color:fitScores[m.company].color,
                       border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap",display:"inline-block"}}
-                      title={fitScores[m.company].reason}>
+                      title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk].filter(Boolean).join(" · ")}>
                       {fitScores[m.company].score}% · {fitScores[m.company].label}
                     </div>
                   ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:"—"}</td>
@@ -1860,31 +1860,50 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
     const scoreBatch = async (batch) => {
       const companies = batch.map(m => `${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
+      const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
+      const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
       const prompt =
-        `You are a B2B sales strategist. Score ICP fit for each company below.\n\n`+
-        `━━━ SCORE (0-100, single integer) ━━━\n`+
+        `You are a B2B sales strategist scoring ICP fit. Use THREE dimensions:\n\n`+
+        `━━━ DIMENSION 1: ICP ALIGNMENT (40% of score) ━━━\n`+
+        `Does the target match the seller's ideal buyer profile?\n`+
+        `High-friction industries (score contribution 2-10): heavy manufacturing, aerospace/defense prime, telecom incumbents, energy utilities, mass-market retail >100K employees, top-5 US banks.\n`+
+        `Underserved high-fit segments (score contribution 24-32): large private insurance/finance, private professional services, regional/community banks, healthcare IT, CPG personal care.\n`+
+        `Ownership: VC-backed +2 · PE-backed = cost-driven buyer · Private +2 vs public.\n`+
+        `Size penalty: >200K employees + early-stage seller = -6.\n`+
+        `Funding signal: target raised <12 months = +3.\n\n`+
+        `━━━ DIMENSION 2: CUSTOMER SIMILARITY (30% of score) ━━━\n`+
+        (customerList.length
+          ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
+            `For each target, assess similarity to these named customers:\n`+
+            `- Same industry AND similar size as a named customer → score contribution 25-30\n`+
+            `- Same industry, different size → 15-20\n`+
+            `- Different industry but similar buyer persona/use case → 8-12\n`+
+            `- No meaningful similarity → 0-5\n`+
+            `In "customerSimilarity" field: name the most similar existing customer and WHY (1 sentence). If no close match, say "No close analogue in current customer base."\n\n`
+          : `No named customers available — score this dimension at 15 (neutral) for all targets.\n\n`)+
+        `━━━ DIMENSION 3: COMPETITIVE LANDSCAPE (30% of score) ━━━\n`+
+        `From your training knowledge (press releases, partnership announcements, tech databases, earnings calls):\n`+
+        `- What vendors does this target CURRENTLY USE in the seller's category?\n`+
+        `- If the target uses a competitor the seller commonly displaces → score contribution 22-30 (displacement opportunity)\n`+
+        `- If the target is locked into a deep incumbent with high switching costs (Oracle, SAP, Salesforce enterprise-wide) → 5-12 (hard displacement)\n`+
+        `- If no known incumbent in the seller's category → 18-25 (greenfield opportunity)\n`+
+        (competitorList.length ? `Seller commonly displaces: ${competitorList.join(", ")}.\n` : "")+
+        `In "incumbentRisk" field: name the likely incumbent vendor (or "No known incumbent") and 1-sentence switching-cost assessment.\n\n`+
+        `━━━ TOTAL SCORE = Dim1 + Dim2 + Dim3 (max 100) ━━━\n`+
         `Band mapping — score MUST match label:\n`+
-        `  75-100 → "Strong Fit"     — clear ICP match, buyer accessible, reasonable cycle\n`+
-        `  55-74  → "Potential Fit"  — partial match, needs specific angle or workaround\n`+
-        `   0-54  → "Poor Fit"        — structural barrier (wrong size, industry, procurement, incumbent lock)\n\n`+
-        `━━━ INTERNAL SIGNALS (use to decide score — do NOT mention in 'reason') ━━━\n`+
-        `High-friction industries (score 5-25): heavy manufacturing, aerospace/defense prime contractors, telecom incumbents, energy utilities, mass-market retail >100K employees, top-5 US banks.\n`+
-        `Underserved high-fit segments (score 60-80): large private insurance/finance, private professional services, regional/community banks, healthcare IT, CPG personal care.\n`+
-        `Ownership adjustments: VC-backed +5 · PE-backed = cost/margin-driven buyer · Private company +5 vs equivalent public peer.\n`+
-        `Size penalty: >200K employees and seller is early-stage (Seed/Series A) = procurement barrier, -15.\n`+
-        `Funding signal: target raised <12 months ago = active buying window +8.\n\n`+
-        `━━━ OUTPUT LANGUAGE RULES ━━━\n`+
-        `- 'label' MUST be exactly one of: "Strong Fit" | "Potential Fit" | "Poor Fit". No variations, no extra words.\n`+
-        `- 'reason' is ONE plain-English sentence. Say WHY in terms the seller can act on (industry match, buyer size, ownership, incumbent risk, funding window). \n`+
-        `- Do NOT use the words "tier", "wall", "band", or "bucket" in 'reason'. Those are internal labels only.\n`+
-        `- Do not include the score number inside the reason.\n\n`+
+        `  75-100 → "Strong Fit"\n`+
+        `  55-74  → "Potential Fit"\n`+
+        `   0-54  → "Poor Fit"\n\n`+
+        `━━━ OUTPUT RULES ━━━\n`+
+        `- 'label' MUST be exactly one of: "Strong Fit" | "Potential Fit" | "Poor Fit".\n`+
+        `- 'reason' is ONE sentence. Say WHY — cite the strongest dimension.\n`+
+        `- 'customerSimilarity' is ONE sentence: most similar named customer + why, or "No close analogue."\n`+
+        `- 'incumbentRisk' is ONE sentence: likely incumbent + switching-cost read.\n`+
+        `- Do NOT use "tier", "wall", "band", "bucket" in any field.\n\n`+
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
-        `For orgSize: provide approximate employee count range (e.g. "~200K", "5K-10K", "500-1K").\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Matches fintech ICP and ~500 employee target size","orgSize":"~200K employees","ownership":"Public (NYSE:MCD)","ownershipType":"public"},`+
-        `{"company":"","score":40,"label":"Poor Fit","reason":"","orgSize":"500-1K employees","ownership":"PE-backed (Thoma Bravo)","ownershipType":"pe"},`+
-        `{"company":"","score":60,"label":"Potential Fit","reason":"","orgSize":"~5K employees","ownership":"Series C ($180M, Sequoia)","ownershipType":"vc"}]}`;
+        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size, same buyer persona","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost, displacement opportunity","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"public"}]}`;
 
       const result = await callAI(prompt);
       if (!result?.scores) return;
@@ -4607,7 +4626,7 @@ Return ONLY valid JSON:
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
-                                title={fitScores[m.company].reason}>
+                                title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk].filter(Boolean).join(" · ")}>
                                 {fitScores[m.company].score}% · {fitScores[m.company].label}
                               </div>
                             ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):sellerUrl;scoreFit(allM,sCtx);}}>Run fit check</button>}
@@ -4777,6 +4796,18 @@ Return ONLY valid JSON:
                 <div className="card" style={{padding:"12px 16px",marginBottom:12}}>
                   <div style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Fit rationale</div>
                   <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.55}}>{fs.reason}</div>
+                  {fs.customerSimilarity && (
+                    <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:6,paddingTop:6,borderTop:"1px solid var(--line-1)"}}>
+                      <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Customer similarity: </span>
+                      {fs.customerSimilarity}
+                    </div>
+                  )}
+                  {fs.incumbentRisk && (
+                    <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:4}}>
+                      <span style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Incumbent: </span>
+                      {fs.incumbentRisk}
+                    </div>
+                  )}
                 </div>
               )}
 
