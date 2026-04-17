@@ -560,34 +560,50 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ()=>{}, 1800
   );
 
-  // MICRO 2: Executives — switched from streamAI to claudeFetch + web_search.
-  // Consistency tests showed executive names hallucinating across runs (USAA CFO
-  // was "Brent Loncar" / "Rohan Duliba" / "Rowen Zetterman" — all fabricated).
-  // web_search lets Haiku verify names against LinkedIn/press before returning.
+  // MICRO 2: Executives — pre-fetched in background when account is selected
+  // (step 4). If cache hit, resolves instantly. If miss (user went straight
+  // to Brief), fires the web_search inline. Either way: verified names, no
+  // hallucination.
   const p2 = (async()=>{
+    // Check pre-fetch cache first
+    const cached = execCacheRef.current[co];
+    if (cached && cached !== "loading" && typeof cached === "object") {
+      return cached;
+    }
+    // If still loading from pre-fetch, wait for it (poll briefly)
+    if (cached === "loading") {
+      for (let w = 0; w < 20; w++) {
+        await new Promise(r => setTimeout(r, 500));
+        const val = execCacheRef.current[co];
+        if (val && val !== "loading") return typeof val === "object" ? val : null;
+      }
+    }
+    // Cache miss — fire inline (same call as pre-fetch)
     try {
       const d = await claudeFetch({
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
         messages:[{role:"user",content:base+
-          `Search for the CURRENT C-suite leadership of ${co}. These names will be shown to a sales rep who may email or call them — ACCURACY IS CRITICAL. Do not guess. If you cannot verify a name via search, return "Verify at LinkedIn" instead of inventing one.\n\n`+
+          `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL. If you cannot verify a name, return "Verify at LinkedIn".\n\n`+
           `Return ONLY raw JSON:\n`+
           `{"keyExecutives":[`+
-          `{"name":"VERIFIED current CEO full name","title":"CEO","initials":"XX","background":"Prior role in 1 sentence","angle":"Board mandate and what they are measured on. 2 sentences."},`+
-          `{"name":"VERIFIED current CHRO/CPO full name or 'Verify at LinkedIn'","title":"exact title","initials":"XX","background":"HR/people focus 1 sentence","angle":"What winning looks like for them personally. 2 sentences."},`+
-          `{"name":"VERIFIED current CFO/COO full name or 'Verify at LinkedIn'","title":"exact title","initials":"XX","background":"Financial/ops focus 1 sentence","angle":"How they evaluate spend decisions. 2 sentences."}],`+
-          `"sellerSnapshot":"2 sentences on seller most relevant offerings for ${co}"}`
+          `{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"1 sentence","angle":"2 sentences"},`+
+          `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"},`+
+          `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"}],`+
+          `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
         }],
       });
       if(d.error) return null;
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for(let i=textBlocks.length-1;i>=0;i--){
         const parsed=extractJsonWithKey(textBlocks[i],"keyExecutives");
-        if(parsed) return parsed;
+        if(parsed){ execCacheRef.current[co]=parsed; return parsed; }
       }
       const raw=textBlocks.join("").trim();
-      return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+      const parsed=safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+      if(parsed) execCacheRef.current[co]=parsed;
+      return parsed;
     }catch(e){console.warn("Exec search failed:",e.message);return null;}
   })();
 
@@ -657,7 +673,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         temperature:0,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:prompt}],
       });
       if(d.error) return null;
@@ -1604,6 +1620,7 @@ export default function App(){
   const bbIsOpen = (key) => !collapsedBB.has(key);
   const bbChevron = (key) => <span className={`bb-collapse-icon ${bbIsOpen(key)?"open":""}`}>▾</span>;
   const[selectedAccount,setSelectedAccount]=useState(null);
+  const execCacheRef=useRef({}); // pre-fetched executives keyed by company name
   const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
   const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
 
@@ -3149,6 +3166,45 @@ Return ONLY valid JSON:
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) { console.error("download failed:", e); }
   };
+
+  // ── PRE-FETCH: executives search fires when account is selected (step 4)
+  // So by the time the user clicks "Build Brief" (step 5), exec data is
+  // already cached. Eliminates the ~10-15s web_search bottleneck from p2.
+  useEffect(() => {
+    if (!selectedAccount?.company || !sellerUrl) return;
+    const co = selectedAccount.company;
+    if (execCacheRef.current[co]) return; // already cached
+    execCacheRef.current[co] = "loading";
+    (async () => {
+      try {
+        const base = `B2B sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\n`;
+        const d = await claudeFetch({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1800,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+          messages: [{ role: "user", content: base +
+            `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\nReturn ONLY raw JSON:\n` +
+            `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
+            `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
+            `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"}],` +
+            `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
+          }],
+        });
+        if (d.error) { execCacheRef.current[co] = null; return; }
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        let parsed = null;
+        for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+          parsed = extractJsonWithKey(textBlocks[i], "keyExecutives");
+        }
+        if (!parsed) {
+          const raw = textBlocks.join("").trim();
+          parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
+        }
+        execCacheRef.current[co] = parsed || null;
+      } catch { execCacheRef.current[co] = null; }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
   const STEPS=["Session","ICP & RFPs","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
