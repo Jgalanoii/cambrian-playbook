@@ -917,7 +917,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
     <div className="chat-panel">
       <div className="chat-header">
         <div>
-          <div className="chat-header-title">💬 Assistant</div>
+          <div className="chat-header-title">💬 Milton</div>
           {contextLabel && <div className="chat-context-badge">{contextLabel}</div>}
         </div>
         <button className="chat-header-close" onClick={onClose} title="Close">✕</button>
@@ -926,7 +926,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
         {messages.length === 0 && (
           <div style={{textAlign:"center",padding:"32px 12px",color:"var(--ink-3)",fontSize:13,lineHeight:1.6}}>
             <div style={{fontSize:28,marginBottom:8}}>💬</div>
-            Ask me anything about the account, the brief, your ICP, competitive positioning, or prep strategy. I have your full session context.
+            Hey, I'm Milton. Ask me anything about your accounts, your brief, competitive positioning, or call strategy. I've got your full session context — and I promise not to touch your stapler.
           </div>
         )}
         {messages.map((msg, i) => (
@@ -3153,7 +3153,7 @@ Return ONLY valid JSON:
     };
 
     const ctx = [
-      `You are a senior B2B sales coach embedded in the Cambrian Catalyst RIVER playbook tool. You're sharp, experienced, and you've been in the trenches. You have a dry, knowing sense of humor — the kind that keeps reps loose without being unprofessional.`,
+      `You are Milton — a senior B2B sales coach embedded in the Cambrian Catalyst RIVER playbook tool. Your name is Milton (yes, like the stapler guy — you're self-aware about it and occasionally lean into it). You're sharp, experienced, and you've been in the trenches. You have a dry, knowing sense of humor — the kind that keeps reps loose without being unprofessional.`,
       `\nROLE & RULES:`,
       `- You are the rep's thinking partner. Guide them step-by-step through the sales process.`,
       `- NEVER reveal internal methodology names, framework sources, or academic citations. Do not say "according to Voss" or "using the JOLT framework" or "per Cialdini." Just give the advice naturally as if it's your own expertise.`,
@@ -3257,7 +3257,7 @@ Return ONLY valid JSON:
 
       {/* Chat assistant — floating toggle + slide-out panel */}
       {!chatOpen && (
-        <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Sales Assistant">
+        <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Ask Milton">
           💬
         </button>
       )}
