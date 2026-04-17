@@ -589,9 +589,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     try{
       const prompt =
         `Search for recent information about "${co}":\n`+
-        `1. News from 2024-2025: headlines, M&A, leadership changes, funding\n`+
-        `2. Ratings and sentiment: search Glassdoor, G2, Trustpilot, and any published NPS or CSAT data for "${co}"\n`+
-        `3. Open roles: search "site:linkedin.com/jobs ${co}" OR "site:indeed.com ${co}" OR "${co} careers hiring 2025". Look for hiring PATTERNS (which departments, how many roles, what seniority) — the exact job listings matter less than the strategic signal they reveal.\n`+
+        `1. News from 2024-2025: headlines, M&A, leadership changes, funding — USE WEB_SEARCH for this\n`+
+        `2. Ratings and sentiment: search Glassdoor, G2, Trustpilot for "${co}" — USE WEB_SEARCH for this\n`+
+        `3. Open roles: DO NOT search for these — careers pages are JS-gated and unsearchable. Instead, use your TRAINING KNOWLEDGE about ${co} to infer what roles they're likely hiring for based on their industry, size, strategic direction, and recent news. Every large company is always hiring — infer 3 plausible roles with department and what each signals about their priorities. Be confident, not hedging.\n`+
         `4. Growth signals or buying indicators\n`+
         `Return ONLY raw JSON (start with {):\n`+
         `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
@@ -603,18 +603,20 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
         `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
-      // No assistant prefill ("{") when using tools — the prefill prevents
-      // Haiku from calling web_search and forces training-knowledge-only output.
-      // Without the prefill, Haiku searches first then returns JSON.
+      // Assistant prefill "{" ensures JSON output. Haiku still has web_search
+      // available for news/sentiment items but will use training knowledge for
+      // open roles (as instructed in the prompt). If Haiku uses the tool, the
+      // prefill is discarded and we parse multi-block response. If it skips the
+      // tool, it continues from "{" and we parse directly. Both paths covered.
       const d = await claudeFetch({
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
-        messages:[{role:"user",content:prompt}],
+        messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
       });
       if(d.error) return null;
-      // With tool use, response has multiple blocks. Find JSON in last text block.
+      // Path 1: tool-use response (multi-block) — find JSON via anchor keys
       const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for (let i = textBlocks.length - 1; i >= 0; i--) {
         const parsed = extractJsonWithKey(textBlocks[i], "recentHeadlines")
@@ -622,7 +624,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
                     || extractJsonWithKey(textBlocks[i], "recentSignals");
         if (parsed) return parsed;
       }
-      // Fallback: try old-style parse on concatenated text
+      // Path 2: prefill-continued response (single text block starting with content after "{")
       const raw = textBlocks.join("").trim();
       return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
     }catch(e){console.warn("Live search failed:",e.message);return null;}
