@@ -1932,13 +1932,25 @@ ${isOpen
         if (d.error) return { kind, error: d.error.message || "API error" };
 
         const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        const fullText = textBlocks.join(" ").toLowerCase();
+
+        // Detect when Haiku searched but found nothing — it returns a
+        // prose apology instead of JSON. This is a DATA gap (no public
+        // RFPs for this seller's niche), not a parse failure.
+        const noResultsSignals = ["unable to find", "could not find", "no specific", "i apologize", "i couldn't find", "no results", "no matching", "unfortunately"];
+        const looksLikeApology = noResultsSignals.some(sig => fullText.includes(sig)) && !fullText.includes('"rows"');
+        if (looksLikeApology) {
+          console.log(`RFP ${kind}: web_search found no matching data — returning empty (not an error)`);
+          return { kind, rows: [] };
+        }
+
         let parsed = null;
         for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
           parsed = extractJsonWithKey(textBlocks[i], "rows");
         }
         if (!parsed) {
           console.warn(`RFP ${kind} parse failed. Content:`, d.content);
-          return { kind, error: `Couldn't parse ${kind} response` };
+          return { kind, error: `Couldn't parse ${kind} response — try Refresh` };
         }
         return { kind, rows: (parsed.rows || []).map(fixGov) };
       } catch (e) {
@@ -3628,7 +3640,7 @@ Return ONLY valid JSON:
                   </div>
                 )}
                 {!rfpData.loading && !rfpData.error && !hasData && (
-                  <EmptyState icon="📡" title="No RFP data loaded yet" sub="Search public procurement databases for active RFPs and recent awards matching your ICP." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="Scan RFP Databases →"/>
+                  <EmptyState icon="📡" title="No matching RFPs found" sub="Public procurement databases (SAM.gov, Ariba, TED Europa) didn't return specific RFPs for your ICP. This is common for niche markets — try broadening your ICP industries or check back later as new opportunities are posted." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="↻ Search again"/>
                 )}
                 {hasData && (
                   <>
