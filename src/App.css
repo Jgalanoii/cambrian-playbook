@@ -551,6 +551,98 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .prod-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--tan-3); color: var(--tan-ink); padding: 2px 8px; border-radius: var(--r-md); font-size: 11px; font-weight: 700; margin: 2px; }
 .prod-chip-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--tan-0); flex-shrink: 0; }
 
+/* ── PHASE 3a: IN-CALL FOCUS MODE ────────────────────────
+   When .app has [data-focus="call"], the UI strips down to
+   the essentials: smaller header, hidden stepper, calmer bg,
+   larger body type. The rep focuses on listening, not navigating.
+   Toggled via body class when step===7. */
+.app[data-focus="call"] { background: #F0EDE8; }
+.app[data-focus="call"] .header {
+  height: 44px; padding: 0 16px;
+  background: var(--ink-0); border-bottom: none;
+}
+.app[data-focus="call"] .logo { color: var(--surface); font-size: 15px; }
+.app[data-focus="call"] .logo span { color: var(--tan-0); }
+.app[data-focus="call"] .stepper { display: none; }
+.app[data-focus="call"] .session-bar { display: none; }
+.app[data-focus="call"] .footer { display: none; }
+.app[data-focus="call"] .incall-wrap { font-size: 15px; }
+.app[data-focus="call"] .dq-question { font-size: 15px; }
+.app[data-focus="call"] .dq-note { font-size: 14px; min-height: 60px; }
+.app[data-focus="call"] .gate-q { font-size: 15px; }
+.app[data-focus="call"] .gate-opt { font-size: 14px; padding: 8px 12px; }
+.app[data-focus="call"] .river-pill { padding: 9px 16px; font-size: 13px; }
+.app[data-focus="call"] .stage-letter-big { width: 44px; height: 44px; font-size: 20px; }
+.app[data-focus="call"] .stage-name { font-size: 19px; }
+.app[data-focus="call"] .incall-title { font-size: 16px; }
+.app[data-focus="call"] .conf-pct { font-size: 28px; }
+
+/* ── PHASE 3b: DARK MODE ─────────────────────────────────
+   Token overrides. Toggled via [data-theme="dark"] on .app
+   or :root. The editorial warm palette shifts to warm-dark
+   (not cold blue-black like Linear — our brand stays warm). */
+[data-theme="dark"] {
+  --bg-0:       #1c1b18;
+  --bg-1:       #242320;
+  --bg-2:       #2e2d28;
+  --surface:    #212019;
+  --ink-0:      #e8e6de;
+  --ink-1:      #b0aea4;
+  --ink-2:      #7a7870;
+  --ink-3:      #555550;
+  --tan-0:      #C8A87A;
+  --tan-1:      #A88C60;
+  --tan-2:      #5A4A35;
+  --tan-3:      #2e2a22;
+  --tan-ink:    #C8A87A;
+  --navy:       #6B9FD8;
+  --navy-dark:  #4A7AB8;
+  --green:      #5AAF5A;
+  --green-dark: #3D8A3D;
+  --red:        #D06060;
+  --amber:      #D4A030;
+  --purple:     #A070C0;
+  --green-bg:   #1e2e1e;
+  --red-bg:     #2e1e1e;
+  --amber-bg:   #2e2a1a;
+  --navy-bg:    #1a2230;
+  --purple-bg:  #261e2e;
+  --line-0:     #363530;
+  --line-1:     #2e2d28;
+  --line-2:     #4a4840;
+  --sh-1:       0 1px 4px rgba(0,0,0,0.3);
+  --sh-2:       0 4px 14px rgba(0,0,0,0.35);
+  --sh-3:       0 14px 40px rgba(0,0,0,0.45);
+  --sh-ring:    0 0 0 3px rgba(200,168,122,0.15);
+  --sh-focus:   0 0 0 4px rgba(200,168,122,0.12);
+}
+[data-theme="dark"] body { background: var(--bg-0); color: var(--ink-0); }
+[data-theme="dark"] .header { background: var(--surface); border-bottom-color: var(--line-0); }
+[data-theme="dark"] .tbl th { background: var(--bg-2); }
+[data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea {
+  background: var(--bg-1); color: var(--ink-0); border-color: var(--line-0);
+}
+[data-theme="dark"] .cmd-overlay { background: rgba(0,0,0,0.6); }
+[data-theme="dark"] .cmd-box { background: var(--surface); }
+[data-theme="dark"] .bb-hdr { background: var(--bg-1); border-bottom-color: var(--line-0); }
+[data-theme="dark"] .upload-zone { background: var(--bg-1); }
+[data-theme="dark"] .pw-tabs { background: var(--bg-2); }
+
+/* ── PHASE 3c: STAGE TRANSITIONS ─────────────────────────
+   Fade + slide when switching between stages. Applied via a
+   wrapper div with key={step}. */
+.stage-transition-enter {
+  opacity: 0; transform: translateX(16px);
+}
+.stage-transition-enter-active {
+  opacity: 1; transform: translateX(0);
+  transition: opacity var(--t-med) var(--ease), transform var(--t-med) var(--ease);
+}
+.stage-transition-exit {
+  opacity: 0; position: absolute;
+  transition: opacity var(--t-fast);
+}
+
 /* ── PRINT ───────────────────────────────────────────── */
 @media print {
   @page { margin: 16mm 14mm; size: A4; }
