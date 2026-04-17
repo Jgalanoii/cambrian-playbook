@@ -548,9 +548,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // ── 5 MICRO-CALLS fire simultaneously, each with a tiny schema ───────────
   // User sees the overview card the moment the fastest resolves (~2s)
 
-  // MICRO 1: Company overview card — smallest schema, shows first (streamed)
-  // Uses baseLight — no seller context needed, just target company research.
-  const p1 = streamAI(baseLight+
+  // MICRO 1: Company overview — check pre-cache first (fires on account select).
+  // If cached, resolves instantly. If not, fires streamAI as before.
+  const preCache = briefPreCacheRef?.current?.[co];
+  const p1 = (preCache?.overview && preCache.overview !== "loading")
+    ? Promise.resolve(preCache.overview)
+    : streamAI(baseLight+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, revenue scale, employees, HQ, strategic direction",`+
     `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:MCD)","employeeCount":"e.g. ~200,000",`+
@@ -639,8 +642,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ()=>{}, 2600
   );
 
-  // MICRO 5: Live search — headlines, roles, signals
-  const p5 = (async()=>{
+  // MICRO 5: Live search — check pre-cache first. If cached from account
+  // selection on step 4, resolves instantly. Otherwise fires web_search.
+  const p5 = (preCache?.live && preCache.live !== "loading")
+    ? Promise.resolve(preCache.live)
+    : (async()=>{
     try{
       const prompt =
         `Search for recent information about "${co}". PRIORITY ORDER — search for open roles FIRST:\n\n`+
@@ -1622,6 +1628,7 @@ export default function App(){
   const bbChevron = (key) => <span className={`bb-collapse-icon ${bbIsOpen(key)?"open":""}`}>▾</span>;
   const[selectedAccount,setSelectedAccount]=useState(null);
   const execCacheRef=useRef({}); // pre-fetched executives keyed by company name
+  const briefPreCacheRef=useRef({}); // pre-fetched static brief sections {overview, live} keyed by company
   const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
   const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
 
@@ -3203,6 +3210,63 @@ Return ONLY valid JSON:
         }
         execCacheRef.current[co] = parsed || null;
       } catch { execCacheRef.current[co] = null; }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccount?.company]);
+
+  // ── PRE-FETCH: static brief sections (overview + live search) ─────────────
+  // 75% of accounts that reach Account Review will need a brief. Pre-fetch
+  // the STATIC parts (company research that doesn't depend on outcomes/deal
+  // context) while the user picks outcomes on step 4. When they click
+  // "Build Brief", p1 + p5 resolve instantly from cache. Only p3 (strategy)
+  // and p4 (solutions) need the user's input — those 2 calls take ~5s.
+  useEffect(() => {
+    if (!selectedAccount?.company || !sellerUrl) return;
+    const co = selectedAccount.company;
+    const url = selectedAccount.company_url || co;
+    if (briefPreCacheRef.current[co]) return;
+    briefPreCacheRef.current[co] = { overview: "loading", live: "loading" };
+
+    // Pre-fetch p1 (overview) — lightweight, no web_search
+    (async () => {
+      try {
+        const light = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown.\nCONSISTENCY: Return EXACTLY the structure shown.\n\n`;
+        const r = await streamAI(light +
+          `Return ONLY raw JSON (start with {) for the company overview:\n` +
+          `{"companySnapshot":"3-4 sentences","revenue":"","publicPrivate":"","employeeCount":"","headquarters":"","founded":"","website":"","linkedIn":"","fundingProfile":"","competitors":["","",""],"watchOuts":["",""]}`,
+          () => {}, 1800
+        );
+        briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], overview: r || null };
+      } catch { briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], overview: null }; }
+    })();
+
+    // Pre-fetch p5 (live search) — web_search for careers/news/sentiment
+    (async () => {
+      try {
+        const prompt =
+          `Search for recent information about "${co}". PRIORITY ORDER — search for open roles FIRST:\n\n` +
+          `1. OPEN ROLES: Search "${co} careers" OR "site:linkedin.com/jobs ${co}" OR "${co} hiring 2025". 3 roles minimum.\n` +
+          `   If search can't access careers, infer from training knowledge.\n\n` +
+          `2. News from 2024-2025\n3. Ratings and sentiment\n4. Growth signals\n` +
+          `Return ONLY raw JSON (start with {):\n` +
+          `{"openRoles":{"summary":"","roles":[{"title":"","dept":"","signal":""}]},"recentHeadlines":[{"headline":"","relevance":""}],"recentSignals":[""],"growthSignals":[""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
+        const d = await claudeFetch({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1800, temperature: 0,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+          messages: [{ role: "user", content: prompt }],
+        });
+        if (d.error) { briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], live: null }; return; }
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        let parsed = null;
+        for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+          parsed = extractJsonWithKey(textBlocks[i], "recentHeadlines")
+                || extractJsonWithKey(textBlocks[i], "openRoles")
+                || extractJsonWithKey(textBlocks[i], "recentSignals");
+        }
+        if (!parsed) { const raw = textBlocks.join("").trim(); parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw); }
+        briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], live: parsed || null };
+      } catch { briefPreCacheRef.current[co] = { ...briefPreCacheRef.current[co], live: null }; }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount?.company]);
