@@ -3139,9 +3139,32 @@ Return ONLY valid JSON:
     setChatLoading(true);
 
     // Build context summary — compact, ~800 tokens max
+    const stepGuide = {
+      0: "The rep is setting up their session. Help them enter their seller URL, describe their products, and select their funding stage. Guide them to click 'Start Session' when ready.",
+      1: "The rep is reviewing their ICP and RFP intelligence. Help them understand their ideal customer profile, review fit signals, and check RFP opportunities. Guide them to import accounts next (Step 3).",
+      2: "The rep needs to import target accounts. They can upload a CSV, use sample data, or generate ICP-matched targets. Help them understand their options and get accounts loaded.",
+      3: "The rep is reviewing their account list with fit scores and cohort analysis. Help them understand which accounts to prioritize, what the fit scores mean, and guide them to select accounts for deeper review.",
+      4: "The rep is setting up a specific account for research. Help them choose outcomes, understand the ICP match, and set deal context. Guide them to click 'Build Brief' when ready.",
+      5: "The rep is reading their account brief. Help them interpret the company overview, solution mapping, executives, and strategic signals. Guide them to review the hypothesis next.",
+      6: "The rep is reviewing their RIVER hypothesis and talk tracks. Help them refine the opening angle, challenger insight, and JOLT plan. Guide them to start the in-call phase when ready.",
+      7: "The rep is on a live call or preparing for one. Help them with discovery questions, gate answers, objection handling, and real-time coaching. Keep answers SHORT — they may be mid-conversation.",
+      8: "The rep is reviewing post-call analysis. Help them understand the deal route, RIVER scorecard, and next steps. Guide them to run the Solution Fit review.",
+      9: "The rep is reviewing the Solution Architecture assessment. Help them understand confirmed solutions, architecture gaps, and the implementation roadmap.",
+    };
+
     const ctx = [
-      `You are a senior B2B sales coach embedded in the Cambrian Catalyst playbook tool. The rep is currently on step "${STEPS[step]}".`,
-      sellerICP?.sellerName ? `Seller: ${sellerICP.sellerName} (${sellerICP.marketCategory||""})` : `Seller: ${sellerUrl}`,
+      `You are a senior B2B sales coach embedded in the Cambrian Catalyst RIVER playbook tool.`,
+      `\nROLE & RULES:`,
+      `- You are the rep's thinking partner. Guide them step-by-step through the sales process.`,
+      `- NEVER reveal internal methodology names, framework sources, or academic citations. Do not say "according to Voss" or "using the JOLT framework" or "per Cialdini." Just give the advice naturally as if it's your own expertise.`,
+      `- NEVER link to external websites, articles, books, or resources. All guidance comes from YOU, not from outside sources.`,
+      `- NEVER mention the names of the AI models, APIs, or technologies powering this tool.`,
+      `- When the rep seems stuck, proactively suggest what to do next on the current step.`,
+      `- Keep answers concise (2-4 sentences) unless the rep explicitly asks for more detail.`,
+      `- Ground claims in the seller's proof — cite their named customers and differentiators naturally.`,
+      `\nCURRENT STEP: "${STEPS[step]}" (step ${step+1} of 10)`,
+      `STEP GUIDANCE: ${stepGuide[step]||""}`,
+      sellerICP?.sellerName ? `\nSeller: ${sellerICP.sellerName} (${sellerICP.marketCategory||""})` : `\nSeller: ${sellerUrl}`,
       selectedAccount ? `Target account: ${selectedAccount.company} (${selectedAccount.ind||""})` : "",
       fitScores[selectedAccount?.company] ? `Fit score: ${fitScores[selectedAccount.company].score}% — ${fitScores[selectedAccount.company].label}. ${fitScores[selectedAccount.company].reason}` : "",
       brief?.companySnapshot ? `Brief snapshot: ${brief.companySnapshot.slice(0,200)}` : "",
@@ -3150,7 +3173,6 @@ Return ONLY valid JSON:
       riverHypo?.reality ? `Hypothesis (Reality): ${riverHypo.reality.slice(0,100)}` : "",
       notes ? `Rep notes: ${notes.slice(0,200)}` : "",
       buildSellerProofPack({sellerICP, sellerDocs, products}).slice(0, 600),
-      `\nINSTRUCTIONS: Answer concisely (2-4 sentences unless the rep asks for more). Ground claims in the seller's proof pack — cite named customers and differentiators. Be a thinking partner, not a chatbot.`,
     ].filter(Boolean).join("\n");
 
     // Build conversation history (last 6 turns max)
