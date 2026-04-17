@@ -588,10 +588,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p5 = (async()=>{
     try{
       const prompt =
-        `Search for recent information about "${co}":\n`+
-        `1. News from 2024-2025: headlines, M&A, leadership changes, funding — USE WEB_SEARCH for this\n`+
-        `2. Ratings and sentiment: search Glassdoor, G2, Trustpilot for "${co}" — USE WEB_SEARCH for this\n`+
-        `3. Open roles: DO NOT search for these — careers pages are JS-gated and unsearchable. Instead, use your TRAINING KNOWLEDGE about ${co} to infer what roles they're likely hiring for based on their industry, size, strategic direction, and recent news. Every large company is always hiring — infer 3 plausible roles with department and what each signals about their priorities. Be confident, not hedging.\n`+
+        `Search for recent information about "${co}". PRIORITY ORDER — search for open roles FIRST:\n\n`+
+        `1. OPEN ROLES (search FIRST — this is the most valuable sales intel):\n`+
+        `   Search ALL of these queries:\n`+
+        `   - "${co} careers" OR "${co} jobs" OR "site:${url}/careers"\n`+
+        `   - "site:linkedin.com/jobs ${co}"\n`+
+        `   - "${co} hiring 2025"\n`+
+        `   Look for: which departments are hiring (Engineering, Sales, HR, Finance, etc.), seniority levels, volume of openings, and what the pattern SIGNALS about their strategic priorities. 3 specific roles minimum.\n`+
+        `   If search returns actual job listings, cite them. If search can't access their careers page, infer 3 plausible roles from your training knowledge about ${co} based on their industry, size, and recent news — be confident.\n\n`+
+        `2. News from 2024-2025: headlines, M&A, leadership changes, funding\n`+
+        `3. Ratings and sentiment: Glassdoor, G2, Trustpilot for "${co}"\n`+
         `4. Growth signals or buying indicators\n`+
         `Return ONLY raw JSON (start with {):\n`+
         `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
@@ -612,7 +618,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         temperature:0,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
         messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
       });
       if(d.error) return null;
