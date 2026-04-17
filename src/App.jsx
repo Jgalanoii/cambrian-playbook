@@ -2998,6 +2998,29 @@ ${isOpen
   };
 
   const runPostCall=async()=>{
+    // Detect how much discovery was actually captured
+    const allGates = RIVER_STAGES.flatMap(s => s.gates.map(g => g.id));
+    const allDisc  = RIVER_STAGES.flatMap(s => s.discovery.map(p => p.id));
+    const gatesFilled = allGates.filter(id => gateAnswers[id]).length;
+    const discFilled  = allDisc.filter(id => riverData[id]?.trim()).length;
+    const totalFields = allGates.length + allDisc.length;
+    const filledPct = Math.round(((gatesFilled + discFilled) / totalFields) * 100);
+
+    // If the rep barely filled anything, give them a nudge
+    if (filledPct < 20 && !notes?.trim()) {
+      const nudges = [
+        `Looks like someone's turning in their homework blank. You need more discovery if this is going to work — coffee is for closers, not for people who skip the questions.`,
+        `I've seen more effort on a TPS report cover sheet. Go back and capture what you actually heard — even Milton can't route a deal with nothing to work with.`,
+        `"What would you say... you DO here?" Because right now it looks like not much. The RIVER stages need real answers from the call, not blank stares.`,
+        `Act as if you had a great call — then actually fill in what happened. I can't coach you through a deal I know nothing about.`,
+        `You're giving me the silent treatment? I need at least a few gate answers and some discovery notes to give you anything useful. Go back in there.`,
+      ];
+      const nudge = nudges[Math.floor(Math.random() * nudges.length)];
+      setChatMessages(prev => [...prev, { role: "assistant", content: nudge }]);
+      if (!chatOpen) setChatOpen(true);
+      // Still proceed — but the post-call will reflect the sparse data
+    }
+
     setPostLoading(true);
     const riverSummary=RIVER_STAGES.map(s=>{
       const gates=s.gates.map(g=>`${g.q}: ${gateAnswers[g.id]||"Not answered"}`).join("; ");
@@ -3022,7 +3045,10 @@ ${isOpen
       `Solutions: ${(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ")||"Unknown"}\n\n`+
 
       `RIVER Capture:\n${riverSummary}\n\n`+
-      `Notes: ${notes||"None"}\n\n`+
+      `Notes: ${notes||"None"}\n`+
+      `Discovery completeness: ${filledPct}% of fields captured (${gatesFilled}/${allGates.length} gates, ${discFilled}/${allDisc.length} discovery fields).\n`+
+      (filledPct < 30 ? `WARNING: Very sparse discovery data. The rep captured almost nothing. In callSummary, note that the deal cannot be properly routed without more discovery — recommend they go back for a follow-up call to fill gaps before advancing.\n` : "") +
+      `\n`+
 
       `ROUTING CRITERIA (apply Graham Margin of Safety + Fisher/Ury interests):\n`+
       `FAST_TRACK: champion identified + budget confirmed + clear timeline + value is 3-5x price\n`+
