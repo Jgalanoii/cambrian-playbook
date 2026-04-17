@@ -4497,7 +4497,7 @@ Return ONLY valid JSON:
           const sa = selectedAccount;
           const fs = sa ? fitScores[sa.company] : null;
           return (
-          <div className="page" style={{maxWidth:960}}>
+          <div className="page" style={{maxWidth:1200}}>
             {/* Title + prev/next + print */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,flexWrap:"wrap"}}>
               <div className="page-title" style={{margin:0,fontSize:24}}>
