@@ -629,20 +629,22 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
         `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
-      // Assistant prefill "{" ensures JSON output. Haiku still has web_search
-      // available for news/sentiment items but will use training knowledge for
-      // open roles (as instructed in the prompt). If Haiku uses the tool, the
-      // prefill is discarded and we parse multi-block response. If it skips the
-      // tool, it continues from "{" and we parse directly. Both paths covered.
+      // NO assistant prefill — the prefill biases Haiku to skip web_search
+      // entirely, generating from training knowledge instead of actually
+      // searching. Without it, Haiku calls web_search for careers/news and
+      // returns JSON in the final text block. If web_search finds nothing
+      // useful, the prompt tells Haiku to fall back to training knowledge
+      // for the roles section specifically.
       const d = await claudeFetch({
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
-        messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+        messages:[{role:"user",content:prompt}],
       });
       if(d.error) return null;
-      // Path 1: tool-use response (multi-block) — find JSON via anchor keys
+      // Tool-use response: multi-block (text + tool_use + tool_result + text)
+      // Find JSON via anchor keys in the last text block
       const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for (let i = textBlocks.length - 1; i >= 0; i--) {
         const parsed = extractJsonWithKey(textBlocks[i], "recentHeadlines")
@@ -665,14 +667,20 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   };
 
   // Per-section merger functions, applied via setBrief(prev => merger(prev))
+  // IMPORTANT: mergeOverview must NOT spread ...r1 blindly. If Haiku returns
+  // extra fields (openingAngle, strategicTheme, etc.) in p1, they'd overwrite
+  // what later mergers (p3, p4) set — causing data loss. Only take the fields
+  // p1 is RESPONSIBLE for.
+  const P1_FIELDS = ["companySnapshot","revenue","publicPrivate","employeeCount","headquarters","founded","website","linkedIn","fundingProfile","competitors","watchOuts"];
   const mergeOverview = (r1) => (prev) => {
     if (!prev) return prev;
     if (!r1 || typeof r1 !== "object") {
       return {...prev, _error: (prev._error || "Brief generation partial — Overview failed. Try Regenerate."),
               _loadingSections: {...(prev._loadingSections||{}), overview:false}};
     }
-    return {...prev, ...r1,
-            _loadingSections: {...(prev._loadingSections||{}), overview:false}};
+    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), overview:false}};
+    P1_FIELDS.forEach(f => { if (r1[f] !== undefined) next[f] = r1[f]; });
+    return next;
   };
   const mergeExecs = (r2) => (prev) => {
     if (!prev) return prev;
