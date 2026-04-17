@@ -884,6 +884,63 @@ const LOADER_QUIPS = [
   "Preparing your strongest opening...",
   "Making sure you walk in ready...",
 ];
+// ── CHAT ASSISTANT PANEL (Pattern B) ─────────────────────────────────────────
+// Persistent right-rail chat with session context. Available on every stage.
+// The assistant knows: current step, selected account, brief, ICP, RIVER
+// state, seller proof pack — and grounds every answer in that context.
+function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
+  const [input, setInput] = React.useState("");
+  const messagesEndRef = React.useRef(null);
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+  React.useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput("");
+    onSend(text);
+  };
+
+  return (
+    <div className="chat-panel">
+      <div className="chat-header">
+        <div>
+          <div className="chat-header-title">💬 Assistant</div>
+          {contextLabel && <div className="chat-context-badge">{contextLabel}</div>}
+        </div>
+        <button className="chat-header-close" onClick={onClose} title="Close">✕</button>
+      </div>
+      <div className="chat-messages">
+        {messages.length === 0 && (
+          <div style={{textAlign:"center",padding:"32px 12px",color:"var(--ink-3)",fontSize:13,lineHeight:1.6}}>
+            <div style={{fontSize:28,marginBottom:8}}>💬</div>
+            Ask me anything about the account, the brief, your ICP, competitive positioning, or prep strategy. I have your full session context.
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <div key={i} className={`chat-msg chat-msg-${msg.role}`}>
+            {msg.content.split("\n").map((line, j) => <p key={j}>{line}</p>)}
+          </div>
+        ))}
+        {loading && <div className="chat-typing">Thinking…</div>}
+        <div ref={messagesEndRef}/>
+      </div>
+      <div className="chat-input-wrap">
+        <textarea ref={inputRef} className="chat-input" placeholder="Ask anything…"
+          value={input} onChange={e => setInput(e.target.value)} rows={1}
+          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}/>
+        <button className="chat-send" onClick={handleSend} disabled={loading || !input.trim()} title="Send">
+          →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── COMPANY LOGO ────────────────────────────────────────────────────────────
 // Fetches logo via Clearbit's free API (no key needed). Falls back to a
 // colored initials circle if the domain has no logo or the request fails.
@@ -1507,6 +1564,9 @@ export default function App(){
   const[cmdOpen,setCmdOpen]=useState(false); // Cmd-K command palette
   const[celebrateStep,setCelebrateStep]=useState(null); // milestone celebration pulse
   const[darkMode,setDarkMode]=useState(false); // Phase 3b dark mode toggle
+  const[chatOpen,setChatOpen]=useState(false);
+  const[chatMessages,setChatMessages]=useState([]); // [{role:'user'|'assistant', content}]
+  const[chatLoading,setChatLoading]=useState(false);
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
   const[collapsedBB,setCollapsedBB]=useState(new Set()); // Phase 2b: collapsed brief sections
   const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
@@ -3040,7 +3100,53 @@ Return ONLY valid JSON:
     } catch (e) { console.error("download failed:", e); }
   };
 
+  // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
   const STEPS=["Session","ICP & RFPs","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
+  const chatContextLabel = selectedAccount?.company
+    ? `${STEPS[step]} · ${selectedAccount.company}`
+    : STEPS[step];
+
+  const sendChatMessage = async (text) => {
+    const userMsg = { role: "user", content: text };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatLoading(true);
+
+    // Build context summary — compact, ~800 tokens max
+    const ctx = [
+      `You are a senior B2B sales coach embedded in the Cambrian Catalyst playbook tool. The rep is currently on step "${STEPS[step]}".`,
+      sellerICP?.sellerName ? `Seller: ${sellerICP.sellerName} (${sellerICP.marketCategory||""})` : `Seller: ${sellerUrl}`,
+      selectedAccount ? `Target account: ${selectedAccount.company} (${selectedAccount.ind||""})` : "",
+      fitScores[selectedAccount?.company] ? `Fit score: ${fitScores[selectedAccount.company].score}% — ${fitScores[selectedAccount.company].label}. ${fitScores[selectedAccount.company].reason}` : "",
+      brief?.companySnapshot ? `Brief snapshot: ${brief.companySnapshot.slice(0,200)}` : "",
+      brief?.strategicTheme ? `Strategic theme: ${brief.strategicTheme.slice(0,150)}` : "",
+      brief?.openingAngle ? `Opening angle: ${brief.openingAngle.slice(0,150)}` : "",
+      riverHypo?.reality ? `Hypothesis (Reality): ${riverHypo.reality.slice(0,100)}` : "",
+      notes ? `Rep notes: ${notes.slice(0,200)}` : "",
+      buildSellerProofPack({sellerICP, sellerDocs, products}).slice(0, 600),
+      `\nINSTRUCTIONS: Answer concisely (2-4 sentences unless the rep asks for more). Ground claims in the seller's proof pack — cite named customers and differentiators. Be a thinking partner, not a chatbot.`,
+    ].filter(Boolean).join("\n");
+
+    // Build conversation history (last 6 turns max)
+    const history = [...chatMessages.slice(-6), userMsg].map(m => ({
+      role: m.role, content: m.content,
+    }));
+
+    try {
+      const d = await claudeFetch({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 800,
+        system: ctx,
+        messages: history,
+      });
+      const reply = d?.content?.[0]?.text || d?.error?.message || "Sorry, I couldn't generate a response. Try again.";
+      setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
+    } catch (e) {
+      setChatMessages(prev => [...prev, { role: "assistant", content: "Error: " + e.message }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
@@ -3086,6 +3192,22 @@ Return ONLY valid JSON:
     <>
       {/* Command palette overlay */}
       {cmdOpen && <CommandPalette commands={cmdCommands} onClose={()=>setCmdOpen(false)}/>}
+
+      {/* Chat assistant — floating toggle + slide-out panel */}
+      {!chatOpen && (
+        <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Sales Assistant">
+          💬
+        </button>
+      )}
+      {chatOpen && (
+        <ChatPanel
+          messages={chatMessages}
+          loading={chatLoading}
+          contextLabel={chatContextLabel}
+          onSend={sendChatMessage}
+          onClose={()=>setChatOpen(false)}
+        />
+      )}
 
       <div className="app"
         data-focus={step===7 ? "call" : undefined}
@@ -5968,6 +6090,61 @@ Return ONLY valid JSON:
           <div className="page">
             <div className="page-title">Post-Call Route</div>
             <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, CRM note, and follow-up email.</div>
+
+            {/* ── Transcript upload — analyze a prior call ── */}
+            {!postCall && !postLoading && (
+              <div className="card" style={{marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                  <div style={{fontSize:22}}>🎙</div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)"}}>Already had a call? Upload the transcript.</div>
+                    <div style={{fontSize:12,color:"var(--ink-2)"}}>Paste or upload a transcript from Gong, Chorus, Otter, Zoom, or any recording tool. We'll run the full RIVER analysis.</div>
+                  </div>
+                </div>
+                <textarea
+                  placeholder={"Paste your call transcript here…\n\nAccepted: plain text, Gong/Chorus/Otter export, VTT/SRT subtitles.\n\nOr click 'Upload file' below."}
+                  style={{width:"100%",minHeight:120,fontSize:13,padding:12,borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",fontFamily:"DM Sans,sans-serif",resize:"vertical",marginBottom:10}}
+                  id="transcript-input"
+                />
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <button className="btn btn-primary" onClick={async()=>{
+                    const text = document.getElementById("transcript-input")?.value?.trim();
+                    if(!text || text.length < 50){alert("Paste at least a few sentences of transcript.");return;}
+                    setPostLoading(true);
+                    // Clean VTT/SRT timestamps if present
+                    const cleaned = text.replace(/^\d{2}:\d{2}[:\.][\d,.]+\s*-->\s*\d{2}:\d{2}[:\.][\d,.]+\s*$/gm,"")
+                      .replace(/^WEBVTT.*$/gm,"").replace(/^\d+$/gm,"").replace(/\n{3,}/g,"\n\n").trim();
+                    const prompt =
+                      `You are a senior sales coach analyzing a recorded sales call transcript. Apply the RIVER framework (Reality, Impact, Vision, Entry Points, Route) to synthesize what happened.\n\n`+
+                      `SELLER: ${sellerUrl} (${sellerICP?.marketCategory||""})\n`+
+                      `PROSPECT: ${selectedAccount?.company||"Unknown"} (${selectedAccount?.ind||""})\n`+
+                      buildSellerProofPack({sellerICP,sellerDocs,products}).slice(0,400)+`\n`+
+                      `TRANSCRIPT:\n${cleaned.slice(0,8000)}\n\n`+
+                      `Return ONLY raw JSON:\n`+
+                      `{"callSummary":"3-4 sentence narrative","riverScorecard":{"reality":"what was confirmed","impact":"cost/impact surfaced","vision":"success in their words","entryPoints":"buying process learned","route":"recommended next move"},"dealRoute":"FAST_TRACK or NURTURE or DISQUALIFY","dealRouteReason":"1 sentence","dealRisk":"single biggest risk","nextSteps":["Step 1","Step 2","Step 3"],"crmNote":"4-5 sentence CRM note","emailSubject":"follow-up subject","emailBody":"full follow-up email"}`;
+                    const result = await callAI(prompt);
+                    setPostCall(result||{callSummary:"Analysis failed — try pasting a longer transcript.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient transcript data.",dealRisk:"Incomplete",nextSteps:["Review transcript manually"],crmNote:"Call transcript analyzed.",emailSubject:"Following up",emailBody:"Hi,\n\nThank you for your time.\n\nBest,"});
+                    setPostLoading(false);
+                  }}>
+                    Analyze Transcript →
+                  </button>
+                  <label className="btn btn-secondary" style={{cursor:"pointer"}}>
+                    📂 Upload file
+                    <input type="file" accept=".txt,.vtt,.srt,.csv,.md" style={{display:"none"}} onChange={e=>{
+                      const file=e.target.files?.[0];
+                      if(!file)return;
+                      const reader=new FileReader();
+                      reader.onload=ev=>{
+                        const el=document.getElementById("transcript-input");
+                        if(el)el.value=ev.target.result;
+                      };
+                      reader.readAsText(file);
+                    }}/>
+                  </label>
+                </div>
+              </div>
+            )}
+
             {postLoading&&(
               <div className="card">
                 <div style={{fontSize:13,color:"#777",marginBottom:12}}>Synthesizing RIVER capture and generating deal route...</div>
