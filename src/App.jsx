@@ -1824,13 +1824,14 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
   const fetchRFPIntel = async ({ forceRefresh = false } = {}) => {
     if (!sellerICP?.icp) return;
 
-    // Cache hit — instant return with live data.
+    // Cache hit — instant return with live data. Only serve from cache if
+    // there's ACTUAL content (not just empty arrays from a prior failed fetch).
     if (!forceRefresh) {
       try {
         const cached = localStorage.getItem(rfpCacheKey());
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (parsed?.open || parsed?.closed) {
+          if ((parsed?.open?.length > 0) || (parsed?.closed?.length > 0)) {
             setRfpData({ open: parsed.open || [], closed: parsed.closed || [], loading: false, error: null });
             return;
           }
@@ -1963,8 +1964,10 @@ ${isOpen
     const [openRes, closedRes] = await Promise.all([openP, closedP]);
     setRfpData(prev => ({ ...prev, loading: false }));
 
-    // Cache only if we got at least one successful class.
-    if (openRes.rows || closedRes.rows) {
+    // Cache only if we got ACTUAL data (not empty arrays from failed parses).
+    const hasOpenData  = openRes.rows?.length > 0;
+    const hasClosedData = closedRes.rows?.length > 0;
+    if (hasOpenData || hasClosedData) {
       try {
         localStorage.setItem(rfpCacheKey(), JSON.stringify({
           open: openRes.rows || [],
