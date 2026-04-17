@@ -499,6 +499,7 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   out.push(`5. Use ONLY products from the catalog above — do NOT invent product names.`);
   out.push(`6. If you cannot ground a claim in the proof above, flag it as "[unsupported — verify with seller]" rather than asserting it as fact.`);
   out.push(`7. The customer should feel deeply understood, that the seller knows the BEST solution, and that this is a deal where everyone wins with measurable outcomes.`);
+  out.push(`8. NEVER INVENT STATISTICS ABOUT THE SELLER. Do not fabricate customer counts, revenue numbers, market share, network size, retailer counts, or any other quantitative claim about the selling organization. Only cite numbers that appear in the proof points, uploaded docs, or ICP above. If you don't have a verified number, describe the capability qualitatively ("extensive retail network" not "500K+ retailers"). Making up stats destroys rep credibility.`);
 
   return out.join("\n") + "\n\n";
 }
