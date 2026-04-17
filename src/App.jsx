@@ -1410,6 +1410,8 @@ export default function App(){
   const[targetGenNote,setTargetGenNote]=useState(""); // surfaced after generation completes
   const[targetIndustries,setTargetIndustries]=useState([]); // user-selected industries for target gen (up to 3)
   const[targetIndInput,setTargetIndInput]=useState(""); // free-text input for custom industry
+  const[targetHeadcount,setTargetHeadcount]=useState(""); // e.g. "50-499 employees"
+  const[targetRevenue,setTargetRevenue]=useState(""); // e.g. "$10M-$100M"
   const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
   const[dealClassification,setDealClassification]=useState(""); // "Top-Line Revenue" etc // "csv" | "quick"
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
@@ -1592,8 +1594,8 @@ What they sell: ${sellerICP.sellerDescription||""}
 
 ═══ IDEAL BUYER (this is who we want to find) ═══
 Target industries:    ${(targetIndustries.length ? targetIndustries : (icp.industries||[])).join(", ")}
-Buyer size:           ${icp.companySize||""}
-Revenue range:        ${icp.revenueRange||""}
+Buyer size:           ${targetHeadcount || icp.companySize || ""}
+Revenue range:        ${targetRevenue || icp.revenueRange || ""}
 Geographies:          ${(icp.geographies||[]).join(", ")||"North America"}
 Buyer personas:       ${(icp.buyerPersonas||[]).join(", ")}
 Priority trigger:     ${icp.priorityInitiative||""}
@@ -4106,6 +4108,42 @@ Return ONLY valid JSON:
                           </div>
                         );
                       })()}
+
+                      {/* Company size selectors */}
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
+                            Headcount
+                          </div>
+                          <select value={targetHeadcount} onChange={e=>setTargetHeadcount(e.target.value)} style={{fontSize:13}}>
+                            <option value="">ICP default{sellerICP?.icp?.companySize ? ` (${sellerICP.icp.companySize})` : ""}</option>
+                            <option value="1-49 employees">1 – 49 employees</option>
+                            <option value="50-99 employees">50 – 99 employees</option>
+                            <option value="100-499 employees">100 – 499 employees</option>
+                            <option value="500-999 employees">500 – 999 employees</option>
+                            <option value="1,000-4,999 employees">1,000 – 4,999 employees</option>
+                            <option value="5,000-9,999 employees">5,000 – 9,999 employees</option>
+                            <option value="10,000-49,999 employees">10,000 – 49,999 employees</option>
+                            <option value="50,000+ employees">50,000+ employees</option>
+                          </select>
+                        </div>
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
+                            Revenue
+                          </div>
+                          <select value={targetRevenue} onChange={e=>setTargetRevenue(e.target.value)} style={{fontSize:13}}>
+                            <option value="">ICP default{sellerICP?.icp?.revenueRange ? ` (${sellerICP.icp.revenueRange})` : ""}</option>
+                            <option value="Under $1M">Under $1M</option>
+                            <option value="$1M-$10M">$1M – $10M</option>
+                            <option value="$10M-$50M">$10M – $50M</option>
+                            <option value="$50M-$100M">$50M – $100M</option>
+                            <option value="$100M-$500M">$100M – $500M</option>
+                            <option value="$500M-$1B">$500M – $1B</option>
+                            <option value="$1B-$10B">$1B – $10B</option>
+                            <option value="$10B+">$10B+</option>
+                          </select>
+                        </div>
+                      </div>
 
                       <div style={{textAlign:"center"}}>
                         <button
