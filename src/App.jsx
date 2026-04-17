@@ -3583,13 +3583,13 @@ Return ONLY valid JSON:
                       )}
                       {sellerICP.icp.priorityInitiative&&(
                         <div style={{background:"var(--amber-bg)",border:"1px solid #BA751744",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>⚡ Trigger to Buy (Revella)</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>⚡ Trigger to Buy</div>
                           <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.priorityInitiative}</div>
                         </div>
                       )}
                       {sellerICP.icp.perceivedBarriers&&(
                         <div style={{background:"var(--red-bg)",border:"1px solid #9B2C2C44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>🚧 Perceived Barriers (Revella)</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>🚧 Perceived Barriers</div>
                           <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.perceivedBarriers}</div>
                         </div>
                       )}
@@ -3601,7 +3601,7 @@ Return ONLY valid JSON:
                       )}
                       {sellerICP.icp.uniqueDifferentiators?.filter(Boolean).length>0&&(
                         <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>✦ Why We Win (Dunford)</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>✦ Why We Win</div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {sellerICP.icp.uniqueDifferentiators.filter(Boolean).map((d,i)=>(
                               <span key={i} style={{fontSize:11,background:"#fff",border:"1px solid #2E6B2E44",borderRadius:10,padding:"2px 8px",color:"var(--green)"}}>{d}</span>
@@ -3888,7 +3888,7 @@ Return ONLY valid JSON:
                         <EF value={sellerICP.marketCategory||""} onChange={v=>setSellerICP(p=>({...p,marketCategory:v}))} placeholder="e.g. Employee Rewards Platform" single/>
                       </div>
                       <div>
-                        <div className="field-label" style={{marginBottom:4}}>Adoption Profile (Moore)</div>
+                        <div className="field-label" style={{marginBottom:4}}>Adoption Profile</div>
                         <EF value={sellerICP.icp.adoptionProfile||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,adoptionProfile:v}}))} placeholder="e.g. Early Majority" single/>
                       </div>
                     </div>
@@ -5389,7 +5389,7 @@ Return ONLY valid JSON:
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:14}}>⚙️</div>
-                      <div><div className="bb-title">Process Maturity</div><div className="bb-sub">DMAIC stage — where are they in their improvement cycle?</div></div>
+                      <div><div className="bb-title">Process Maturity</div><div className="bb-sub">Where are they in their improvement cycle?</div></div>
                     </div>
                     <div className="bb-body">
                       <div style={{display:"flex",gap:4,marginBottom:14,flexWrap:"wrap"}}>
@@ -5905,7 +5905,7 @@ Return ONLY valid JSON:
 
                 {brief?.processMaturity?.dmiacStage&&(
                   <div className="incall-sidebar" style={{marginTop:14}}>
-                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:8}}>⚙️ DMAIC Stage</div>
+                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:8}}>⚙️ Process Maturity Stage</div>
                     <div style={{display:"flex",gap:3,marginBottom:8,flexWrap:"wrap"}}>
                       {(()=>{
                         const stages=["Define","Measure","Analyze","Improve","Control"];
