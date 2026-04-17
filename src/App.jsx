@@ -1408,6 +1408,8 @@ export default function App(){
   const[targetGenLoading,setTargetGenLoading]=useState(false);
   const[targetGenError,setTargetGenError]=useState("");
   const[targetGenNote,setTargetGenNote]=useState(""); // surfaced after generation completes
+  const[targetIndustries,setTargetIndustries]=useState([]); // user-selected industries for target gen (up to 3)
+  const[targetIndInput,setTargetIndInput]=useState(""); // free-text input for custom industry
   const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
   const[dealClassification,setDealClassification]=useState(""); // "Top-Line Revenue" etc // "csv" | "quick"
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
@@ -1589,7 +1591,7 @@ Market category: ${sellerICP.marketCategory||""}
 What they sell: ${sellerICP.sellerDescription||""}
 
 ═══ IDEAL BUYER (this is who we want to find) ═══
-Target industries:    ${(icp.industries||[]).join(", ")}
+Target industries:    ${(targetIndustries.length ? targetIndustries : (icp.industries||[])).join(", ")}
 Buyer size:           ${icp.companySize||""}
 Revenue range:        ${icp.revenueRange||""}
 Geographies:          ${(icp.geographies||[]).join(", ")||"North America"}
@@ -1601,7 +1603,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
 ═══ SELECTION CRITERIA — be strict ═══
 - Only return REAL, recognizable companies (Fortune 1000, prominent private companies, well-known mid-market). Do NOT invent companies.
-- Each company MUST clearly match the target industries AND buyer size AND geography above.
+- Each company MUST clearly match the target industries listed above AND buyer size AND geography. Distribute results across the listed industries — do not cluster in one.
 - AVOID anything matching the disqualifiers — those are explicit non-fits.
 - Do NOT return companies in the "known customers" list above (those are already customers, not prospects).
 - Mix public + private. Mix industries within the seller's target list (don't return 20 banks if the ICP has 3 target industries).
@@ -4037,20 +4039,82 @@ Return ONLY valid JSON:
                 {sellerICP?.icp && (
                   <>
                     <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
-                    <div style={{background:"linear-gradient(135deg, var(--bg-1) 0%, var(--surface) 100%)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"18px 20px",textAlign:"center",marginBottom:18}}>
-                      <div style={{fontSize:22,marginBottom:6}}>✨</div>
-                      <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"var(--ink-0)",marginBottom:4}}>
-                        Don't know who to target?
+                    <div style={{background:"linear-gradient(135deg, var(--bg-1) 0%, var(--surface) 100%)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"18px 20px",marginBottom:18}}>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:22,marginBottom:6}}>✨</div>
+                        <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"var(--ink-0)",marginBottom:4}}>
+                          Don't know who to target?
+                        </div>
+                        <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5,marginBottom:14,maxWidth:440,margin:"0 auto"}}>
+                          Select up to 3 industries to focus the search, or leave blank to use your full ICP.
+                        </div>
                       </div>
-                      <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5,marginBottom:14,maxWidth:440,margin:"0 auto 14px"}}>
-                        We'll use your ICP — <strong>{sellerICP.marketCategory||"your market"}</strong> selling to <strong>{(sellerICP.icp.industries||[]).slice(0,2).join(", ")||"your buyers"}</strong> — to surface 20 real, recognizable companies that match. Each gets fit-scored automatically; Strong Fit candidates rise to the top.
+
+                      {/* Industry selector — chips + free-text input */}
+                      {(()=>{
+                        // Seed suggestions from ICP industries + common B2B verticals
+                        const icpInd = (sellerICP.icp.industries||[]).filter(Boolean);
+                        const commonInd = ["Banking","Insurance","Healthcare","Retail & E-commerce","Technology / SaaS","Fintech","Consumer Goods","Hospitality & Travel","Manufacturing","Professional Services","Education","Energy & Utilities","Transportation & Logistics","Media & Entertainment","Real Estate","Telecom","Government"];
+                        const suggestions = [...new Set([...icpInd, ...commonInd])].filter(s => !targetIndustries.includes(s));
+                        const addInd = (ind) => { if(ind && targetIndustries.length < 3 && !targetIndustries.includes(ind)) setTargetIndustries(prev => [...prev, ind]); };
+                        const removeInd = (ind) => setTargetIndustries(prev => prev.filter(i => i !== ind));
+                        return (
+                          <div style={{marginBottom:14}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>
+                              Target industries <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"var(--ink-3)"}}>(up to 3{targetIndustries.length>0?` · ${targetIndustries.length}/3 selected`:""})</span>
+                            </div>
+                            {/* Selected chips */}
+                            {targetIndustries.length > 0 && (
+                              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                                {targetIndustries.map(ind => (
+                                  <span key={ind} style={{display:"inline-flex",alignItems:"center",gap:5,background:"var(--ink-0)",color:"var(--tan-0)",padding:"4px 10px 4px 12px",borderRadius:"var(--r-pill)",fontSize:12,fontWeight:700}}>
+                                    {ind}
+                                    <span onClick={()=>removeInd(ind)} style={{cursor:"pointer",color:"var(--ink-2)",fontSize:14,lineHeight:1}}>×</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {/* Suggestion chips */}
+                            {targetIndustries.length < 3 && (
+                              <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>
+                                {suggestions.slice(0,12).map(ind => (
+                                  <button key={ind} onClick={()=>addInd(ind)}
+                                    style={{background:"var(--surface)",border:"1px solid var(--line-0)",borderRadius:"var(--r-pill)",padding:"3px 10px",fontSize:11,color:"var(--ink-1)",cursor:"pointer",fontFamily:"inherit",transition:"all var(--t-fast)"}}>
+                                    + {ind}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {/* Free-text input */}
+                            {targetIndustries.length < 3 && (
+                              <div style={{display:"flex",gap:6}}>
+                                <input type="text" placeholder="Type a custom industry…" value={targetIndInput}
+                                  onChange={e=>setTargetIndInput(e.target.value)}
+                                  onKeyDown={e=>{if(e.key==="Enter"&&targetIndInput.trim()){addInd(targetIndInput.trim());setTargetIndInput("");}}}
+                                  style={{flex:1,fontSize:12,padding:"6px 10px"}}/>
+                                <button className="btn btn-secondary btn-sm"
+                                  onClick={()=>{if(targetIndInput.trim()){addInd(targetIndInput.trim());setTargetIndInput("");}}}>
+                                  Add
+                                </button>
+                              </div>
+                            )}
+                            {targetIndustries.length === 0 && (
+                              <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>
+                                No industries selected — will use your ICP defaults: {icpInd.slice(0,3).join(", ")||"all"}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      <div style={{textAlign:"center"}}>
+                        <button
+                          className="btn btn-gold btn-lg"
+                          disabled={targetGenLoading}
+                          onClick={generateTargets}>
+                          {targetGenLoading ? "✨ Building your target list…" : "✨ Build my target accounts →"}
+                        </button>
                       </div>
-                      <button
-                        className="btn btn-gold btn-lg"
-                        disabled={targetGenLoading}
-                        onClick={generateTargets}>
-                        {targetGenLoading ? "✨ Building your target list…" : "✨ Build my target accounts →"}
-                      </button>
                       {targetGenLoading && (
                         <div style={{fontSize:12,color:"var(--ink-2)",marginTop:10,fontStyle:"italic"}}>
                           Searching the web for ICP-matched companies… ~20-30 seconds
