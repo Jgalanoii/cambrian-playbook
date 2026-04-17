@@ -1,5 +1,5 @@
 # Cambrian Catalyst — RIVER Playbook Engine
-**Agent onboarding context. Last updated: 2026-04-16 (tag `v106-pipeline-quality`)**
+**Agent onboarding context. Last updated: 2026-04-17 (tag `v107-ux-phases`)**
 
 ---
 
@@ -21,7 +21,8 @@ all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route
 
 ## Tech stack
 - Frontend: React 19 + Vite 6
-- Styling: `src/App.css` (extracted in v106), Google Fonts (Lora + DM Sans) loaded via `@import` in App.css
+- Styling: `src/App.css` (~580 lines — includes design tokens, Phase 1-3 CSS, dark mode overrides, focus mode, skeleton shimmer, command palette, print rules), Google Fonts (Lora + DM Sans) loaded via `@import` in App.css
+- UX: Cmd-K command palette, keyboard shortcuts, dark mode toggle, in-call focus mode, stage transition animations, section collapse on Brief, company logos via Clearbit, responsive 1200px desktop width
 - Auth + DB: Supabase (anon key auth, `sessions` table with RLS)
 - AI: Anthropic Claude via serverless proxies (`/api/claude.js`, `/api/claude-stream.js`)
 - Deployment: Vercel (auto-deploy from `main`)
@@ -371,7 +372,8 @@ Run scenarios: `node scripts/pl.mjs --users=5000 --fallback=0.10`
 - `v103-obscure-seller-fix` — web_search Phase 1 + cache quality gate
 - `v104-security-hardening` — model/tool allow-list + origin check + security headers
 - `v105-ux-polish` — design tokens + stepper redesign + login on app shell
-- **`v106-pipeline-quality`** — RFP rewrite, Sonnet fallback, brief skeleton, target generation, proof pack, print/export, cost model, tier vocabulary purge, canonical fit labels
+- `v106-pipeline-quality` — RFP rewrite, Sonnet fallback, brief skeleton, target generation, proof pack, print/export, cost model, tier vocabulary purge, canonical fit labels
+- **`v107-ux-phases`** — UX Phases 1-3 (elevation, Cmd-K, dark mode, focus mode, transitions), company logos, desktop width 860→1200, exec hallucination fix (web_search on p2), fit hysteresis 50→55, target-gen filters, open-positions careers-first search
 
 ---
 
