@@ -224,9 +224,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg-0); color: var(-
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.25} }
 
 /* ── LAYOUT ──────────────────────────────────────────── */
-.page { max-width: 860px; margin: 0 auto; padding: 32px 24px 64px; width: 100%; }
+/* Desktop: use available width up to 1200px. Tablet (≤1024): 860px reading column.
+   Mobile (≤768): full-width with tighter padding. */
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 32px 64px; width: 100%; }
+@media (max-width: 1024px) { .page { max-width: 860px; padding: 28px 24px 56px; } }
+@media (max-width: 768px)  { .page { max-width: 100%; padding: 20px 16px 40px; } }
 .page-title { font-family: 'Lora', serif; font-size: 28px; font-weight: 600; margin-bottom: 6px; color: var(--ink-0); letter-spacing: -0.4px; line-height: 1.2; }
-.page-sub { font-size: 14px; color: var(--ink-1); line-height: 1.65; margin-bottom: 24px; max-width: 560px; }
+.page-sub { font-size: 14px; color: var(--ink-1); line-height: 1.65; margin-bottom: 24px; max-width: 680px; }
 .footer { text-align: center; padding: 20px 24px; font-size: 11px; color: var(--ink-3); border-top: 1px solid var(--line-0); margin-top: auto; background: var(--surface); }
 
 /* ── SESSION BAR ─────────────────────────────────────── */
@@ -327,14 +331,14 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .tbl tr:hover td { background: var(--bg-1); }
 
 /* ── STATS ───────────────────────────────────────────── */
-.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 10px; margin-bottom: 16px; }
 .stat-card { background: var(--surface); box-shadow: var(--sh-1); border: none; border-radius: var(--r-md); padding: 14px 12px; text-align: center; transition: box-shadow var(--t-med) var(--ease); }
 .stat-card:hover { box-shadow: var(--sh-2); }
 .stat-num { font-family: 'Lora', serif; font-size: 28px; color: var(--tan-0); margin-bottom: 2px; letter-spacing: -0.5px; }
 .stat-label { font-size: 11px; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.4px; }
 
 /* ── COHORT ──────────────────────────────────────────── */
-.cohort-chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.cohort-chart-wrap { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 12px; margin-bottom: 16px; }
 .pie-card { background: var(--surface); box-shadow: var(--sh-1); border: none; border-radius: var(--r-md); padding: 14px; transition: box-shadow var(--t-med) var(--ease); }
 .pie-title { font-family: 'Lora', serif; font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--ink-0); }
 .pie-wrap { display: flex; align-items: center; gap: 12px; }
@@ -386,7 +390,7 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .account-acv { font-size: 13px; font-weight: 700; color: var(--tan-0); }
 
 /* ── OUTCOMES ────────────────────────────────────────── */
-.outcome-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.outcome-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 8px; }
 .outcome-tile { background: var(--surface); box-shadow: var(--sh-1); border: 1.5px solid transparent; border-radius: var(--r-md); padding: 12px; cursor: pointer; transition: all var(--t-med) var(--ease); }
 .outcome-tile:hover { box-shadow: var(--sh-2); transform: translateY(-1px); border-color: var(--tan-0); }
 .outcome-tile.selected { background: var(--bg-1); box-shadow: var(--sh-2); border-color: var(--tan-0); }
@@ -429,7 +433,8 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 @keyframes pulse { 0%{opacity:1}50%{opacity:0.35}100%{opacity:1} }
 
 /* ── IN-CALL ─────────────────────────────────────────── */
-.incall-wrap { max-width: 940px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
+.incall-wrap { max-width: 1200px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
+@media (max-width: 1024px) { .incall-wrap { max-width: 940px; } }
 .incall-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
 .incall-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--ink-0); }
 .incall-meta { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
