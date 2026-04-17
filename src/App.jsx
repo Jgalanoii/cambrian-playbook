@@ -591,7 +591,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `Search for recent information about "${co}":\n`+
         `1. News from 2024-2025: headlines, M&A, leadership changes, funding\n`+
         `2. Ratings and sentiment: search Glassdoor, G2, Trustpilot, and any published NPS or CSAT data for "${co}"\n`+
-        `3. Open roles on their careers page\n`+
+        `3. Open roles: search "site:linkedin.com/jobs ${co}" OR "site:indeed.com ${co}" OR "${co} careers hiring 2025". Look for hiring PATTERNS (which departments, how many roles, what seniority) — the exact job listings matter less than the strategic signal they reveal.\n`+
         `4. Growth signals or buying indicators\n`+
         `Return ONLY raw JSON (start with {):\n`+
         `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
@@ -684,7 +684,14 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       return h?.headline && h.headline.length > 10 && !errorWords.some(w=>t.includes(w));
     });
     if (cleanHL.length) next.recentHeadlines = cleanHL;
-    if (r5.openRoles?.summary || r5.openRoles?.roles?.some(r=>r?.title)) next.openRoles = r5.openRoles;
+    // Accept openRoles only if there's USEFUL data — filter out apology
+    // summaries from web_search ("unable to retrieve", "search limit",
+    // "could not access"). Careers pages are often JS-gated and unsearchable.
+    const rolesUseful = r5.openRoles && (
+      r5.openRoles.roles?.some(r=>r?.title) ||
+      (r5.openRoles.summary && !/unable|could not|search limit|couldn't|not available|no results/i.test(r5.openRoles.summary))
+    );
+    if (rolesUseful) next.openRoles = r5.openRoles;
     if (r5.recentSignals?.some(s=>s)) next.recentSignals = r5.recentSignals;
     if (r5.growthSignals?.some(s=>s)) next.growthSignals = r5.growthSignals;
     const snapOk = r5.companySnapshot?.length > 50 && !errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
@@ -5034,7 +5041,12 @@ Return ONLY valid JSON:
                         </div>
                       )}
                       {(!brief.openRoles.roles||!brief.openRoles.roles.filter(r=>r?.title).length)&&(
-                        <div style={{fontSize:12,color:"#aaa",fontStyle:"italic"}}>No open roles found — click to regenerate or edit manually.</div>
+                        <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6}}>
+                          No hiring data found via search — careers pages are often JS-gated.
+                          {selectedAccount?.company_url && (
+                            <> Try <a href={`https://www.linkedin.com/company/${(selectedAccount.company_url||"").replace(/\.(com|org|io|ai|net).*$/,"")}/jobs/`} target="_blank" rel="noopener noreferrer" style={{color:"var(--navy)",fontWeight:600}}>LinkedIn Jobs</a> or <a href={`https://${selectedAccount.company_url}/careers`} target="_blank" rel="noopener noreferrer" style={{color:"var(--navy)",fontWeight:600}}>{selectedAccount.company_url}/careers</a> directly.</>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
