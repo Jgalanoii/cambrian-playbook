@@ -837,6 +837,21 @@ const LOADER_QUIPS = [
   "Preparing your strongest opening...",
   "Making sure you walk in ready...",
 ];
+// ── EMPTY STATE ─────────────────────────────────────────────────────────────
+// Unified pattern for every "nothing here yet" screen. Replace ad-hoc
+// dashed-border-emoji-text blocks with this for visual consistency.
+function EmptyState({ icon, title, sub, action, actionLabel, children }) {
+  return (
+    <div className="empty-state">
+      {icon && <div className="empty-state-icon">{icon}</div>}
+      {title && <div className="empty-state-title">{title}</div>}
+      {sub && <div className="empty-state-sub">{sub}</div>}
+      {action && <button className="btn btn-primary" onClick={action}>{actionLabel || "Get started"}</button>}
+      {children}
+    </div>
+  );
+}
+
 function BriefLoader({ company, status }) {
   const [quip, setQuip] = useState(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
   const [fade, setFade] = useState(true);
@@ -3407,11 +3422,7 @@ Return ONLY valid JSON:
             )}
 
             {!sellerICP&&!icpLoading&&(
-              <div style={{textAlign:"center",padding:"40px 0",color:"#aaa"}}>
-                <div style={{fontSize:32,marginBottom:12}}>🔍</div>
-                <div style={{fontSize:14,marginBottom:16}}>ICP not built yet</div>
-                <button className="btn btn-primary" onClick={()=>buildSellerICP(sellerUrl)}>Build ICP Now</button>
-              </div>
+              <EmptyState icon="🔍" title="ICP not built yet" sub="Build your Ideal Customer Profile to start seeing target-matched intelligence." action={()=>buildSellerICP(sellerUrl)} actionLabel="Build ICP Now"/>
             )}
 
             {icpTab==="rfp"&&sellerICP?.icp&&(()=>{
@@ -3436,11 +3447,7 @@ Return ONLY valid JSON:
                   </div>
                 )}
                 {!rfpData.loading && !rfpData.error && !hasData && (
-                  <div style={{textAlign:"center",padding:"40px 0",color:"#aaa"}}>
-                    <div style={{fontSize:32,marginBottom:8}}>📡</div>
-                    <div style={{fontSize:14,marginBottom:12}}>No RFP data loaded yet</div>
-                    <button className="btn btn-primary" onClick={()=>fetchRFPIntel({forceRefresh:true})}>Scan RFP Databases →</button>
-                  </div>
+                  <EmptyState icon="📡" title="No RFP data loaded yet" sub="Search public procurement databases for active RFPs and recent awards matching your ICP." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="Scan RFP Databases →"/>
                 )}
                 {hasData && (
                   <>
@@ -3889,9 +3896,7 @@ Return ONLY valid JSON:
                   </>
                 )}
                 {!sellerICP?.icp && !icpLoading && (
-                  <div style={{background:"var(--bg-1)",border:"1.5px dashed var(--line-2)",borderRadius:"var(--r-md)",padding:"14px 16px",textAlign:"center",fontSize:12,color:"var(--ink-2)",marginBottom:18}}>
-                    💡 Build your ICP first (Step 2 — ICP &amp; RFPs) to unlock <strong>Build my target accounts</strong> — we'll generate 20 ICP-matched companies for you.
-                  </div>
+                  <EmptyState icon="💡" title="Build your ICP first" sub="Complete Step 2 (ICP & RFPs) to unlock Build my target accounts — we'll generate 20 ICP-matched companies for you."/>
                 )}
               </>
             )}
@@ -4219,11 +4224,7 @@ Return ONLY valid JSON:
             </div>
 
             {!sa && (
-              <div style={{background:"var(--bg-1)",border:"1.5px dashed var(--line-2)",borderRadius:"var(--r-md)",padding:"28px 24px",textAlign:"center"}}>
-                <div style={{fontSize:28,marginBottom:10}}>👆</div>
-                <div style={{fontSize:14,fontWeight:600,color:"var(--ink-1)",marginBottom:4}}>Select an account to continue</div>
-                <div style={{fontSize:12,color:"var(--ink-3)"}}>Choose from the strip above to set outcomes and build your brief.</div>
-              </div>
+              <EmptyState icon="👆" title="Select an account to continue" sub="Choose from the strip above to set outcomes and build your brief."/>
             )}
 
             {sa && (<>
@@ -5270,12 +5271,7 @@ Return ONLY valid JSON:
             )}
 
             {!riverHypo&&!riverHypoLoading&&(
-              <div style={{background:"var(--bg-1)",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:24,textAlign:"center",color:"#aaa",fontSize:13}}>
-                Hypothesis not yet generated.
-                <button className="btn btn-gold" style={{marginLeft:12}} onClick={()=>buildRiverHypo(brief,selectedAccount)}>
-                  Build Hypothesis
-                </button>
-              </div>
+              <EmptyState icon="🧪" title="Hypothesis not yet generated" sub="Build your RIVER hypothesis to prepare talk tracks, challenger insights, and JOLT plan." action={()=>buildRiverHypo(brief,selectedAccount)} actionLabel="Build Hypothesis →"/>
             )}
 
             <div className="actions-row">
