@@ -3,6 +3,11 @@ import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
+import { ALL_NEGOTIATION_INJECTIONS, FISHER_URY_INJECTION, GRAHAM_INJECTION } from "./data/prompts/negotiationInjections.js";
+import { FIT_SCORING_RULES } from "./data/prompts/index.js";
+import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "./data/negotiationFrameworks.js";
+import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "./data/rfpSources.js";
+import { BUYING_SIGNALS } from "./data/prompts/briefGeneration.js";
 import "./App.css";
 
 
@@ -600,7 +605,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 3: Strategy + opening angle — needs seller context for "why you" (streamed)
+  // Inject Challenger teaching angle + Cialdini social proof for the opening
   const p3 = streamAI(baseFull+
+    `CHALLENGER: ${CHALLENGER_FRAMEWORK.teachingAngle}. ${CHALLENGER_FRAMEWORK.mobilizer.identify}\n`+
+    `CIALDINI: Name a similar company as social proof. Authority via specific data.\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
     `{"strategicTheme":"2-3 sentences on ${co} current strategic direction and priorities",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now for ${co} — the why-you-why-now",`+
@@ -1894,15 +1902,21 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       const companies = batch.map(m => `${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
       const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
       const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
+      // Inject research-backed heuristics from knowledge layer
+      const highFrictionCtx = FIT_SCORING_RULES.highFriction.industries.map(i=>`${i.name} (avg ${i.avgFit}%): ${i.reason}`).join("; ");
+      const highFitCtx = FIT_SCORING_RULES.highFit.industries.map(i=>`${i.name} (avg ${i.avgFit}%${i.examples?" e.g. "+i.examples:""})`).join("; ");
+      const stageCtx = FIT_SCORING_RULES.stageThresholds.map(s=>`${s.stage}: avg ${s.avgFit}% — ${s.note}`).join("; ");
+      const signalCtx = [...FIT_SCORING_RULES.signals.positive, ...FIT_SCORING_RULES.signals.negative].join("; ");
+
       const prompt =
         `You are a sales strategist scoring ICP fit. Use THREE dimensions:\n\n`+
         `━━━ DIMENSION 1: ICP ALIGNMENT (40% of score) ━━━\n`+
         `Does the target match the seller's ideal buyer profile?\n`+
-        `High-friction industries (score contribution 2-10): heavy manufacturing, aerospace/defense prime, telecom incumbents, energy utilities, mass-market retail >100K employees, top-5 US banks.\n`+
-        `Underserved high-fit segments (score contribution 24-32): large private insurance/finance, private professional services, regional/community banks, healthcare IT, CPG personal care.\n`+
-        `Ownership: VC-backed +2 · PE-backed = cost-driven buyer · Private +2 vs public.\n`+
-        `Size penalty: >200K employees + early-stage seller = -6.\n`+
-        `Funding signal: target raised <12 months = +3.\n\n`+
+        `HIGH-FRICTION INDUSTRIES (research-backed avg fit scores): ${highFrictionCtx}\n`+
+        `UNDERSERVED HIGH-FIT SEGMENTS: ${highFitCtx}\n`+
+        `SELLER STAGE THRESHOLDS: ${stageCtx}\n`+
+        `BUYING SIGNALS: ${signalCtx}\n`+
+        `Ownership: VC-backed +2 · PE-backed = cost-driven buyer · Private +2 vs public.\n\n`+
         `━━━ DIMENSION 2: CUSTOMER SIMILARITY (30% of score) ━━━\n`+
         (customerList.length
           ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
@@ -2071,6 +2085,14 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
     const competitors  = (icp.competitiveAlternatives || []).filter(Boolean);
     const differ       = (icp.uniqueDifferentiators || []).filter(Boolean);
 
+    // Look up NAICS/CPV codes from knowledge layer for more precise searches
+    const naicsCodes = Object.entries(NAICS_CATEGORY_MAP)
+      .filter(([cat]) => category.toLowerCase().includes(cat.toLowerCase().split("/")[0]))
+      .flatMap(([,codes]) => codes).slice(0, 4);
+    const cpvCodes = Object.entries(CPV_CATEGORY_MAP)
+      .filter(([cat]) => category.toLowerCase().includes(cat.toLowerCase().split("/")[0]))
+      .flatMap(([,codes]) => codes).slice(0, 4);
+
     const fixGov = r => ({ ...r, isGovernment: r.isGovernment === true || r.isGovernment === "true" });
 
     const buildPrompt = (kind) => {
@@ -2091,13 +2113,15 @@ Geographies:      ${geo.join(", ") || "North America"}
 Buyer personas:   ${buyers.join(", ") || "—"}
 Priority trigger: ${trigger || "—"}
 Exclusions:       ${disqual.slice(0,3).join(" · ") || "—"}
+${naicsCodes.length ? `NAICS codes (USA): ${naicsCodes.join(", ")}` : ""}
+${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
 
 ━━━ SEARCH STRATEGY (use 2-3 of these query patterns) ━━━
 ${isOpen ? `
-  - site:sam.gov "${category || industries[0] || "RFP"}" 2025
+  - site:sam.gov "${category || industries[0] || "RFP"}" 2025${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
   - "${industries[0] || "fintech"}" RFP 2025 "${buyers[0] || "CFO"}"
   - ${category || industries[0] || "software"} procurement Ariba OR Coupa 2025
-  - site:ted.europa.eu ${industries[0] || "software"} 2025
+  - site:ted.europa.eu ${industries[0] || "software"} 2025${cpvCodes.length ? ` CPV ${cpvCodes[0]}` : ""}
   - "${trigger.split(" ").slice(0,4).join(" ") || industries[0]}" RFP request for proposal
 ` : `
   - site:usaspending.gov ${category || industries[0]} contract 2024 OR 2025
@@ -2748,27 +2772,29 @@ ${isOpen
     // cite NAMED customers from the proof pack, not invent generic claims.
     const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
 
+    // Build negotiation framework context from imported knowledge layer
+    const joltCtx = JOLT_EFFECT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
+    const challengerCtx = `${CHALLENGER_FRAMEWORK.mobilizer.definition}. ${CHALLENGER_FRAMEWORK.mobilizer.identify}. Teaching: ${CHALLENGER_FRAMEWORK.teachingAngle}`;
+    const buyingSignalCtx = [...BUYING_SIGNALS.positive, ...BUYING_SIGNALS.negative].join("; ");
+
     const prompt =
       proofPack +
       "You are a senior sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
       "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting. Cite named customers from the proof pack above whenever you claim 'we've done this before.' Use unique differentiators from the proof pack to justify 'why us.'\n" +
       "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
-      "BUYER EXPERIENCE FRAMEWORK (Gartner 2023 — 1,700 buyers): Buyers spend only 17% of time with vendors. Every interaction must create value they can't get from online research. The rep who wins: (1) already knows their industry, (2) challenges their thinking without arrogance, (3) shows proof from similar companies, (4) makes the next step obvious and small, (5) asks about their world not their product.\n" +
-      "JOLT EFFECT (Dixon/McKenna): Indecision kills 40-60% of deals. FOMU > FOMO. Route: J=Judge indecision, O=One clear recommendation, L=Limit scope, T=Take risk off table (pilot/SLA/phased).\n" +
-      "VOSS: Calibrated How/What questions only. Tactical empathy — name emotion before agenda. Accusation Audit: name objections before they raise them.\n" +
-      "FISHER/URY: Surface interests not positions. When price comes up ask what is driving that number. Always have pilot/phased option ready.\n" +
-      "SUN TZU: Know competitive alternatives before call. Find underserved stakeholder not gatekeeper. Recommend smallest first step.\n" +
-      "CIALDINI: Social proof from exact industry. Authority via specific data. Real scarcity only — regulatory deadlines, budget cycles.\n" +
-      "CHALLENGER CUSTOMER (CEB/Gartner): Identify the MOBILIZER — not the Talker or Blocker. Only 13% of stakeholders are Mobilizers. They ask 'how do we make this happen?'. Teach an insight to the ORGANIZATION through the Mobilizer. The teaching angle must challenge a widely-held assumption about their industry.\n" +
-      "QUALIFICATION SIGNALS: referral/partner deals close 30%+ higher; funding <12 months = 18-month buying window; single-threaded prospect = 3x churn risk; SMB 30-45 day cycles, Mid-market 60-90, Enterprise 90-180; Ellis 40% must-have test is the critical qualifier.\n" +
+      "BUYER EXPERIENCE (Gartner): Buyers spend 17% of time with vendors. The rep who wins: already knows their industry, challenges their thinking, shows proof from similar companies, makes the next step obvious and small.\n" +
+      ALL_NEGOTIATION_INJECTIONS + "\n" +
+      "JOLT EFFECT: " + joltCtx + "\n" +
+      "CHALLENGER CUSTOMER: " + challengerCtx + "\n" +
+      "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
       "SEGMENT-SPECIFIC SELLING NOTES (apply whichever matches this account):\n" +
-      "- Private Insurance (State Farm/Allstate/Nationwide): relationship first, compliance confidence before features, reference check culture, no artificial urgency\n" +
-      "- Regional Banks (US Bank/PNC/Truist): regulatory fluency required (BSA/AML/OCC), pilot-friendly, IT+InfoSec are hidden veto players\n" +
-      "- Private Professional Services (Deloitte/EY/KPMG): they know selling — be precise, focus on making THEIR delivery better, partner-level buy-in needed\n" +
-      "- Large Private Tech (Bloomberg/SAS/Valve): technical depth expected, security posture upfront, fast decisions if champion is right level\n" +
-      "PE SELLER SMB DYNAMICS (3,366 scenarios): Vertical SaaS PE + matched SMB vertical = 95% fit. High-EBITDA PE → SMB new logos = 51% avg fit — recommend Route stage focuses on expansion of existing base. Healthcare practices and Insurance agencies are top PE SMB verticals. Wealth Mgmt/RIA (64.9% avg) is underserved by most PE sellers. MSP channel preferred over direct for high-EBITDA PE targeting <250-employee accounts.\n\n" +
+      "- Private Insurance: relationship first, compliance confidence before features, reference check culture\n" +
+      "- Regional Banks: regulatory fluency required (BSA/AML/OCC), pilot-friendly, IT+InfoSec are hidden veto players\n" +
+      "- Private Professional Services: they know selling — be precise, partner-level buy-in needed\n" +
+      "- Large Private Tech: technical depth expected, security posture upfront, fast decisions if champion is right level\n" +
+      "PE SELLER SMB DYNAMICS: Vertical SaaS PE + matched SMB vertical = 95% fit. Healthcare practices and Insurance agencies are top PE SMB verticals. MSP channel preferred for high-EBITDA PE targeting <250-employee accounts.\n\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
-      "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → recommend channel/partner motion or innovation arm; Series B/C → departmental landing; Series D+/PE/Public → full enterprise motion.\n" +
+      "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
       "SELLER (" + sellerUrl + ") CONTEXT:\n" + sellerCtx + "\n" +
       (productsCtx?"SELLER PRODUCTS/SERVICES: "+productsCtx+"\n":"") +
       "\nPROSPECT: " + co + " | Industry: " + (member.ind||"") + "\n" +
@@ -2805,11 +2831,23 @@ ${isOpen
         ],
       });
 
-    const result = await callAI(prompt);
+    // Stream hypothesis for progressive rendering — user sees talk tracks
+    // fill in as they arrive instead of a 10-15 second blank wait.
+    const result = await streamAI(prompt, (partial) => {
+      try {
+        // Try to parse partial JSON for progressive display
+        const last = partial.lastIndexOf('}');
+        if (last > 0) {
+          const candidate = partial.slice(0, last + 1);
+          const parsed = JSON.parse(candidate);
+          if (parsed.reality) setRiverHypo(normalizeRiverHypo(parsed));
+        }
+      } catch { /* partial JSON not parseable yet — wait for more */ }
+    }, 4000);
+
     if(result){
       setRiverHypo(normalizeRiverHypo(result));
     } else {
-      // callAI failed — set a placeholder so the page still renders
       setRiverHypo({
         reality:"Could not generate — click to edit manually.",
         impact:"",vision:"",entryPoints:"",route:"",
@@ -2830,24 +2868,20 @@ ${isOpen
     const snapshot = (briefData.companySnapshot||"").slice(0,300);
     const theme = (briefData.strategicTheme||"").slice(0,200);
 
+    // Use imported framework injections from knowledge layer
     const prompt =
       `You are a senior discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
+      ALL_NEGOTIATION_INJECTIONS + `\n`+
       `Mom Test (Fitzpatrick): ask about PAST BEHAVIOR and REAL PROBLEMS, never about your product or hypothetical futures.\n`+
-      `Voss: calibrated How/What questions only — never yes/no. Mirror and label.\n`+
-      `Fisher/Ury: surface interests not positions. "What's driving that?" not "Do you want X?"\n`+
-      `Cialdini: use social proof ("companies like yours...") naturally.\n`+
-      `Sun Tzu: ask about competitive landscape and who else they're talking to.\n`+
-      `Crucial Conversations: watch for safety signals; if they go quiet, ask "What's your read?"\n`+
-      `Blank customer development: validate the problem EXISTS and MATTERS before mentioning solutions.\n`+
       `Olsen PMF Pyramid: surface Target Customer fit → Underserved Need → Value Prop resonance.\n`+
       `Sean Ellis 40% Rule: include at least one must-have test ("If you had to go back to how you handled this 18 months ago, what would that mean?").\n`+
       `Listening: Heather Younger (listen for what's NOT said), Mark Goulston (make them feel heard), David Brooks (witness their reality), Celeste Headlee (no multitasking), Olivia Fox Cabane (presence + warmth).\n\n`+
 
       `═══ ARCHITECTURE TRACK FRAMEWORKS ═══\n`+
-      `Goal: capture enough technical and operational reality during the SALES call that a Solution Architect joining later starts at 70% context, not 0%. Reps without SA backgrounds can ask these — they're plain-language but they map to:\n`+
+      `Goal: capture enough technical and operational reality during the SALES call that a Solution Architect joining later starts at 70% context, not 0%.\n`+
       `Rajput (business → digital alignment): does the seller's solution map to a real business outcome they can commit to?\n`+
       `McSweeney (stakeholder alignment): who configures, who owns budget, who can veto on security/compliance?\n`+
       `Richards/Ford (architecture quality attributes): which of scalability, security, observability, maintainability matters most here?\n`+
@@ -2884,7 +2918,8 @@ ${isOpen
       `{"track":"architecture","q":"","lens":"","intent":""}`+
       `],"impact":[/* 2 sales + 2 architecture */],"vision":[/* same */],"entryPoints":[/* same */],"route":[/* same */]}`;
 
-    const result = await callAI(prompt);
+    // Stream discovery questions for progressive rendering
+    const result = await streamAI(prompt, () => {}, 3500);
     if(result) setDiscoveryQs(result);
   };
 
@@ -2913,6 +2948,7 @@ ${isOpen
     const prompt =
       proofPack +
       `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call. Your recommendations MUST cite specific differentiators from the proof pack above and name analogous customers from the seller's customer list when justifying why a solution will succeed.\n\n`+
+      GRAHAM_INJECTION + `\n`+
       `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
       `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
       `DEAL CONFIDENCE: ${confidence}%\n`+
@@ -2930,7 +2966,8 @@ ${isOpen
       `Apply PMF qualification signals from research data:\n`+
       `- Sean Ellis 40% Rule: would >40% of this team say "very disappointed" if the solution went away? Score overallPMFSignal accordingly\n`+
       `- Churn risk flags: single stakeholder champion, evaluation team >7 without named owner, no dedicated use case owner = flag in architectureGaps\n`+
-      `- Must-have test: if the problem they described would persist without a solution, that is Strong PMF; if it is a nice-to-have workflow improvement, that is Weak PMF\n\n`+
+      `- Must-have test: if the problem they described would persist without a solution, that is Strong PMF; if it is a nice-to-have workflow improvement, that is Weak PMF\n`+
+      `Apply Graham Margin of Safety: only confirm solutions where value delivered is 3-5x the price.\n\n`+
       `Return ONLY raw JSON, start with {:\n`+
       `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"adoptionProfile":"Innovator or Early Adopter or Early Majority or Late Majority",`+`"adoptionImplication":"1 sentence: what their adoption profile means for messaging, proof points, and sales approach",`+`"pmfAssessment":{"targetCustomerFit":"Strong/Partial/Weak — is this genuinely the ICP?","underservedNeedFit":"Strong/Partial/Weak — is the need real and unmet?","valuePropositionFit":"Strong/Partial/Weak — does our value prop land clearly?","overallPMFSignal":"Strong/Emerging/Weak — overall PMF signal from this discovery"},`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
       `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
@@ -2940,7 +2977,17 @@ ${isOpen
       `"successMetrics":["Specific measurable outcome 1 tied to their stated goals","Metric 2","Metric 3"],`+
       `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`;
 
-    const result = await callAI(prompt);
+    // Stream solution fit for progressive rendering
+    const result = await streamAI(prompt, (partial) => {
+      try {
+        const last = partial.lastIndexOf('}');
+        if (last > 0) {
+          const parsed = JSON.parse(partial.slice(0, last + 1));
+          if (parsed.dmiacStage) setSolutionFit(parsed);
+        }
+      } catch { /* partial JSON */ }
+    }, 4000);
+
     setSolutionFit(result||{
       confirmedSolutions:[],revisedSolutions:[],architectureGaps:[],
       implementationRoadmap:"Unable to generate — review discovery notes and try again.",
@@ -2958,37 +3005,50 @@ ${isOpen
       return`${s.label}: ${gates} | ${disc}`;
     }).join("\n");
 
-    const result=await callAI(
-      `Senior sales coach reviewing a RIVER framework discovery call.
+    // Inject seller proof pack so deal routing is grounded in real capabilities
+    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
 
-Company: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%
-Cohort: ${selectedCohort?.name} | Outcomes: ${selectedOutcomes.join(", ")}
-Solutions: ${(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ")||"Unknown"}
+    const postCallPrompt =
+      postCallProof +
+      `Senior sales coach reviewing a RIVER framework discovery call.\n`+
+      FISHER_URY_INJECTION + `\n`+
+      GRAHAM_INJECTION + `\n`+
+      `DEAL ROUTING SIGNALS:\n`+
+      `- ${BUYING_SIGNALS.positive.join("\n- ")}\n`+
+      `- ${BUYING_SIGNALS.negative.join("\n- ")}\n\n`+
 
-RIVER Capture:
-${riverSummary}
+      `Company: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%\n`+
+      `Cohort: ${selectedCohort?.name} | Outcomes: ${selectedOutcomes.join(", ")}\n`+
+      `Solutions: ${(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ")||"Unknown"}\n\n`+
 
-Notes: ${notes||"None"}
+      `RIVER Capture:\n${riverSummary}\n\n`+
+      `Notes: ${notes||"None"}\n\n`+
 
-Return ONLY valid JSON:
-{
-  "callSummary": "3-4 sentence narrative of what was learned",
-  "riverScorecard": {
-    "reality": "What was confirmed about current state",
-    "impact": "What cost or impact was surfaced",
-    "vision": "What success looks like in their words",
-    "entryPoints": "What was learned about buying process",
-    "route": "Recommended next move and why"
-  },
-  "dealRoute": "FAST_TRACK or NURTURE or DISQUALIFY",
-  "dealRouteReason": "One sentence explaining the routing decision",
-  "dealRisk": "Single biggest risk to this deal",
-  "nextSteps": ["Step 1 with owner and date", "Step 2", "Step 3"],
-  "crmNote": "CRM-ready note — 4-5 sentences covering state, pain, vision, process, next action",
-  "emailSubject": "Follow-up email subject line",
-  "emailBody": "Full follow-up email — professional, outcome-focused, references specific things discussed, clear CTA"
-}`
-    );
+      `ROUTING CRITERIA (apply Graham Margin of Safety + Fisher/Ury interests):\n`+
+      `FAST_TRACK: champion identified + budget confirmed + clear timeline + value is 3-5x price\n`+
+      `NURTURE: interest confirmed but missing champion, budget, or timeline\n`+
+      `DISQUALIFY: structural barrier, no real pain, or value case cannot be made\n\n`+
+
+      `Return ONLY valid JSON:\n`+
+      `{"callSummary":"3-4 sentence narrative of what was learned",`+
+      `"riverScorecard":{"reality":"What was confirmed about current state","impact":"What cost or impact was surfaced","vision":"What success looks like in their words","entryPoints":"What was learned about buying process","route":"Recommended next move and why"},`+
+      `"dealRoute":"FAST_TRACK or NURTURE or DISQUALIFY","dealRouteReason":"One sentence explaining the routing decision",`+
+      `"dealRisk":"Single biggest risk to this deal",`+
+      `"nextSteps":["Step 1 with owner and date","Step 2","Step 3"],`+
+      `"crmNote":"CRM-ready note — 4-5 sentences covering state, pain, vision, process, next action",`+
+      `"emailSubject":"Follow-up email subject line",`+
+      `"emailBody":"Full follow-up email — professional, outcome-focused, references specific things discussed, clear CTA"}`;
+
+    // Stream post-call so user sees deal route appear first
+    const result = await streamAI(postCallPrompt, (partial) => {
+      try {
+        const last = partial.lastIndexOf('}');
+        if (last > 0) {
+          const parsed = JSON.parse(partial.slice(0, last + 1));
+          if (parsed.callSummary) setPostCall(parsed);
+        }
+      } catch { /* partial JSON */ }
+    }, 3500);
 
     setPostCall(result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:"Following up — "+(selectedAccount?.company||""),emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"});
     setPostLoading(false);
@@ -6420,12 +6480,16 @@ Return ONLY valid JSON:
                     // Clean VTT/SRT timestamps if present
                     const cleaned = text.replace(/^\d{2}:\d{2}[:\.][\d,.]+\s*-->\s*\d{2}:\d{2}[:\.][\d,.]+\s*$/gm,"")
                       .replace(/^WEBVTT.*$/gm,"").replace(/^\d+$/gm,"").replace(/\n{3,}/g,"\n\n").trim();
+                    const transcriptProof = buildSellerProofPack({sellerICP,sellerDocs,products,sellerLinkedIn,sellerProofPoints});
                     const prompt =
+                      transcriptProof +
                       `You are a senior sales coach analyzing a recorded sales call transcript. Apply the RIVER framework (Reality, Impact, Vision, Entry Points, Route) to synthesize what happened.\n\n`+
+                      FISHER_URY_INJECTION + `\n`+
+                      GRAHAM_INJECTION + `\n`+
+                      `DEAL ROUTING: FAST_TRACK = champion + budget + timeline + 3-5x value. NURTURE = interest but missing elements. DISQUALIFY = structural barrier or no real pain.\n\n`+
                       `SELLER: ${sellerUrl} (${sellerICP?.marketCategory||""})\n`+
                       `PROSPECT: ${selectedAccount?.company||"Unknown"} (${selectedAccount?.ind||""})\n`+
-                      buildSellerProofPack({sellerICP,sellerDocs,products,sellerLinkedIn,sellerProofPoints}).slice(0,400)+`\n`+
-                      `TRANSCRIPT:\n${cleaned.slice(0,8000)}\n\n`+
+                      `TRANSCRIPT:\n${cleaned.slice(0,7000)}\n\n`+
                       `Return ONLY raw JSON:\n`+
                       `{"callSummary":"3-4 sentence narrative","riverScorecard":{"reality":"what was confirmed","impact":"cost/impact surfaced","vision":"success in their words","entryPoints":"buying process learned","route":"recommended next move"},"dealRoute":"FAST_TRACK or NURTURE or DISQUALIFY","dealRouteReason":"1 sentence","dealRisk":"single biggest risk","nextSteps":["Step 1","Step 2","Step 3"],"crmNote":"4-5 sentence CRM note","emailSubject":"follow-up subject","emailBody":"full follow-up email"}`;
                     const result = await callAI(prompt);
