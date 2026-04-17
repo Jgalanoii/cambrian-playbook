@@ -1437,6 +1437,12 @@ export default function App(){
   const[celebrateStep,setCelebrateStep]=useState(null); // milestone celebration pulse
   const[darkMode,setDarkMode]=useState(false); // Phase 3b dark mode toggle
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
+  const[collapsedBB,setCollapsedBB]=useState(new Set()); // Phase 2b: collapsed brief sections
+  const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
+  // Helpers for collapsible bb blocks. bbHdr() returns onClick + chevron props;
+  // bbWrap() returns the wrapper className for the body.
+  const bbIsOpen = (key) => !collapsedBB.has(key);
+  const bbChevron = (key) => <span className={`bb-collapse-icon ${bbIsOpen(key)?"open":""}`}>▾</span>;
   const[selectedAccount,setSelectedAccount]=useState(null);
   const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
   const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
@@ -4800,11 +4806,12 @@ Return ONLY valid JSON:
 
                 {/* Company Snapshot */}
                 <div className="bb">
-                  <div className="bb-hdr">
+                  <div className="bb-hdr" onClick={()=>toggleBB("overview")}>
                     <div className="bb-icon">◎</div>
                     <div><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to edit</div></div>
+                    {bbChevron("overview")}
                   </div>
-                  <div className="bb-body">
+                  <div className={`bb-body-wrap ${bbIsOpen("overview")?"":"collapsed"}`}><div className="bb-body">
                     <EF value={brief.companySnapshot||""} onChange={v=>patchBrief(b=>{b.companySnapshot=v;})}/>
 
                     {/* Key facts 2x2 grid */}
@@ -4878,7 +4885,7 @@ Return ONLY valid JSON:
                       <EF value={brief.fundingProfile||""} onChange={v=>patchBrief(b=>{b.fundingProfile=v;})} placeholder="Ownership structure, funding history..."/>
                     </div>
                   )}
-                </div>
+                </div></div>{/* /bb-body-wrap overview */}
 
                 {/* Key Executives */}
                 {(brief.keyExecutives||[]).filter(e=>e?.name).length>0&&(
@@ -5090,14 +5097,15 @@ Return ONLY valid JSON:
 
                 {/* Solution Mapping */}
                 <div className="bb">
-                  <div className="bb-hdr">
+                  <div className="bb-hdr" onClick={()=>toggleBB("solutions")}>
                     <div className="bb-icon">↑</div>
                     <div>
                       <div className="bb-title">Solution Mapping</div>
                       <div className="bb-sub">{brief.sellerSnapshot||`Your products mapped to ${selectedAccount?.company}`}</div>
                     </div>
+                    {bbChevron("solutions")}
                   </div>
-                  <div className="bb-body">
+                  <div className={`bb-body-wrap ${bbIsOpen("solutions")?"":"collapsed"}`}><div className="bb-body">
                     {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
                       <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid var(--tan-3)":"none"}}>
                         {/* Product header + imperative badge */}
@@ -5208,17 +5216,18 @@ Return ONLY valid JSON:
                         ))}
                       </div>
                     )}
-                  </div>
+                  </div></div>{/* /bb-body-wrap solutions */}
                 </div>
 
                 {/* Tech Stack & Integrations */}
                 {brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(
                   <div className="bb">
-                    <div className="bb-hdr">
+                    <div className="bb-hdr" onClick={()=>toggleBB("techstack")}>
                       <div className="bb-icon" style={{fontSize:13}}>🔌</div>
                       <div><div className="bb-title">Tech Stack & Integrations</div><div className="bb-sub">Known SaaS platforms, tools, and systems in use</div></div>
+                      {bbChevron("techstack")}
                     </div>
-                    <div className="bb-body">
+                    <div className={`bb-body-wrap ${bbIsOpen("techstack")?"":"collapsed"}`}><div className="bb-body">
                       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
                         {[
                           {key:"crm",label:"CRM"},
@@ -5243,17 +5252,18 @@ Return ONLY valid JSON:
                       </div>
                       <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Used for solution mapping and integration complexity assessment</div>
                     </div>
-                  </div>
+                  </div></div>
                 )}
 
                 {/* Workforce & Culture Intelligence */}
                 {(brief.workforceProfile?.knowledgeWorkerPct||brief.cultureProfile?.coreValues||brief.incumbentVendors?.hrSystem)&&(
                   <div className="bb">
-                    <div className="bb-hdr">
+                    <div className="bb-hdr" onClick={()=>toggleBB("culture")}>
                       <div className="bb-icon" style={{fontSize:12}}>🏛</div>
                       <div><div className="bb-title">Culture, Workforce & Incumbents</div><div className="bb-sub">How they operate · who they are · what you're up against</div></div>
+                      {bbChevron("culture")}
                     </div>
-                    <div className="bb-body">
+                    <div className={`bb-body-wrap ${bbIsOpen("culture")?"":"collapsed"}`}><div className="bb-body">
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                         {/* Workforce */}
                         {(brief.workforceProfile?.knowledgeWorkerPct||brief.workforceProfile?.remotePolicy)&&(
@@ -5300,7 +5310,7 @@ Return ONLY valid JSON:
                         )}
                       </div>
                     </div>
-                  </div>
+                  </div></div>
                 )}
 
                 {/* Opening Angle */}
