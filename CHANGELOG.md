@@ -6,6 +6,78 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ---
 
+## [v107-ux-phases] — 2026-04-17
+
+19 commits. Major UX overhaul (Phases 1-3 of the award-winning-SaaS plan),
+target-generation filters, data-accuracy fixes, and desktop layout.
+
+### UX Phase 1 — Foundation polish
+- **Elevation system**: flat 1px borders → box-shadow on cards, bb blocks,
+  stat cards, pie cards, cohort cards, account items, outcome tiles. Hover
+  lifts cards with translateY(-1px) + elevated shadow.
+- **Spacing scale**: `--sp-1` (4px) through `--sp-8` (64px) tokens.
+- **Universal transitions**: 30 interactive element selectors get smooth
+  spring-eased transitions on all state changes.
+- **Skeleton shimmer**: `.skeleton` class for consistent async loading.
+- **EmptyState component**: unified icon + Lora title + sub + CTA pattern
+  replacing 5 ad-hoc dashed-border blocks.
+
+### UX Phase 2 — Interaction layer
+- **Cmd-K command palette**: full-width overlay, fuzzy search across stages
+  (10), actions (save/print/regenerate), and accounts (up to 50).
+  Keyboard nav (↑↓↵ Esc), grouped results, backdrop blur, slide animation.
+- **Brief section collapse**: 4 heaviest sections (Company Overview,
+  Solution Mapping, Tech Stack, Culture/Workforce) toggle on header click.
+  CSS grid-template-rows animation, chevron rotation.
+- **Keyboard shortcuts**: ⌘K palette, ⌘S save, ⌘P print, ←→ stage nav,
+  1-9 stage jump. Only fires outside inputs.
+- **Milestone celebration**: stepper circle pulses green on step completion.
+
+### UX Phase 3 — Focus & immersion
+- **In-call focus mode** (auto on step 7): header shrinks to 44px dark bar,
+  stepper/session-bar/footer hidden, bg shifts calmer, type scales up
+  across questions/gates/pills. Auto-reverts on step change.
+- **Dark mode**: 🌙 toggle in header. Warm-dark palette (not cold blue-black).
+  Covers surfaces, ink, brand tan, semantic colors, shadows, inputs, tables,
+  command palette, tab switchers.
+- **Stage transitions**: keyed wrapper div triggers CSS slide-in (opacity 0→1,
+  translateX 16→0) on every step change.
+
+### Target generation enhancements
+- **Industry selector**: up to 3 industries from ICP defaults + 17 common
+  B2B verticals + free-text custom. Chip picker with add/remove.
+- **Headcount + revenue dropdowns**: 8 headcount bands (1-49 through 50K+),
+  8 revenue bands (Under $1M through $10B+). Default shows ICP value.
+  Both override ICP defaults in the generation prompt when selected.
+
+### Data accuracy fixes
+- **Executive name hallucination**: Brief p2 (executives) switched from
+  streamAI (training recall) to claudeFetch + web_search. Prompt: "ACCURACY
+  IS CRITICAL — if you cannot verify a name, return 'Verify at LinkedIn'."
+- **Fit-score boundary hysteresis**: Potential Fit threshold raised 50 → 55.
+  Accounts scoring 50-54 now consistently "Poor Fit" instead of flickering.
+- **Open positions**: search careers pages FIRST (LinkedIn Jobs, Indeed,
+  {company}/careers) with max_uses:3. Falls back to training knowledge if
+  inaccessible. Filters out apology summaries from web_search failures.
+
+### Layout & polish
+- **Desktop width**: .page 860px → 1200px; .incall-wrap 940px → 1200px;
+  Account Review 960px → 1200px. Responsive breakpoints: ≤1024px → 860px,
+  ≤768px → 100%. Auto-fit grids for stats/pies/outcomes.
+- **Session page**: 580px fixed → 720px in .page container.
+- **Company logos** via Clearbit: Brief header (seller → target), Account
+  Review hero, Hypothesis title. Fallback to initials on 404.
+- **Search icon**: ⌘K button uses magnifying glass SVG.
+- **Framework labels removed**: (Moore), (Revella), (Dunford), DMAIC
+  stripped from all user-facing UI. Kept in prompt strings.
+
+### Bug fixes
+- **RFP cache**: empty arrays `[]` no longer served as valid cache hits.
+- **RFP no-results**: "Couldn't parse" error → clean "No matching RFPs
+  found" EmptyState with explanation.
+
+---
+
 ## [v106-pipeline-quality] — 2026-04-16
 
 Major iteration spanning ~24 commits over two sessions. Focus: make the
