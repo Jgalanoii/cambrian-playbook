@@ -1435,6 +1435,8 @@ export default function App(){
   const[customOutcome,setCustomOutcome]=useState(""); // free-form outcome
   const[cmdOpen,setCmdOpen]=useState(false); // Cmd-K command palette
   const[celebrateStep,setCelebrateStep]=useState(null); // milestone celebration pulse
+  const[darkMode,setDarkMode]=useState(false); // Phase 3b dark mode toggle
+  const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
   const[selectedAccount,setSelectedAccount]=useState(null);
   const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
   const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
@@ -2346,8 +2348,6 @@ ${isOpen
   }, [step]);
 
   // ── MILESTONE CELEBRATION (Phase 2d) ──────────────────────────────────────
-  // When `step` changes and the PREVIOUS step's work is "done" (e.g. brief
-  // exists, hypothesis exists), flash a celebration pulse on the stepper.
   const prevStepRef = useRef(step);
   useEffect(() => {
     if (step > prevStepRef.current) {
@@ -2355,6 +2355,8 @@ ${isOpen
       setTimeout(() => setCelebrateStep(null), 700);
     }
     prevStepRef.current = step;
+    // Phase 3c: bump stage-key to trigger CSS transition animation
+    setStageKey(k => k + 1);
   }, [step]);
 
   // Build ICP whenever sellerUrl is set but ICP not yet loaded
@@ -3003,7 +3005,9 @@ Return ONLY valid JSON:
       {/* Command palette overlay */}
       {cmdOpen && <CommandPalette commands={cmdCommands} onClose={()=>setCmdOpen(false)}/>}
 
-      <div className="app">
+      <div className="app"
+        data-focus={step===7 ? "call" : undefined}
+        data-theme={darkMode ? "dark" : undefined}>
 
         {/* HEADER */}
         <header className="header">
@@ -3052,6 +3056,10 @@ Return ONLY valid JSON:
             <button onClick={()=>setCmdOpen(true)} title="Command palette (⌘K)"
               style={{padding:"4px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:11,color:"var(--ink-3)",fontFamily:"monospace",display:"flex",alignItems:"center",gap:4}}>
               ⌘K
+            </button>
+            <button onClick={()=>setDarkMode(d=>!d)} title={darkMode?"Light mode":"Dark mode"}
+              style={{padding:"4px 8px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:13,lineHeight:1}}>
+              {darkMode?"☀️":"🌙"}
             </button>
             {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
             {step>0&&(
@@ -3187,6 +3195,9 @@ Return ONLY valid JSON:
             </span>
           </div>
         )}
+
+        {/* Stage transition wrapper — key change triggers CSS enter animation */}
+        <div key={stageKey} className="stage-transition-enter stage-transition-enter-active">
 
         {/* ── STEP 0: SESSION SETUP ── */}
         {step===0&&(
@@ -5921,6 +5932,8 @@ Return ONLY valid JSON:
             onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}
           />
         )}
+
+        </div>{/* end stage-transition wrapper */}
 
       </div>
       <footer className="footer">
