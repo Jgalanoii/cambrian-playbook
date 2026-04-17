@@ -852,6 +852,85 @@ function EmptyState({ icon, title, sub, action, actionLabel, children }) {
   );
 }
 
+// ── COMMAND PALETTE ──────────────────────────────────────────────────────────
+// Cmd-K / Ctrl-K overlay. Follows Linear/Notion/VS Code pattern. Actions are
+// a declarative registry built at render time inside the main component (so
+// they have access to state + setters). This shell component handles the
+// UI shell + keyboard navigation; the parent passes `commands`.
+function CommandPalette({ commands = [], onClose }) {
+  const [query, setQuery] = React.useState("");
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const q = query.toLowerCase().trim();
+  const filtered = q
+    ? commands.filter(c => c.label.toLowerCase().includes(q) || (c.section||"").toLowerCase().includes(q))
+    : commands;
+
+  // Group by section
+  const grouped = {};
+  filtered.forEach(c => {
+    const s = c.section || "Actions";
+    if (!grouped[s]) grouped[s] = [];
+    grouped[s].push(c);
+  });
+  const flat = Object.values(grouped).flat();
+
+  const run = (cmd) => { if (cmd?.action) { cmd.action(); onClose(); } };
+
+  const onKey = (e) => {
+    if (e.key === "Escape") { onClose(); return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, flat.length - 1)); return; }
+    if (e.key === "ArrowUp")   { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)); return; }
+    if (e.key === "Enter") { e.preventDefault(); run(flat[activeIdx]); return; }
+  };
+
+  // Reset active index when query changes
+  React.useEffect(() => { setActiveIdx(0); }, [query]);
+
+  let itemIdx = -1;
+  return (
+    <div className="cmd-overlay" onClick={onClose} onKeyDown={onKey}>
+      <div className="cmd-box" onClick={e => e.stopPropagation()}>
+        <div className="cmd-input-wrap">
+          <div className="cmd-input-icon">⌘</div>
+          <input ref={inputRef} className="cmd-input" placeholder="Type a command or search…"
+            value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKey}/>
+          <div className="cmd-kbd">esc</div>
+        </div>
+        <div className="cmd-results">
+          {flat.length === 0 && <div className="cmd-empty">No results for "{query}"</div>}
+          {Object.entries(grouped).map(([section, items]) => (
+            <div key={section}>
+              <div className="cmd-section">{section}</div>
+              {items.map(cmd => {
+                itemIdx++;
+                const idx = itemIdx;
+                return (
+                  <div key={cmd.id || cmd.label} className={`cmd-item ${idx === activeIdx ? "active" : ""}`}
+                    onMouseEnter={() => setActiveIdx(idx)}
+                    onClick={() => run(cmd)}>
+                    <div className="cmd-item-icon">{cmd.icon || "→"}</div>
+                    <div className="cmd-item-label">{cmd.label}</div>
+                    {cmd.hint && <div className="cmd-item-hint">{cmd.hint}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="cmd-footer">
+          <span>↑↓ navigate</span>
+          <span>↵ select</span>
+          <span>esc close</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BriefLoader({ company, status }) {
   const [quip, setQuip] = useState(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
   const [fade, setFade] = useState(true);
@@ -1338,6 +1417,8 @@ export default function App(){
   const[selectedCohort,setSelectedCohort]=useState(null);
   const[selectedOutcomes,setSelectedOutcomes]=useState([]);
   const[customOutcome,setCustomOutcome]=useState(""); // free-form outcome
+  const[cmdOpen,setCmdOpen]=useState(false); // Cmd-K command palette
+  const[celebrateStep,setCelebrateStep]=useState(null); // milestone celebration pulse
   const[selectedAccount,setSelectedAccount]=useState(null);
   const[accountQueue,setAccountQueue]=useState([]); // multi-select queue, up to 5
   const[queueIdx,setQueueIdx]=useState(0); // which account in queue we're on
@@ -2195,6 +2276,56 @@ ${isOpen
 
   React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
 
+  // ── KEYBOARD SHORTCUTS (Phase 2c) ─────────────────────────────────────────
+  // Global keydown listener. Only fires when no input/textarea has focus
+  // (so typing in a field doesn't trigger navigation).
+  useEffect(() => {
+    const handler = (e) => {
+      // Cmd-K / Ctrl-K — open command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen(o => !o);
+        return;
+      }
+      // Don't intercept while typing in a field
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      // Cmd-S — save session
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        saveSession();
+        return;
+      }
+      // Cmd-P — print / PDF
+      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        doExport();
+        return;
+      }
+      // Arrow keys — stage navigation (only on main workflow pages)
+      if (e.key === "ArrowRight" && step < 9) { setStep(s => Math.min(s + 1, 9)); return; }
+      if (e.key === "ArrowLeft"  && step > 0) { setStep(s => Math.max(s - 1, 0)); return; }
+      // Number keys 1-9 — jump to stage (when not in an input)
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 9) { setStep(num); return; }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // ── MILESTONE CELEBRATION (Phase 2d) ──────────────────────────────────────
+  // When `step` changes and the PREVIOUS step's work is "done" (e.g. brief
+  // exists, hypothesis exists), flash a celebration pulse on the stepper.
+  const prevStepRef = useRef(step);
+  useEffect(() => {
+    if (step > prevStepRef.current) {
+      setCelebrateStep(prevStepRef.current);
+      setTimeout(() => setCelebrateStep(null), 700);
+    }
+    prevStepRef.current = step;
+  }, [step]);
+
   // Build ICP whenever sellerUrl is set but ICP not yet loaded
   useEffect(()=>{
     if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl);
@@ -2800,8 +2931,47 @@ Return ONLY valid JSON:
 
   if(!authed) return <PasswordGate onAuth={(u,tok)=>{setAuthed(true);setSbUser(u);setSbToken(tok);}}/>;
 
+  // ── COMMAND PALETTE REGISTRY ────────────────────────────────────────────────
+  // Declarative list of all actions. Built at render time so commands have
+  // access to current state. Searched via fuzzy match in CommandPalette.
+  const cmdCommands = [
+    // Navigation
+    { id:"nav-session", icon:"🏠", label:"Go to Session",       section:"Navigate", action:()=>setStep(0) },
+    { id:"nav-icp",     icon:"🎯", label:"Go to ICP & RFPs",   section:"Navigate", action:()=>setStep(1) },
+    { id:"nav-import",  icon:"📂", label:"Go to Import",       section:"Navigate", action:()=>setStep(2) },
+    { id:"nav-accounts",icon:"📊", label:"Go to Accounts",     section:"Navigate", action:()=>setStep(3) },
+    { id:"nav-review",  icon:"👁", label:"Go to Account Review",section:"Navigate", action:()=>setStep(4) },
+    { id:"nav-brief",   icon:"📋", label:"Go to Brief",        section:"Navigate", action:()=>setStep(5) },
+    { id:"nav-hypo",    icon:"🧪", label:"Go to Hypothesis",   section:"Navigate", action:()=>setStep(6) },
+    { id:"nav-incall",  icon:"🎙", label:"Go to In-Call",      section:"Navigate", action:()=>setStep(7) },
+    { id:"nav-post",    icon:"📬", label:"Go to Post-Call",    section:"Navigate", action:()=>setStep(8) },
+    { id:"nav-sa",      icon:"🏗", label:"Go to Solution Fit", section:"Navigate", action:()=>setStep(9) },
+    // Actions
+    { id:"act-save",    icon:"💾", label:"Save session",        section:"Actions", hint:"⌘S", action:saveSession },
+    { id:"act-print",   icon:"🖨", label:"Print / Save as PDF", section:"Actions", hint:"⌘P", action:doExport },
+    ...(sellerICP?.icp ? [
+      { id:"act-regen-icp", icon:"↻", label:"Regenerate ICP",   section:"Actions", action:()=>{if(confirm("Regenerate ICP?"))buildSellerICP(sellerUrl,{forceRefresh:true});} },
+      { id:"act-rfp",       icon:"📡", label:"Refresh RFP Intel",section:"Actions", action:()=>fetchRFPIntel({forceRefresh:true}) },
+    ] : []),
+    ...(brief ? [
+      { id:"act-regen-brief", icon:"↻", label:"Regenerate Brief", section:"Actions", action:()=>pickAccount(selectedAccount) },
+    ] : []),
+    // Accounts (searchable by company name)
+    ...(cohorts.flatMap(c => c.members.map(m => ({
+      id: "acct-" + m.company.replace(/\s+/g,"-"),
+      icon: "🏢",
+      label: m.company,
+      section: "Accounts",
+      hint: m.ind || "",
+      action: () => { setSelectedCohort(c); setSelectedAccount(m); setSelectedOutcomes([]); setStep(4); },
+    }))).slice(0, 50)), // cap at 50 to keep the palette performant
+  ];
+
   return(
     <>
+      {/* Command palette overlay */}
+      {cmdOpen && <CommandPalette commands={cmdCommands} onClose={()=>setCmdOpen(false)}/>}
+
       <div className="app">
 
         {/* HEADER */}
@@ -2840,7 +3010,7 @@ Return ONLY valid JSON:
                     onClick={()=>canNav&&setStep(i)}
                     aria-current={step===i?"step":undefined}
                     title={canNav?`Go to ${s}`:step===i?`Current step: ${s}`:"Complete earlier steps first"}>
-                    <div className="step-num">{step>i?"✓":i+1}</div>
+                    <div className={`step-num ${celebrateStep===i?"just-completed":""}`}>{step>i?"✓":i+1}</div>
                     <div className="step-label">{s}</div>
                   </button>
                 </React.Fragment>
@@ -2848,6 +3018,10 @@ Return ONLY valid JSON:
             })}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <button onClick={()=>setCmdOpen(true)} title="Command palette (⌘K)"
+              style={{padding:"4px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:11,color:"var(--ink-3)",fontFamily:"monospace",display:"flex",alignItems:"center",gap:4}}>
+              ⌘K
+            </button>
             {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
             {step>0&&(
               <button onClick={saveSession}
