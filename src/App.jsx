@@ -849,6 +849,42 @@ const LOADER_QUIPS = [
   "Preparing your strongest opening...",
   "Making sure you walk in ready...",
 ];
+// ── COMPANY LOGO ────────────────────────────────────────────────────────────
+// Fetches logo via Clearbit's free API (no key needed). Falls back to a
+// colored initials circle if the domain has no logo or the request fails.
+function CompanyLogo({ domain, name, size = 40, style = {} }) {
+  const [failed, setFailed] = React.useState(false);
+  const cleanDomain = (domain || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
+  const initials = (name || cleanDomain || "?").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
+
+  if (!cleanDomain || failed) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: "50%", background: "var(--ink-0)",
+        color: "var(--tan-0)", fontFamily: "Lora,serif", fontWeight: 700,
+        fontSize: size * 0.38, display: "flex", alignItems: "center",
+        justifyContent: "center", flexShrink: 0, ...style,
+      }}>
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={`https://logo.clearbit.com/${cleanDomain}`}
+      alt={`${name || cleanDomain} logo`}
+      width={size} height={size}
+      onError={() => setFailed(true)}
+      style={{
+        borderRadius: size > 32 ? "var(--r-md)" : "var(--r-sm)",
+        objectFit: "contain", background: "#fff",
+        border: "1px solid var(--line-1)", flexShrink: 0, ...style,
+      }}
+    />
+  );
+}
+
 // ── EMPTY STATE ─────────────────────────────────────────────────────────────
 // Unified pattern for every "nothing here yet" screen. Replace ad-hoc
 // dashed-border-emoji-text blocks with this for visual consistency.
@@ -4550,7 +4586,7 @@ Return ONLY valid JSON:
             {sa && (<>
               {/* ── Account hero ── */}
               <div className="account-hero">
-                <div className="account-hero-av">{sa.company.slice(0,2).toUpperCase()}</div>
+                <CompanyLogo domain={sa.company_url} name={sa.company} size={48}/>
                 <div className="account-hero-body">
                   <div className="account-hero-name">{sa.company}</div>
                   <div className="account-hero-meta">
@@ -4720,7 +4756,18 @@ Return ONLY valid JSON:
         {/* ── STEP 4: RIVER BRIEF ── */}
         {step===5&&(
           <div className="page">
-            <div className="page-title">RIVER Brief{selectedAccount?` — ${selectedAccount.company}`:""}</div>
+            {/* Brief header with logos */}
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:6}}>
+              <CompanyLogo domain={sellerUrl} name={sellerICP?.sellerName} size={44}/>
+              <div style={{fontSize:18,color:"var(--ink-3)",fontWeight:300}}>→</div>
+              <CompanyLogo domain={selectedAccount?.company_url} name={selectedAccount?.company} size={44}/>
+              <div style={{flex:1}}>
+                <div className="page-title" style={{margin:0}}>RIVER Brief</div>
+                <div style={{fontSize:13,color:"var(--ink-1)",marginTop:2}}>
+                  <strong>{sellerICP?.sellerName||sellerUrl}</strong> selling to <strong>{selectedAccount?.company}</strong>
+                </div>
+              </div>
+            </div>
             <div className="page-sub">
               {briefLoading?"Hang tight — live research in progress.":"All fields are editable — click any text to refine before your call."}
             </div>
@@ -5435,7 +5482,10 @@ Return ONLY valid JSON:
         {/* ── STEP 5: RIVER HYPOTHESIS ── */}
         {step===6&&(
           <ErrorBoundary><div className="page">
-            <div className="page-title">RIVER Hypothesis — {selectedAccount?.company||"Account"}</div>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
+              <CompanyLogo domain={selectedAccount?.company_url} name={selectedAccount?.company} size={36}/>
+              <div className="page-title" style={{margin:0}}>RIVER Hypothesis — {selectedAccount?.company||"Account"}</div>
+            </div>
             <div className="page-sub">
               {riverHypoLoading
                 ? "Building your hypothesis — usually ready before you finish reading the brief..."
