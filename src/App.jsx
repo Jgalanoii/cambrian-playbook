@@ -534,7 +534,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
   // Base context injected into every prompt
   const base =
-    `B2B sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
+    `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
     `${universalCtx}\n`+
@@ -1782,7 +1782,7 @@ export default function App(){
     setTargetGenNote("");
 
     const icp = sellerICP.icp;
-    const prompt = `You are a B2B target-account analyst. Use web_search to identify 20 REAL, well-known companies that closely match the seller's Ideal Customer Profile below. These accounts will be served to a sales rep as "high-fit candidates worth pursuing."
+    const prompt = `You are a target-account analyst. Use web_search to identify 20 REAL, well-known organizations that closely match the seller's Ideal Customer Profile below. These accounts will be served to a sales rep as "high-fit candidates worth pursuing."
 
 ═══ SELLER PROFILE ═══
 URL: ${sellerUrl}
@@ -1901,7 +1901,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
       const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
       const prompt =
-        `You are a B2B sales strategist scoring ICP fit. Use THREE dimensions:\n\n`+
+        `You are a sales strategist scoring ICP fit. Use THREE dimensions:\n\n`+
         `━━━ DIMENSION 1: ICP ALIGNMENT (40% of score) ━━━\n`+
         `Does the target match the seller's ideal buyer profile?\n`+
         `High-friction industries (score contribution 2-10): heavy manufacturing, aerospace/defense prime, telecom incumbents, energy utilities, mass-market retail >100K employees, top-5 US banks.\n`+
@@ -2081,7 +2081,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
     const buildPrompt = (kind) => {
       const isOpen = kind === "open";
-      return `You are a procurement intelligence analyst helping a B2B seller find relevant RFPs. Use web_search with SPECIFIC queries. ${isOpen ? "Focus on ACTIVE (open) opportunities posted in the last 90 days." : "Focus on AWARDED (closed) contracts from the last 18 months that reveal incumbent vendors."}
+      return `You are a procurement intelligence analyst helping a seller find relevant RFPs. Use web_search with SPECIFIC queries. ${isOpen ? "Focus on ACTIVE (open) opportunities posted in the last 90 days." : "Focus on AWARDED (closed) contracts from the last 18 months that reveal incumbent vendors."}
 
 ━━━ SELLER PROFILE ━━━
 URL: ${sellerUrl}
@@ -2270,7 +2270,7 @@ ${isOpen
 
     // Phase 1 — research (training-knowledge recall, no web_search tool yet)
     const researchPrompt =
-      `You are researching the B2B company at https://${url} to inform an Ideal Customer Profile build.\n`+
+      `You are researching the company at https://${url} to inform an Ideal Customer Profile build. The seller may serve B2B, B2C, B2B2C, B2G, or other markets — adapt your research to whatever you discover about their actual audience.\n`+
       `Use the web_search tool to find the company's actual website, press mentions, LinkedIn, and customer logos.\n`+
       `Search queries to try:\n`+
       `1. "${url}" products OR solutions — what they sell and to whom\n`+
@@ -2308,7 +2308,7 @@ ${isOpen
     // MUST pick one of the listed values verbatim — no free-form ranges.
     // This is what kills "500-10K vs 1K-50K" drift between runs.
     const icpPrompt =
-      `You are a senior B2B ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}.\n`+
+      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid. The framework works for any sales motion.\n`+
       (researchCtx?`RESEARCH:\n${researchCtx.slice(0,800)}\n\n`:"")+
       `Seller stage: ${sellerStage||"unknown"}. Be specific and confident — no placeholders.\n\n`+
       `CRITICAL — CONSISTENCY RULES:\n`+
@@ -2749,7 +2749,7 @@ ${isOpen
 
     const prompt =
       proofPack +
-      "You are a senior B2B sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
+      "You are a senior sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
       "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting. Cite named customers from the proof pack above whenever you claim 'we've done this before.' Use unique differentiators from the proof pack to justify 'why us.'\n" +
       "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
       "BUYER EXPERIENCE FRAMEWORK (Gartner 2023 — 1,700 buyers): Buyers spend only 17% of time with vendors. Every interaction must create value they can't get from online research. The rep who wins: (1) already knows their industry, (2) challenges their thinking without arrogance, (3) shows proof from similar companies, (4) makes the next step obvious and small, (5) asks about their world not their product.\n" +
@@ -2830,7 +2830,7 @@ ${isOpen
     const theme = (briefData.strategicTheme||"").slice(0,200);
 
     const prompt =
-      `You are a senior B2B discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
+      `You are a senior discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
@@ -3177,7 +3177,7 @@ Return ONLY valid JSON:
     execCacheRef.current[co] = "loading";
     (async () => {
       try {
-        const base = `B2B sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\n`;
+        const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\n`;
         const d = await claudeFetch({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 1800,
@@ -3232,7 +3232,7 @@ Return ONLY valid JSON:
     };
 
     const ctx = [
-      `You are Milton — a senior B2B sales coach embedded in the Cambrian Catalyst RIVER playbook tool. Your name is Milton (yes, like the stapler guy — you're self-aware about it and occasionally lean into it). You're sharp, experienced, and you've been in the trenches. You have a dry, knowing sense of humor — the kind that keeps reps loose without being unprofessional.`,
+      `You are Milton — a senior sales coach embedded in the Cambrian Catalyst RIVER playbook tool. Your name is Milton (yes, like the stapler guy — you're self-aware about it and occasionally lean into it). You're sharp, experienced, and you've been in the trenches. You have a dry, knowing sense of humor — the kind that keeps reps loose without being unprofessional.`,
       `\nROLE & RULES:`,
       `- You are the rep's thinking partner. Guide them step-by-step through the sales process.`,
       `- NEVER reveal internal methodology names, framework sources, or academic citations. Do not say "according to Voss" or "using the JOLT framework" or "per Cialdini." Just give the advice naturally as if it's your own expertise.`,
@@ -4493,7 +4493,7 @@ Return ONLY valid JSON:
 
                       {/* Industry selector — chips + free-text input */}
                       {(()=>{
-                        // Seed suggestions from ICP industries + common B2B verticals
+                        // Seed suggestions from ICP industries + common verticals
                         const icpInd = (sellerICP.icp.industries||[]).filter(Boolean);
                         const commonInd = ["Banking","Insurance","Healthcare","Retail & E-commerce","Technology / SaaS","Fintech","Consumer Goods","Hospitality & Travel","Manufacturing","Professional Services","Education","Energy & Utilities","Transportation & Logistics","Media & Entertainment","Real Estate","Telecom","Government"];
                         const suggestions = [...new Set([...icpInd, ...commonInd])].filter(s => !targetIndustries.includes(s));
