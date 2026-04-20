@@ -2628,16 +2628,15 @@ ${isOpen
       `{"companyName":"","tagline":"","products":["product 1","product 2"],"targetCustomers":"who they sell to in plain language","knownCustomers":["logo 1","logo 2","logo 3"],"industries":["vertical 1","vertical 2","vertical 3"],"companySize":"typical customer size","pricingHint":"any pricing signals found","useCases":["use case 1","use case 2"],"competitors":["competitor 1","competitor 2"]}`;
 
     // Phase 1 uses web_search — critical for obscure sellers Haiku wouldn't
-    // know from training data (tested: Tillo.com, Cambrian, Savvi all failed
-    // without live search). No assistant-prefill because tool-use responses
-    // can't start with a forced "{" token.
+    // know from training data. 2 searches: one for products/customers, one
+    // for competitors/industry context. More research → more stable ICP.
     let researchCtx = "";
     try{
       const d1 = await claudeFetch({
         model:activeModel(),
         max_tokens:2000,
         temperature:0,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:researchPrompt}],
       });
       if(!d1.error){
@@ -2652,47 +2651,52 @@ ${isOpen
     }catch(e){ console.warn("ICP research failed:",e.message); }
 
     // Phase 2 — build full ICP.
-    // Numeric/categorical fields are ANCHORED to fixed enums below. The model
-    // MUST pick one of the listed values verbatim — no free-form ranges.
-    // This is what kills "500-10K vs 1K-50K" drift between runs.
+    // Every categorical field is ANCHORED to a fixed enum. Free-text fields
+    // have explicit format constraints. Industries use a canonical taxonomy
+    // so the same seller always maps to the same verticals regardless of
+    // web_search variation. This is the backbone of all downstream analysis.
     const icpPrompt =
-      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid. The framework works for any sales motion.\n`+
+      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n`+
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
-      (researchCtx?`RESEARCH:\n${researchCtx.slice(0,800)}\n\n`:"")+
+      (researchCtx?`RESEARCH (use these facts as ground truth):\n${researchCtx.slice(0,1500)}\n\n`:"")+
       getVerticalInjection({ marketCategory: researchCtx, sellerDescription: url }) +
-      `Seller stage: ${sellerStage||"unknown"}. Be specific and confident — no placeholders.\n\n`+
-      `CRITICAL — CONSISTENCY RULES:\n`+
-      `- For fields marked "PICK ONE" below, return ONLY the chosen value verbatim. No extra words, no custom ranges, no parentheticals.\n`+
-      `- Be deterministic. If a buyer fits two buckets, pick the one matching the MEDIAN customer, not the widest range.\n`+
-      `- ACCURACY: Only state facts grounded in the research above or verifiable training knowledge. Do NOT invent customer names, revenue figures, or product names for the seller. If unknown, leave the field as an empty string.\n\n`+
+      `Seller stage: ${sellerStage||"unknown"}.\n\n`+
+      `CRITICAL — CONSISTENCY & ACCURACY RULES:\n`+
+      `- For "PICK ONE" fields: return ONLY the exact value from the list. No extra words, no custom ranges, no parentheticals.\n`+
+      `- For "PICK FROM" fields: choose from the canonical list provided. Do NOT invent your own labels.\n`+
+      `- If a buyer fits two buckets, pick the one matching the MEDIAN customer.\n`+
+      `- CUSTOMER NAMES: Only include customers you found in the RESEARCH above or are certain from training knowledge. Do NOT guess or invent customer names — a wrong name destroys credibility. 3-5 verified names, or fewer if you can't verify more.\n`+
+      `- COMPETITOR NAMES: Only include competitors you can verify. Include "Status quo / do nothing" as the first alternative.\n`+
+      `- DIFFERENTIATORS: Must be specific to THIS seller, not generic category claims. "AI-powered" is generic. "Only platform with native Visa/Mastercard issuing" is specific.\n`+
+      `- ALL facts must be grounded in the research above or verifiable training knowledge. Empty string if unknown.\n\n`+
       `Return ONLY raw JSON starting with {:\n`+
       `{"sellerName":"",`+
-      `"sellerDescription":"2 sentences on what they sell",`+
-      `"marketCategory":"specific category in 2-5 words",`+
+      `"sellerDescription":"2 sentences: what they sell and who they sell it to",`+
+      `"marketCategory":"specific category in 2-5 words (e.g. 'Employee Rewards & Recognition' not 'SaaS')",`+
       `"icp":{`+
-      `"industries":["Primary","Second","Third"],`+
+      `"industries":["PICK 2-4 FROM: Banking | Insurance | Healthcare | Retail & E-commerce | Technology / SaaS | Fintech | Consumer Goods | Hospitality & Travel | Manufacturing | Professional Services | Education | Energy & Utilities | Transportation & Logistics | Media & Entertainment | Real Estate | Telecom | Government | Pharmaceuticals | Automotive | Agriculture | Nonprofit | Construction"],`+
       `"companySize":"PICK ONE: 1-49 employees | 50-499 employees | 500-4,999 employees | 5,000-49,999 employees | 50,000+ employees",`+
       `"revenueRange":"PICK ONE: <$10M | $10M-$100M | $100M-$1B | $1B-$10B | $10B+",`+
       `"ownershipTypes":["PICK 1-2 FROM: VC-backed private | PE-backed private | Public | Privately-held (family/founder) | Bootstrapped"],`+
-      `"geographies":["Primary region: North America | EMEA | APAC | LATAM | Global"],`+
+      `"geographies":["PICK 1-2 FROM: North America | EMEA | APAC | LATAM | Global"],`+
       `"adoptionProfile":"PICK ONE: Innovator | Early Adopter | Early Majority | Late Majority",`+
-      `"buyerPersonas":["Economic buyer role","Champion role","Technical evaluator role"],`+
-      `"priorityInitiative":"what triggers them to act NOW in 1-2 sentences",`+
-      `"successFactors":"what winning looks like in 1-2 sentences",`+
-      `"perceivedBarriers":"top objections in 1-2 sentences",`+
-      `"decisionCriteria":"top 2-3 evaluation factors",`+
-      `"buyerJourney":"awareness to decision in 1 sentence",`+
-      `"customerJobs":["Functional job","Emotional job","Social job"],`+
-      `"topPains":["Pain 1","Pain 2","Pain 3"],`+
-      `"topGains":["Gain 1","Gain 2","Gain 3"],`+
-      `"competitiveAlternatives":["Status quo","Competitor","Build in-house"],`+
-      `"uniqueDifferentiators":["Differentiator 1","Differentiator 2"],`+
-      `"disqualifiers":["HARD disqualifier 1 — a structural reason to walk away (e.g. 'No budget authority below C-suite')","HARD disqualifier 2 — not a preference, a deal-breaker"],`+
-      `"techSignals":["Signal 1","Signal 2"],`+
-      `"tractionChannels":["Channel 1","Channel 2","Channel 3"],`+
+      `"buyerPersonas":["PICK 2-3 titles FROM: CEO | CFO | CTO | CIO | CISO | CHRO | CMO | COO | VP Sales | VP Marketing | VP Operations | VP HR | VP Finance | VP Engineering | VP Product | Director of IT | Director of Procurement | Director of Customer Success | Head of Digital | Head of Innovation — or a specific title if none fit"],`+
+      `"priorityInitiative":"the specific business trigger that makes a company buy THIS product NOW — not generic pain. 1-2 sentences.",`+
+      `"successFactors":"what a successful deployment looks like for their buyer — measurable outcomes. 1-2 sentences.",`+
+      `"perceivedBarriers":"the top 2-3 objections a seller hears in the first meeting. Be specific to this product category.",`+
+      `"decisionCriteria":"the top 2-3 factors buyers evaluate (e.g. 'integration with existing HRIS', 'time to first value under 30 days')",`+
+      `"buyerJourney":"awareness → consideration → decision flow in 1 sentence specific to this category",`+
+      `"customerJobs":["Functional job: the task they hire this product to do","Emotional job: how they want to feel","Social job: how they want to be perceived"],`+
+      `"topPains":["Specific pain 1 — cite what triggers it","Specific pain 2","Specific pain 3"],`+
+      `"topGains":["Measurable gain 1 — quantify if possible","Gain 2","Gain 3"],`+
+      `"competitiveAlternatives":["Status quo / do nothing","Named competitor 1 — verified","Named competitor 2 — verified","Build in-house (if applicable)"],`+
+      `"uniqueDifferentiators":["Differentiator 1 — specific to THIS seller, not the category","Differentiator 2 — something a competitor cannot easily replicate"],`+
+      `"disqualifiers":["HARD disqualifier 1 — structural deal-breaker (e.g. 'Company has fewer than 100 employees')","HARD disqualifier 2 — not a preference, a reason to walk away"],`+
+      `"techSignals":["Tech signal 1 that indicates readiness (e.g. 'Uses Workday = likely buyer')","Signal 2"],`+
+      `"tractionChannels":["Primary GTM channel","Secondary","Tertiary"],`+
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
       `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
-      `"customerExamples":["Customer 1","Customer 2","Customer 3"]}}`;
+      `"customerExamples":["VERIFIED customer 1 — from research or certain training knowledge","Customer 2","Customer 3"]}}`;
 
     try{
       const d2 = await claudeFetch({
@@ -2721,13 +2725,12 @@ ${isOpen
           const parsed = JSON.parse(m[0]);
           if(parsed.sellerName||parsed.icp){
             setSellerICP(parsed);
-            // Only cache if the ICP is usable. "Unknown" / "Unable to determine"
-            // means web_search + training data both failed — don't persist that
-            // failure forever; let the next session retry. Also catches the
-            // case where model echoes the "PICK ONE: ..." instruction verbatim.
-            const badPattern = /unknown|unable to determine|insufficient data|n\/a|PICK ONE/i;
+            // Only cache if the ICP is usable. Catches: model echoed "PICK ONE"
+            // instructions verbatim, returned "unknown", or web_search failed.
+            const badPattern = /unknown|unable to determine|insufficient data|n\/a|PICK ONE|PICK FROM|PICK 1-2|PICK 2-3|PICK 2-4/i;
             const core = [parsed.marketCategory, parsed.icp?.companySize, parsed.icp?.revenueRange, parsed.icp?.dealSize];
-            const usable = core.every(v => typeof v === "string" && v.length > 0 && !badPattern.test(v));
+            const hasIndustries = parsed.icp?.industries?.length > 0 && !badPattern.test(parsed.icp.industries[0]);
+            const usable = hasIndustries && core.every(v => typeof v === "string" && v.length > 0 && !badPattern.test(v));
             if(usable){
               try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
             } else {
