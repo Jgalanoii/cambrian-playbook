@@ -254,6 +254,19 @@ function safeParseJSON(text){
 }
 
 
+// ── CITATION STRIPPER — web_search returns <cite index="...">text</cite> tags ─
+// Strip them globally from any AI response text before it enters state.
+function stripCitations(text) {
+  if (typeof text === "string") return text.replace(/<\/?cite[^>]*>/g, "");
+  if (Array.isArray(text)) return text.map(stripCitations);
+  if (text && typeof text === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(text)) out[k] = stripCitations(v);
+    return out;
+  }
+  return text;
+}
+
 // ── AUTH TOKEN — module-level so all AI helpers can include it ─────────────
 let _authToken = "";
 function setAuthToken(token) { _authToken = token || ""; }
@@ -326,7 +339,7 @@ async function claudeFetch(body, { retries = 3 } = {}) {
         headers: authHeaders(),
         body: JSON.stringify(body),
       });
-      const d = await r.json();
+      const d = stripCitations(await r.json());
       if (d?.error) {
         const t = d.error.type;
         const isOverload = t === "overloaded_error" || r.status === 529;
@@ -391,15 +404,15 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
         const event = JSON.parse(data);
         if (event.type === 'content_block_delta' && event.delta?.text) {
           fullText += event.delta.text;
-          onChunk(fullText);
+          onChunk(fullText.replace(/<\/?cite[^>]*>/g, ""));
         }
       } catch {}
     }
   }
   try {
-    const cleaned = fullText.trim();
+    const cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").trim();
     const lastBrace = cleaned.lastIndexOf('}');
-    return JSON.parse(lastBrace > 0 ? cleaned.slice(0, lastBrace+1) : cleaned);
+    return stripCitations(JSON.parse(lastBrace > 0 ? cleaned.slice(0, lastBrace+1) : cleaned));
   } catch { return null; }
 }
 
@@ -439,7 +452,7 @@ async function callAI(prompt){
         console.error("callAI error:",d.error);
         return null;
       }
-      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/<\/?cite[^>]*>/g,"").trim();
       if(!raw) return null;
       // If model already included the opening {, don't double up
       const text = raw.startsWith("{") ? raw : "{" + raw;
