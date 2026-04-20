@@ -3097,22 +3097,37 @@ ${isOpen
                   const co = member.company;
                   const snapshot = (current.companySnapshot || "").slice(0, 300);
                   const execs = (current.keyExecutives || []).map(e => `${e.name} (${e.title})`).join(", ");
+                  const contacts = (current.keyContacts || []).filter(c => c?.name).map(c => `${c.name} (${c.title})`).join(", ");
+                  const sellerName = sbUser?.user_metadata?.full_name || sbUser?.email?.split("@")[0] || liSlug;
+                  const stage = sellerStage || "unknown stage";
                   const result = await streamAI(
-                    `You are analyzing potential relationship paths between a sales rep and a target company.\n\n` +
-                    `SELLER'S LINKEDIN: linkedin.com/in/${liSlug}\n` +
-                    `TARGET: ${co}\n` +
-                    `TARGET SNAPSHOT: ${snapshot}\n` +
-                    `TARGET EXECUTIVES: ${execs || "Unknown"}\n\n` +
-                    `Search your training knowledge for OVERLAP between the seller (${liSlug}) and ${co}:\n` +
-                    `- Shared former employers (seller worked at a company that ${co} partners with or acquires from)\n` +
-                    `- Same university or MBA program as any ${co} executive\n` +
-                    `- Same industry background or certifications\n` +
-                    `- Mutual connections' companies (if the seller's past colleagues now work at ${co})\n` +
-                    `- Geographic proximity or shared community involvement\n\n` +
-                    `Be specific. Name companies, schools, and people where you can. If no meaningful overlap exists, say so honestly.\n\n` +
+                    `You are a sales coach analyzing warm-path opportunities between a specific sales rep and a target company.\n\n` +
+                    `THE SELLER (the person who will make this call):\n` +
+                    `- LinkedIn: linkedin.com/in/${liSlug}\n` +
+                    `- Name: ${sellerName}\n` +
+                    `- Company stage: ${stage}\n` +
+                    `- Seller's company: ${sellerUrl}\n` +
+                    `From the LinkedIn slug and company stage, INFER the seller's likely seniority and role. A "${stage}" company rep is likely an individual contributor or early manager, NOT a C-suite executive. Adjust your advice to their level.\n\n` +
+                    `THE TARGET COMPANY: ${co}\n` +
+                    `SNAPSHOT: ${snapshot}\n` +
+                    `EXECUTIVES: ${execs || "Unknown"}\n` +
+                    `KEY CONTACTS (mid-level): ${contacts || "Unknown"}\n\n` +
+                    `SENIORITY-APPROPRIATE RELATIONSHIP SIGNALS:\n` +
+                    `The seller needs connections they can ACTUALLY USE at their level. A junior/mid-level rep cannot cold-email a CEO. Find:\n` +
+                    `1. PEER-LEVEL contacts at ${co} (Directors, VPs, Managers — NOT C-suite unless the seller is senior)\n` +
+                    `2. Shared former employers (did the seller work somewhere that ${co} also uses as a vendor or partner?)\n` +
+                    `3. Shared university, bootcamp, or professional community\n` +
+                    `4. Industry/vertical overlap (seller's past experience in ${co}'s industry)\n` +
+                    `5. Geographic proximity (same city, same professional meetups)\n` +
+                    `6. Warm intro paths (someone the seller likely knows who could introduce them to the right person at ${co})\n\n` +
+                    `COACHING (include 1 tactical tip):\n` +
+                    `Based on the seller's inferred level, include ONE specific coaching tip for how to approach this account. Examples:\n` +
+                    `- "You're likely peer-level to their Director of Ops — lead with a shared challenge, not a pitch"\n` +
+                    `- "Your best path in is through their VP of [function] — here's how to earn 15 minutes"\n` +
+                    `- "At your stage, a warm intro through [connection type] will outperform cold outreach 3:1"\n\n` +
                     `Return ONLY raw JSON:\n` +
-                    `{"relationshipSignals":"2-4 sentences describing warm-path opportunities the seller can use to get a warm intro or build rapport. Be specific — name the shared employer, school, or connection. If no overlap found, say 'No direct relationship signals found — lead with industry expertise and the opening angle instead.'"}`,
-                    () => {}, 800
+                    `{"relationshipSignals":"3-5 sentences. Start with the best warm-path opportunity at an APPROPRIATE seniority level. Include the coaching tip. Be specific — name roles, companies, or connection types. If no meaningful overlap, say so and recommend the best cold approach for someone at the seller's level."}`,
+                    () => {}, 1200
                   );
                   if (result?.relationshipSignals) {
                     setBrief(prev => prev ? { ...prev, relationshipSignals: result.relationshipSignals } : prev);
