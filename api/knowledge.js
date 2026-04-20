@@ -17,6 +17,7 @@ import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "../src/data/negotiationFramew
 import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "../src/data/rfpSources.js";
 import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FOUR_FORCES, SPICED, WBD_SCORECARD, DUNFORD_POSITIONING, DISQUALIFICATION, FINTECH_ICP, ICP_FAILURE_MODES } from "../src/data/icpFitKnowledge.js";
 import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../src/data/verticalPlaybooks.js";
+import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS } from "../src/data/advancedKnowledge.js";
 
 // Reuse JWT verification from the guard
 function verifyJwt(req) {
@@ -79,5 +80,15 @@ export default function handler(req, res) {
     icpFailureModes: ICP_FAILURE_MODES,
     // 10 vertical playbooks
     verticalPlaybooks: VERTICAL_PLAYBOOKS,
+    // Advanced knowledge (battle cards, scorecard, offer-fit, onboarding, QBR)
+    competitiveInjection: COMPETITIVE_INJECTION,
+    discoveryScorecardInjection: DISCOVERY_SCORECARD_INJECTION,
+    offerFitInjection: OFFER_FIT_INJECTION,
+    battleCardFramework: BATTLE_CARD_FRAMEWORK,
+    discoveryScorecard: DISCOVERY_SCORECARD,
+    offerFitFramework: OFFER_FIT_FRAMEWORK,
+    repOnboarding: REP_ONBOARDING,
+    qbrFramework: QBR_FRAMEWORK,
+    solutionFitCards: SOLUTION_FIT_CARDS,
   });
 }

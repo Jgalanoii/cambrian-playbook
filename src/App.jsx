@@ -21,6 +21,9 @@ let KL_NAICS = {};
 let KL_CPV = {};
 let KL_ICP_KNOWLEDGE = "";
 let KL_DISCOVERY_KNOWLEDGE = "";
+let KL_COMPETITIVE = "";
+let KL_DISCOVERY_SCORECARD = "";
+let KL_OFFER_FIT = "";
 let KL_VERTICALS = {}; // VERTICAL_PLAYBOOKS from knowledge layer
 
 async function fetchKnowledgeLayer() {
@@ -41,6 +44,9 @@ async function fetchKnowledgeLayer() {
     KL_ICP_KNOWLEDGE = d.icpKnowledge || "";
     KL_DISCOVERY_KNOWLEDGE = d.discoveryKnowledge || "";
     KL_VERTICALS = d.verticalPlaybooks || {};
+    KL_COMPETITIVE = d.competitiveInjection || "";
+    KL_DISCOVERY_SCORECARD = d.discoveryScorecardInjection || "";
+    KL_OFFER_FIT = d.offerFitInjection || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -3210,6 +3216,7 @@ ${isOpen
       "RECENT NEWS: " + headlines + "\n" +
       "SELLER OPPORTUNITY (pre-built): " + opportunity + "\n" +
       "SOLUTION MAPPING (pre-built):\n" + mappedSolutions + "\n\n" +
+      KL_COMPETITIVE +
       "BUILD THE RIVER HYPOTHESIS:\n" +
       "Every field grounded in what " + sellerUrl + " sells. No stray consulting.\n" +
       "DMAIC: Reality=Define+Measure, Impact=Analyze, Vision=Improve, Route=Control.\n" +
@@ -3278,6 +3285,7 @@ ${isOpen
     const prompt =
       `You are a senior discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
       (KL_DISCOVERY_KNOWLEDGE ? KL_DISCOVERY_KNOWLEDGE + "\n" : "") +
+      (KL_DISCOVERY_SCORECARD ? KL_DISCOVERY_SCORECARD + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
@@ -3460,6 +3468,7 @@ ${isOpen
       `\n`+
 
       `ACCURACY: Base every claim in callSummary, crmNote, and emailBody on what was actually captured above. NEVER invent things the prospect said, metrics they shared, or commitments they made. If a RIVER field says "Not captured", do not fill in what you think they might have said — reflect the gap.\n\n`+
+      KL_OFFER_FIT +
       `ROUTING CRITERIA (apply Graham Margin of Safety + Fisher/Ury interests):\n`+
       `FAST_TRACK: champion identified + budget confirmed + clear timeline + value is 3-5x price\n`+
       `NURTURE: interest confirmed but missing champion, budget, or timeline\n`+
@@ -3826,6 +3835,9 @@ ${isOpen
       `NEGATIVE SIGNALS: ${KL_BUYING_SIGNALS.negative.join("; ")}`,
       `FIT SCORING: High-friction industries (avg 5-13% fit): ${KL_FIT_RULES.highFriction.industries.map(i=>i.name).join(", ")}. High-fit segments (avg 55-65%): ${KL_FIT_RULES.highFit.industries.map(i=>i.name).join(", ")}`,
       `STAGE THRESHOLDS: ${KL_FIT_RULES.stageThresholds.map(s=>`${s.stage}: avg ${s.avgFit}%`).join(", ")}`,
+      KL_COMPETITIVE,
+      KL_DISCOVERY_SCORECARD,
+      KL_OFFER_FIT,
       `═══ END INTERNAL KNOWLEDGE ═══`,
     ].join("\n");
 
