@@ -787,6 +787,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     return next;
   };
 
+  // earlyDone resolves when p1+p3+p4 settle (overview, strategy, solutions).
+  // Hypothesis only needs these — no reason to wait for slow web_search
+  // calls (p2 executives, p5 live search). Shaves 5-10s off hypothesis start.
+  const earlyDone = Promise.allSettled([p1, p3, p4]);
+
   return {
     skeleton,
     mergers: {
@@ -796,6 +801,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       solutions: p4.then(mergeSolutions).catch(e => mergeSolutions(null)),
       live:      p5.then(mergeLive).catch(e => mergeLive(null)),
     },
+    earlyDone,
     allDone: Promise.allSettled([p1,p2,p3,p4,p5]),
   };
 }
@@ -2007,6 +2013,53 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
     await Promise.all(batches.map(scoreBatch));
     setFitScoring(false);
+
+    // Pre-cache top 3 accounts by fit score. The user will almost certainly
+    // click a Strong Fit account first — by pre-fetching execs + overview +
+    // live search now, the brief loads 5-10s faster when they do.
+    setTimeout(() => {
+      setFitScores(currentScores => {
+        const top3 = Object.entries(currentScores)
+          .sort(([,a],[,b]) => (b.score||0) - (a.score||0))
+          .slice(0, 3)
+          .map(([company]) => members.find(m => m.company === company))
+          .filter(Boolean);
+        top3.forEach(m => {
+          const co = m.company;
+          // Trigger pre-cache by simulating account selection for the useEffect
+          // We can't call setSelectedAccount here (would navigate the UI), so
+          // we directly populate the cache refs if empty.
+          if (!execCacheRef.current[co]) {
+            execCacheRef.current[co] = (async () => {
+              try {
+                const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\nACCURACY: NEVER invent facts. Empty string if unknown.\n`;
+                const d = await claudeFetch({
+                  model: "claude-haiku-4-5-20251001", max_tokens: 1800,
+                  tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+                  messages: [{ role: "user", content: base +
+                    `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\nReturn ONLY raw JSON:\n` +
+                    `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
+                    `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
+                    `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"}],` +
+                    `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
+                  }],
+                });
+                if (d.error) { execCacheRef.current[co] = null; return null; }
+                const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+                let parsed = null;
+                for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+                  parsed = extractJsonWithKey(textBlocks[i], "keyExecutives");
+                }
+                if (!parsed) { const raw = textBlocks.join("").trim(); parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw); }
+                execCacheRef.current[co] = parsed || null;
+                return parsed || null;
+              } catch { execCacheRef.current[co] = null; return null; }
+            })();
+          }
+        });
+        return currentScores;
+      });
+    }, 500); // small delay to let state settle after batch scoring
   };
 
 
@@ -2681,7 +2734,7 @@ ${isOpen
     const co = member.company;
     const cachedExecs = execCacheRef.current[co] || null;   // promise, object, or null
     const cachedBrief = briefPreCacheRef.current[co] || {}; // {overview: promise|obj, live: promise|obj}
-    const { skeleton, mergers, allDone } = generateBrief(
+    const { skeleton, mergers, earlyDone, allDone } = generateBrief(
       member, sellerUrl, sellerDocs, products,
       selectedCohort, selectedOutcomes, productPageUrl,
       (msg) => setBriefStatus(msg),
@@ -2698,18 +2751,29 @@ ${isOpen
       m.then(updater => { if (typeof updater === "function") setBrief(prev => updater(prev)); });
     });
 
-    // Buildhypothesis + discovery questions depend on the full brief, so
-    // wait for all sections to settle before kicking them off.
+    // Hypothesis only needs overview + strategy + solutions (p1+p3+p4).
+    // Fire it on earlyDone — don't wait for slow web_search calls (p2, p5).
+    // Shaves 5-10s off hypothesis generation start time.
+    earlyDone.then(() => {
+      setTimeout(() => {
+        setBrief(current => {
+          if (current?.companySnapshot && current?.strategicTheme) {
+            Promise.resolve().then(() => buildRiverHypo(current, member));
+          }
+          return current;
+        });
+      }, 0);
+    });
+
+    // Discovery questions + error check wait for ALL sections.
     allDone.then(() => {
       setBrief(current => {
         if (current?._error) setBriefError(current._error);
         return current;
       });
-      // Use a microtask to read the freshest brief state.
       setTimeout(() => {
         setBrief(current => {
           if (current) {
-            Promise.resolve().then(() => buildRiverHypo(current, member));
             Promise.resolve().then(() => generateDiscoveryQs(current, member));
           }
           return current;
