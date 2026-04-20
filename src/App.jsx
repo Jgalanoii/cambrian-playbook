@@ -567,10 +567,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${activeOutcomes.join(", ")}`;
   const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
-  // For the Brief, use a TRIMMED proof pack — LinkedIn + full proof-point
-  // detail slows down p3/p4 without adding value at this stage (relationship
-  // signals + verbatim proof citations matter more in hypothesis/talk tracks).
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs: sellerDocs.slice(0,2), products });
+  // Full proof pack for p3/p4 — these are the seller-mapping calls that need
+  // differentiators, named customers, and product catalog to ground the output.
+  // LinkedIn excluded (fires as post-brief relationship signals call).
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
@@ -593,21 +593,39 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // ── 5 MICRO-CALLS fire simultaneously, each with a tiny schema ───────────
   // User sees the overview card the moment the fastest resolves (~2s)
 
-  // MICRO 1: Company overview — reuse pre-cache promise/result. Never duplicate.
+  // MICRO 1: Company overview — web_search for real data, not just training knowledge.
+  // Reuse pre-cache promise/result if available. Never duplicate.
   const preCache = caches.brief || {};
   const overviewCache = preCache.overview;
   const p1 = overviewCache
     ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
-    : streamAI(baseLight+
-    `Return ONLY raw JSON (start with {) for the company overview:\n`+
-    `{"companySnapshot":"3-4 sentences: what ${co} does, revenue scale, employees, HQ, strategic direction",`+
-    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:MCD)","employeeCount":"e.g. ~200,000",`+
-    `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
-    `"fundingProfile":"Ownership: PE firm + year acquired, or Series + total raised + lead investor, or Public exchange+ticker",`+
-    `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
-    `"watchOuts":["PROCUREMENT RISK: Structurally-difficult industries include heavy manufacturing, aerospace/defense prime, telecom incumbents, oil/gas, utilities, mass-market retail with >100K employees, and the top-5 US banks. If this target falls in one of those, direct startup sales are near-impossible regardless of the seller's stage — flag and recommend a partner/channel path or scope down to a specific business unit.","INCUMBENT RISK: which Oracle/SAP/Workday/Amex/Salesforce relationship are we displacing or landing adjacent to? Adjacent is almost always the right first motion. Series A-B sellers cannot displace deep incumbents.","STAGE CREDIBILITY: Seed/Series A selling to >50K-employee companies averages 23-33% fit. Series C+ is usually required for meaningful enterprise traction. PE-acquired sellers have a trust advantage."]}`,
-    ()=>{}, 1800
-  );
+    : (async () => {
+    try {
+      const d = await claudeFetch({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2000,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+        messages: [{ role: "user", content: baseLight +
+          `Search for "${co}" to get current, accurate company data. Use web_search.\n\n` +
+          `Return ONLY raw JSON:\n` +
+          `{"companySnapshot":"3-4 sentences: what ${co} does, their market position, recent strategic moves, and current trajectory. Be specific — cite recent news, earnings, or initiatives.",` +
+          `"revenue":"e.g. $2.4B (FY2024) — use most recent public figure","publicPrivate":"e.g. Public (NYSE:MCD) or Private (PE: Thoma Bravo, 2023)","employeeCount":"e.g. ~200,000",` +
+          `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",` +
+          `"fundingProfile":"Ownership details: PE firm + year acquired, or Series + total raised + lead investor, or Public exchange+ticker. Be specific.",` +
+          `"competitors":["Competitor 1","Competitor 2","Competitor 3"],` +
+          `"watchOuts":["PROCUREMENT: Flag if this is a structurally-difficult target (heavy mfg, defense, telecom, utilities, top-5 banks, >100K retail) and recommend a channel/partner path or business-unit scope-down.","INCUMBENT: Name the specific Oracle/SAP/Workday/Salesforce/etc relationship we'd displace or land adjacent to. Adjacent is almost always the right first motion.","CREDIBILITY: Assess seller-stage fit. Seed/Series A to >50K employees averages 23-33% fit. PE-backed sellers have a trust advantage."]}`
+        }],
+      });
+      if (d.error) return null;
+      const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+      for (let i = textBlocks.length - 1; i >= 0; i--) {
+        const parsed = extractJsonWithKey(textBlocks[i], "companySnapshot");
+        if (parsed) return parsed;
+      }
+      const raw = textBlocks.join("").trim();
+      return safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
+    } catch { return null; }
+  })();
 
   // MICRO 2: Executives — reuse pre-cache promise/result. Never duplicate.
   const execCache = caches.execs;
@@ -620,7 +638,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
-        messages:[{role:"user",content:base+
+        messages:[{role:"user",content:baseLight+
           `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL. If you cannot verify a name, return "Verify at LinkedIn".\n\n`+
           `For each executive provide:\n- background: 1 sentence — prior company, board role, or notable career move\n- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What keeps them up at night? What initiative would they champion? How should a seller approach them? 2-3 specific sentences grounded in ${co}'s current situation.\n\n`+
           `Return ONLY raw JSON:\n`+
@@ -643,16 +661,24 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 3: Strategy + opening angle — needs seller context for "why you" (streamed)
-  // Inject Challenger teaching angle + Cialdini social proof for the opening
   const p3 = streamAI(baseFull+
-    `CHALLENGER: ${KL_CHALLENGER.teachingAngle}. ${KL_CHALLENGER.mobilizer.identify}\n`+
-    `CIALDINI: Name a similar company as social proof. Authority via specific data.\n`+
+    `CHALLENGER: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
+    `CIALDINI: Name a SPECIFIC similar company as social proof. Lead with a precise stat or insight.\n`+
+    `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
-    `{"strategicTheme":"2-3 sentences on ${co} current strategic direction and priorities",`+
-    `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned right now for ${co} — the why-you-why-now",`+
-    `"openingAngle":"1-2 sharp sentences referencing something real about ${co}. Reframe an assumption. Sounds human not scripted.",`+
-    `"publicSentiment":{`+`"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name sources and tone.",`+`"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — or empty if unknown",`+`"g2Rating":"G2 product rating as a number e.g. 4.2 out of 5 — or empty if not a software company",`+`"npsSignal":"Estimated NPS signal: if you know ${co} publishes NPS or CSAT data, cite it. Otherwise describe customer loyalty signals (high churn, vocal advocates, renewal rates mentioned in press)",`+`"trustpilotRating":"Trustpilot score as a number if known — or empty",`+`"employeeScore":"Glassdoor CEO approval % or Indeed rating if known — signals culture and operational health",`+`"standoutReview":{"text":"Most revealing customer or employee quote or paraphrase — something a seller would want to know","source":"G2 / Glassdoor / Trustpilot / analyst / press","sentiment":"positive or negative"},`+`"salesAngle":"1 sentence: how the seller should use this sentiment context in the discovery conversation"}}`,
-    ()=>{}, 2400
+    `{"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
+    `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
+    `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
+    `"publicSentiment":{`+
+    `"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name Glassdoor themes, G2 review patterns, press coverage tone. What's the narrative?",`+
+    `"glassdoorRating":"Glassdoor rating as number e.g. 3.8 — or empty",`+
+    `"g2Rating":"G2 rating as number e.g. 4.2 — or empty if not software",`+
+    `"npsSignal":"NPS/CSAT data if published, or customer loyalty signals (churn rate, advocacy programs, renewal patterns)",`+
+    `"trustpilotRating":"Trustpilot score or empty",`+
+    `"employeeScore":"Glassdoor CEO approval % or Indeed rating — signals culture health",`+
+    `"standoutReview":{"text":"Most revealing quote from a customer or employee review — something a seller would want to know before calling","source":"G2 / Glassdoor / press","sentiment":"positive or negative"},`+
+    `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
+    ()=>{}, 2800
   );
   // relationshipSignals (LinkedIn) now fires as a separate post-brief call
 
@@ -712,12 +738,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:"claude-haiku-4-5-20251001",
         max_tokens:1800,
         temperature:0,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
         messages:[{role:"user",content:prompt}],
       });
       if(d.error) return null;
       // Tool-use response: multi-block (text + tool_use + tool_result + text)
-      // Find JSON via anchor keys in the last text block
       const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for (let i = textBlocks.length - 1; i >= 0; i--) {
         const parsed = extractJsonWithKey(textBlocks[i], "recentHeadlines")
@@ -725,7 +750,6 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
                     || extractJsonWithKey(textBlocks[i], "recentSignals");
         if (parsed) return parsed;
       }
-      // Path 2: prefill-continued response (single text block starting with content after "{")
       const raw = textBlocks.join("").trim();
       return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
     }catch(e){console.warn("Live search failed:",e.message);return null;}
@@ -3528,14 +3552,27 @@ ${isOpen
 
     const light = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown.\nCONSISTENCY: Return EXACTLY the structure shown.\n\n`;
 
-    // p1 pre-fetch (overview) — lightweight, no web_search
+    // p1 pre-fetch (overview) — web_search for accurate, current data
     const overviewPromise = (async () => {
       try {
-        return await streamAI(light +
-          `Return ONLY raw JSON (start with {) for the company overview:\n` +
-          `{"companySnapshot":"3-4 sentences","revenue":"","publicPrivate":"","employeeCount":"","headquarters":"","founded":"","website":"","linkedIn":"","fundingProfile":"","competitors":["","",""],"watchOuts":["",""]}`,
-          () => {}, 1800
-        ) || null;
+        const d = await claudeFetch({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 2000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+          messages: [{ role: "user", content: light +
+            `Search for "${co}" to get current, accurate company data.\n\n` +
+            `Return ONLY raw JSON:\n` +
+            `{"companySnapshot":"3-4 sentences: what they do, market position, recent moves","revenue":"most recent figure","publicPrivate":"e.g. Public (NYSE:X)","employeeCount":"e.g. ~50,000","headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name","fundingProfile":"Ownership details","competitors":["","",""],"watchOuts":["Procurement risk assessment","Incumbent vendor risk","Seller-stage credibility fit"]}`
+          }],
+        });
+        if (d.error) return null;
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        for (let i = textBlocks.length - 1; i >= 0; i--) {
+          const parsed = extractJsonWithKey(textBlocks[i], "companySnapshot");
+          if (parsed) return parsed;
+        }
+        const raw = textBlocks.join("").trim();
+        return safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
       } catch { return null; }
     })();
 
