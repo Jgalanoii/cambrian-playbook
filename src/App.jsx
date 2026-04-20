@@ -2800,7 +2800,7 @@ ${isOpen
       }, 0);
     });
 
-    // Discovery questions + error check wait for ALL sections.
+    // Discovery questions + relationship signals + error check wait for ALL sections.
     allDone.then(() => {
       setBrief(current => {
         if (current?._error) setBriefError(current._error);
@@ -2810,6 +2810,38 @@ ${isOpen
         setBrief(current => {
           if (current) {
             Promise.resolve().then(() => generateDiscoveryQs(current, member));
+            // Fire relationship signals as a separate lightweight call (post-brief)
+            // Only if seller LinkedIn is set — looks for warm-path overlap.
+            if (sellerLinkedIn) {
+              Promise.resolve().then(async () => {
+                try {
+                  const liSlug = sellerLinkedIn.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//,"").replace(/\/.*/,"");
+                  const co = member.company;
+                  const snapshot = (current.companySnapshot || "").slice(0, 300);
+                  const execs = (current.keyExecutives || []).map(e => `${e.name} (${e.title})`).join(", ");
+                  const result = await streamAI(
+                    `You are analyzing potential relationship paths between a sales rep and a target company.\n\n` +
+                    `SELLER'S LINKEDIN: linkedin.com/in/${liSlug}\n` +
+                    `TARGET: ${co}\n` +
+                    `TARGET SNAPSHOT: ${snapshot}\n` +
+                    `TARGET EXECUTIVES: ${execs || "Unknown"}\n\n` +
+                    `Search your training knowledge for OVERLAP between the seller (${liSlug}) and ${co}:\n` +
+                    `- Shared former employers (seller worked at a company that ${co} partners with or acquires from)\n` +
+                    `- Same university or MBA program as any ${co} executive\n` +
+                    `- Same industry background or certifications\n` +
+                    `- Mutual connections' companies (if the seller's past colleagues now work at ${co})\n` +
+                    `- Geographic proximity or shared community involvement\n\n` +
+                    `Be specific. Name companies, schools, and people where you can. If no meaningful overlap exists, say so honestly.\n\n` +
+                    `Return ONLY raw JSON:\n` +
+                    `{"relationshipSignals":"2-4 sentences describing warm-path opportunities the seller can use to get a warm intro or build rapport. Be specific — name the shared employer, school, or connection. If no overlap found, say 'No direct relationship signals found — lead with industry expertise and the opening angle instead.'"}`,
+                    () => {}, 800
+                  );
+                  if (result?.relationshipSignals) {
+                    setBrief(prev => prev ? { ...prev, relationshipSignals: result.relationshipSignals } : prev);
+                  }
+                } catch (e) { console.warn("Relationship signals failed:", e.message); }
+              });
+            }
           }
           return current;
         });
