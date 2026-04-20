@@ -2056,7 +2056,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size, same buyer persona","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost, displacement opportunity","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"public"}]}`;
+        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size, same buyer persona","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost, displacement opportunity","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       const result = await callAI(prompt);
       if (!result?.scores) return;

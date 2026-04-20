@@ -57,8 +57,9 @@ function decodeJwtPayload(token) {
 }
 
 function verifyJwt(req) {
-  // Allow guest mode if explicitly enabled
-  if (process.env.ALLOW_GUEST === "true") return true;
+  // Allow guest mode if explicitly enabled (handle quoted/unquoted values)
+  const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
+  if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") return true;
 
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return false;

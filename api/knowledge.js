@@ -20,7 +20,8 @@ import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../s
 
 // Reuse JWT verification from the guard
 function verifyJwt(req) {
-  if (process.env.ALLOW_GUEST === "true") return true;
+  const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
+  if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") return true;
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return false;
   const token = authHeader.slice(7);
