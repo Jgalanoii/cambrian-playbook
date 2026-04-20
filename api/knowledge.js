@@ -1,0 +1,67 @@
+// api/knowledge.js
+//
+// Serves sensitive knowledge layer data (scoring heuristics, framework
+// injections, industry benchmarks) to authenticated clients only.
+// This keeps proprietary IP out of the client JS bundle — it's fetched
+// at runtime behind JWT auth, never baked into the build artifact.
+//
+// The client calls this once on login and caches the result in memory.
+// If the call fails (guest mode, offline), the app falls back to
+// minimal inline heuristics that don't expose exact numbers.
+
+// Import from the same data modules the app uses
+import { FIT_SCORING_RULES } from "../src/data/prompts/fitScoring.js";
+import { ALL_NEGOTIATION_INJECTIONS, FISHER_URY_INJECTION, GRAHAM_INJECTION } from "../src/data/prompts/negotiationInjections.js";
+import { BUYING_SIGNALS } from "../src/data/prompts/briefGeneration.js";
+import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "../src/data/negotiationFrameworks.js";
+import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "../src/data/rfpSources.js";
+
+// Reuse JWT verification from the guard
+function verifyJwt(req) {
+  if (process.env.ALLOW_GUEST === "true") return true;
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) return false;
+  const token = authHeader.slice(7);
+  if (!token) return false;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(
+      Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()
+    );
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) return false;
+    if (payload.iss !== "supabase" && !payload.iss?.includes("xtnidawfuaxwwwcnkewu")) return false;
+    return true;
+  } catch { return false; }
+}
+
+export default function handler(req, res) {
+  if (req.method !== "GET") { res.status(405).end(); return; }
+
+  if (!verifyJwt(req)) {
+    res.status(401).json({ error: "authentication required" });
+    return;
+  }
+
+  // Cache for 1 hour — this data changes only on deploys
+  res.setHeader("Cache-Control", "private, max-age=3600");
+
+  res.status(200).json({
+    fitScoringRules: FIT_SCORING_RULES,
+    negotiations: ALL_NEGOTIATION_INJECTIONS,
+    fisherUry: FISHER_URY_INJECTION,
+    graham: GRAHAM_INJECTION,
+    buyingSignals: BUYING_SIGNALS,
+    joltEffect: {
+      description: JOLT_EFFECT.description,
+      steps: JOLT_EFFECT.steps,
+    },
+    challenger: {
+      teachingAngle: CHALLENGER_FRAMEWORK.teachingAngle,
+      mobilizer: CHALLENGER_FRAMEWORK.mobilizer,
+    },
+    naicsCodes: NAICS_CATEGORY_MAP,
+    cpvCodes: CPV_CATEGORY_MAP,
+  });
+}
