@@ -654,9 +654,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p1 = overviewCache
     ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
     : streamAI(baseLight+
+    `TICKER ACCURACY: If you state a stock ticker symbol, you MUST be certain it is correct. Pathward Financial trades as CASH, not PAWD. Meta trades as META, not FB. If you are not 100% certain of a ticker, write "Public" without the ticker rather than guessing.\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:MCD)","employeeCount":"e.g. ~200,000",`+
+    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NASDAQ: CASH) — only include ticker if you are CERTAIN it is correct, otherwise just say Public or Private","employeeCount":"e.g. ~200,000",`+
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
     `"fundingProfile":"Ownership: PE firm + year, or Series + total raised, or Public exchange+ticker",`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
@@ -3700,9 +3701,10 @@ ${isOpen
           max_tokens: 2000,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
           messages: [{ role: "user", content: light +
-            `Search for "${co}" to get current, accurate company data.\n\n` +
+            `Search for "${co}" to get current, accurate company data.\n` +
+            `TICKER ACCURACY: Only include a stock ticker if verified by web search. Do not guess tickers from memory.\n\n` +
             `Return ONLY raw JSON:\n` +
-            `{"companySnapshot":"3-4 sentences: what they do, market position, recent moves","revenue":"most recent figure","publicPrivate":"e.g. Public (NYSE:X)","employeeCount":"e.g. ~50,000","headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name","fundingProfile":"Ownership details","competitors":["","",""],"watchOuts":["Procurement risk assessment","Incumbent vendor risk","Seller-stage credibility fit"]}`
+            `{"companySnapshot":"3-4 sentences: what they do, market position, recent moves","revenue":"most recent figure","publicPrivate":"e.g. Public (NASDAQ: CASH) — only include ticker if verified","employeeCount":"e.g. ~50,000","headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name","fundingProfile":"Ownership details","competitors":["","",""],"watchOuts":["Procurement risk assessment","Incumbent vendor risk","Seller-stage credibility fit"]}`
           }],
         });
         if (d.error) return null;
