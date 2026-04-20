@@ -620,7 +620,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // Proof pack for p3/p4 — includes differentiators, named customers, product
   // catalog, and proof points. LinkedIn excluded (post-brief call). Docs capped
   // at 3 to keep prompt size manageable for streaming speed.
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs: sellerDocs.slice(0,3), products, sellerProofPoints });
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs: sellerDocs.slice(0,3), products });
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
