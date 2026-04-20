@@ -633,9 +633,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
   // Proof pack for p3/p4 — includes differentiators, named customers, product
-  // catalog, and proof points. LinkedIn excluded (post-brief call). Docs capped
-  // at 3 to keep prompt size manageable for streaming speed.
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
+  // catalog, and proof points. generateBrief doesn't have sellerProofPoints
+  // in scope (it's component state, not a param) — those are injected by the
+  // component-level calls (hypothesis, post-call, solution fit).
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
