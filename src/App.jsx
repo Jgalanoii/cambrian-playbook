@@ -3345,7 +3345,7 @@ ${isOpen
   // Informed by: seller products, prospect context, 5 listening frameworks
   // Fires after brief completes, alongside hypothesis build
   const generateDiscoveryQs = async(briefData, member) => {
-    if(!briefData||discoveryQs) return;
+    if(!briefData) return;
     const co = member.company;
     const products_ctx = (briefData.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product+": "+s.fit).join("; ");
     const seller = sellerUrl;
