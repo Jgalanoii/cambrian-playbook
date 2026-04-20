@@ -2715,31 +2715,61 @@ ${isOpen
     scoreFit(allMembers, sellerCtxF);
   };
 
-  const goToQuickBrief=()=>{
+  const goToQuickBrief=async()=>{
     const entries=quickEntries.filter(e=>e.name.trim());
     if(!entries.length) return;
-    // Build synthetic rows + a single cohort
+
+    // Show immediate feedback — navigate to step 3 with a loading indicator
+    const members = entries.map(e=>({company:e.name.trim(),company_url:e.url.trim(),ind:"",acv:0,src:"Quick Entry",outcome:""}));
     const syntheticRows=entries.map(e=>({
-      company:e.name.trim(),
-      company_url:e.url.trim(),
+      company:e.name.trim(), company_url:e.url.trim(),
       industry:"",acv:"0",lead_source:"Quick Entry",outcome:"",
     }));
     const syntheticMapping={company:"company",industry:"industry",acv:"0",lead_source:"lead_source",company_url:"company_url",outcome:"outcome",close_date:"",product:""};
     setRows(syntheticRows);
     setMapping(syntheticMapping);
     setHeaders(["company","company_url","industry","acv","lead_source","outcome"]);
-    // Build a single cohort with all entries
-    const cohort={id:"qe",name:"Quick Entry",color:"var(--tan-0)",size:entries.length,pct:100,avgACV:0,topInd:[],topSrc:["Quick Entry"],topOut:[],
-      members:entries.map(e=>({company:e.name.trim(),company_url:e.url.trim(),ind:"",acv:0,src:"Quick Entry",outcome:""}))};
+    setFileName(`quick_entry_${entries.length}_accounts`);
+
+    const cohort={id:"qe",name:"Quick Entry",color:"var(--tan-0)",size:entries.length,pct:100,avgACV:0,topInd:[],topSrc:["Quick Entry"],topOut:[],members};
     setCohorts([cohort]);
     setSelectedCohort(cohort);
     setSelectedOutcomes([]);
-    setStep(3); // Skip straight to account selection
-    // Score in background
+    setStep(3);
+
+    // Enrich companies in background — lookup industry + basic info via AI
+    // This turns the blank "—" columns into real data within a few seconds.
     const sellerCtx2=sellerDocs.length>0
       ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
       : sellerUrl+(productUrls.filter(u=>u.url).map(u=>u.url).join(" | ")??" ");
-    scoreFit(cohort.members, sellerCtx2);
+
+    // Fire fit scoring (also enriches orgSize + ownership)
+    scoreFit(members, sellerCtx2);
+
+    // Enrich industry via a quick AI call — fills in the blank industry column
+    try {
+      const companiesStr = members.map(m => `${m.company}|${m.company_url||""}`).join("\n");
+      const enrichResult = await callAI(
+        `For each company below, return the PRIMARY industry vertical (e.g. "Financial Services", "Healthcare", "Technology", "Retail", "Manufacturing", etc.) and estimated employee count.\n\n` +
+        `ACCURACY: Use training knowledge confidently for well-known companies. If truly unknown, use empty string.\n\n` +
+        `Companies:\n${companiesStr}\n\n` +
+        `Return ONLY raw JSON:\n` +
+        `{"companies":[{"company":"exact name","industry":"Primary vertical","employees":"e.g. ~5,000"}]}`
+      );
+      if (enrichResult?.companies) {
+        const enrichMap = {};
+        enrichResult.companies.forEach(c => { if (c.company) enrichMap[c.company] = c; });
+        // Update cohort members with enriched data
+        setCohorts(prev => prev.map(c => ({
+          ...c,
+          members: c.members.map(m => {
+            const e = enrichMap[m.company];
+            return e ? { ...m, ind: e.industry || m.ind, employees: e.employees || m.employees } : m;
+          }),
+          topInd: [...new Set(Object.values(enrichMap).map(e => e.industry).filter(Boolean))].slice(0, 3),
+        })));
+      }
+    } catch (e) { console.warn("Quick entry enrichment failed:", e.message); }
   };
   const goToOutcomes=()=>{
     if(selectedCohort){
