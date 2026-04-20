@@ -617,10 +617,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const dealCtx = `${selectedCohort?.name||""} | Industry: ${member.ind||""} | Outcomes: ${activeOutcomes.join(", ")}`;
   const universalCtx = `ASSUME: Every company universally wants to grow revenue, expand markets, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Frame all briefs through these lenses even when not explicitly stated.\n`+`GARTNER BUYING REALITY: Buyers spend only 17% of their time with vendors. The seller must use that time to demonstrate they already understand the buyer's industry, challenge a widely-held assumption, and make the next step obvious and small. Score accounts on how much they NEED this insight, not just whether they could use the product.`;
 
-  // Full proof pack for p3/p4 — these are the seller-mapping calls that need
-  // differentiators, named customers, and product catalog to ground the output.
-  // LinkedIn excluded (fires as post-brief relationship signals call).
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
+  // Proof pack for p3/p4 — includes differentiators, named customers, product
+  // catalog, and proof points. LinkedIn excluded (post-brief call). Docs capped
+  // at 3 to keep prompt size manageable for streaming speed.
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs: sellerDocs.slice(0,3), products, sellerProofPoints });
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
@@ -645,39 +645,24 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // ── 5 MICRO-CALLS fire simultaneously, each with a tiny schema ───────────
   // User sees the overview card the moment the fastest resolves (~2s)
 
-  // MICRO 1: Company overview — web_search for real data, not just training knowledge.
-  // Reuse pre-cache promise/result if available. Never duplicate.
+  // MICRO 1: Company overview. Pre-cache (web_search, rich) → instant hit.
+  // Inline fallback uses streamAI (training-only, ~2s) for fast first paint.
+  // The pre-cache fires on account select (step 4) with web_search — by the
+  // time the user clicks Build Brief, it's usually ready.
   const preCache = caches.brief || {};
   const overviewCache = preCache.overview;
   const p1 = overviewCache
     ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
-    : (async () => {
-    try {
-      const d = await claudeFetch({
-        model: activeModel(),
-        max_tokens: 2000,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
-        messages: [{ role: "user", content: baseLight +
-          `Search for "${co}" to get current, accurate company data. Use web_search.\n\n` +
-          `Return ONLY raw JSON:\n` +
-          `{"companySnapshot":"3-4 sentences: what ${co} does, their market position, recent strategic moves, and current trajectory. Be specific — cite recent news, earnings, or initiatives.",` +
-          `"revenue":"e.g. $2.4B (FY2024) — use most recent public figure","publicPrivate":"e.g. Public (NYSE:MCD) or Private (PE: Thoma Bravo, 2023)","employeeCount":"e.g. ~200,000",` +
-          `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",` +
-          `"fundingProfile":"Ownership details: PE firm + year acquired, or Series + total raised + lead investor, or Public exchange+ticker. Be specific.",` +
-          `"competitors":["Competitor 1","Competitor 2","Competitor 3"],` +
-          `"watchOuts":["PROCUREMENT: Flag if this is a structurally-difficult target (heavy mfg, defense, telecom, utilities, top-5 banks, >100K retail) and recommend a channel/partner path or business-unit scope-down.","INCUMBENT: Name the specific Oracle/SAP/Workday/Salesforce/etc relationship we'd displace or land adjacent to. Adjacent is almost always the right first motion.","CREDIBILITY: Assess seller-stage fit. Seed/Series A to >50K employees averages 23-33% fit. PE-backed sellers have a trust advantage."]}`
-        }],
-      });
-      if (d.error) return null;
-      const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
-      for (let i = textBlocks.length - 1; i >= 0; i--) {
-        const parsed = extractJsonWithKey(textBlocks[i], "companySnapshot");
-        if (parsed) return parsed;
-      }
-      const raw = textBlocks.join("").trim();
-      return safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
-    } catch { return null; }
-  })();
+    : streamAI(baseLight+
+    `Return ONLY raw JSON (start with {) for the company overview:\n`+
+    `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
+    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NYSE:MCD)","employeeCount":"e.g. ~200,000",`+
+    `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
+    `"fundingProfile":"Ownership: PE firm + year, or Series + total raised, or Public exchange+ticker",`+
+    `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
+    `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
+    ()=>{}, 1800
+  );
 
   // MICRO 2: Executives — reuse pre-cache promise/result. Never duplicate.
   const execCache = caches.execs;
@@ -730,7 +715,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed rating — signals culture health",`+
     `"standoutReview":{"text":"Most revealing quote from a customer or employee review — something a seller would want to know before calling","source":"G2 / Glassdoor / press","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
-    ()=>{}, 2800
+    ()=>{}, 2400
   );
   // relationshipSignals (LinkedIn) now fires as a separate post-brief call
 
