@@ -83,13 +83,22 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
   // Build a clean outbound body from scratch — do NOT spread req.body, which
   // would let unknown fields (e.g. service_tier, metadata, unrecognized
   // params) pass through.
+  // Cap total input size to prevent billing abuse (large message arrays).
+  // ~100KB is generous for any legitimate app call; the largest prompt
+  // (hypothesis) is ~6KB. This blocks bulk-padding attacks.
+  const inputSize = JSON.stringify(body.messages).length + (body.system?.length || 0);
+  if (inputSize > 120_000) {
+    throw { status: 400, message: "input too large" };
+  }
+
   const clean = {
     model: body.model,
     max_tokens: Math.min(Number(body.max_tokens) || 1024, MAX_TOKENS_CAP),
     temperature: 0, // hardcoded — app-wide consistency guarantee
     messages: body.messages,
   };
-  if (typeof body.system === "string" && body.system.length) clean.system = body.system;
+  // Cap system prompt at 12KB — largest legitimate use is Milton (~4KB).
+  if (typeof body.system === "string" && body.system.length && body.system.length <= 12_000) clean.system = body.system;
   const tools = sanitizeTools(body.tools);
   if (tools) clean.tools = tools;
   if (stream) clean.stream = true;
