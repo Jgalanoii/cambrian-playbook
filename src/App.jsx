@@ -599,7 +599,7 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
 // wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
-function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}){
+function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null){
   const co  = member.company;
   const url = member.company_url || co;
 
@@ -661,7 +661,18 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"fundingProfile":"Ownership: PE firm + year, or Series + total raised, or Public exchange+ticker",`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
-    ()=>{}, 1800
+    (partial) => {
+      // Live stream p1 — show companySnapshot as it types
+      if (onStream && partial.length > 60) {
+        try {
+          const last = partial.lastIndexOf('}');
+          if (last > 0) {
+            const parsed = JSON.parse(partial.slice(0, last + 1));
+            if (parsed.companySnapshot) onStream("overview", parsed);
+          }
+        } catch { /* partial JSON */ }
+      }
+    }, 1800
   );
 
   // MICRO 2: Executives — reuse pre-cache promise/result. Never duplicate.
@@ -715,7 +726,18 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed rating — signals culture health",`+
     `"standoutReview":{"text":"Most revealing quote from a customer or employee review — something a seller would want to know before calling","source":"G2 / Glassdoor / press","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
-    ()=>{}, 2400
+    (partial) => {
+      // Live stream p3 — show strategicTheme + openingAngle as they type
+      if (onStream && partial.length > 80) {
+        try {
+          const last = partial.lastIndexOf('}');
+          if (last > 0) {
+            const parsed = JSON.parse(partial.slice(0, last + 1));
+            if (parsed.strategicTheme) onStream("strategy", parsed);
+          }
+        } catch { /* partial JSON */ }
+      }
+    }, 2400
   );
   // relationshipSignals (LinkedIn) now fires as a separate post-brief call
 
@@ -734,7 +756,18 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"keyContacts":[{"name":"VP/Director at ${co} — real name if known, NOT C-suite","title":"Full title","initials":"XX","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
     `"techStack":{"crm":"e.g. Salesforce — or empty string if unknown","erp":"e.g. SAP — or empty string","hris":"e.g. Workday — or empty string","marketing":"e.g. HubSpot — or empty string","payments":"e.g. Stripe — or empty string","analytics":"e.g. Tableau — or empty string","infrastructure":"e.g. AWS — or empty string","other":[]},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
-    ()=>{}, 2600
+    (partial) => {
+      // Live stream p4 — show solutionMapping as it types
+      if (onStream && partial.length > 100) {
+        try {
+          const last = partial.lastIndexOf('}');
+          if (last > 0) {
+            const parsed = JSON.parse(partial.slice(0, last + 1));
+            if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
+          }
+        } catch { /* partial JSON */ }
+      }
+    }, 2600
   );
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
@@ -2912,13 +2945,35 @@ ${isOpen
     const co = member.company;
     const cachedExecs = execCacheRef.current[co] || null;   // promise, object, or null
     const cachedBrief = briefPreCacheRef.current[co] || {}; // {overview: promise|obj, live: promise|obj}
+    // onStream: live callback from streaming calls — merges partial JSON
+    // into the brief as it arrives, so users see fields typing in real-time.
+    const onStream = (section, partialData) => {
+      setBrief(prev => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        if (section === "overview" && partialData.companySnapshot) {
+          next.companySnapshot = partialData.companySnapshot;
+          if (partialData.revenue) next.revenue = partialData.revenue;
+          if (partialData.employeeCount) next.employeeCount = partialData.employeeCount;
+        } else if (section === "strategy") {
+          if (partialData.strategicTheme) next.strategicTheme = partialData.strategicTheme;
+          if (partialData.openingAngle) next.openingAngle = partialData.openingAngle;
+          if (partialData.sellerOpportunity) next.sellerOpportunity = partialData.sellerOpportunity;
+        } else if (section === "solutions" && partialData.solutionMapping?.[0]?.product) {
+          next.solutionMapping = partialData.solutionMapping;
+        }
+        return next;
+      });
+    };
+
     const { skeleton, mergers, earlyDone, allDone } = generateBrief(
       member, sellerUrl, sellerDocs, products,
       selectedCohort, selectedOutcomes, productPageUrl,
       (msg) => setBriefStatus(msg),
       productUrls,
       sellerICP,
-      { execs: cachedExecs, brief: cachedBrief }
+      { execs: cachedExecs, brief: cachedBrief },
+      onStream
     );
     setBrief(skeleton);
     setBriefLoading(false);  // skeleton counts as "loaded" — sections show their own inline progress
