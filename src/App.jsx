@@ -824,7 +824,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // each micro-result as its promise resolves. No await here.
   const skeleton = {
     ...BLANK_BRIEF,
-    companySnapshot: "",
+    companySnapshot: `Researching ${co}...`,
     _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true},
   };
 
@@ -2942,9 +2942,10 @@ ${isOpen
 
   const pickAccount = async member => {
     setSelectedAccount(member);
-    setBriefLoading(false);  // skeleton renders immediately — progress shown via _loadingSections banner
+    setBriefLoading(true);
     setBriefError("");
-    setBriefStatus("");
+    setBriefStatus("Researching " + member.company + "...");
+    setBrief(null);  // clear previous brief so loader shows
     setGateAnswers({}); setGateNotes({}); setRiverData({}); setDiscoveryQs(null);
     setDealValue(""); setDealClassification(""); setNotes(""); setPostCall(null);
     setContactRole(""); setCustomOutcome("");
