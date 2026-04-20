@@ -2087,7 +2087,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":25,"dim3":24,"reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":25,"dim3":24,"reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt);
@@ -2905,9 +2905,10 @@ ${isOpen
         const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
         const result = await callAI(
           `For each company, return the primary industry vertical, estimated employee count, and ownership type.\n` +
-          `Use training knowledge confidently. Empty string if truly unknown.\n\n` +
+          `Use training knowledge confidently. Empty string if truly unknown.\n` +
+          `TICKER ACCURACY: Do NOT include stock tickers unless you are 100% certain. Just say "Public" or "Private" — a wrong ticker is worse than no ticker.\n\n` +
           `Companies (Name|URL):\n${companiesStr}\n\n` +
-          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"e.g. Public (NYSE:XYZ) or Private or PE-backed","url":"verified domain or empty"}]}`
+          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"Public or Private or PE-backed — no ticker unless certain","url":"verified domain or empty"}]}`
         );
         if (result?.companies) {
           const map = {};
