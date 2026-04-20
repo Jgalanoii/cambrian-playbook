@@ -2545,7 +2545,7 @@ ${isOpen
       `"topGains":["Gain 1","Gain 2","Gain 3"],`+
       `"competitiveAlternatives":["Status quo","Competitor","Build in-house"],`+
       `"uniqueDifferentiators":["Differentiator 1","Differentiator 2"],`+
-      `"disqualifiers":["Not a fit: 1","Not a fit: 2"],`+
+      `"disqualifiers":["HARD disqualifier 1 — a structural reason to walk away (e.g. 'No budget authority below C-suite')","HARD disqualifier 2 — not a preference, a deal-breaker"],`+
       `"techSignals":["Signal 1","Signal 2"],`+
       `"tractionChannels":["Channel 1","Channel 2","Channel 3"],`+
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
@@ -4832,9 +4832,9 @@ ${isOpen
                       <EF value={sellerICP.icp.dealSize||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,dealSize:v}}))} placeholder="e.g. $25K–$150K" single/>
                     </div>
                     <div>
-                      <div className="field-label" style={{marginBottom:4}}>Not a Fit</div>
+                      <div className="field-label" style={{marginBottom:4}}>Hard Disqualifiers</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                        {(sellerICP.icp.disqualifiers||[]).filter(Boolean).map((d,i)=>(
+                        {(sellerICP.icp.disqualifiers||[]).filter(Boolean).slice(0,3).map((d,i)=>(
                           <span key={i} style={{background:"var(--red-bg)",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--red)"}}>{d}</span>
                         ))}
                       </div>
