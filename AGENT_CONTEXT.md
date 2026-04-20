@@ -1,13 +1,14 @@
 # Cambrian Catalyst — RIVER Playbook Engine
-**Agent onboarding context. Last updated: 2026-04-17 (tag `v107-ux-phases`)**
+**Agent onboarding context. Last updated: 2026-04-20 (tag `v108-security-perf`)**
 
 ---
 
 ## What this app does
-B2B sales intelligence tool for Cambrian Catalyst LLC (West Seattle).
+Any-model sales intelligence tool for Cambrian Catalyst LLC (West Seattle).
 Takes a seller's website + a list of target accounts, runs AI research,
 and produces account briefs, discovery frameworks, and post-call routing —
 all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route).
+Supports B2B, B2C, B2B2C, B2G, marketplace, and hybrid sales models.
 
 ---
 
@@ -24,7 +25,9 @@ all structured around the RIVER framework (Reality, Impact, Vision, Entry, Route
 - Styling: `src/App.css` (~580 lines — includes design tokens, Phase 1-3 CSS, dark mode overrides, focus mode, skeleton shimmer, command palette, print rules), Google Fonts (Lora + DM Sans) loaded via `@import` in App.css
 - UX: Cmd-K command palette, keyboard shortcuts, dark mode toggle, in-call focus mode, stage transition animations, section collapse on Brief, company logos via Clearbit, responsive 1200px desktop width
 - Auth + DB: Supabase (anon key auth, `sessions` table with RLS)
-- AI: Anthropic Claude via serverless proxies (`/api/claude.js`, `/api/claude-stream.js`)
+- AI: Anthropic Claude via serverless proxies (`/api/claude.js`, `/api/claude-stream.js`), guarded by `api/_guard.js` (JWT auth, rate limiting, model/tool/input caps)
+- Knowledge layer: sensitive heuristics served from `/api/knowledge.js` behind JWT auth — NOT in client bundle
+- Chat: "Milton" embedded sales coach with full knowledge layer, dry humor, anti-fabrication rules
 - Deployment: Vercel (auto-deploy from `main`)
 - Models: `claude-haiku-4-5-20251001` (primary). `claude-sonnet-4-5` allow-listed as **automatic fallback** when Haiku returns 529 — substitution happens server-side in the proxy.
 
@@ -39,9 +42,9 @@ src/
   main.jsx               entry
   config/constants.js    COHORT_COLORS (15), MAX_OUTCOMES, MAX_DOCS, MAX_PRODUCTS
   lib/
-    api.js               callAI + streamAI wrappers (NOT yet imported by App.jsx — duplicates exist)
-    supabase.js          sbAuth / sbGetUser / sbSessions helpers (likewise)
-    utils.js             parseACV, labelOrgSize, buildCohorts, calcConfidence, etc.
+    api.js               callAI + streamAI wrappers (NOT yet imported — App.jsx has evolved versions with auth headers + retry)
+    supabase.js          sbAuth / sbGetUser / sbSessions helpers — IMPORTED by App.jsx
+    utils.js             parseACV, labelOrgSize, buildCohorts, calcConfidence (NOT yet imported — needs COHORT_COLORS dependency fix)
   data/
     outcomes.js          universal business imperatives
     riverFramework.js    RIVER_STAGES (imported by App.jsx)
@@ -49,10 +52,10 @@ src/
     negotiationFrameworks.js
     rfpSources.js        global RFP registry + CPV/NAICS codes
     prompts/
-      fitScoring.js      reference module — sync'd through v105 then drifted
-      icpGeneration.js   reference module — drifted
-      briefGeneration.js reference module — drifted
-      negotiationInjections.js
+      fitScoring.js      FIT_SCORING_RULES — served via /api/knowledge.js
+      icpGeneration.js   ICP_ENUM_BUCKETS, ICP_FRAMEWORKS — reference
+      briefGeneration.js BUYING_SIGNALS, BRIEF_FRAMEWORKS — served via /api/knowledge.js
+      negotiationInjections.js  ALL_NEGOTIATION_INJECTIONS — served via /api/knowledge.js
   stages/
     S9_SolutionFit.jsx   EXTRACTED — presentational component
                          (S1/S5/S6/S8 still inline in App.jsx)
@@ -61,9 +64,11 @@ src/
 api/
   claude.js               60s timeout. temperature:0 enforced. Sonnet fallback on 529.
   claude-stream.js        120s timeout, SSE. Same fallback before stream starts.
-  _guard.js               Shared validator: model allow-list, max_tokens cap (8000),
-                          tool allow-list, max_uses cap (3), origin allow-list.
-                          Exports MODEL_FALLBACK = { haiku-4-5 → sonnet-4-5 }.
+  _guard.js               JWT auth + rate limiting (60/min/IP) + model allow-list +
+                          tool allow-list + max_tokens cap (8000) + input size caps
+                          (120KB messages, 12KB system). ALLOW_GUEST env var for guest mode.
+  knowledge.js            Serves sensitive knowledge layer data behind JWT auth.
+                          Scoring heuristics, framework injections, NAICS/CPV codes.
 scripts/
   consistency/
     test-icp.mjs          ICP drift measurement (per-seller, N runs)
@@ -74,6 +79,7 @@ scripts/
     README.md             how to run
     results/              gitignored — regenerated per run
   pl.mjs                  Runnable P&L scenario calculator (--users, --fallback, etc.)
+  check-rls.mjs           Supabase RLS verification script + manual checklist
 docs/
   cost-model.md           Cost model + pricing tier proposal + sensitivity analysis
 ```
@@ -86,6 +92,7 @@ docs/
 | `ANTHROPIC_API_KEY` | Vercel server-side only (NO `VITE_` prefix) | Claude API key — used by `/api/claude*.js` |
 | `VITE_SUPABASE_URL` | Vercel + `.env.local` | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Vercel + `.env.local` | Supabase anon key |
+| `ALLOW_GUEST` | Vercel (all envs) | Set to `"true"` to let guest mode bypass JWT auth |
 
 **Critical**: `ANTHROPIC_API_KEY` must NEVER get `VITE_` prefix — it would end up in the browser bundle.
 
@@ -108,17 +115,23 @@ Each stage has Print-to-PDF + JSON Data export buttons (v106).
 ---
 
 ## Key functions in App.jsx
-| Function | Approx lines | Purpose |
-|---|---|---|
-| `claudeFetch()` | 195 | Shared retry wrapper for /api/claude. Handles 429 + 529 with exp backoff. |
-| `streamAI()` | 250 | SSE streaming helper. Retries initial POST on 529. |
-| `callAI()` | 290 | Non-streaming Haiku JSON wrapper. 3× retry incl. 529. |
-| `buildSellerProofPack()` | 425 | Composes "why buy from us" block — diffs, customers, alts, success factors, etc. Prepended to brief/hypothesis/solution-fit/fit-score prompts. |
-| `generateBrief()` | 495 | NON-ASYNC. Returns `{skeleton, mergers, allDone}`. 5 micro-calls fire in parallel; pickAccount paints skeleton instantly + merges sections progressively. |
-| `scoreFit()` | 1577 | Parallel batch scoring (Promise.all). Canonical Strong/Potential/Poor labels enforced via score-derived normalizer. |
-| `generateTargets()` | 1648 | "Build my target accounts" — 20 ICP-matched real companies via web_search; routes through standard cohort + fit pipeline. |
-| `fetchRFPIntel()` | 1758 | Two parallel calls (open + closed) with web_search; localStorage cache; auto-trigger on ICP change. |
-| `buildSellerICP()` | 2118 | Two-phase ICP: research (web_search) + anchored generation. localStorage cache by user+url+v3. |
+| Function | Purpose |
+|---|---|
+| `setAuthToken()` / `authHeaders()` | Module-level JWT token management. Set on login, sent with every proxy call. |
+| `claudeFetch()` | Shared retry wrapper for /api/claude. Handles 429 + 529 with exp backoff. Sends JWT. |
+| `streamAI()` | SSE streaming helper. Retries initial POST on 529. Sends JWT. |
+| `callAI()` | Non-streaming Haiku JSON wrapper. 3× retry + JSON repair. Sends JWT. |
+| `fetchKnowledgeLayer()` | Fetches sensitive heuristics from /api/knowledge on login. Populates KL_* vars. |
+| `buildSellerProofPack()` | Composes "why buy from us" block. Rules #1-9 including anti-fabrication. |
+| `generateBrief()` | NON-ASYNC. Returns `{skeleton, mergers, earlyDone, allDone}`. 5 micro-calls; pre-cache uses Promises. earlyDone (p1+p3+p4) fires hypothesis early. |
+| `scoreFit()` | Parallel batch scoring. 3-dimension: ICP Alignment + Customer Similarity + Competitive Landscape. Pre-caches top 3 accounts after completion. |
+| `buildRiverHypo()` | **Streamed** (streamAI, 4000 tok). Full knowledge layer injected. Progressive rendering. |
+| `generateDiscoveryQs()` | **Streamed** (streamAI, 3500 tok). Sales + Architecture dual-track. |
+| `runPostCall()` | **Streamed** (streamAI, 3500 tok). Proof pack + Fisher/Ury + Graham injected. Detects lazy reps. |
+| `buildSolutionFit()` | **Streamed** (streamAI, 4000 tok). Graham Margin of Safety injected. |
+| `sendChatMessage()` | Milton chat handler. Full knowledge layer in system prompt. Never reveals methodology. |
+| `fetchRFPIntel()` | Two parallel calls (open + closed) with web_search + NAICS/CPV codes. |
+| `buildSellerICP()` | Two-phase ICP: research (web_search) + anchored generation. Anti-fabrication rules. |
 | `pickAccount()` | 2256 | Brief wrapper — paints skeleton, merges micro-results, fires hypothesis + discovery in background. |
 | `buildRiverHypo()` | 2318 | RIVER hypothesis + JOLT + talk tracks. normalizeRiverField guards against object-shape leaks. |
 | `generateDiscoveryQs()` | 2497 | TWO tracks per RIVER stage: SALES (Mom Test/Voss/Cialdini) + ARCHITECTURE (Rajput/McSweeney/Richards-Ford/Fowler/DMAIC). |

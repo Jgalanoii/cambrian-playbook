@@ -6,6 +6,81 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). Dates ar
 
 ---
 
+## [v108-security-perf] — 2026-04-20
+
+22 commits. Security hardening, performance overhaul, knowledge layer
+protection, anti-fabrication guardrails, and Milton (chat assistant).
+
+### Security
+- **JWT auth on all Claude proxy calls**: `api/_guard.js` requires
+  `Authorization: Bearer <supabase-jwt>`. Validates exp + iss. Guest mode
+  via `ALLOW_GUEST` env var.
+- **Rate limiting**: 60 req/min per IP, sliding window in-memory per
+  Vercel instance. Returns 429 on excess.
+- **Knowledge layer server-side**: scoring heuristics, framework injections,
+  NAICS/CPV codes served from `/api/knowledge.js` behind JWT — removed from
+  client bundle. Verified: dist contains zero sensitive data.
+- **Input size caps**: 120KB total messages + 12KB system prompt in guard.
+- **Clerk removed**: eliminated critical CVE GHSA-vqx2-fgx2-5wq9 (unused
+  since Supabase migration). npm audit: 0 vulnerabilities.
+- **Supabase RLS verified**: anon key returns `[]` for fake user_id queries.
+
+### Performance
+- **Fixed duplicate API calls**: pre-cache stored `"loading"` strings;
+  `pickAccount` duplicated all 5 calls (8 total). Now stores Promises.
+- **Streamed 4 heavy calls**: Hypothesis, Post-Call, Discovery Qs, Solution
+  Fit — all converted from blocking `callAI` to progressive `streamAI`.
+- **Hypothesis fires 5-10s earlier**: triggers on `earlyDone` (p1+p3+p4)
+  instead of waiting for slow web_search calls (p2, p5).
+- **Top-3 account pre-caching**: after fit scores arrive, top 3 accounts
+  get executive data pre-warmed automatically.
+- **Brief proof pack trimmed**: LinkedIn + heavy proof-point data excluded
+  from brief (added only to hypothesis/talk tracks where it matters).
+- **Pre-fetch overview + live search on account select** (step 4).
+
+### Chat Assistant (Milton)
+- Embedded sales coach with dry humor (Office Space, Glengarry, Tommy Boy,
+  Jerry Maguire, Wolf of Wall Street, Boiler Room, Pursuit of Happyness).
+- Full knowledge layer (all negotiation frameworks, fit heuristics, buying
+  signals) — never reveals proprietary methodology or framework names.
+- Context-aware per step (10 step guides), injects brief/hypothesis/fit data.
+- Calls out lazy reps (<20% discovery fields + no notes) with humorous nudges.
+- Red Swingline stapler icon.
+
+### Data Accuracy
+- **Anti-fabrication rules on every prompt**: baseLight, proof pack (rule
+  #9), hypothesis, fit scoring, discovery, post-call, solution fit,
+  transcript analysis, ICP. Pattern: "NEVER invent — leave blank or [Verify]."
+- **Never-invent seller stats** (rule #8 in proof pack).
+- **3-dimension fit scoring**: ICP Alignment (40%) + Customer Similarity
+  (30%) + Competitive Landscape (30%), with research-backed industry averages.
+
+### Knowledge Layer Integration
+- All `src/data/` modules now imported via `/api/knowledge.js` endpoint.
+- `FIT_SCORING_RULES` heuristics injected into fit scoring prompts.
+- `NAICS_CATEGORY_MAP` + `CPV_CATEGORY_MAP` into RFP search queries.
+- `ALL_NEGOTIATION_INJECTIONS` into hypothesis + discovery.
+- `BUYING_SIGNALS` into hypothesis + post-call deal routing.
+- `JOLT_EFFECT` + `CHALLENGER_FRAMEWORK` into hypothesis + brief p3.
+- `FISHER_URY` + `GRAHAM` into post-call + transcript analysis + SA review.
+
+### Features
+- **LinkedIn input + proof points**: Session page fields for seller's
+  LinkedIn profile and manual proof points (case studies, ROI, wins, awards).
+- **Scan Products button**: manual "Scan Products, Solutions & Services"
+  fallback for mobile (onBlur doesn't always fire).
+- **Call transcript upload**: paste or upload Gong/Chorus/Otter/VTT/SRT
+  transcripts for full RIVER analysis on Post-Call page.
+- **Any-model sales support**: removed B2B assumption — adapts to B2C,
+  B2B2C, B2G, marketplace, hybrid.
+
+### Code Quality
+- Wired `src/lib/supabase.js` — deleted inline duplicates from App.jsx.
+- Updated reference module comments in `src/data/prompts/` (briefGeneration,
+  fitScoring, icpGeneration) — reflect streaming arch, knowledge layer API.
+
+---
+
 ## [v107-ux-phases] — 2026-04-17
 
 19 commits. Major UX overhaul (Phases 1-3 of the award-winning-SaaS plan),
