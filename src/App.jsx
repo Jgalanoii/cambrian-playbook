@@ -301,7 +301,7 @@ async function claudeFetch(body, { retries = 3 } = {}) {
       if (attempt < retries - 1) await sleep(2000 * (attempt + 1));
     }
   }
-  return { error: { type: "unavailable", message: "Anthropic API unavailable after retries — try again in a moment." } };
+  return { error: { type: "unavailable", message: "Our AI engine is temporarily unavailable — try again in a moment." } };
 }
 
 async function streamAI(prompt, onChunk, maxTok=2000) {
@@ -2507,7 +2507,7 @@ ${isOpen
         console.warn("ICP phase 2 error:",d2.error);
         // Surface a user-actionable error in state so the UI can show it.
         if (d2.error.type === "unavailable" || d2.error.type === "overloaded_error") {
-          setSellerICP(prev => prev || ({ _error: "Anthropic is currently overloaded. Click Regenerate ICP in a moment to retry." }));
+          setSellerICP(prev => prev || ({ _error: "Our AI engine is temporarily overloaded. Click Regenerate ICP in a moment to retry." }));
         }
         setIcpLoading(false);
         return;
@@ -3855,7 +3855,7 @@ ${isOpen
               {darkMode?"☀️":"🌙"}
             </button>
             <button onClick={()=>{const next=!cambrianMax;setCambrianMax(next);setCambrianMaxMode(next);}}
-              title={cambrianMax?"Switch to Standard (Haiku)":"Switch to Cambrian Max (Opus) — premium output"}
+              title={cambrianMax?"Switch to Standard":"Switch to Cambrian Max — premium intelligence"}
               style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.3px",
                 border:cambrianMax?"2px solid #8B5CF6":"1.5px solid var(--line-0)",
                 background:cambrianMax?"linear-gradient(135deg,#8B5CF6,#6D28D9)":"var(--surface)",
@@ -4011,7 +4011,7 @@ ${isOpen
               </div>
               <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
                 <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most informed seller in the room.</div>
-                <div style={{fontSize:14,color:"#666",lineHeight:1.7}}>Walk into every call knowing exactly what keeps your prospect up at night — their strategy, gaps, hiring signals, and the precise angle that opens doors. Powered by live research and five proven sales frameworks.</div>
+                <div style={{fontSize:14,color:"#666",lineHeight:1.7}}>Walk into every call knowing exactly what keeps your prospect up at night — their strategy, gaps, hiring signals, and the precise angle that opens doors. Built on live research and proven sales intelligence.</div>
               </div>
               <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
                 {[["⚡","Brief in seconds"],["🎯","5 sales frameworks"],["🔍","Live web research"],["📋","RIVER hypothesis"]].map(([icon,label])=>(
@@ -4074,7 +4074,7 @@ ${isOpen
                     </div>
                   )}
                 </div>
-                <div style={{fontSize:11,color:"#aaa",marginTop:6}}>Claude will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
+                <div style={{fontSize:11,color:"#aaa",marginTop:6}}>Cambrian will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
                 {/* Manual scan button — fallback when onBlur doesn't fire (mobile, etc.) */}
                 {sellerInput.trim() && urlScanStatus !== "scanning" && !urlScanConfirmed && (
                   <button className="btn btn-secondary btn-sm" style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}
@@ -4125,7 +4125,7 @@ ${isOpen
 
                 {sellerDocs.length>0&&(
                   <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5}}>
-                    <span>✓</span> {sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Claude will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.
+                    <span>✓</span> {sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Cambrian will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.
                   </div>
                 )}
               </div>
@@ -4226,7 +4226,7 @@ ${isOpen
                       </div>
                     )}
                     {!urlScanConfirmed&&urlScanStatus===""&&(
-                      <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>Add a URL for each product or service line. Claude will reference these for solution mapping.</div>
+                      <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>Add a URL for each product or service line. Cambrian will reference these for solution mapping.</div>
                     )}
                     {productUrls.map((item,i)=>(
                       <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
@@ -4268,7 +4268,7 @@ ${isOpen
                   <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — drives curated recommendations)</span>
                 </div>
                 <div style={{fontSize:11,color:"#777",marginBottom:10,lineHeight:1.5}}>
-                  Add your products or services so Claude can recommend the right fit for each prospect based on live research. Upload a product sheet or add them manually.
+                  Add your products or services so Cambrian can recommend the right fit for each prospect based on live research. Upload a product sheet or add them manually.
                 </div>
 
                 {/* Upload product doc */}
@@ -4282,7 +4282,7 @@ ${isOpen
                   <div className="doc-upload-icon">📋</div>
                   <div className="doc-upload-text">
                     <div className="doc-upload-title">Import product sheet</div>
-                    <div className="doc-upload-hint">Upload a product overview, solution brief, or pricing sheet — Claude extracts each product automatically</div>
+                    <div className="doc-upload-hint">Upload a product overview, solution brief, or pricing sheet — Cambrian extracts each product automatically</div>
                   </div>
                   <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();prodDocRef.current.click();}}>Upload</button>
                   <input ref={prodDocRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.csv" multiple style={{display:"none"}}
@@ -4313,7 +4313,7 @@ ${isOpen
                     {products.filter(p=>p.name.trim()).map((p,i)=>(
                       <span key={i} className="prod-chip"><span className="prod-chip-dot"/>{p.name}</span>
                     ))}
-                    <span style={{color:"#aaa"}}>— Claude will match these to each prospect</span>
+                    <span style={{color:"#aaa"}}>— Cambrian will match these to each prospect</span>
                   </div>
                 )}
               </div>
@@ -5637,7 +5637,7 @@ ${isOpen
                       <strong>Fix:</strong> Vercel → Project → Settings → Environment Variables<br/>
                       Add <code style={{background:"#f5c6c6",padding:"1px 6px",borderRadius:3}}>ANTHROPIC_API_KEY</code> = sk-ant-... key (no VITE_ prefix) → <strong>Redeploy</strong><br/>
                       Check browser DevTools (F12) Console for detailed error.<br/>
-                      <em style={{color:"#aaa"}}>Brief below uses Claude training knowledge only — no live research.</em>
+                      <em style={{color:"#aaa"}}>Brief below uses cached knowledge only — no live research.</em>
                     </div>
                   </div>
                 )}
