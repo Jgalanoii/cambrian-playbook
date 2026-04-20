@@ -3861,6 +3861,13 @@ ${isOpen
                   )}
                 </div>
                 <div style={{fontSize:11,color:"#aaa",marginTop:6}}>Claude will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
+                {/* Manual scan button — fallback when onBlur doesn't fire (mobile, etc.) */}
+                {sellerInput.trim() && urlScanStatus !== "scanning" && !urlScanConfirmed && (
+                  <button className="btn btn-secondary btn-sm" style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}
+                    onClick={() => { scanSellerUrl(sellerInput.trim()); if(!sellerICP&&!icpLoading) buildSellerICP(sellerInput.trim()); }}>
+                    <span style={{fontSize:13}}>🔍</span> Scan Products, Solutions &amp; Services
+                  </button>
+                )}
               </div>
 
               {/* Divider */}
