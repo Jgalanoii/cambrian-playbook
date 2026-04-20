@@ -662,16 +662,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
     (partial) => {
-      // Live stream p1 — show companySnapshot as it types
-      if (onStream && partial.length > 60) {
-        try {
-          const last = partial.lastIndexOf('}');
-          if (last > 0) {
-            const parsed = JSON.parse(partial.slice(0, last + 1));
-            if (parsed.companySnapshot) onStream("overview", parsed);
-          }
-        } catch { /* partial JSON */ }
-      }
+      if (!onStream || partial.length < 40) return;
+      // Extract companySnapshot value from partial stream using regex
+      // (more reliable than JSON.parse on incomplete JSON)
+      const snapMatch = partial.match(/"companySnapshot"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (snapMatch) onStream("overview", { companySnapshot: snapMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n') });
     }, 1800
   );
 
@@ -727,15 +722,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"standoutReview":{"text":"Most revealing quote from a customer or employee review — something a seller would want to know before calling","source":"G2 / Glassdoor / press","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
     (partial) => {
-      // Live stream p3 — show strategicTheme + openingAngle as they type
-      if (onStream && partial.length > 80) {
-        try {
-          const last = partial.lastIndexOf('}');
-          if (last > 0) {
-            const parsed = JSON.parse(partial.slice(0, last + 1));
-            if (parsed.strategicTheme) onStream("strategy", parsed);
-          }
-        } catch { /* partial JSON */ }
+      if (!onStream || partial.length < 60) return;
+      const themeMatch = partial.match(/"strategicTheme"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      const angleMatch = partial.match(/"openingAngle"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      const oppMatch = partial.match(/"sellerOpportunity"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (themeMatch || angleMatch || oppMatch) {
+        const data = {};
+        if (themeMatch) data.strategicTheme = themeMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        if (angleMatch) data.openingAngle = angleMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        onStream("strategy", data);
       }
     }, 2400
   );
@@ -757,16 +753,15 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"techStack":{"crm":"e.g. Salesforce — or empty string if unknown","erp":"e.g. SAP — or empty string","hris":"e.g. Workday — or empty string","marketing":"e.g. HubSpot — or empty string","payments":"e.g. Stripe — or empty string","analytics":"e.g. Tableau — or empty string","infrastructure":"e.g. AWS — or empty string","other":[]},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
     (partial) => {
-      // Live stream p4 — show solutionMapping as it types
-      if (onStream && partial.length > 100) {
-        try {
-          const last = partial.lastIndexOf('}');
-          if (last > 0) {
-            const parsed = JSON.parse(partial.slice(0, last + 1));
-            if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
-          }
-        } catch { /* partial JSON */ }
-      }
+      if (!onStream || partial.length < 100) return;
+      // For p4, try JSON parse since solutionMapping is complex
+      try {
+        const last = partial.lastIndexOf('}');
+        if (last > 0) {
+          const parsed = JSON.parse(partial.slice(0, last + 1));
+          if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
+        }
+      } catch { /* partial — wait for more */ }
     }, 2600
   );
 
@@ -829,7 +824,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // each micro-result as its promise resolves. No await here.
   const skeleton = {
     ...BLANK_BRIEF,
-    companySnapshot: `Researching ${co}...`,
+    companySnapshot: "",
     _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true},
   };
 
@@ -2940,9 +2935,9 @@ ${isOpen
 
   const pickAccount = async member => {
     setSelectedAccount(member);
-    setBriefLoading(true);
+    setBriefLoading(false);  // skeleton renders immediately — progress shown via _loadingSections banner
     setBriefError("");
-    setBriefStatus("Researching " + member.company + "...");
+    setBriefStatus("");
     setGateAnswers({}); setGateNotes({}); setRiverData({}); setDiscoveryQs(null);
     setDealValue(""); setDealClassification(""); setNotes(""); setPostCall(null);
     setContactRole(""); setCustomOutcome("");
@@ -2992,9 +2987,38 @@ ${isOpen
     setBriefStatus("");
 
     // Wire each section's merger to fire as it resolves.
-    Object.values(mergers).forEach(m => {
-      m.then(updater => { if (typeof updater === "function") setBrief(prev => updater(prev)); });
+    // Also track timing so we can warn if calls are taking too long.
+    const briefStart = Date.now();
+    let sectionsResolved = 0;
+    Object.entries(mergers).forEach(([name, m]) => {
+      m.then(updater => {
+        sectionsResolved++;
+        if (typeof updater === "function") setBrief(prev => updater(prev));
+        console.log(`[brief] ${name} resolved (${sectionsResolved}/5) in ${((Date.now()-briefStart)/1000).toFixed(1)}s`);
+      }).catch(err => {
+        sectionsResolved++;
+        console.warn(`[brief] ${name} FAILED:`, err?.message || err);
+        // Surface error to user if all sections fail
+        if (sectionsResolved >= 5) {
+          setBrief(prev => prev?._loadingSections && Object.values(prev._loadingSections).every(v => v)
+            ? { ...prev, _error: "All brief sections failed — check your connection and try Regenerate." }
+            : prev);
+        }
+      });
     });
+
+    // Timeout warning — if nothing has loaded after 30s, something is wrong
+    setTimeout(() => {
+      setBrief(prev => {
+        if (!prev) return prev;
+        const pending = Object.values(prev._loadingSections || {}).filter(Boolean).length;
+        if (pending >= 4) {
+          console.warn("[brief] Still waiting on", pending, "sections after 30s");
+          return { ...prev, _error: (prev._error || "") + " Brief is taking longer than expected — this may be a connection or API issue. Try clicking Regenerate." };
+        }
+        return prev;
+      });
+    }, 30000);
 
     // Hypothesis only needs overview + strategy + solutions (p1+p3+p4).
     // Fire it on earlyDone — don't wait for slow web_search calls (p2, p5).
