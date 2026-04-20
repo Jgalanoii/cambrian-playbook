@@ -1754,6 +1754,8 @@ export default function App(){
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState([]); // [{role:'user'|'assistant', content}]
   const[chatLoading,setChatLoading]=useState(false);
+  const[resourcesOpen,setResourcesOpen]=useState(false);
+  const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
   const[collapsedBB,setCollapsedBB]=useState(new Set()); // Phase 2b: collapsed brief sections
   const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
@@ -3927,6 +3929,7 @@ ${isOpen
     ...(sellerICP?.icp ? [
       { id:"act-regen-icp", icon:"↻", label:"Regenerate ICP",   section:"Actions", action:()=>{if(confirm("Regenerate ICP?"))buildSellerICP(sellerUrl,{forceRefresh:true});} },
       { id:"act-rfp",       icon:"📡", label:"Refresh RFP Intel",section:"Actions", action:()=>fetchRFPIntel({forceRefresh:true}) },
+      { id:"act-resources", icon:"📁", label:"Open Resources",    section:"Actions", action:()=>setResourcesOpen(true) },
     ] : []),
     ...(brief ? [
       { id:"act-regen-brief", icon:"↻", label:"Regenerate Brief", section:"Actions", action:()=>pickAccount(selectedAccount) },
@@ -3961,6 +3964,191 @@ ${isOpen
           onSend={sendChatMessage}
           onClose={()=>setChatOpen(false)}
         />
+      )}
+
+      {/* ── RESOURCES DRAWER ─────────────────────────────────────────── */}
+      {resourcesOpen && (
+        <div style={{position:"fixed",top:0,right:0,bottom:0,width:380,maxWidth:"90vw",background:"var(--bg-0)",borderLeft:"1.5px solid var(--line-0)",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1100,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          {/* Header */}
+          <div style={{padding:"16px 20px 12px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontFamily:"Lora,serif",fontSize:17,fontWeight:700,color:"var(--ink-0)"}}>Resources</div>
+            <button onClick={()=>setResourcesOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--ink-2)"}}>✕</button>
+          </div>
+
+          {/* Tabs */}
+          <div style={{display:"flex",gap:0,padding:"0 16px",borderBottom:"1px solid var(--line-0)",background:"var(--bg-1)"}}>
+            {[["uploads","📂 Uploads"],["outputs","📄 Outputs"],["tools","🛠 Tools"]].map(([key,label])=>(
+              <button key={key} onClick={()=>setResourceTab(key)}
+                style={{padding:"10px 16px",fontSize:12,fontWeight:resourceTab===key?700:500,
+                  color:resourceTab===key?"var(--ink-0)":"var(--ink-2)",
+                  borderBottom:resourceTab===key?"2.5px solid var(--tan-0)":"2.5px solid transparent",
+                  background:"transparent",border:"none",cursor:"pointer",transition:"all 0.15s"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div style={{flex:1,overflow:"auto",padding:"16px 20px"}}>
+
+            {/* ── UPLOADS TAB ── */}
+            {resourceTab==="uploads"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:4}}>Files you've uploaded this session.</div>
+
+                {/* Sales Materials */}
+                {sellerDocs.length>0 ? (
+                  <div>
+                    <div style={{fontSize:11,fontWeight:700,color:"var(--ink-1)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Sales Materials</div>
+                    {sellerDocs.map((d,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"var(--bg-1)",borderRadius:8,marginBottom:6,border:"1px solid var(--line-0)"}}>
+                        <span style={{fontSize:14}}>📄</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label || d.name}</div>
+                          <div style={{fontSize:11,color:"var(--ink-2)"}}>{d.name} · {(d.content?.length||0).toLocaleString()} chars</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{padding:20,textAlign:"center",color:"var(--ink-2)",fontSize:13}}>No sales materials uploaded yet. Add them on the Session page.</div>
+                )}
+
+                {/* Proof Points */}
+                {sellerProofPoints.filter(p=>p.content?.trim()).length>0 && (
+                  <div>
+                    <div style={{fontSize:11,fontWeight:700,color:"var(--ink-1)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Proof Points</div>
+                    {sellerProofPoints.filter(p=>p.content?.trim()).map((p,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"var(--bg-1)",borderRadius:8,marginBottom:6,border:"1px solid var(--line-0)"}}>
+                        <span style={{fontSize:12}}>{p.type==="Case Study"?"📋":p.type==="ROI Metric"?"📊":p.type==="Customer Win"?"🏆":p.type==="Award"?"⭐":p.type==="Partnership"?"🤝":"✅"}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:11,fontWeight:600,color:"var(--tan-0)",textTransform:"uppercase"}}>{p.type}</div>
+                          <div style={{fontSize:12,color:"var(--ink-0)"}}>{p.content}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Call Transcripts hint */}
+                <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)",marginBottom:4}}>🎙 Call Transcripts</div>
+                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Upload call transcripts on the Post-Call page (Step 8). Supported: Gong, Chorus, Otter, Zoom, VTT/SRT files.</div>
+                  {step!==8&&<button className="btn btn-secondary btn-sm" style={{marginTop:8}} onClick={()=>{setResourcesOpen(false);setStep(8);}}>Go to Post-Call →</button>}
+                </div>
+              </div>
+            )}
+
+            {/* ── OUTPUTS TAB ── */}
+            {resourceTab==="outputs"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:4}}>Generated intelligence for {selectedAccount?.company || "your accounts"}.</div>
+
+                {/* Brief */}
+                {brief && (
+                  <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>RIVER Brief — {selectedAccount?.company}</div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Brief",brief)}>💾 JSON</button>
+                        <button className="btn btn-navy btn-sm" onClick={doExport}>🖨 PDF</button>
+                      </div>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>Company overview, executives, strategy, solutions, sentiment</div>
+                  </div>
+                )}
+
+                {/* Hypothesis */}
+                {riverHypo && (
+                  <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>RIVER Hypothesis</div>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Hypothesis",riverHypo)}>💾 JSON</button>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>Reality, Impact, Vision, Entry, Route + JOLT plan + talk tracks</div>
+                  </div>
+                )}
+
+                {/* Discovery Questions */}
+                {discoveryQs && (
+                  <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Discovery Questions</div>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Discovery",discoveryQs)}>💾 JSON</button>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>Sales + Architecture tracks per RIVER stage</div>
+                  </div>
+                )}
+
+                {/* Post-Call */}
+                {postCall && (
+                  <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Post-Call Route</div>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Post-Call",postCall)}>💾 JSON</button>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>Deal route: {postCall.dealRoute} · CRM note · follow-up email</div>
+                  </div>
+                )}
+
+                {/* Solution Fit */}
+                {solutionFit && (
+                  <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Solution Fit Review</div>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Solution-Fit",solutionFit)}>💾 JSON</button>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>PMF assessment, DMAIC stage, architecture gaps</div>
+                  </div>
+                )}
+
+                {/* ICP */}
+                {sellerICP?.icp && (
+                  <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Ideal Customer Profile</div>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("ICP",sellerICP)}>💾 JSON</button>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>{sellerICP.sellerName} · {sellerICP.marketCategory}</div>
+                  </div>
+                )}
+
+                {!brief && !riverHypo && !postCall && !solutionFit && !sellerICP?.icp && (
+                  <div style={{padding:20,textAlign:"center",color:"var(--ink-2)",fontSize:13}}>No outputs generated yet. Build a brief to get started.</div>
+                )}
+              </div>
+            )}
+
+            {/* ── TOOLS TAB ── */}
+            {resourceTab==="tools"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:4}}>Sales enablement tools and frameworks.</div>
+
+                {[
+                  { icon: "⚔️", title: "Competitive Battle Cards", desc: "Reframe comparisons, handle 'we're also looking at X' moments", action: "Built into hypothesis talk tracks" },
+                  { icon: "📋", title: "Discovery Call Scorecard", desc: "8-dimension scoring rubric for call quality assessment", action: "Built into discovery question generation" },
+                  { icon: "🎯", title: "Offer-Fit Mapping", desc: "Map prospect situations to engagement shapes (Diagnostic, Pilot, Implementation, etc.)", action: "Built into post-call deal routing" },
+                  { icon: "🎓", title: "Rep Onboarding Playbook", desc: "90-day curriculum with weekly milestones and certification gates", action: "Available via Milton coaching" },
+                  { icon: "📊", title: "QBR Template", desc: "7-section quarterly business review structure", action: "Available via Milton coaching" },
+                  { icon: "🃏", title: "Solution-Fit Cards", desc: "Per-offer cards: trigger → pain → solution → deliverable → success metric", action: "Built into Solution Architecture review" },
+                  { icon: "🤖", title: "Milton (Sales Coach)", desc: "AI coaching assistant with full knowledge layer — ask anything", action: null },
+                ].map((tool,i)=>(
+                  <div key={i} style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                      <span style={{fontSize:18,flexShrink:0}}>{tool.icon}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>{tool.title}</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5,marginTop:2}}>{tool.desc}</div>
+                        {tool.action && <div style={{fontSize:10,color:"var(--tan-0)",marginTop:4,fontWeight:600}}>{tool.action}</div>}
+                        {!tool.action && <button className="btn btn-secondary btn-sm" style={{marginTop:6}} onClick={()=>{setResourcesOpen(false);setChatOpen(true);}}>Open Milton →</button>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="app"
@@ -4027,6 +4215,14 @@ ${isOpen
                 background:cambrianMax?"linear-gradient(135deg,#8B5CF6,#6D28D9)":"var(--surface)",
                 color:cambrianMax?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
               {cambrianMax?"⚡ MAX":"⚡ Max"}
+            </button>
+            <button onClick={()=>setResourcesOpen(r=>!r)}
+              title="Resources — uploads, outputs, tools"
+              style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,
+                border:resourcesOpen?"2px solid var(--tan-0)":"1.5px solid var(--line-0)",
+                background:resourcesOpen?"var(--tan-0)":"var(--surface)",
+                color:resourcesOpen?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
+              📁 Resources
             </button>
             {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
             {step>0&&(
