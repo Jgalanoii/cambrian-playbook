@@ -2707,69 +2707,116 @@ ${isOpen
     setCohorts(b);
     setSelectedCohort(b[0]||null);
     setStep(3);
-    // Score all members in background
+    // Score all members in background — use best available seller context
     const allMembers=b.flatMap(c=>c.members);
     const sellerCtxF=sellerDocs.length>0
       ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
-      : sellerUrl+(productUrls.filter(u=>u.url).map(u=>u.url).join(" | ")??" ");
+      : (sellerICP?.sellerName || sellerUrl || "the seller") +
+        (sellerICP?.marketCategory ? " (" + sellerICP.marketCategory + ")" : "") +
+        (productUrls.filter(u=>u.url).length ? " | Pages: " + productUrls.filter(u=>u.url).map(u=>u.url).join(", ") : "");
     scoreFit(allMembers, sellerCtxF);
   };
 
-  const goToQuickBrief=async()=>{
-    const entries=quickEntries.filter(e=>e.name.trim());
-    if(!entries.length) return;
+  // ── QUICK ENTRY: enrich a single company name → suggest URL ────────────
+  const suggestUrl = async (name, idx) => {
+    if (!name.trim() || name.trim().length < 2) return;
+    try {
+      const r = await callAI(
+        `What is the PRIMARY website domain for the company "${name.trim()}"?\n` +
+        `Return ONLY raw JSON: {"url":"company.com","industry":"Primary vertical","employees":"e.g. ~5,000"}\n` +
+        `If unknown, return {"url":"","industry":"","employees":""}`
+      );
+      if (r?.url) {
+        setQuickEntries(prev => prev.map((e, j) => j === idx ? {
+          ...e,
+          url: e.url || r.url,  // don't overwrite if user already typed one
+          _suggested: r.url,
+          _industry: r.industry || "",
+          _employees: r.employees || "",
+        } : e));
+      }
+    } catch {}
+  };
 
-    // Show immediate feedback — navigate to step 3 with a loading indicator
-    const members = entries.map(e=>({company:e.name.trim(),company_url:e.url.trim(),ind:"",acv:0,src:"Quick Entry",outcome:""}));
-    const syntheticRows=entries.map(e=>({
-      company:e.name.trim(), company_url:e.url.trim(),
-      industry:"",acv:"0",lead_source:"Quick Entry",outcome:"",
+  const goToQuickBrief = async () => {
+    const entries = quickEntries.filter(e => e.name.trim());
+    if (!entries.length) return;
+
+    // Navigate immediately — user sees companies in table right away
+    const members = entries.map(e => ({
+      company: e.name.trim(),
+      company_url: (e.url || e._suggested || "").trim(),
+      ind: e._industry || "",
+      employees: e._employees || "",
+      acv: 0, src: "Quick Entry", outcome: "",
     }));
-    const syntheticMapping={company:"company",industry:"industry",acv:"0",lead_source:"lead_source",company_url:"company_url",outcome:"outcome",close_date:"",product:""};
+    const syntheticRows = entries.map(e => ({
+      company: e.name.trim(),
+      company_url: (e.url || e._suggested || "").trim(),
+      industry: e._industry || "", acv: "0", lead_source: "Quick Entry", outcome: "",
+    }));
     setRows(syntheticRows);
-    setMapping(syntheticMapping);
-    setHeaders(["company","company_url","industry","acv","lead_source","outcome"]);
+    setMapping({ company: "company", industry: "industry", acv: "0", lead_source: "lead_source", company_url: "company_url", outcome: "outcome", close_date: "", product: "" });
+    setHeaders(["company", "company_url", "industry", "acv", "lead_source", "outcome"]);
     setFileName(`quick_entry_${entries.length}_accounts`);
 
-    const cohort={id:"qe",name:"Quick Entry",color:"var(--tan-0)",size:entries.length,pct:100,avgACV:0,topInd:[],topSrc:["Quick Entry"],topOut:[],members};
+    const cohort = {
+      id: "qe", name: "Quick Entry", color: "var(--tan-0)",
+      size: entries.length, pct: 100, avgACV: 0,
+      topInd: [...new Set(members.map(m => m.ind).filter(Boolean))].slice(0, 3),
+      topSrc: ["Quick Entry"], topOut: [], members,
+    };
     setCohorts([cohort]);
     setSelectedCohort(cohort);
     setSelectedOutcomes([]);
     setStep(3);
 
-    // Enrich companies in background — lookup industry + basic info via AI
-    // This turns the blank "—" columns into real data within a few seconds.
-    const sellerCtx2=sellerDocs.length>0
-      ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
-      : sellerUrl+(productUrls.filter(u=>u.url).map(u=>u.url).join(" | ")??" ");
+    // Build seller context — use whatever we have (URL, docs, ICP name)
+    const sellerCtx2 = sellerDocs.length > 0
+      ? sellerDocs.map(d => d.label + ": " + d.content.slice(0, 400)).join(" | ")
+      : (sellerICP?.sellerName || sellerUrl || "the seller") +
+        (sellerICP?.marketCategory ? " (" + sellerICP.marketCategory + ")" : "");
 
-    // Fire fit scoring (also enriches orgSize + ownership)
+    // Fire enrichment + fit scoring in parallel
+    // 1. Enrich: fills in industry + employees for blank entries
+    const enrichPromise = (async () => {
+      // Only enrich entries that are still missing data
+      const needsEnrich = members.filter(m => !m.ind || !m.employees);
+      if (!needsEnrich.length) return;
+      try {
+        const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
+        const result = await callAI(
+          `For each company, return the primary industry vertical and estimated employee count.\n` +
+          `Use training knowledge confidently. Empty string if truly unknown.\n\n` +
+          `Companies (Name|URL):\n${companiesStr}\n\n` +
+          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","url":"verified domain or empty"}]}`
+        );
+        if (result?.companies) {
+          const map = {};
+          result.companies.forEach(c => { if (c.company) map[c.company] = c; });
+          setCohorts(prev => prev.map(co => ({
+            ...co,
+            members: co.members.map(m => {
+              const e = map[m.company];
+              if (!e) return m;
+              return {
+                ...m,
+                ind: m.ind || e.industry || "",
+                employees: m.employees || e.employees || "",
+                company_url: m.company_url || e.url || "",
+              };
+            }),
+            topInd: [...new Set(Object.values(map).map(e => e.industry).filter(Boolean))].slice(0, 3),
+          })));
+        }
+      } catch (e) { console.warn("Enrichment failed:", e.message); }
+    })();
+
+    // 2. Fit scoring — fires in parallel with enrichment
     scoreFit(members, sellerCtx2);
 
-    // Enrich industry via a quick AI call — fills in the blank industry column
-    try {
-      const companiesStr = members.map(m => `${m.company}|${m.company_url||""}`).join("\n");
-      const enrichResult = await callAI(
-        `For each company below, return the PRIMARY industry vertical (e.g. "Financial Services", "Healthcare", "Technology", "Retail", "Manufacturing", etc.) and estimated employee count.\n\n` +
-        `ACCURACY: Use training knowledge confidently for well-known companies. If truly unknown, use empty string.\n\n` +
-        `Companies:\n${companiesStr}\n\n` +
-        `Return ONLY raw JSON:\n` +
-        `{"companies":[{"company":"exact name","industry":"Primary vertical","employees":"e.g. ~5,000"}]}`
-      );
-      if (enrichResult?.companies) {
-        const enrichMap = {};
-        enrichResult.companies.forEach(c => { if (c.company) enrichMap[c.company] = c; });
-        // Update cohort members with enriched data
-        setCohorts(prev => prev.map(c => ({
-          ...c,
-          members: c.members.map(m => {
-            const e = enrichMap[m.company];
-            return e ? { ...m, ind: e.industry || m.ind, employees: e.employees || m.employees } : m;
-          }),
-          topInd: [...new Set(Object.values(enrichMap).map(e => e.industry).filter(Boolean))].slice(0, 3),
-        })));
-      }
-    } catch (e) { console.warn("Quick entry enrichment failed:", e.message); }
+    // Wait for enrichment so the table fills in
+    await enrichPromise;
   };
   const goToOutcomes=()=>{
     if(selectedCohort){
@@ -4983,20 +5030,38 @@ ${isOpen
                 </div>
 
                 {quickEntries.map((entry,i)=>(
-                  <div key={i} style={{display:"flex",gap:10,marginBottom:10,alignItems:"center"}}>
+                  <div key={i} style={{display:"flex",gap:10,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
                     <div style={{width:28,height:28,borderRadius:"50%",background:"var(--ink-0)",color:"var(--tan-0)",fontFamily:"Lora,serif",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                       {i+1}
                     </div>
                     <input type="text" value={entry.name} placeholder="Company name"
                       style={{flex:"0 0 200px",fontSize:14}}
-                      onChange={e=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,name:e.target.value}:x))}
-                      onKeyDown={e=>{if(e.key==="Enter"&&i===quickEntries.length-1)setQuickEntries(p=>[...p,{name:"",url:""}]);}}
+                      onChange={e=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,name:e.target.value,_suggested:""}:x))}
+                      onBlur={()=>{if(entry.name.trim()&&!entry.url.trim()) suggestUrl(entry.name, i);}}
+                      onKeyDown={e=>{
+                        if(e.key==="Enter"){
+                          if(entry.name.trim()&&!entry.url.trim()) suggestUrl(entry.name, i);
+                          if(i===quickEntries.length-1) setQuickEntries(p=>[...p,{name:"",url:""}]);
+                        }
+                        if(e.key==="Tab"&&!e.shiftKey&&entry.name.trim()&&!entry.url.trim()){
+                          suggestUrl(entry.name, i);
+                        }
+                      }}
                     />
-                    <input type="text" value={entry.url} placeholder="website.com or linkedin.com/company/..."
-                      style={{flex:1,fontSize:14,color:"#555"}}
-                      onChange={e=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
-                      onKeyDown={e=>{if(e.key==="Enter"&&i===quickEntries.length-1)setQuickEntries(p=>[...p,{name:"",url:""}]);}}
-                    />
+                    <div style={{flex:1,position:"relative"}}>
+                      <input type="text" value={entry.url} placeholder={entry._suggested ? entry._suggested : "website.com (auto-suggested on blur)"}
+                        style={{width:"100%",fontSize:14,color:entry.url?"#555":"#aaa"}}
+                        onChange={e=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
+                        onKeyDown={e=>{if(e.key==="Enter"&&i===quickEntries.length-1)setQuickEntries(p=>[...p,{name:"",url:""}]);}}
+                      />
+                      {entry._suggested && !entry.url && (
+                        <button
+                          style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",fontSize:11,background:"var(--green)",color:"#fff",border:"none",borderRadius:12,padding:"2px 10px",cursor:"pointer",fontWeight:600}}
+                          onClick={()=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,url:entry._suggested}:x))}>
+                          Accept
+                        </button>
+                      )}
+                    </div>
                     {quickEntries.length>1&&(
                       <button onClick={()=>setQuickEntries(p=>p.filter((_,j)=>j!==i))}
                         style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:18,padding:"0 4px",flexShrink:0}}>×</button>
@@ -5153,7 +5218,7 @@ ${isOpen
                                 title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk].filter(Boolean).join(" · ")}>
                                 {fitScores[m.company].score}% · {fitScores[m.company].label}
                               </div>
-                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):sellerUrl;scoreFit(allM,sCtx);}}>Run fit check</button>}
+                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):(sellerICP?.sellerName||sellerUrl||"the seller")+(sellerICP?.marketCategory?" ("+sellerICP.marketCategory+")":"");scoreFit(allM,sCtx);}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
