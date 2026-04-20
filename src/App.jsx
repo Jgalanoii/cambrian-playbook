@@ -96,7 +96,7 @@ const BLANK_BRIEF = {
   companySnapshot:"",sellerSnapshot:"",
   revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",website:"",linkedIn:"",
   keyExecutives:[],recentHeadlines:[],
-  openRoles:{summary:"",roles:[]},
+  openRoles:null,
   solutionMapping:[{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""}],
   mobilizer:{description:"",identifyingBehavior:"",teachingAngle:""},
   caseStudies:[],
@@ -105,6 +105,9 @@ const BLANK_BRIEF = {
   competitors:[],recentSignals:["","",""],
   fundingProfile:"",strategicTheme:"",growthSignals:[],sellerOpportunity:"",
   publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:""},
+  workforceProfile:{knowledgeWorkerPct:"",unionizedPct:"",remotePolicy:"",avgTenure:""},
+  cultureProfile:{coreValues:"",communicationStyle:"",decisionMaking:"",sellerLanguageHint:""},
+  incumbentVendors:{hrSystem:"",financeSystem:"",crmSystem:"",cardProvider:""},
 };
 
 const RKEYS = ["reality","impact","vision","entryPoints","route"];
@@ -416,7 +419,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
   } catch { return null; }
 }
 
-async function callAI(prompt){
+async function callAI(prompt, { maxTokens = 5500 } = {}){
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   for(let attempt=0; attempt<3; attempt++){
     try{
@@ -425,7 +428,7 @@ async function callAI(prompt){
         headers:authHeaders(),
         body:JSON.stringify({
           model:activeModel(),
-          max_tokens:5500,
+          max_tokens:maxTokens,
           temperature:0,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
           messages:[
@@ -537,7 +540,7 @@ async function callAI(prompt){
 // CRITICAL: includes explicit instructions telling Haiku to GROUND every
 // claim in this proof — cite named customers, name differentiators, flag
 // unsupported claims rather than asserting them.
-function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], sellerLinkedIn = "", sellerProofPoints = [] }) {
+function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], sellerProofPoints = [] }) {
   if (!sellerICP?.icp) return "";
   const icp = sellerICP.icp;
   const out = [];
@@ -583,13 +586,6 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   if (namedProducts.length) {
     out.push(`\nSeller's product catalog (use these EXACT names — do NOT invent products):`);
     namedProducts.forEach(p => out.push(`  • ${p.name}${p.description ? " — " + p.description.slice(0, 120) : ""}`));
-  }
-
-  // Seller's personal LinkedIn — for relationship signals + warm-path inference
-  if (sellerLinkedIn) {
-    const liSlug = sellerLinkedIn.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//,"").replace(/\/.*/,"");
-    out.push(`\nSeller's personal LinkedIn: linkedin.com/in/${liSlug}`);
-    out.push(`When building briefs or hypotheses for a target, look for OVERLAP between the seller's background and the target company: shared former employers, mutual connections' companies, same university, same industry experience. Surface these as "Relationship Signals" — warm intro paths the rep can use.`);
   }
 
   // Manually-entered proof points (case studies, ROI metrics, awards, etc.)
@@ -639,7 +635,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // Proof pack for p3/p4 — includes differentiators, named customers, product
   // catalog, and proof points. LinkedIn excluded (post-brief call). Docs capped
   // at 3 to keep prompt size manageable for streaming speed.
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs: sellerDocs.slice(0,3), products });
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
@@ -755,7 +751,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       }
     }, 2400
   );
-  // relationshipSignals (LinkedIn) now fires as a separate post-brief call
+  // relationshipSignals feature tabled
 
   // MICRO 4: Solution mapping + contacts — shows after strategy (streamed)
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
@@ -769,7 +765,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `{"product":"","fit":"","provenWith":"","measurableOutcome":""},`+
     `{"product":"","fit":"","provenWith":"","measurableOutcome":""}],`+
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
-    `"keyContacts":[{"name":"VP/Director at ${co} — real name if known, NOT C-suite","title":"Full title","initials":"XX","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
+    `"keyContacts":[{"name":"Real name if known from web search (leave EMPTY STRING if not verified — do NOT guess names)","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this","initials":"XX or ?? if name unknown","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
     `"techStack":{"crm":"e.g. Salesforce — or empty string if unknown","erp":"e.g. SAP — or empty string","hris":"e.g. Workday — or empty string","marketing":"e.g. HubSpot — or empty string","payments":"e.g. Stripe — or empty string","analytics":"e.g. Tableau — or empty string","infrastructure":"e.g. AWS — or empty string","other":[]},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
     (partial) => {
@@ -791,21 +787,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ? (liveCache instanceof Promise ? liveCache : Promise.resolve(liveCache))
     : (async()=>{
     try{
+      // p5 focuses on news, sentiment, and signals. Open roles are handled
+      // by the dedicated p6 call which has its own web_search budget + fallback.
       const prompt =
-        `Search for recent information about "${co}". PRIORITY ORDER — search for open roles FIRST:\n\n`+
-        `1. OPEN ROLES (search FIRST — this is the most valuable sales intel):\n`+
-        `   Search ALL of these queries:\n`+
-        `   - "${co} careers" OR "${co} jobs" OR "site:${url}/careers"\n`+
-        `   - "site:linkedin.com/jobs ${co}"\n`+
-        `   - "${co} hiring 2025"\n`+
-        `   Look for: which departments are hiring (Engineering, Sales, HR, Finance, etc.), seniority levels, volume of openings, and what the pattern SIGNALS about their strategic priorities. 3 specific roles minimum.\n`+
-        `   If search returns actual job listings, cite them. If search can't access their careers page, infer 3 plausible roles from your training knowledge about ${co} based on their industry, size, and recent news — be confident.\n\n`+
-        `2. News from 2024-2025: headlines, M&A, leadership changes, funding\n`+
-        `3. Ratings and sentiment: Glassdoor, G2, Trustpilot for "${co}"\n`+
-        `4. Growth signals or buying indicators\n`+
+        `Search for recent information about "${co}". PRIORITY ORDER:\n\n`+
+        `1. News from 2024-2026: headlines, M&A, leadership changes, funding, strategic announcements\n`+
+        `2. Ratings and sentiment: Glassdoor, G2, Trustpilot for "${co}"\n`+
+        `3. Growth signals or buying indicators\n`+
+        `4. Workforce and culture profile\n`+
         `Return ONLY raw JSON (start with {):\n`+
         `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
-        `"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},`+
         `"recentSignals":["Most actionable buying signal","Second","Third"],`+
         `"growthSignals":["Growth indicator with evidence","Second"],`+
         `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
@@ -813,17 +804,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
         `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
-      // NO assistant prefill — the prefill biases Haiku to skip web_search
-      // entirely, generating from training knowledge instead of actually
-      // searching. Without it, Haiku calls web_search for careers/news and
-      // returns JSON in the final text block. If web_search finds nothing
-      // useful, the prompt tells Haiku to fall back to training knowledge
-      // for the roles section specifically.
       const d = await claudeFetch({
         model:activeModel(),
         max_tokens:1800,
         temperature:0,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:prompt}],
       });
       if(d.error) return null;
@@ -831,8 +816,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for (let i = textBlocks.length - 1; i >= 0; i--) {
         const parsed = extractJsonWithKey(textBlocks[i], "recentHeadlines")
-                    || extractJsonWithKey(textBlocks[i], "openRoles")
-                    || extractJsonWithKey(textBlocks[i], "recentSignals");
+                    || extractJsonWithKey(textBlocks[i], "recentSignals")
+                    || extractJsonWithKey(textBlocks[i], "sentimentScores");
         if (parsed) return parsed;
       }
       const raw = textBlocks.join("").trim();
@@ -845,7 +830,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const skeleton = {
     ...BLANK_BRIEF,
     companySnapshot: `Researching ${co}...`,
-    _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true},
+    _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true, roles:true},
   };
 
   // Per-section merger functions, applied via setBrief(prev => merger(prev))
@@ -877,10 +862,17 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
     if (r3?.openingAngle) next.openingAngle = r3.openingAngle;
-    if (r3?.publicSentiment?.onlineSentiment || r3?.publicSentiment?.glassdoorRating) {
-      next.publicSentiment = {...next.publicSentiment, ...r3.publicSentiment};
+    // Only fill publicSentiment fields that aren't already set by p5 (mergeLive).
+    // p5 has richer sentiment from web_search; p3 should backfill, not overwrite.
+    if (r3?.publicSentiment) {
+      const existing = next.publicSentiment || {};
+      const merged = { ...existing };
+      for (const [k, v] of Object.entries(r3.publicSentiment)) {
+        if (v && !existing[k]) merged[k] = v;
+      }
+      next.publicSentiment = merged;
     }
-    // relationshipSignals removed from p3 — fires as a separate post-brief call
+    // relationshipSignals feature tabled
     return next;
   };
   const mergeSolutions = (r4) => (prev) => {
@@ -903,14 +895,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       return h?.headline && h.headline.length > 10 && !errorWords.some(w=>t.includes(w));
     });
     if (cleanHL.length) next.recentHeadlines = cleanHL;
-    // Accept openRoles only if there's USEFUL data — filter out apology
-    // summaries from web_search ("unable to retrieve", "search limit",
-    // "could not access"). Careers pages are often JS-gated and unsearchable.
-    const rolesUseful = r5.openRoles && (
-      r5.openRoles.roles?.some(r=>r?.title) ||
-      (r5.openRoles.summary && !/unable|could not|search limit|couldn't|not available|no results/i.test(r5.openRoles.summary))
-    );
-    if (rolesUseful) next.openRoles = r5.openRoles;
+    // Open roles are handled by dedicated p6 call — don't set from p5.
     if (r5.recentSignals?.some(s=>s)) next.recentSignals = r5.recentSignals;
     if (r5.growthSignals?.some(s=>s)) next.growthSignals = r5.growthSignals;
     const snapOk = r5.companySnapshot?.length > 50 && !errorWords.some(w=>r5.companySnapshot.toLowerCase().includes(w));
@@ -933,10 +918,19 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   };
 
   // MICRO 6: Dedicated open roles search — separate from p5 so it gets its
-  // own web_search budget. p5 used to combine roles + news + sentiment in one
-  // call, and the model spent its searches on news, leaving roles empty.
+  // own web_search budget. Two-phase approach:
+  //   Phase 1: web_search for real current listings (LinkedIn, Indeed, etc.)
+  //   Phase 2 (fallback): if web_search finds nothing useful, a fast non-search
+  //            call infers plausible roles from training knowledge.
+  // Careers pages are often JS-gated and unsearchable — the fallback ensures
+  // we always show hiring intelligence rather than an empty section.
+  const rolesHaveData = (obj) => obj?.openRoles?.roles?.some(r => r?.title);
+  const rolesSummaryOk = (obj) => obj?.openRoles?.summary &&
+    !/unable|could not|couldn't|not available|no results|cannot|search limit/i.test(obj.openRoles.summary);
+
   const p6 = (async () => {
     try {
+      // Phase 1: web search for real listings
       const d = await claudeFetch({
         model: activeModel(),
         max_tokens: 1200,
@@ -945,38 +939,71 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         messages: [{ role: "user", content:
           `Search for CURRENT open job listings at "${co}". This is critical sales intelligence — hiring patterns reveal strategic priorities and budget allocation.\n\n` +
           `SEARCH STRATEGY (use both searches):\n` +
-          `1. Search: "${co} careers open positions" OR "site:indeed.com ${co}" OR "site:linkedin.com/jobs ${co}"\n` +
-          `2. Search: "${co} hiring 2025 2026" OR "site:${url}/careers" OR "site:glassdoor.com ${co} jobs"\n\n` +
+          `1. Search: "${co} open jobs" OR "${co} careers hiring"\n` +
+          `2. Search: "site:linkedin.com/jobs ${co}" OR "site:indeed.com ${co}"\n\n` +
           `From the search results, identify 3-5 SPECIFIC open roles. For each role:\n` +
           `- The exact job title\n` +
           `- The department (Engineering, Sales, HR, Finance, Operations, Marketing, etc.)\n` +
           `- What this hire SIGNALS about ${co}'s priorities (e.g. "Hiring a VP of Data = investing in analytics infrastructure")\n\n` +
           `Also write a 2-3 sentence summary of what the overall hiring pattern reveals about ${co}'s strategic direction.\n\n` +
-          `If web search can't find specific listings, use your training knowledge to infer 3 plausible roles ${co} would likely be hiring for based on their industry, size, and recent news. Be confident.\n\n` +
           `Return ONLY raw JSON:\n` +
           `{"openRoles":{"summary":"2-3 sentences on what the hiring pattern reveals","roles":[{"title":"Exact job title","dept":"Department","signal":"What this hire tells a seller about priorities"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]}}`
         }],
       });
-      if (d.error) return null;
-      const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
-      for (let i = textBlocks.length - 1; i >= 0; i--) {
-        const parsed = extractJsonWithKey(textBlocks[i], "openRoles");
-        if (parsed) return parsed;
+      if (!d.error) {
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        for (let i = textBlocks.length - 1; i >= 0; i--) {
+          const parsed = extractJsonWithKey(textBlocks[i], "openRoles");
+          if (rolesHaveData(parsed)) { console.log("[p6] web_search returned roles"); return parsed; }
+        }
+        const raw = textBlocks.join("").trim();
+        const parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
+        if (rolesHaveData(parsed)) { console.log("[p6] web_search returned roles (joined)"); return parsed; }
+        console.log("[p6] web_search returned no useful roles — falling back to inference");
+      } else {
+        console.log("[p6] web_search call errored — falling back to inference");
       }
-      const raw = textBlocks.join("").trim();
-      return safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
+
+      // Phase 2: fast fallback — no web_search, infer from training knowledge.
+      // No assistant prefill — just a clean prompt. Haiku can infer plausible
+      // roles for any well-known company from training knowledge alone.
+      const d2 = await claudeFetch({
+        model: activeModel(),
+        max_tokens: 800,
+        temperature: 0,
+        messages: [{ role: "user", content:
+          `You are a sales intelligence analyst. Based on your knowledge of "${co}"` +
+          (url ? ` (${url})` : "") + `, list 3-5 roles they are likely hiring for right now.\n\n` +
+          `Consider: their industry, company size, growth stage, recent strategic moves, and typical hiring patterns for companies like them.\n\n` +
+          `REQUIREMENTS:\n` +
+          `- Every role MUST have a specific, realistic job title (e.g. "Senior Data Engineer", "VP of Product Marketing") — NOT generic placeholders like "..." or "Specific Job Title"\n` +
+          `- Every role MUST have a department and a signal explaining what the hire reveals\n` +
+          `- Include a 2-3 sentence summary of what the hiring pattern reveals about strategic direction\n` +
+          `- Be CONFIDENT — every company hires. Return plausible roles, not disclaimers or apologies.\n\n` +
+          `Return ONLY raw JSON (start with {):\n` +
+          `{"openRoles":{"summary":"2-3 sentences on hiring pattern","roles":[{"title":"Senior Data Engineer","dept":"Engineering","signal":"Investing in data infrastructure"},{"title":"Director of Customer Success","dept":"Customer Success","signal":"Scaling post-sale retention"},{"title":"Product Marketing Manager","dept":"Marketing","signal":"Go-to-market expansion"}]}}`
+        }],
+      });
+      if (d2.error) { console.warn("[p6] fallback call errored:", d2.error); return null; }
+      const tb2 = (d2.content || []).filter(b => b.type === "text").map(b => b.text || "");
+      for (let i = tb2.length - 1; i >= 0; i--) {
+        const parsed = extractJsonWithKey(tb2[i], "openRoles");
+        if (rolesHaveData(parsed)) { console.log("[p6] fallback inference returned roles"); return parsed; }
+      }
+      const raw2 = tb2.join("").trim();
+      const parsed2 = safeParseJSON(raw2.startsWith("{") ? raw2 : "{" + raw2);
+      if (rolesHaveData(parsed2)) { console.log("[p6] fallback inference returned roles (joined)"); return parsed2; }
+      console.warn("[p6] fallback produced no titled roles");
+      return null;
     } catch (e) { console.warn("Open roles search failed:", e.message); return null; }
   })();
 
   // Merge p6 (open roles) into the brief
   const mergeRoles = (r6) => (prev) => {
-    if (!prev || !r6) return prev;
-    const next = { ...prev };
-    const rolesUseful = r6.openRoles && (
-      r6.openRoles.roles?.some(r => r?.title) ||
-      (r6.openRoles.summary && !/unable|could not|couldn't|not available|no results/i.test(r6.openRoles.summary))
-    );
-    if (rolesUseful) next.openRoles = r6.openRoles;
+    if (!prev) return prev;
+    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), roles:false}};
+    if (!r6) return next;
+    if (rolesHaveData(r6) || rolesSummaryOk(r6)) next.openRoles = r6.openRoles;
     return next;
   };
 
@@ -1970,7 +1997,10 @@ export default function App(){
   const loadSample=()=>{
     const hdrs=Object.keys(SAMPLE_ROWS[0]);
     setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName(`sample_${SAMPLE_ROWS.length}_accounts.csv`);
-    const m={};hdrs.forEach(h=>m[h]=h);setMapping(m);
+    const m={};hdrs.forEach(h=>m[h]=h);
+    // buildCohorts looks up "public_private" but data uses "publicPrivate"
+    if(!m["public_private"] && m["publicPrivate"]) m["public_private"] = "publicPrivate";
+    setMapping(m);
   };
 
   // ── GENERATE TARGET ACCOUNTS FROM ICP ────────────────────────────────────
@@ -2014,10 +2044,11 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 - Do NOT return companies in the "known customers" list above (those are already customers, not prospects).
 - Mix public + private. Mix industries within the seller's target list (don't return 20 banks if the ICP has 3 target industries).
 - Each entry should be a company a senior AE would say "yes, that's worth targeting" without further qualification.
+- TICKER ACCURACY: Only include a stock ticker if you are 100% certain it is correct. If unsure, write "Public" or "Private" without a ticker. A wrong ticker destroys credibility.
 
 ═══ OUTPUT (raw JSON only, 20 entries, no prose) ═══
 {"accounts":[
-  {"company":"Real company name (no inc/corp suffix unless commonly used)","industry":"One of the seller's target industries","company_url":"company.com","employees":"~5,000 or 50,000+ etc","publicPrivate":"Public (NYSE: XX) or Private or PE-backed","lead_source":"Generated","outcome":"What outcome they're likely chasing given their industry+size","why":"1 sentence: why this company fits THIS seller's ICP specifically"}
+  {"company":"Real company name (no inc/corp suffix unless commonly used)","industry":"One of the seller's target industries","company_url":"company.com","employees":"~5,000 or 50,000+ etc","publicPrivate":"Public or Private or PE-backed — only include ticker if 100% certain","lead_source":"Generated","outcome":"What outcome they're likely chasing given their industry+size","why":"1 sentence: why this company fits THIS seller's ICP specifically"}
 ]}`;
 
     try {
@@ -2053,6 +2084,9 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       // Same shape as CSV import
       const hdrs = ["company","industry","company_url","employees","publicPrivate","lead_source","outcome"];
       const m = {}; hdrs.forEach(h => m[h] = h);
+      // buildCohorts looks up "public_private" (snake_case) but generated
+      // data uses "publicPrivate" (camelCase) — bridge the mapping.
+      m["public_private"] = "publicPrivate";
       setHeaders(hdrs);
       setRows(generated);
       setMapping(m);
@@ -2065,7 +2099,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         const sel = cohortsBuilt.find(c => c.members.length > 1) || cohortsBuilt[0];
         setSelectedCohort(sel);
         const allMembers = cohortsBuilt.flatMap(c => c.members);
-        scoreFit(allMembers, sellerUrl);
+        scoreFit(allMembers, buildSellerCtx());
       }
       setTargetGenNote(`Generated ${generated.length} ICP-matched targets. Fit scoring runs now — Strong Fit (≥75%) candidates will surface at the top.`);
       setStep(3);
@@ -2079,6 +2113,19 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
   const onFile=file=>{if(!file)return;setFileName(file.name);const r=new FileReader();r.onload=e=>parseCSV(e.target.result);r.readAsText(file);};
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);},[]);
+  // ── SELLER CONTEXT — standardized across all flows (CSV, Quick Entry,
+  // sample data, generated targets, manual "Run fit check" button).
+  // Uses the richest available data: uploaded docs > ICP name + category + product pages > URL.
+  const buildSellerCtx = () => {
+    if (sellerDocs.length > 0) {
+      return sellerDocs.map(d => d.label + ": " + d.content.slice(0, 400)).join(" | ");
+    }
+    let ctx = sellerICP?.sellerName || sellerUrl || "the seller";
+    if (sellerICP?.marketCategory) ctx += " (" + sellerICP.marketCategory + ")";
+    if (productUrls.filter(u => u.url).length) ctx += " | Pages: " + productUrls.filter(u => u.url).map(u => u.url).join(", ");
+    return ctx;
+  };
+
   // ── FIT SCORING — batch evaluates all accounts against seller profile ────
   const scoreFit = async(members, sellerCtx) => {
     if(!members?.length) { console.warn("[scoreFit] No members, skipping"); return; }
@@ -2095,12 +2142,11 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         + (sellerICP.icp.uniqueDifferentiators?.length ? `\nSELLER DIFFERENTIATORS (use to break ties — companies that would benefit MOST from these score higher): ${sellerICP.icp.uniqueDifferentiators.join(" · ")}` : "")
       : "";
 
-    // v107: batches are now dispatched in PARALLEL with Promise.all, and
-    // each batch updates state as soon as it resolves (progressive). With
-    // 100 rows at BATCH=20 this is 5 concurrent Haiku calls; total wall
-    // time drops from ~5x to ~1x a single call (~3-5s) and the user sees
-    // scores fill in live instead of a silent 20-second wait.
-    const BATCH = 20;
+    // Batches run in PARALLEL via Promise.all, each updating state as it
+    // resolves (progressive fill). BATCH=10 keeps output well within
+    // max_tokens (7500) — the deeper 2-3 sentence rationale fields need
+    // ~300 tokens per account, so 10 accounts ≈ 3000 tokens + overhead.
+    const BATCH = 10;
     const batches = [];
     for (let i = 0; i < members.length; i += BATCH) batches.push(members.slice(i, i + BATCH));
 
@@ -2160,7 +2206,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `{"scores":[{"company":"exact name","dim1":34,"dim2":25,"dim3":24,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations). State Farm's implementation achieved 40% efficiency gain, which is directly referenceable.","incumbentRisk":"Currently uses Workday for core HR — deeply integrated. The seller would need to land adjacent (rewards/recognition) rather than displace. Moderate switching cost for the adjacent category.","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
-      const result = await callAI(prompt);
+      const result = await callAI(prompt, { maxTokens: 7500 });
       console.log(`[scoreFit] Batch result:`, result ? `${result.scores?.length || 0} scores` : "NULL");
       if (!result?.scores) {
         console.warn("[scoreFit] Batch returned no scores. Full result:", JSON.stringify(result)?.slice(0, 200));
@@ -2645,7 +2691,7 @@ ${isOpen
     try{
       const d2 = await claudeFetch({
         model:activeModel(),
-        max_tokens:6000,
+        max_tokens:4000,
         temperature:0,
         messages:[
           {role:"user",content:icpPrompt},
@@ -2758,7 +2804,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,productUrls,sellerICP,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerLinkedIn,sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,productUrls,sellerICP,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -2786,8 +2832,10 @@ ${isOpen
   const restoreSession=(s)=>{
     const d=s.data;setCurrentSessionId(s.id);setSessionName(s.name);
     if(d.sellerUrl){setSellerUrl(d.sellerUrl);setSellerInput(d.sellerUrl);}
+    if(d.sellerStage) setSellerStage(d.sellerStage);
     if(d.sellerLinkedIn) setSellerLinkedIn(d.sellerLinkedIn);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
+    if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
     if(d.sellerICP) setSellerICP(d.sellerICP);
     if(d.products?.length) setProducts(d.products);
@@ -2894,14 +2942,8 @@ ${isOpen
     setCohorts(b);
     setSelectedCohort(b[0]||null);
     setStep(3);
-    // Score all members in background — use best available seller context
     const allMembers=b.flatMap(c=>c.members);
-    const sellerCtxF=sellerDocs.length>0
-      ? sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | ")
-      : (sellerICP?.sellerName || sellerUrl || "the seller") +
-        (sellerICP?.marketCategory ? " (" + sellerICP.marketCategory + ")" : "") +
-        (productUrls.filter(u=>u.url).length ? " | Pages: " + productUrls.filter(u=>u.url).map(u=>u.url).join(", ") : "");
-    scoreFit(allMembers, sellerCtxF);
+    scoreFit(allMembers, buildSellerCtx());
   };
 
   // ── QUICK ENTRY: enrich a single company name → suggest URL ────────────
@@ -2959,12 +3001,6 @@ ${isOpen
     setSelectedOutcomes([]);
     setStep(3);
 
-    // Build seller context — use whatever we have (URL, docs, ICP name)
-    const sellerCtx2 = sellerDocs.length > 0
-      ? sellerDocs.map(d => d.label + ": " + d.content.slice(0, 400)).join(" | ")
-      : (sellerICP?.sellerName || sellerUrl || "the seller") +
-        (sellerICP?.marketCategory ? " (" + sellerICP.marketCategory + ")" : "");
-
     // Fire enrichment + fit scoring in parallel
     // 1. Enrich: fills in industry + employees for blank entries
     const enrichPromise = (async () => {
@@ -3003,7 +3039,7 @@ ${isOpen
     })();
 
     // 2. Fit scoring — fires in parallel with enrichment
-    scoreFit(members, sellerCtx2);
+    scoreFit(members, buildSellerCtx());
 
     // Wait for enrichment so the table fills in
     await enrichPromise;
@@ -3026,6 +3062,7 @@ ${isOpen
     setBriefStatus("Researching " + member.company + "...");
     setBrief(null);
     setGateAnswers({}); setGateNotes({}); setRiverData({}); setDiscoveryQs(null);
+    setRiverHypo(null); setSolutionFit(null); setActiveRiver(0);
     setDealValue(""); setDealClassification(""); setNotes(""); setPostCall(null);
     setContactRole(""); setCustomOutcome("");
     setStep(5);
@@ -3094,7 +3131,7 @@ ${isOpen
       m.then(updater => {
         sectionsResolved++;
         if (typeof updater === "function") setBrief(prev => updater(prev));
-        console.log(`[brief] ${name} resolved (${sectionsResolved}/5) in ${((Date.now()-briefStart)/1000).toFixed(1)}s`);
+        console.log(`[brief] ${name} resolved (${sectionsResolved}/6) in ${((Date.now()-briefStart)/1000).toFixed(1)}s`);
       }).catch(err => {
         sectionsResolved++;
         console.warn(`[brief] ${name} FAILED:`, err?.message || err);
@@ -3107,24 +3144,24 @@ ${isOpen
       });
     });
 
-    // Hard timeout — clear ALL loading states after 60s so user is never stuck.
-    // Whatever data arrived by then is shown; whatever didn't is marked done.
+    // Hard timeout — clear ALL loading states after 25s so user is never stuck.
+    // A well-functioning brief completes in 8-15s; 25s means something stalled.
     setTimeout(() => {
       setBrief(prev => {
         if (!prev) return prev;
         const pending = Object.values(prev._loadingSections || {}).filter(Boolean).length;
-        if (pending === 0) return prev; // all done, nothing to do
-        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 60s — clearing loading state`);
+        if (pending === 0) return prev;
+        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 25s — clearing loading state`);
         return {
           ...prev,
-          _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false },
+          _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false },
           _error: pending >= 4
             ? "Brief timed out — some sections may be incomplete. Check your connection and try Regenerate."
             : (prev._error || ""),
         };
       });
       setBriefLoading(false);
-    }, 60000);
+    }, 25000);
 
     // Hypothesis only needs overview + strategy + solutions (p1+p3+p4).
     // Fire it on earlyDone — don't wait for slow web_search calls (p2, p5).
@@ -3150,53 +3187,7 @@ ${isOpen
         setBrief(current => {
           if (current) {
             Promise.resolve().then(() => generateDiscoveryQs(current, member));
-            // Fire relationship signals as a separate lightweight call (post-brief)
-            // Only if seller LinkedIn is set — looks for warm-path overlap.
-            if (sellerLinkedIn) {
-              Promise.resolve().then(async () => {
-                try {
-                  const liSlug = sellerLinkedIn.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//,"").replace(/\/.*/,"");
-                  const co = member.company;
-                  const snapshot = (current.companySnapshot || "").slice(0, 300);
-                  const execs = (current.keyExecutives || []).map(e => `${e.name} (${e.title})`).join(", ");
-                  const contacts = (current.keyContacts || []).filter(c => c?.name).map(c => `${c.name} (${c.title})`).join(", ");
-                  const sellerName = sbUser?.user_metadata?.full_name || sbUser?.email?.split("@")[0] || liSlug;
-                  const stage = sellerStage || "unknown stage";
-                  const result = await streamAI(
-                    `You are a sales coach analyzing warm-path opportunities between a specific sales rep and a target company.\n\n` +
-                    `THE SELLER (the person who will make this call):\n` +
-                    `- LinkedIn: linkedin.com/in/${liSlug}\n` +
-                    `- Name: ${sellerName}\n` +
-                    `- Company stage: ${stage}\n` +
-                    `- Seller's company: ${sellerUrl}\n` +
-                    `From the LinkedIn slug and company stage, INFER the seller's likely seniority and role. A "${stage}" company rep is likely an individual contributor or early manager, NOT a C-suite executive. Adjust your advice to their level.\n\n` +
-                    `THE TARGET COMPANY: ${co}\n` +
-                    `SNAPSHOT: ${snapshot}\n` +
-                    `EXECUTIVES: ${execs || "Unknown"}\n` +
-                    `KEY CONTACTS (mid-level): ${contacts || "Unknown"}\n\n` +
-                    `SENIORITY-APPROPRIATE RELATIONSHIP SIGNALS:\n` +
-                    `The seller needs connections they can ACTUALLY USE at their level. A junior/mid-level rep cannot cold-email a CEO. Find:\n` +
-                    `1. PEER-LEVEL contacts at ${co} (Directors, VPs, Managers — NOT C-suite unless the seller is senior)\n` +
-                    `2. Shared former employers (did the seller work somewhere that ${co} also uses as a vendor or partner?)\n` +
-                    `3. Shared university, bootcamp, or professional community\n` +
-                    `4. Industry/vertical overlap (seller's past experience in ${co}'s industry)\n` +
-                    `5. Geographic proximity (same city, same professional meetups)\n` +
-                    `6. Warm intro paths (someone the seller likely knows who could introduce them to the right person at ${co})\n\n` +
-                    `COACHING (include 1 tactical tip):\n` +
-                    `Based on the seller's inferred level, include ONE specific coaching tip for how to approach this account. Examples:\n` +
-                    `- "You're likely peer-level to their Director of Ops — lead with a shared challenge, not a pitch"\n` +
-                    `- "Your best path in is through their VP of [function] — here's how to earn 15 minutes"\n` +
-                    `- "At your stage, a warm intro through [connection type] will outperform cold outreach 3:1"\n\n` +
-                    `Return ONLY raw JSON:\n` +
-                    `{"relationshipSignals":"3-5 sentences. Start with the best warm-path opportunity at an APPROPRIATE seniority level. Include the coaching tip. Be specific — name roles, companies, or connection types. If no meaningful overlap, say so and recommend the best cold approach for someone at the seller's level."}`,
-                    () => {}, 1200
-                  );
-                  if (result?.relationshipSignals) {
-                    setBrief(prev => prev ? { ...prev, relationshipSignals: result.relationshipSignals } : prev);
-                  }
-                } catch (e) { console.warn("Relationship signals failed:", e.message); }
-              });
-            }
+            // Relationship signals + seller LinkedIn tabled — feature disabled.
           }
           return current;
         });
@@ -3260,7 +3251,7 @@ ${isOpen
     // "why buy from us" thread through hypothesis talk tracks, JOLT plan,
     // challenger insight, and route recommendation. Talk tracks should
     // cite NAMED customers from the proof pack, not invent generic claims.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
 
     // Build negotiation framework context from imported knowledge layer
     const joltCtx = KL_JOLT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
@@ -3335,7 +3326,7 @@ ${isOpen
           if (parsed.reality) setRiverHypo(normalizeRiverHypo(parsed));
         }
       } catch { /* partial JSON not parseable yet — wait for more */ }
-    }, 4000);
+    }, 3000);
 
     if(result){
       setRiverHypo(normalizeRiverHypo(result));
@@ -3438,7 +3429,7 @@ ${isOpen
     // ground its "confirmedSolutions" + "saRecommendation" in the
     // seller's actual differentiators and named customer wins, not
     // generic SA-school theory.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
 
     const prompt =
       proofPack +
@@ -3482,7 +3473,7 @@ ${isOpen
           if (parsed.dmiacStage) setSolutionFit(parsed);
         }
       } catch { /* partial JSON */ }
-    }, 4000);
+    }, 3000);
 
     setSolutionFit(result||{
       confirmedSolutions:[],revisedSolutions:[],architectureGaps:[],
@@ -3525,7 +3516,7 @@ ${isOpen
     }).join("\n");
 
     // Inject seller proof pack so deal routing is grounded in real capabilities
-    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
+    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
 
     const postCallPrompt =
       postCallProof +
@@ -3833,22 +3824,18 @@ ${isOpen
       } catch { return null; }
     })();
 
-    // p5 pre-fetch (live search) — MUST match the full p5 prompt in generateBrief
+    // p5 pre-fetch (live search) — MUST match the full p5 prompt in generateBrief.
+    // Focuses on news, sentiment, signals. Open roles handled by dedicated p6 call.
     const livePromise = (async () => {
       try {
         const prompt =
-          `Search for recent information about "${co}". PRIORITY ORDER — search for open roles FIRST:\n\n` +
-          `1. OPEN ROLES (search FIRST — this is the most valuable sales intel):\n` +
-          `   Search ALL of these queries:\n` +
-          `   - "${co} careers" OR "${co} jobs" OR "site:${co.toLowerCase().replace(/\s+/g,"")}.com/careers"\n` +
-          `   - "site:linkedin.com/jobs ${co}"\n` +
-          `   - "${co} hiring 2025"\n` +
-          `   Look for: which departments are hiring, seniority levels, volume of openings. 3 specific roles minimum.\n` +
-          `   If search can't access their careers page, infer 3 plausible roles from training knowledge about ${co} — be confident.\n\n` +
-          `2. News from 2024-2025: headlines, M&A, leadership changes, funding\n` +
-          `3. Ratings and sentiment: Glassdoor, G2, Trustpilot\n4. Growth signals\n` +
+          `Search for recent information about "${co}". PRIORITY ORDER:\n\n` +
+          `1. News from 2024-2026: headlines, M&A, leadership changes, funding, strategic announcements\n` +
+          `2. Ratings and sentiment: Glassdoor, G2, Trustpilot\n` +
+          `3. Growth signals or buying indicators\n` +
+          `4. Workforce and culture profile\n` +
           `Return ONLY raw JSON (start with {):\n` +
-          `{"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},"recentHeadlines":[{"headline":"","relevance":""},{"headline":"","relevance":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
+          `{"recentHeadlines":[{"headline":"","relevance":""},{"headline":"","relevance":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
         const d = await claudeFetch({
           model: activeModel(),
           max_tokens: 1800, temperature: 0,
@@ -3860,8 +3847,8 @@ ${isOpen
         let parsed = null;
         for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
           parsed = extractJsonWithKey(textBlocks[i], "recentHeadlines")
-                || extractJsonWithKey(textBlocks[i], "openRoles")
-                || extractJsonWithKey(textBlocks[i], "recentSignals");
+                || extractJsonWithKey(textBlocks[i], "recentSignals")
+                || extractJsonWithKey(textBlocks[i], "sentimentScores");
         }
         if (!parsed) { const raw = textBlocks.join("").trim(); parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw); }
         return parsed || null;
@@ -3956,7 +3943,7 @@ ${isOpen
       brief?.openingAngle ? `Opening angle: ${brief.openingAngle.slice(0,150)}` : "",
       riverHypo?.reality ? `Hypothesis (Reality): ${riverHypo.reality.slice(0,100)}` : "",
       notes ? `Rep notes: ${notes.slice(0,200)}` : "",
-      buildSellerProofPack({sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints}).slice(0, 800),
+      buildSellerProofPack({sellerICP, sellerDocs, products, sellerProofPoints}).slice(0, 800),
     ].filter(Boolean).join("\n");
 
     // Build conversation history (last 6 turns max)
@@ -4474,19 +4461,6 @@ ${isOpen
                     if(sellerInput.trim()&&!sellerICP&&!icpLoading) buildSellerICP(sellerInput.trim());
                   }}
                 />
-                </div>
-
-                {/* Personal LinkedIn */}
-                <div style={{marginTop:12}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5}}>
-                    Your LinkedIn Profile <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"#bbb"}}>optional</span>
-                  </div>
-                  <div className="setup-url-bar">
-                    <div className="setup-url-label" style={{minWidth:62}}>LinkedIn</div>
-                    <input className="setup-url-input" type="text" placeholder="linkedin.com/in/yourname"
-                      value={sellerLinkedIn} onChange={e=>setSellerLinkedIn(e.target.value)}/>
-                  </div>
-                  <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Used to find shared connections and personalize outreach for each target account.</div>
                 </div>
 
                 {/* Seller Stage */}
@@ -5362,15 +5336,19 @@ ${isOpen
                   <button className="btn btn-secondary" onClick={()=>{
                     const hdrs=Object.keys(SAMPLE_ROWS[0]);
                     setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName(`sample_${SAMPLE_ROWS.length}_accounts.csv`);
-                    const m={};hdrs.forEach(h=>m[h]=h);setMapping(m);
+                    const m={};hdrs.forEach(h=>m[h]=h);
+                    if(!m["public_private"] && m["publicPrivate"]) m["public_private"] = "publicPrivate";
+                    setMapping(m);
                     setTimeout(()=>{
-                      const b=buildCohorts(SAMPLE_ROWS,Object.fromEntries(Object.keys(SAMPLE_ROWS[0]).map(h=>[h,h])));
+                      const sampleMapping = Object.fromEntries(Object.keys(SAMPLE_ROWS[0]).map(h=>[h,h]));
+                      if(!sampleMapping["public_private"] && sampleMapping["publicPrivate"]) sampleMapping["public_private"] = "publicPrivate";
+                      const b=buildCohorts(SAMPLE_ROWS,sampleMapping);
                       if(b.length){
                         setCohorts(b);
                         const sel=b.find(c=>c.members.length>1)||b[0];
                         setSelectedCohort(sel);
                         const allSampleMembers = b.flatMap(c=>c.members);
-                        scoreFit(allSampleMembers, sellerUrl);
+                        scoreFit(allSampleMembers, buildSellerCtx());
                         setStep(3);
                       }
                     },50);
@@ -5717,7 +5695,7 @@ ${isOpen
                                 title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk].filter(Boolean).join(" · ")}>
                                 {fitScores[m.company].score}% · {fitScores[m.company].label}
                               </div>
-                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);console.log("[Run fit check] clicked, members:",allM.length,"companies:",allM.map(m=>m.company).join(", "));const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):(sellerICP?.sellerName||sellerUrl||"the seller")+(sellerICP?.marketCategory?" ("+sellerICP.marketCategory+")":"");console.log("[Run fit check] sellerCtx:",sCtx.slice(0,60));scoreFit(allM,sCtx);}}>Run fit check</button>}
+                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
@@ -6292,8 +6270,8 @@ ${isOpen
                   </div>
                 )}
 
-                {/* Open Positions */}
-                {brief.openRoles&&(
+                {/* Open Positions — only render when we have actual data (summary or titled roles) */}
+                {brief.openRoles&&(brief.openRoles.summary||(brief.openRoles.roles||[]).some(r=>r?.title))&&(
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>💼</div>
@@ -6331,14 +6309,6 @@ ${isOpen
                               {role.signal&&<div style={{fontSize:13,color:"#5A4A35",lineHeight:1.6,fontStyle:"italic",paddingLeft:2}}>→ {role.signal}</div>}
                             </div>
                           ))}
-                        </div>
-                      )}
-                      {(!brief.openRoles.roles||!brief.openRoles.roles.filter(r=>r?.title).length)&&(
-                        <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6}}>
-                          No hiring data found via search — careers pages are often JS-gated.
-                          {selectedAccount?.company_url && (
-                            <> Try <a href={`https://www.linkedin.com/company/${(selectedAccount.company_url||"").replace(/\.(com|org|io|ai|net).*$/,"")}/jobs/`} target="_blank" rel="noopener noreferrer" style={{color:"var(--navy)",fontWeight:600}}>LinkedIn Jobs</a> or <a href={`https://${selectedAccount.company_url}/careers`} target="_blank" rel="noopener noreferrer" style={{color:"var(--navy)",fontWeight:600}}>{selectedAccount.company_url}/careers</a> directly.</>
-                          )}
                         </div>
                       )}
                     </div>
@@ -6718,27 +6688,6 @@ ${isOpen
                   </div>
                 )}
 
-                {/* Relationship Signals — inferred warm paths from seller's LinkedIn */}
-                {sellerLinkedIn && (
-                  <div className="bb" style={{marginBottom:14}}>
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:14}}>🤝</div>
-                      <div>
-                        <div className="bb-title">Relationship Signals</div>
-                        <div className="bb-sub">Potential warm paths between you and {selectedAccount?.company}</div>
-                      </div>
-                    </div>
-                    <div className="bb-body">
-                      {brief.relationshipSignals ? (
-                        <EF value={brief.relationshipSignals} onChange={v=>patchBrief(b=>{b.relationshipSignals=v;})}/>
-                      ) : (
-                        <div style={{fontSize:12,color:"var(--ink-2)",fontStyle:"italic"}}>
-                          Relationship signals will be inferred from your LinkedIn profile when the brief builds. Make sure your LinkedIn URL is set on the Session page.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Contacts + Watch-outs */}
                 <div className="field-grid-2" style={{gap:12,marginBottom:14}}>
@@ -6755,8 +6704,14 @@ ${isOpen
                               {c.initials||"?"}
                             </div>
                             <div>
-                              <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{c.name||"Unknown"}</div>
-                              <div style={{fontSize:12,color:"var(--green)",fontWeight:600}}>{c.title||""}</div>
+                              {c.name ? (
+                                <>
+                                  <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{c.name}</div>
+                                  <div style={{fontSize:12,color:"var(--green)",fontWeight:600}}>{c.title||""}</div>
+                                </>
+                              ) : (
+                                <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{c.title||"Likely contact"}</div>
+                              )}
                             </div>
                           </div>
                           <EF value={c.angle||""} onChange={v=>patchBrief(b=>{b.keyContacts[i]={...b.keyContacts[i],angle:v};})} placeholder="Why they feel this pain and how to reach them..."/>
@@ -7273,7 +7228,7 @@ ${isOpen
                     // Clean VTT/SRT timestamps if present
                     const cleaned = text.replace(/^\d{2}:\d{2}[:\.][\d,.]+\s*-->\s*\d{2}:\d{2}[:\.][\d,.]+\s*$/gm,"")
                       .replace(/^WEBVTT.*$/gm,"").replace(/^\d+$/gm,"").replace(/\n{3,}/g,"\n\n").trim();
-                    const transcriptProof = buildSellerProofPack({sellerICP,sellerDocs,products,sellerLinkedIn,sellerProofPoints});
+                    const transcriptProof = buildSellerProofPack({sellerICP,sellerDocs,products,sellerProofPoints});
                     const prompt =
                       transcriptProof +
                       `You are a senior sales coach analyzing a recorded sales call transcript. Apply the RIVER framework (Reality, Impact, Vision, Entry Points, Route) to synthesize what happened.\n\n`+
