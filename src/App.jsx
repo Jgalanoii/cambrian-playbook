@@ -539,15 +539,15 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   const channels= (icp.tractionChannels || []).filter(Boolean);
 
   if (diffs.length) {
-    out.push(`\nUnique differentiators (Dunford — name these to justify "why us"):`);
+    out.push(`\nUnique differentiators (name these to justify "why us"):`);
     diffs.forEach(d => out.push(`  • ${d}`));
   }
   if (cust.length) {
-    out.push(`\nNamed customers (Cialdini social proof — cite by name when proposing solutions; do NOT invent other customer names):`);
+    out.push(`\nNamed customers (cite by name as social proof when proposing solutions; do NOT invent other customer names):`);
     cust.forEach(c => out.push(`  • ${c}`));
   }
   if (alts.length) {
-    out.push(`\nCompetitive alternatives we displace/replace (know the terrain — Sun Tzu):`);
+    out.push(`\nCompetitive alternatives we displace/replace (know the terrain):`);
     alts.forEach(a => out.push(`  • ${a}`));
   }
   if (icp.successFactors) {
@@ -712,8 +712,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
   // MICRO 3: Strategy + opening angle — needs seller context for "why you" (streamed)
   const p3 = streamAI(baseFull+
-    `CHALLENGER: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
-    `CIALDINI: Name a SPECIFIC similar company as social proof. Lead with a precise stat or insight.\n`+
+    `TEACHING ANGLE: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption about their industry"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
+    `SOCIAL PROOF: Name a SPECIFIC similar company as proof. Lead with a precise stat or insight.\n`+
     `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
     `{"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
@@ -749,7 +749,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // and (when possible) a named customer from the seller's proof pack above.
   const p4 = streamAI(baseFull+
     `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
-    `Apply Dunford positioning and Osterwalder VPC to map seller solutions to ${co}.\n`+
+    `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`+
     `For each solution: (1) which seller PRODUCT (use exact name from catalog above), (2) what job-to-be-done it performs for ${co}, (3) what differentiator from the proof pack justifies "why us", (4) what NAMED CUSTOMER from the proof pack is similar evidence (or "[no analogue customer in our list — verify with seller]" if none fit), (5) what measurable outcome we'd target.\n`+
     `{"solutionMapping":[`+
     `{"product":"EXACT product name from seller catalog","fit":"Job-to-be-done → specific pain it relieves → gain for ${co}, in 2 sentences. Cite ONE differentiator by name from the proof pack to justify why us.","provenWith":"Named customer from the proof pack who's similar to ${co}, or '[no analogue — verify]'","measurableOutcome":"Specific outcome we'd target (e.g. 'Cut HR ticket volume 30% in 90 days') — quantified when possible, framed in the customer's language, NOT a feature list."},`+
@@ -3239,10 +3239,10 @@ ${isOpen
         },
         talkTracks:[
           {stage:"Opening",line:"1-2 natural sentences. Teach the Challenger insight about "+co+"'s industry. Reference a NAMED CUSTOMER from the proof pack as a brief social-proof anchor when natural."},
-          {stage:"Discovery (Mom Test)",line:"One short question about their PAST BEHAVIOR around this problem — not about the future or our product. Use their language."},
-          {stage:"Impact (Ellis Test)",line:"One question that tests if this is a must-have: 'If you had to go back to [old way] tomorrow, what would that mean for [specific team/metric]?'"},
+          {stage:"Discovery",line:"One short question about their PAST BEHAVIOR around this problem — not about the future or our product. Use their language."},
+          {stage:"Impact",line:"One question that tests if this is a must-have: 'If you had to go back to [old way] tomorrow, what would that mean for [specific team/metric]?'"},
           {stage:"Vision",line:"One sentence. What good looks like in their words — specific and measurable. Frame using a success factor from the proof pack."},
-          {stage:"Route (JOLT)",line:"Name the decision clearly and offer one specific recommendation grounded in a named customer's path: 'Based on what you've told me, here's how [Named Customer] approached this — I'd recommend starting with [specific pilot]. Here's why...'"},
+          {stage:"Route",line:"Name the decision clearly and offer one specific recommendation grounded in a named customer's path: 'Based on what you've told me, here's how [Named Customer] approached this — I'd recommend starting with [specific pilot]. Here's why...'"},
         ],
       });
 
@@ -3319,8 +3319,8 @@ ${isOpen
       `  - 1 sentence max, conversational — something a rep says naturally mid-call (no jargon dumps)\n`+
       `  - Tied directly to what the seller sells, not generic consulting\n`+
       `  - NEVER reference fabricated facts, metrics, or company traits in the question. Only cite what is verifiable.\n`+
-      `  - SALES questions: cite a sales/listening framework in 'framework'\n`+
-      `  - ARCHITECTURE questions: cite an SA lens in 'lens' (Rajput, McSweeney, Richards/Ford, Fowler, DMAIC, Pilot scoping, Adjacent-system risk, or Quality attributes)\n`+
+      `  - SALES questions: state the approach used in 'framework' (e.g. 'Past behavior', 'Social proof', 'Cost of inaction', 'Empathy labeling')\n`+
+      `  - ARCHITECTURE questions: state the SA focus in 'lens' (e.g. 'Business alignment', 'Stakeholder mapping', 'Integration topology', 'Quality attributes', 'Operational maturity', 'Pilot scoping')\n`+
       `Stage-specific architecture focus:\n`+
       `  - Reality: current systems/tools/data flows touching this problem TODAY\n`+
       `  - Impact: where data integrity, throughput, or quality breaks in the current flow\n`+
@@ -3330,9 +3330,9 @@ ${isOpen
 
       `Return ONLY raw JSON, start with {:\n`+
       `{"reality":[`+
-      `{"track":"sales","q":"Question?","framework":"Mom Test - past behavior","intent":"Why this question works"},`+
+      `{"track":"sales","q":"Question?","framework":"Past behavior","intent":"Why this question works"},`+
       `{"track":"sales","q":"","framework":"","intent":""},`+
-      `{"track":"architecture","q":"","lens":"Fowler - integration topology","intent":"What this reveals to a future SA"},`+
+      `{"track":"architecture","q":"","lens":"Integration topology","intent":"What this reveals to a future SA"},`+
       `{"track":"architecture","q":"","lens":"","intent":""}`+
       `],"impact":[/* 2 sales + 2 architecture */],"vision":[/* same */],"entryPoints":[/* same */],"route":[/* same */]}`;
 
@@ -3377,10 +3377,10 @@ ${isOpen
       `POST-CALL SUMMARY: ${postCall?.callSummary||""}\n\n`+
       `ACCURACY: NEVER invent facts. Every confirmed solution, architecture note, gap, and metric must be grounded in the discovery capture or proof pack above. If something was not discussed or verified, do not assert it — say "[Not confirmed in discovery]". Do not fabricate integration requirements, tech stack details, or implementation timelines that were not surfaced in the call.\n\n`+
       `Apply Solution Architecture principles:\n`+
-      `- Rajput: align their business proposition to the digital solution — does what we sell map to what they need to BUILD?\n`+
-      `- McSweeney: assess stakeholder alignment — do the right people see the value?\n`+
-      `- Richards/Ford: evaluate architecture fit attributes — scalability, reliability, maintainability, security fit\n`+
-      `- Fowler: flag integration complexity — what patterns does connecting to their stack require?\n`+
+      `- Business alignment: does what we sell map to what they need to BUILD?\n`+
+      `- Stakeholder alignment: do the right people see the value?\n`+
+      `- Architecture quality: evaluate scalability, reliability, maintainability, security fit\n`+
+      `- Integration complexity: what patterns does connecting to their stack require?\n`+
       `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n`+
       `Apply PMF qualification signals from research data:\n`+
       `- Sean Ellis 40% Rule: would >40% of this team say "very disappointed" if the solution went away? Score overallPMFSignal accordingly\n`+
@@ -3471,7 +3471,7 @@ ${isOpen
 
       `ACCURACY: Base every claim in callSummary, crmNote, and emailBody on what was actually captured above. NEVER invent things the prospect said, metrics they shared, or commitments they made. If a RIVER field says "Not captured", do not fill in what you think they might have said — reflect the gap.\n\n`+
       KL_OFFER_FIT +
-      `ROUTING CRITERIA (apply Graham Margin of Safety + Fisher/Ury interests):\n`+
+      `ROUTING CRITERIA:\n`+
       `FAST_TRACK: champion identified + budget confirmed + clear timeline + value is 3-5x price\n`+
       `NURTURE: interest confirmed but missing champion, budget, or timeline\n`+
       `DISQUALIFY: structural barrier, no real pain, or value case cannot be made\n\n`+
@@ -3820,7 +3820,7 @@ ${isOpen
       3: "The rep is reviewing their account list with fit scores and cohort analysis. Help them understand which accounts to prioritize, what the fit scores mean, and guide them to select accounts for deeper review.",
       4: "The rep is setting up a specific account for research. Help them choose outcomes, understand the ICP match, and set deal context. Guide them to click 'Build Brief' when ready.",
       5: "The rep is reading their account brief. Help them interpret the company overview, solution mapping, executives, and strategic signals. Guide them to review the hypothesis next.",
-      6: "The rep is reviewing their RIVER hypothesis and talk tracks. Help them refine the opening angle, challenger insight, and JOLT plan. Guide them to start the in-call phase when ready.",
+      6: "The rep is reviewing their RIVER hypothesis and talk tracks. Help them refine the opening angle, teaching insight, and indecision plan. Guide them to start the in-call phase when ready.",
       7: "The rep is on a live call or preparing for one. Help them with discovery questions, gate answers, objection handling, and real-time coaching. Keep answers SHORT — they may be mid-conversation.",
       8: "The rep is reviewing post-call analysis. Help them understand the deal route, RIVER scorecard, and next steps. Guide them to run the Solution Fit review.",
       9: "The rep is reviewing the Solution Architecture assessment. Help them understand confirmed solutions, architecture gaps, and the implementation roadmap.",
@@ -4065,7 +4065,7 @@ ${isOpen
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>RIVER Hypothesis</div>
                       <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Hypothesis",riverHypo)}>💾 JSON</button>
                     </div>
-                    <div style={{fontSize:11,color:"var(--ink-2)"}}>Reality, Impact, Vision, Entry, Route + JOLT plan + talk tracks</div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>Reality, Impact, Vision, Entry, Route + indecision plan + talk tracks</div>
                   </div>
                 )}
 
@@ -4098,7 +4098,7 @@ ${isOpen
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Solution Fit Review</div>
                       <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Solution-Fit",solutionFit)}>💾 JSON</button>
                     </div>
-                    <div style={{fontSize:11,color:"var(--ink-2)"}}>PMF assessment, DMAIC stage, architecture gaps</div>
+                    <div style={{fontSize:11,color:"var(--ink-2)"}}>Product-market fit assessment, maturity stage, architecture gaps</div>
                   </div>
                 )}
 
@@ -4516,7 +4516,7 @@ ${isOpen
                       pp.type==="Case Study"?"e.g. Cut HR ticket volume 40% for State Farm in 90 days":
                       pp.type==="ROI Metric"?"e.g. Average 3.2x ROI within 12 months":
                       pp.type==="Customer Win"?"e.g. Won USAA over Blackhawk Network — 18-month displacement":
-                      pp.type==="Award"?"e.g. Gartner Cool Vendor 2025 in Employee Experience":
+                      pp.type==="Award"?"e.g. Industry award — Cool Vendor 2025 in Employee Experience":
                       pp.type==="Partnership"?"e.g. Salesforce AppExchange Partner — integrated rewards":
                       "e.g. SOC 2 Type II certified"
                     } value={pp.content} onChange={e=>setSellerProofPoints(prev=>prev.map((p,j)=>j===i?{...p,content:e.target.value}:p))} style={{flex:1,fontSize:12}}/>
@@ -6429,7 +6429,7 @@ ${isOpen
                           <div style={{marginTop:8,background:"var(--ink-0)",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}>
                             <span style={{fontSize:11,color:"var(--tan-0)",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span>
                             <div>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Challenger Insight</div>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Teaching Insight</div>
                               <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{item.challengerInsight}</div>
                             </div>
                           </div>
@@ -6439,7 +6439,7 @@ ${isOpen
                           <div style={{marginTop:6,background:"var(--green-bg)",borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"flex-start",gap:6}}>
                             <span style={{fontSize:11,flexShrink:0}}>🛡</span>
                             <div>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Risk Remover (JOLT)</div>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Risk Remover</div>
                               <div style={{fontSize:12,color:"var(--green)",lineHeight:1.5}}>{item.joltRiskRemover}</div>
                             </div>
                           </div>
@@ -6450,7 +6450,7 @@ ${isOpen
                     {/* Mobilizer Intelligence */}
                     {brief.mobilizer?.description&&(
                       <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
-                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:10}}>🎯 Mobilizer Intelligence (Challenger Customer)</div>
+                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:10}}>🎯 Champion Intelligence</div>
                         <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
                           <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Who Moves Deals — Not Talkers or Blockers</div>
                           <div style={{fontSize:13,color:"#333",lineHeight:1.6,marginBottom:8}}>{brief.mobilizer.description}</div>
@@ -6462,7 +6462,7 @@ ${isOpen
                           )}
                           {brief.mobilizer.teachingAngle&&(
                             <div style={{background:"var(--ink-0)",borderRadius:7,padding:"8px 12px"}}>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Challenger Teaching Angle</div>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Teaching Angle</div>
                               <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.teachingAngle}</div>
                             </div>
                           )}
@@ -6831,11 +6831,11 @@ ${isOpen
                   <div className="bb" style={{marginBottom:10}}>
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:14}}>⚡</div>
-                      <div><div className="bb-title">Challenger Insight</div><div className="bb-sub">The assumption to challenge — teach this to the organization through the Mobilizer</div></div>
+                      <div><div className="bb-title">Teaching Insight</div><div className="bb-sub">The assumption to challenge — teach this to the organization through your champion</div></div>
                     </div>
                     <div className="bb-body">
                       <div style={{background:"var(--ink-0)",borderRadius:8,padding:"12px 16px"}}>
-                        <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>The Insight (Challenger Customer)</div>
+                        <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>The Teaching Insight</div>
                         <div style={{fontSize:14,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>"{riverHypo.challengerInsight}"</div>
                       </div>
                     </div>
@@ -6847,7 +6847,7 @@ ${isOpen
                   <div className="bb" style={{marginBottom:10}}>
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:14}}>🛡</div>
-                      <div><div className="bb-title">JOLT Plan — Overcoming Indecision</div><div className="bb-sub">Dixon & McKenna: indecision kills 40-60% of deals. FOMU beats FOMO.</div></div>
+                      <div><div className="bb-title">Overcoming Indecision</div><div className="bb-sub">Indecision kills 40-60% of deals. Fear of messing up beats fear of missing out.</div></div>
                     </div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
                       {[
@@ -6895,7 +6895,7 @@ ${isOpen
             )}
 
             {!riverHypo&&!riverHypoLoading&&(
-              <EmptyState icon="🧪" title="Hypothesis not yet generated" sub="Build your RIVER hypothesis to prepare talk tracks, challenger insights, and JOLT plan." action={()=>buildRiverHypo(brief,selectedAccount)} actionLabel="Build Hypothesis →"/>
+              <EmptyState icon="🧪" title="Hypothesis not yet generated" sub="Build your RIVER hypothesis to prepare talk tracks, teaching insights, and an indecision plan." action={()=>buildRiverHypo(brief,selectedAccount)} actionLabel="Build Hypothesis →"/>
             )}
 
             <div className="actions-row">
