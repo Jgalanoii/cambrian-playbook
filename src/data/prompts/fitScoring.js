@@ -1,17 +1,14 @@
 // src/data/prompts/fitScoring.js
 //
-// ⚠️ `buildFitScoringPrompt()` below is NOT IMPORTED BY App.jsx — the live
-// scoreFit() implementation at src/App.jsx has its own inline prompt that
-// additionally handles batching (20 accounts/batch), ICP context injection,
-// and the orgSize/ownership enrichment fields.
+// IMPORTED by /api/knowledge.js → served to client at runtime via JWT-auth'd
+// endpoint. FIT_SCORING_RULES heuristics are injected into scoreFit() prompts
+// in App.jsx as KL_FIT_RULES (populated by fetchKnowledgeLayer() on login).
 //
-// Treat this file as a reference map of the underlying fit heuristics. Do
-// not edit buildFitScoringPrompt and expect the app behavior to change —
-// the live version must be edited in App.jsx too.
+// The live scoreFit() in App.jsx uses these rules to build research-backed
+// fit scoring prompts with exact industry averages and stage thresholds.
 //
 // CANONICAL SOURCE:
-//   - scoreFit() batch prompt and response schema: src/App.jsx (search for
-//     "SCORE (0-100, single integer)")
+//   - scoreFit() batch prompt: src/App.jsx (search for "DIMENSION 1: ICP ALIGNMENT")
 //
 // Model:       claude-haiku-4-5-20251001
 // Max tokens:  1400 per batch

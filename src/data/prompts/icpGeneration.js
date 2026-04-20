@@ -1,17 +1,17 @@
 // src/data/prompts/icpGeneration.js
 //
-// ⚠️ NOT IMPORTED BY App.jsx. This is a reference map — the canonical ICP
-// prompt lives in App.jsx and is kept there because buildSellerICP()
-// closes over `sellerStage` and other React state.
+// Reference module for ICP generation. Enum buckets are the source of truth
+// for anchored schema fields. The canonical ICP prompt lives in App.jsx
+// (buildSellerICP) because it closes over sellerStage and other React state.
 //
 // CANONICAL SOURCE:
-//   - Phase 1 (web_search research): src/App.jsx ~lines 1718-1752
-//   - Phase 2 (anchored enum schema): src/App.jsx ~lines 1758-1792
-//   - Cache + quality gate:           src/App.jsx ~lines 1699-1812
+//   - Phase 1 (web_search research): src/App.jsx (search for "researchPrompt")
+//   - Phase 2 (anchored enum schema): src/App.jsx (search for "icpPrompt")
+//   - Cache key: icp:v3:<url>, quality gate rejects "Unknown" / "PICK ONE"
 //
 // Model:       claude-haiku-4-5-20251001
 // Max tokens:  2000 (phase 1) / 6000 (phase 2)
-// Temperature: 0 (forced by /api/claude proxy)
+// Temperature: 0 (forced by api/_guard.js)
 // Tools:       web_search_20250305 (phase 1 only, max_uses:1)
 //
 // Behavior summary:

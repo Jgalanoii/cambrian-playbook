@@ -1,32 +1,27 @@
 // src/data/prompts/briefGeneration.js
 //
-// ⚠️ NOT IMPORTED BY App.jsx. Reference map — the canonical Brief/Hypothesis/
-// Discovery prompts live in App.jsx. Earlier versions of this file had
-// template strings that drifted out of sync AND had broken string
-// concatenation (wouldn't have compiled if imported). Those are gone.
+// IMPORTED by /api/knowledge.js → served to client at runtime via JWT-auth'd
+// endpoint. NOT bundled into the client JS.
 //
 // CANONICAL SOURCES:
-//   - generateBrief():    src/App.jsx ~lines 651-838 (5 micro-calls, p1-p4
-//                                                     stream via streamAI;
-//                                                     p5 uses web_search)
-//   - buildRiverHypo():   src/App.jsx ~lines 2043-2200
-//   - generateDiscoveryQs() / inline discovery prompt: src/App.jsx ~line 1583+
+//   - generateBrief():       src/App.jsx (5 micro-calls, p1/p3/p4 stream via
+//                            streamAI; p2/p5 use claudeFetch + web_search)
+//   - buildRiverHypo():      src/App.jsx (streamed via streamAI, ~4000 tok)
+//   - generateDiscoveryQs(): src/App.jsx (streamed via streamAI, ~3500 tok)
 //
-// Brief architecture (as of v103):
-//   - p1 overview         Haiku streamed, 1800 tok — awaited first, renders skeleton
-//   - p2 executives       Haiku streamed, 1800 tok — merges as it completes
-//   - p3 strategy + sentiment   Haiku streamed, 2200 tok
-//   - p4 solutions + contacts   Haiku streamed, 2400 tok
-//   - p5 live search      Haiku non-stream + web_search_20250305, 1800 tok
-//   All parallelized via Promise.allSettled; mergePromise applies each as
-//   it resolves, so the UI fills in progressively.
+// Brief architecture (as of v108+):
+//   - p1 overview         streamAI, 1800 tok — pre-cached on account select
+//   - p2 executives       claudeFetch + web_search, 1800 tok — pre-cached
+//   - p3 strategy         streamAI, 2400 tok — Challenger + Cialdini injected
+//   - p4 solutions        streamAI, 2600 tok — proof pack grounded
+//   - p5 live search      claudeFetch + web_search, 1800 tok — pre-cached
+//   earlyDone (p1+p3+p4) fires hypothesis; allDone fires discovery Qs.
+//   Pre-cache stores Promises (not "loading" strings) to prevent duplicates.
 //
 // Model:       claude-haiku-4-5-20251001
-// Temperature: 0 (forced by proxies server-side)
+// Temperature: 0 (forced by api/_guard.js server-side)
 
-// The 6 universal imperatives every company shares — injected into prompts
-// as an anchoring frame ("frame all briefs through these lenses even when
-// not explicitly stated").
+// The 6 universal imperatives every company shares
 export const UNIVERSAL_IMPERATIVES = [
   "Grow revenue and market share",
   "Expand — new customers, geographies, segments",
@@ -36,26 +31,24 @@ export const UNIVERSAL_IMPERATIVES = [
   "Make customers happy — NPS, retention, loyalty",
 ];
 
-// Frameworks referenced in the live Brief/Hypothesis/Discovery prompts.
-// This array is the audit trail — if you add a framework reference in
-// App.jsx, add it here so the reference library stays coherent.
+// Frameworks referenced in live prompts
 export const BRIEF_FRAMEWORKS = [
-  { name: "Gartner 17% Rule",   note: "Buyers spend only 17% of time with vendors — every interaction must create unique value" },
+  { name: "Gartner 17% Rule",   note: "Buyers spend only 17% of time with vendors" },
   { name: "JOLT Effect",        note: "Indecision kills 40-60% of deals. FOMU > FOMO" },
-  { name: "Challenger Customer",note: "Only 13% of stakeholders are Mobilizers" },
-  { name: "Dunford",            note: "Obviously Awesome positioning — used in solution mapping" },
+  { name: "Challenger Customer", note: "Only 13% of stakeholders are Mobilizers" },
+  { name: "Dunford",            note: "Obviously Awesome positioning — solution mapping" },
   { name: "Osterwalder VPC",    note: "Job-to-be-done → Pain → Gain mapping" },
   { name: "DMAIC",              note: "Reality=Define, Impact=Analyze, Vision=Improve, Route=Control" },
-  { name: "Mom Test (Fitzpatrick)", note: "Ask about past behavior and real problems — never hypothetical futures. Used in Discovery prompt." },
-  { name: "Voss (Never Split the Difference)", note: "Calibrated How/What questions, labeling, accusation audit. In Hypothesis + Discovery prompts." },
-  { name: "Fisher/Ury",         note: "Interests not positions. In Hypothesis + Post-call." },
-  { name: "Cialdini",            note: "Social proof, authority, scarcity (FOMU). In Brief + Hypothesis." },
-  { name: "Sun Tzu",             note: "Know the terrain; attack where unprepared. In Fit scoring + Brief." },
-  { name: "Crucial Conversations", note: "Safety signals, STATE method. In Discovery." },
-  { name: "Ellis 40% Rule",     note: "Must-have test — disqualifying signal. In Discovery." },
+  { name: "Mom Test",           note: "Ask about past behavior, never hypothetical futures" },
+  { name: "Voss",               note: "Calibrated How/What questions, labeling, accusation audit" },
+  { name: "Fisher/Ury",         note: "Interests not positions. In post-call + deal routing." },
+  { name: "Cialdini",           note: "Social proof, authority, scarcity. In brief p3 + hypothesis." },
+  { name: "Sun Tzu",            note: "Know the terrain; attack where unprepared. In fit + brief." },
+  { name: "Crucial Conversations", note: "Safety signals, STATE method. In discovery." },
+  { name: "Ellis 40% Rule",     note: "Must-have test — disqualifying signal." },
+  { name: "Graham (Intelligent Investor)", note: "Margin of Safety — 3-5x value. In post-call + SA review." },
 ];
 
-// JOLT framework structure — used by the Route stage of RIVER hypothesis
 export const JOLT_FRAMEWORK = {
   J: "Judge the indecision — name the FOMU explicitly",
   O: "Offer ONE clear recommendation — not options",
@@ -63,7 +56,7 @@ export const JOLT_FRAMEWORK = {
   T: "Take risk off the table — pilot, SLA, phased rollout",
 };
 
-// Signals that the live Brief prompts inject as heuristics (line 675 in App.jsx)
+// Buying signal heuristics — injected into hypothesis + post-call routing
 export const BUYING_SIGNALS = {
   positive: [
     "Funding <12 months = 18-month buying window",
