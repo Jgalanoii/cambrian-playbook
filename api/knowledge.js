@@ -15,6 +15,7 @@ import { ALL_NEGOTIATION_INJECTIONS, FISHER_URY_INJECTION, GRAHAM_INJECTION } fr
 import { BUYING_SIGNALS } from "../src/data/prompts/briefGeneration.js";
 import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "../src/data/negotiationFrameworks.js";
 import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "../src/data/rfpSources.js";
+import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FOUR_FORCES, SPICED, WBD_SCORECARD, DUNFORD_POSITIONING, DISQUALIFICATION, FINTECH_ICP, ICP_FAILURE_MODES } from "../src/data/icpFitKnowledge.js";
 
 // Reuse JWT verification from the guard
 function verifyJwt(req) {
@@ -63,5 +64,16 @@ export default function handler(req, res) {
     },
     naicsCodes: NAICS_CATEGORY_MAP,
     cpvCodes: CPV_CATEGORY_MAP,
+    // ICP deep knowledge layer (from icp-fit-knowledge-base.md)
+    icpKnowledge: ICP_KNOWLEDGE_INJECTION,
+    discoveryKnowledge: DISCOVERY_KNOWLEDGE_INJECTION,
+    murphyRWAS: MURPHY_RWAS,
+    fourForces: FOUR_FORCES,
+    spiced: SPICED,
+    wbdScorecard: WBD_SCORECARD,
+    dunfordPositioning: DUNFORD_POSITIONING,
+    disqualification: DISQUALIFICATION,
+    fintechICP: FINTECH_ICP,
+    icpFailureModes: ICP_FAILURE_MODES,
   });
 }

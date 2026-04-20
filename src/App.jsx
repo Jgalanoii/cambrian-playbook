@@ -14,11 +14,13 @@ let KL_NEGOTIATIONS = "";
 let KL_FISHER_URY = "";
 let KL_GRAHAM = "";
 let KL_FIT_RULES = { highFriction: { industries: [] }, highFit: { industries: [] }, stageThresholds: [], signals: { positive: [], negative: [] } };
-let KL_KL_BUYING_SIGNALS = { positive: [], negative: [] };
+let KL_BUYING_SIGNALS = { positive: [], negative: [] };
 let KL_JOLT = { description: "", steps: [] };
 let KL_CHALLENGER = { teachingAngle: "", mobilizer: { definition: "", identify: "", notMobilizers: [] } };
 let KL_NAICS = {};
 let KL_CPV = {};
+let KL_ICP_KNOWLEDGE = "";
+let KL_DISCOVERY_KNOWLEDGE = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -29,11 +31,14 @@ async function fetchKnowledgeLayer() {
     KL_FISHER_URY = d.fisherUry || "";
     KL_GRAHAM = d.graham || "";
     KL_FIT_RULES = d.fitScoringRules || KL_FIT_RULES;
-    KL_KL_BUYING_SIGNALS = d.buyingSignals || KL_KL_BUYING_SIGNALS;
+    KL_BUYING_SIGNALS = d.buyingSignals || KL_BUYING_SIGNALS;
     KL_JOLT = d.joltEffect || KL_JOLT;
     KL_CHALLENGER = d.challenger || KL_CHALLENGER;
     KL_NAICS = d.naicsCodes || {};
     KL_CPV = d.cpvCodes || {};
+    // ICP deep knowledge
+    KL_ICP_KNOWLEDGE = d.icpKnowledge || "";
+    KL_DISCOVERY_KNOWLEDGE = d.discoveryKnowledge || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -2444,6 +2449,7 @@ ${isOpen
     // This is what kills "500-10K vs 1K-50K" drift between runs.
     const icpPrompt =
       `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid. The framework works for any sales motion.\n`+
+      (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
       (researchCtx?`RESEARCH:\n${researchCtx.slice(0,800)}\n\n`:"")+
       `Seller stage: ${sellerStage||"unknown"}. Be specific and confident — no placeholders.\n\n`+
       `CRITICAL — CONSISTENCY RULES:\n`+
@@ -3110,6 +3116,7 @@ ${isOpen
     // Use imported framework injections from knowledge layer
     const prompt =
       `You are a senior discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
+      (KL_DISCOVERY_KNOWLEDGE ? KL_DISCOVERY_KNOWLEDGE + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
