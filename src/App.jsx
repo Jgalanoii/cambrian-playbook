@@ -2769,23 +2769,21 @@ ${isOpen
     try{
       const d = await claudeFetch({
         model:activeModel(),
-        max_tokens:2000,
+        max_tokens:1200,
         temperature:0,
-        messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        messages:[{role:"user",content:prompt}],
       });
       if(d.error){console.warn("Scan error:",d.error);setUrlScanStatus("none");return;}
 
-      // Extract all text blocks (web_search returns tool results + text)
-      const allText = (d.content||[])
-        .filter(b=>b.type==="text"||b.type==="tool_result")
-        .map(b=>b.type==="text"?b.text:(b.content?.[0]?.text||""))
-        .join(" ");
+      // Extract text blocks (web_search returns tool results + text)
+      const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+      const allText = textBlocks.join(" ");
 
-      // Extract any JSON block in the response
-      const jsonMatch = allText.match(/\{[\s\S]*"pages"[\s\S]*\}/);
+      // Use the standard JSON extractor (handles markdown fences)
       let parsed = null;
-      if(jsonMatch){
-        try{ parsed = JSON.parse(jsonMatch[0]); }catch{}
+      for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+        parsed = extractJsonWithKey(textBlocks[i], "pages");
       }
       if(!parsed){
         // Try finding URLs directly via regex as fallback
