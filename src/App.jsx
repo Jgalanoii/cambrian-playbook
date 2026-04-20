@@ -3172,27 +3172,35 @@ ${isOpen
       setBriefLoading(false);
     }, 25000);
 
-    // Hypothesis + discovery both only need overview + strategy + solutions
-    // (p1+p3+p4). Fire on earlyDone — don't wait for slow web_search calls
-    // (p2 executives, p5 live search, p6 roles). Shaves 5-10s off start time.
+    // Hypothesis only needs overview + strategy (p1+p3). Fire on earlyDone
+    // so it starts 5-10s before slow web_search calls finish.
     earlyDone.then(() => {
       setTimeout(() => {
         setBrief(current => {
           if (current?.companySnapshot && current?.strategicTheme) {
             Promise.resolve().then(() => buildRiverHypo(current, member));
-            Promise.resolve().then(() => generateDiscoveryQs(current, member));
           }
           return current;
         });
       }, 0);
     });
 
-    // Error check waits for ALL sections.
+    // Discovery questions need solutionMapping (product context) to generate
+    // product-specific questions — NOT generic ones. Wait for allDone so all
+    // mergers (including p4 solutions) have applied to the brief state.
     allDone.then(() => {
       setBrief(current => {
         if (current?._error) setBriefError(current._error);
         return current;
       });
+      setTimeout(() => {
+        setBrief(current => {
+          if (current) {
+            Promise.resolve().then(() => generateDiscoveryQs(current, member));
+          }
+          return current;
+        });
+      }, 0);
     });
   };
 
