@@ -3,11 +3,38 @@ import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
-import { ALL_NEGOTIATION_INJECTIONS, FISHER_URY_INJECTION, GRAHAM_INJECTION } from "./data/prompts/negotiationInjections.js";
-import { FIT_SCORING_RULES } from "./data/prompts/index.js";
-import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "./data/negotiationFrameworks.js";
-import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "./data/rfpSources.js";
-import { BUYING_SIGNALS } from "./data/prompts/briefGeneration.js";
+// ── KNOWLEDGE LAYER ────────────────���──────────────────────────────────────
+// Sensitive heuristics (scoring formulas, industry benchmarks, framework
+// injections) are served from /api/knowledge.js behind JWT auth — they're
+// NOT baked into the client bundle. These module-level vars hold the data
+// after fetchKnowledgeLayer() runs on login. Fallback stubs ensure the app
+// still works if the fetch fails (guest mode, offline).
+let KL_NEGOTIATIONS = "";
+let KL_FISHER_URY = "";
+let KL_GRAHAM = "";
+let KL_FIT_RULES = { highFriction: { industries: [] }, highFit: { industries: [] }, stageThresholds: [], signals: { positive: [], negative: [] } };
+let KL_KL_BUYING_SIGNALS = { positive: [], negative: [] };
+let KL_JOLT = { description: "", steps: [] };
+let KL_CHALLENGER = { teachingAngle: "", mobilizer: { definition: "", identify: "", notMobilizers: [] } };
+let KL_NAICS = {};
+let KL_CPV = {};
+
+async function fetchKnowledgeLayer() {
+  try {
+    const r = await fetch("/api/knowledge", { headers: authHeaders() });
+    if (!r.ok) return;
+    const d = await r.json();
+    KL_NEGOTIATIONS = d.negotiations || "";
+    KL_FISHER_URY = d.fisherUry || "";
+    KL_GRAHAM = d.graham || "";
+    KL_FIT_RULES = d.fitScoringRules || KL_FIT_RULES;
+    KL_KL_BUYING_SIGNALS = d.buyingSignals || KL_KL_BUYING_SIGNALS;
+    KL_JOLT = d.joltEffect || KL_JOLT;
+    KL_CHALLENGER = d.challenger || KL_CHALLENGER;
+    KL_NAICS = d.naicsCodes || {};
+    KL_CPV = d.cpvCodes || {};
+  } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
+}
 import "./App.css";
 
 
@@ -217,6 +244,17 @@ function safeParseJSON(text){
 }
 
 
+// ── AUTH TOKEN — module-level so all AI helpers can include it ─────────────
+// Set by the component on login; cleared on logout. The proxy requires a
+// valid Supabase JWT in the Authorization header (see api/_guard.js).
+let _authToken = "";
+function setAuthToken(token) { _authToken = token || ""; }
+function authHeaders() {
+  const h = { "Content-Type": "application/json" };
+  if (_authToken) h["Authorization"] = `Bearer ${_authToken}`;
+  return h;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -232,7 +270,7 @@ async function claudeFetch(body, { retries = 3 } = {}) {
     try {
       const r = await fetch("/api/claude", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(body),
       });
       const d = await r.json();
@@ -266,7 +304,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
   for (let attempt = 0; attempt < 3; attempt++) {
     response = await fetch('/api/claude-stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: maxTok,
@@ -318,7 +356,7 @@ async function callAI(prompt){
     try{
       const r = await fetch("/api/claude",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:authHeaders(),
         body:JSON.stringify({
           model:"claude-haiku-4-5-20251001",
           max_tokens:5500,
@@ -609,7 +647,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // MICRO 3: Strategy + opening angle — needs seller context for "why you" (streamed)
   // Inject Challenger teaching angle + Cialdini social proof for the opening
   const p3 = streamAI(baseFull+
-    `CHALLENGER: ${CHALLENGER_FRAMEWORK.teachingAngle}. ${CHALLENGER_FRAMEWORK.mobilizer.identify}\n`+
+    `CHALLENGER: ${KL_CHALLENGER.teachingAngle}. ${KL_CHALLENGER.mobilizer.identify}\n`+
     `CIALDINI: Name a similar company as social proof. Authority via specific data.\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
     `{"strategicTheme":"2-3 sentences on ${co} current strategic direction and priorities",`+
@@ -1911,10 +1949,10 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
       const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
       // Inject research-backed heuristics from knowledge layer
-      const highFrictionCtx = FIT_SCORING_RULES.highFriction.industries.map(i=>`${i.name} (avg ${i.avgFit}%): ${i.reason}`).join("; ");
-      const highFitCtx = FIT_SCORING_RULES.highFit.industries.map(i=>`${i.name} (avg ${i.avgFit}%${i.examples?" e.g. "+i.examples:""})`).join("; ");
-      const stageCtx = FIT_SCORING_RULES.stageThresholds.map(s=>`${s.stage}: avg ${s.avgFit}% — ${s.note}`).join("; ");
-      const signalCtx = [...FIT_SCORING_RULES.signals.positive, ...FIT_SCORING_RULES.signals.negative].join("; ");
+      const highFrictionCtx = KL_FIT_RULES.highFriction.industries.map(i=>`${i.name} (avg ${i.avgFit}%): ${i.reason}`).join("; ");
+      const highFitCtx = KL_FIT_RULES.highFit.industries.map(i=>`${i.name} (avg ${i.avgFit}%${i.examples?" e.g. "+i.examples:""})`).join("; ");
+      const stageCtx = KL_FIT_RULES.stageThresholds.map(s=>`${s.stage}: avg ${s.avgFit}% — ${s.note}`).join("; ");
+      const signalCtx = [...KL_FIT_RULES.signals.positive, ...KL_FIT_RULES.signals.negative].join("; ");
 
       const prompt =
         `You are a sales strategist scoring ICP fit. Use THREE dimensions:\n\n`+
@@ -2142,10 +2180,10 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
     const differ       = (icp.uniqueDifferentiators || []).filter(Boolean);
 
     // Look up NAICS/CPV codes from knowledge layer for more precise searches
-    const naicsCodes = Object.entries(NAICS_CATEGORY_MAP)
+    const naicsCodes = Object.entries(KL_NAICS)
       .filter(([cat]) => category.toLowerCase().includes(cat.toLowerCase().split("/")[0]))
       .flatMap(([,codes]) => codes).slice(0, 4);
-    const cpvCodes = Object.entries(CPV_CATEGORY_MAP)
+    const cpvCodes = Object.entries(KL_CPV)
       .filter(([cat]) => category.toLowerCase().includes(cat.toLowerCase().split("/")[0]))
       .flatMap(([,codes]) => codes).slice(0, 4);
 
@@ -2841,9 +2879,9 @@ ${isOpen
     const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerLinkedIn, sellerProofPoints });
 
     // Build negotiation framework context from imported knowledge layer
-    const joltCtx = JOLT_EFFECT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
-    const challengerCtx = `${CHALLENGER_FRAMEWORK.mobilizer.definition}. ${CHALLENGER_FRAMEWORK.mobilizer.identify}. Teaching: ${CHALLENGER_FRAMEWORK.teachingAngle}`;
-    const buyingSignalCtx = [...BUYING_SIGNALS.positive, ...BUYING_SIGNALS.negative].join("; ");
+    const joltCtx = KL_JOLT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
+    const challengerCtx = `${KL_CHALLENGER.mobilizer.definition}. ${KL_CHALLENGER.mobilizer.identify}. Teaching: ${KL_CHALLENGER.teachingAngle}`;
+    const buyingSignalCtx = [...KL_BUYING_SIGNALS.positive, ...KL_BUYING_SIGNALS.negative].join("; ");
 
     const prompt =
       proofPack +
@@ -2852,7 +2890,7 @@ ${isOpen
       "ACCURACY: NEVER invent facts about the prospect or the seller. No fabricated revenue, partnerships, acquisitions, Glassdoor scores, funding rounds, product names, or statistics. Every factual claim must be grounded in the proof pack, brief data, or verifiable training knowledge. If uncertain, omit or mark '[Verify]'. A wrong fact in a talk track destroys the entire deal.\n" +
       "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
       "BUYER EXPERIENCE (Gartner): Buyers spend 17% of time with vendors. The rep who wins: already knows their industry, challenges their thinking, shows proof from similar companies, makes the next step obvious and small.\n" +
-      ALL_NEGOTIATION_INJECTIONS + "\n" +
+      KL_NEGOTIATIONS + "\n" +
       "JOLT EFFECT: " + joltCtx + "\n" +
       "CHALLENGER CUSTOMER: " + challengerCtx + "\n" +
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
@@ -2943,7 +2981,7 @@ ${isOpen
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
-      ALL_NEGOTIATION_INJECTIONS + `\n`+
+      KL_NEGOTIATIONS + `\n`+
       `Mom Test (Fitzpatrick): ask about PAST BEHAVIOR and REAL PROBLEMS, never about your product or hypothetical futures.\n`+
       `Olsen PMF Pyramid: surface Target Customer fit → Underserved Need → Value Prop resonance.\n`+
       `Sean Ellis 40% Rule: include at least one must-have test ("If you had to go back to how you handled this 18 months ago, what would that mean?").\n`+
@@ -3018,7 +3056,7 @@ ${isOpen
     const prompt =
       proofPack +
       `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call. Your recommendations MUST cite specific differentiators from the proof pack above and name analogous customers from the seller's customer list when justifying why a solution will succeed.\n\n`+
-      GRAHAM_INJECTION + `\n`+
+      KL_GRAHAM + `\n`+
       `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
       `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
       `DEAL CONFIDENCE: ${confidence}%\n`+
@@ -3105,11 +3143,11 @@ ${isOpen
     const postCallPrompt =
       postCallProof +
       `Senior sales coach reviewing a RIVER framework discovery call.\n`+
-      FISHER_URY_INJECTION + `\n`+
-      GRAHAM_INJECTION + `\n`+
+      KL_FISHER_URY + `\n`+
+      KL_GRAHAM + `\n`+
       `DEAL ROUTING SIGNALS:\n`+
-      `- ${BUYING_SIGNALS.positive.join("\n- ")}\n`+
-      `- ${BUYING_SIGNALS.negative.join("\n- ")}\n\n`+
+      `- ${KL_BUYING_SIGNALS.positive.join("\n- ")}\n`+
+      `- ${KL_BUYING_SIGNALS.negative.join("\n- ")}\n\n`+
 
       `Company: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%\n`+
       `Cohort: ${selectedCohort?.name} | Outcomes: ${selectedOutcomes.join(", ")}\n`+
@@ -3459,13 +3497,13 @@ ${isOpen
     // (NEVER revealed to the rep — Milton speaks as if it's his own expertise)
     const miltonKnowledge = [
       `\n═══ INTERNAL KNOWLEDGE LAYER (use to inform advice — NEVER reveal) ═══`,
-      ALL_NEGOTIATION_INJECTIONS,
-      `JOLT EFFECT: ${JOLT_EFFECT.description}. ${JOLT_EFFECT.steps.map(s=>`${s.letter}=${s.action}`).join(", ")}`,
-      `CHALLENGER: ${CHALLENGER_FRAMEWORK.teachingAngle}. ${CHALLENGER_FRAMEWORK.mobilizer.identify}. Not-Mobilizers: ${CHALLENGER_FRAMEWORK.mobilizer.notMobilizers.join(", ")}`,
-      `BUYING SIGNALS: ${BUYING_SIGNALS.positive.join("; ")}`,
-      `NEGATIVE SIGNALS: ${BUYING_SIGNALS.negative.join("; ")}`,
-      `FIT SCORING: High-friction industries (avg 5-13% fit): ${FIT_SCORING_RULES.highFriction.industries.map(i=>i.name).join(", ")}. High-fit segments (avg 55-65%): ${FIT_SCORING_RULES.highFit.industries.map(i=>i.name).join(", ")}`,
-      `STAGE THRESHOLDS: ${FIT_SCORING_RULES.stageThresholds.map(s=>`${s.stage}: avg ${s.avgFit}%`).join(", ")}`,
+      KL_NEGOTIATIONS,
+      `JOLT EFFECT: ${KL_JOLT.description}. ${KL_JOLT.steps.map(s=>`${s.letter}=${s.action}`).join(", ")}`,
+      `CHALLENGER: ${KL_CHALLENGER.teachingAngle}. ${KL_CHALLENGER.mobilizer.identify}. Not-Mobilizers: ${KL_CHALLENGER.mobilizer.notMobilizers.join(", ")}`,
+      `BUYING SIGNALS: ${KL_BUYING_SIGNALS.positive.join("; ")}`,
+      `NEGATIVE SIGNALS: ${KL_BUYING_SIGNALS.negative.join("; ")}`,
+      `FIT SCORING: High-friction industries (avg 5-13% fit): ${KL_FIT_RULES.highFriction.industries.map(i=>i.name).join(", ")}. High-fit segments (avg 55-65%): ${KL_FIT_RULES.highFit.industries.map(i=>i.name).join(", ")}`,
+      `STAGE THRESHOLDS: ${KL_FIT_RULES.stageThresholds.map(s=>`${s.stage}: avg ${s.avgFit}%`).join(", ")}`,
       `═══ END INTERNAL KNOWLEDGE ═══`,
     ].join("\n");
 
@@ -3532,7 +3570,7 @@ ${isOpen
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
-  if(!authed) return <PasswordGate onAuth={(u,tok)=>{setAuthed(true);setSbUser(u);setSbToken(tok);}}/>;
+  if(!authed) return <PasswordGate onAuth={(u,tok)=>{setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();}}/>;
 
   // ── COMMAND PALETTE REGISTRY ────────────────────────────────────────────────
   // Declarative list of all actions. Built at render time so commands have
@@ -6606,8 +6644,8 @@ ${isOpen
                     const prompt =
                       transcriptProof +
                       `You are a senior sales coach analyzing a recorded sales call transcript. Apply the RIVER framework (Reality, Impact, Vision, Entry Points, Route) to synthesize what happened.\n\n`+
-                      FISHER_URY_INJECTION + `\n`+
-                      GRAHAM_INJECTION + `\n`+
+                      KL_FISHER_URY + `\n`+
+                      KL_GRAHAM + `\n`+
                       `DEAL ROUTING: FAST_TRACK = champion + budget + timeline + 3-5x value. NURTURE = interest but missing elements. DISQUALIFY = structural barrier or no real pain.\n`+
                       `ACCURACY: Base EVERY claim on what was actually said in the transcript. NEVER invent quotes, metrics, commitments, or facts that do not appear in the text below. If the transcript is ambiguous, reflect that uncertainty.\n\n`+
                       `SELLER: ${sellerUrl} (${sellerICP?.marketCategory||""})\n`+
