@@ -257,6 +257,35 @@ function safeParseJSON(text){
 }
 
 
+// ── JSON EXTRACTOR — brace-walking parser anchored on a key name ─────────
+// Robust to narration before/after JSON and markdown code fences.
+// Used by generateBrief (module scope) and component-level functions.
+function extractJsonWithKey(text, anchorKey) {
+  const clean = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
+  const anchor = clean.indexOf(`"${anchorKey}"`);
+  if (anchor === -1) return null;
+  let start = anchor;
+  while (start > 0 && clean[start] !== "{") start--;
+  if (clean[start] !== "{") return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < clean.length; i++) {
+    const ch = clean[i];
+    if (esc) { esc = false; continue; }
+    if (ch === "\\") { esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        try { return JSON.parse(clean.slice(start, i + 1)); }
+        catch { return null; }
+      }
+    }
+  }
+  return null;
+}
+
 // ── CITATION STRIPPER — web_search returns <cite index="...">text</cite> tags ─
 // Strip them globally from any AI response text before it enters state.
 function stripCitations(text) {
@@ -2338,33 +2367,6 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
 
   // ── FETCH RFP INTEL ──────────────────────────────────────────────────────
-  // Shared brace-walking JSON extractor. Robust to narration before/after
-  // the JSON and to markdown code fences.
-  const extractJsonWithKey = (text, anchorKey) => {
-    const clean = text.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "");
-    const anchor = clean.indexOf(`"${anchorKey}"`);
-    if (anchor === -1) return null;
-    let start = anchor;
-    while (start > 0 && clean[start] !== "{") start--;
-    if (clean[start] !== "{") return null;
-    let depth = 0, inStr = false, esc = false;
-    for (let i = start; i < clean.length; i++) {
-      const ch = clean[i];
-      if (esc) { esc = false; continue; }
-      if (ch === "\\") { esc = true; continue; }
-      if (ch === '"') { inStr = !inStr; continue; }
-      if (inStr) continue;
-      if (ch === "{") depth++;
-      else if (ch === "}") {
-        depth--;
-        if (depth === 0) {
-          try { return JSON.parse(clean.slice(start, i + 1)); }
-          catch { return null; }
-        }
-      }
-    }
-    return null;
-  };
 
   // RFP cache: keyed by (user, seller URL, marketCategory, RFP schema
   // version). Cache TTL is implicit — the seller URL and marketCategory
