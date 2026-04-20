@@ -2953,53 +2953,66 @@ ${isOpen
     setBriefLoading(true);
     setBriefError("");
     setBriefStatus("Researching " + member.company + "...");
-    setBrief(null);  // clear previous brief so loader shows
+    setBrief(null);
     setGateAnswers({}); setGateNotes({}); setRiverData({}); setDiscoveryQs(null);
     setDealValue(""); setDealClassification(""); setNotes(""); setPostCall(null);
     setContactRole(""); setCustomOutcome("");
     setStep(5);
 
-    // generateBrief is now synchronous — returns skeleton + per-section
-    // merger promises. Paint the skeleton INSTANTLY, then each section
-    // fills in as its Haiku call returns.
-    // Pass pre-cached data (or in-flight promises) so generateBrief reuses
-    // them instead of firing duplicate API calls. Promises are awaited inside
-    // generateBrief's micro-call wrappers; resolved objects hit instantly.
     const co = member.company;
-    const cachedExecs = execCacheRef.current[co] || null;   // promise, object, or null
-    const cachedBrief = briefPreCacheRef.current[co] || {}; // {overview: promise|obj, live: promise|obj}
-    // onStream: live callback from streaming calls — merges partial JSON
-    // into the brief as it arrives, so users see fields typing in real-time.
+    const cachedExecs = execCacheRef.current[co] || null;
+    const cachedBrief = briefPreCacheRef.current[co] || {};
+
+    // Streaming callback — merges partial data into brief as it arrives
     const onStream = (section, partialData) => {
-      setBrief(prev => {
-        if (!prev) return prev;
-        const next = { ...prev };
-        if (section === "overview" && partialData.companySnapshot) {
-          next.companySnapshot = partialData.companySnapshot;
-          if (partialData.revenue) next.revenue = partialData.revenue;
-          if (partialData.employeeCount) next.employeeCount = partialData.employeeCount;
-        } else if (section === "strategy") {
-          if (partialData.strategicTheme) next.strategicTheme = partialData.strategicTheme;
-          if (partialData.openingAngle) next.openingAngle = partialData.openingAngle;
-          if (partialData.sellerOpportunity) next.sellerOpportunity = partialData.sellerOpportunity;
-        } else if (section === "solutions" && partialData.solutionMapping?.[0]?.product) {
-          next.solutionMapping = partialData.solutionMapping;
-        }
-        return next;
-      });
+      try {
+        setBrief(prev => {
+          if (!prev) return prev;
+          const next = { ...prev };
+          if (section === "overview" && partialData.companySnapshot) {
+            next.companySnapshot = partialData.companySnapshot;
+            if (partialData.revenue) next.revenue = partialData.revenue;
+            if (partialData.employeeCount) next.employeeCount = partialData.employeeCount;
+          } else if (section === "strategy") {
+            if (partialData.strategicTheme) next.strategicTheme = partialData.strategicTheme;
+            if (partialData.openingAngle) next.openingAngle = partialData.openingAngle;
+            if (partialData.sellerOpportunity) next.sellerOpportunity = partialData.sellerOpportunity;
+          } else if (section === "solutions" && partialData.solutionMapping?.[0]?.product) {
+            next.solutionMapping = partialData.solutionMapping;
+          }
+          return next;
+        });
+      } catch (e) { console.warn("[onStream] error:", e.message); }
     };
 
-    const { skeleton, mergers, earlyDone, allDone } = generateBrief(
-      member, sellerUrl, sellerDocs, products,
-      selectedCohort, selectedOutcomes, productPageUrl,
-      (msg) => setBriefStatus(msg),
-      productUrls,
-      sellerICP,
-      { execs: cachedExecs, brief: cachedBrief },
-      onStream
-    );
+    // CRITICAL: wrap generateBrief in try/catch. If it throws for ANY reason,
+    // we must still show a brief skeleton so the user isn't stuck on the loader.
+    let skeleton, mergers, earlyDone, allDone;
+    try {
+      const result = generateBrief(
+        member, sellerUrl, sellerDocs, products,
+        selectedCohort, selectedOutcomes, productPageUrl,
+        (msg) => setBriefStatus(msg),
+        productUrls,
+        sellerICP,
+        { execs: cachedExecs, brief: cachedBrief },
+        onStream
+      );
+      skeleton = result.skeleton;
+      mergers = result.mergers;
+      earlyDone = result.earlyDone;
+      allDone = result.allDone;
+    } catch (e) {
+      console.error("[pickAccount] generateBrief CRASHED:", e);
+      // Show an empty brief with error so user isn't stuck
+      skeleton = { ...BLANK_BRIEF, companySnapshot: `Error building brief for ${co}. Click Regenerate to retry.`, _error: e.message };
+      mergers = {};
+      earlyDone = Promise.resolve();
+      allDone = Promise.resolve();
+    }
+
     setBrief(skeleton);
-    setBriefLoading(false);  // skeleton counts as "loaded" — sections show their own inline progress
+    setBriefLoading(false);
     setBriefStatus("");
 
     // Wire each section's merger to fire as it resolves.
@@ -3023,18 +3036,24 @@ ${isOpen
       });
     });
 
-    // Timeout warning — if nothing has loaded after 30s, something is wrong
+    // Hard timeout — clear ALL loading states after 60s so user is never stuck.
+    // Whatever data arrived by then is shown; whatever didn't is marked done.
     setTimeout(() => {
       setBrief(prev => {
         if (!prev) return prev;
         const pending = Object.values(prev._loadingSections || {}).filter(Boolean).length;
-        if (pending >= 4) {
-          console.warn("[brief] Still waiting on", pending, "sections after 30s");
-          return { ...prev, _error: (prev._error || "") + " Brief is taking longer than expected — this may be a connection or API issue. Try clicking Regenerate." };
-        }
-        return prev;
+        if (pending === 0) return prev; // all done, nothing to do
+        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 60s — clearing loading state`);
+        return {
+          ...prev,
+          _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false },
+          _error: pending >= 4
+            ? "Brief timed out — some sections may be incomplete. Check your connection and try Regenerate."
+            : (prev._error || ""),
+        };
       });
-    }, 30000);
+      setBriefLoading(false);
+    }, 60000);
 
     // Hypothesis only needs overview + strategy + solutions (p1+p3+p4).
     // Fire it on earlyDone — don't wait for slow web_search calls (p2, p5).
