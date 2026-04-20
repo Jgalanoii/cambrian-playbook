@@ -540,7 +540,7 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   out.push(`6. If you cannot ground a claim in the proof above, flag it as "[unsupported — verify with seller]" rather than asserting it as fact.`);
   out.push(`7. The customer should feel deeply understood, that the seller knows the BEST solution, and that this is a deal where everyone wins with measurable outcomes.`);
   out.push(`8. NEVER INVENT STATISTICS ABOUT THE SELLER. Do not fabricate customer counts, revenue numbers, market share, network size, retailer counts, or any other quantitative claim about the selling organization. Only cite numbers that appear in the proof points, uploaded docs, or ICP above. If you don't have a verified number, describe the capability qualitatively ("extensive retail network" not "500K+ retailers"). Making up stats destroys rep credibility.`);
-  out.push(`9. NEVER INVENT FACTS ABOUT THE TARGET COMPANY. Do not fabricate revenue, employee counts, executives, products, partnerships, acquisitions, Glassdoor ratings, G2 scores, funding rounds, or any other factual claim about the prospect. Only state what you can verify from training data, web search results, or the proof pack. If uncertain, leave blank or say "[Verify]". A rep who cites a wrong fact in a sales call loses credibility instantly and permanently.`);
+  out.push(`9. NEVER INVENT FACTS ABOUT THE TARGET COMPANY. Do not fabricate revenue, employee counts, executives, products, partnerships, or acquisitions. Use training knowledge confidently for well-known companies. For genuinely unknown facts, use an empty string — do NOT write "[Verify]" or placeholder text. A rep who cites a wrong fact in a sales call loses credibility instantly.`);
 
   return out.join("\n") + "\n\n";
 }
@@ -579,7 +579,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const baseLight =
     `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
-    `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, acquisitions, or statistics. If you are not confident a fact is real, leave the field empty or say "Verify". A blank field is always better than a fabricated one. Cite real sources (earnings, press, LinkedIn, Glassdoor) when stating specifics.\n`+
+    `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n\n`;
 
   const baseFull = baseLight +
@@ -668,7 +668,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `{"product":"","fit":"","provenWith":"","measurableOutcome":""}],`+
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
     `"keyContacts":[{"name":"VP/Director at ${co} — real name if known, NOT C-suite","title":"Full title","initials":"XX","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
-    `"techStack":{"crm":"if known","erp":"if known","hris":"if known","marketing":"if known","payments":"if known","analytics":"if known","infrastructure":"if known","other":[]},`+
+    `"techStack":{"crm":"e.g. Salesforce — or empty string if unknown","erp":"e.g. SAP — or empty string","hris":"e.g. Workday — or empty string","marketing":"e.g. HubSpot — or empty string","payments":"e.g. Stripe — or empty string","analytics":"e.g. Tableau — or empty string","infrastructure":"e.g. AWS — or empty string","other":[]},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
     ()=>{}, 2600
   );
@@ -3426,16 +3426,22 @@ ${isOpen
       } catch { return null; }
     })();
 
-    // p5 pre-fetch (live search) — web_search for careers/news/sentiment
+    // p5 pre-fetch (live search) — MUST match the full p5 prompt in generateBrief
     const livePromise = (async () => {
       try {
         const prompt =
           `Search for recent information about "${co}". PRIORITY ORDER — search for open roles FIRST:\n\n` +
-          `1. OPEN ROLES: Search "${co} careers" OR "site:linkedin.com/jobs ${co}" OR "${co} hiring 2025". 3 roles minimum.\n` +
-          `   If search can't access careers, infer from training knowledge.\n\n` +
-          `2. News from 2024-2025\n3. Ratings and sentiment\n4. Growth signals\n` +
+          `1. OPEN ROLES (search FIRST — this is the most valuable sales intel):\n` +
+          `   Search ALL of these queries:\n` +
+          `   - "${co} careers" OR "${co} jobs" OR "site:${co.toLowerCase().replace(/\s+/g,"")}.com/careers"\n` +
+          `   - "site:linkedin.com/jobs ${co}"\n` +
+          `   - "${co} hiring 2025"\n` +
+          `   Look for: which departments are hiring, seniority levels, volume of openings. 3 specific roles minimum.\n` +
+          `   If search can't access their careers page, infer 3 plausible roles from training knowledge about ${co} — be confident.\n\n` +
+          `2. News from 2024-2025: headlines, M&A, leadership changes, funding\n` +
+          `3. Ratings and sentiment: Glassdoor, G2, Trustpilot\n4. Growth signals\n` +
           `Return ONLY raw JSON (start with {):\n` +
-          `{"openRoles":{"summary":"","roles":[{"title":"","dept":"","signal":""}]},"recentHeadlines":[{"headline":"","relevance":""}],"recentSignals":[""],"growthSignals":[""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
+          `{"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},"recentHeadlines":[{"headline":"","relevance":""},{"headline":"","relevance":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
         const d = await claudeFetch({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 1800, temperature: 0,
