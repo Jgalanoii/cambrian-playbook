@@ -16,6 +16,7 @@ import { BUYING_SIGNALS } from "../src/data/prompts/briefGeneration.js";
 import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "../src/data/negotiationFrameworks.js";
 import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "../src/data/rfpSources.js";
 import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FOUR_FORCES, SPICED, WBD_SCORECARD, DUNFORD_POSITIONING, DISQUALIFICATION, FINTECH_ICP, ICP_FAILURE_MODES } from "../src/data/icpFitKnowledge.js";
+import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../src/data/verticalPlaybooks.js";
 
 // Reuse JWT verification from the guard
 function verifyJwt(req) {
@@ -75,5 +76,7 @@ export default function handler(req, res) {
     disqualification: DISQUALIFICATION,
     fintechICP: FINTECH_ICP,
     icpFailureModes: ICP_FAILURE_MODES,
+    // 10 vertical playbooks
+    verticalPlaybooks: VERTICAL_PLAYBOOKS,
   });
 }

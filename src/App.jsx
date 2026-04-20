@@ -21,6 +21,7 @@ let KL_NAICS = {};
 let KL_CPV = {};
 let KL_ICP_KNOWLEDGE = "";
 let KL_DISCOVERY_KNOWLEDGE = "";
+let KL_VERTICALS = {}; // VERTICAL_PLAYBOOKS from knowledge layer
 
 async function fetchKnowledgeLayer() {
   try {
@@ -39,6 +40,7 @@ async function fetchKnowledgeLayer() {
     // ICP deep knowledge
     KL_ICP_KNOWLEDGE = d.icpKnowledge || "";
     KL_DISCOVERY_KNOWLEDGE = d.discoveryKnowledge || "";
+    KL_VERTICALS = d.verticalPlaybooks || {};
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -263,6 +265,42 @@ const OPUS  = "claude-opus-4-6-20250514";
 let _maxMode = false;
 function setCambrianMaxMode(on) { _maxMode = !!on; }
 function activeModel() { return _maxMode ? OPUS : HAIKU; }
+
+// ── VERTICAL PLAYBOOK MATCHER ────────────────────────────────────────────
+// Given seller ICP data, find matching vertical playbook(s) and build
+// a prompt injection with personas, triggers, disqualifiers, heuristics.
+function getVerticalInjection(sellerICP) {
+  if (!KL_VERTICALS || !Object.keys(KL_VERTICALS).length) return "";
+  const text = [
+    sellerICP?.marketCategory,
+    sellerICP?.sellerDescription,
+    ...(sellerICP?.icp?.industries || []),
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  // Match keywords
+  const matches = Object.entries(KL_VERTICALS)
+    .map(([key, v]) => {
+      let score = 0;
+      for (const kw of (v.keywords || [])) { if (text.includes(kw)) score += 10; }
+      if (text.includes(v.name?.toLowerCase()?.split(" ")[0])) score += 5;
+      return { key, v, score };
+    })
+    .filter(m => m.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2);
+  if (!matches.length) return "";
+  const parts = ["\nVERTICAL-SPECIFIC ICP INTELLIGENCE:"];
+  for (const { v } of matches) {
+    parts.push(`\n--- ${v.name.toUpperCase()} ---`);
+    parts.push(`Key buyers: ${(v.personas||[]).slice(0, 5).join(", ")}`);
+    parts.push(`Top triggers: ${(v.triggers||[]).slice(0, 5).join("; ")}`);
+    parts.push(`Disqualifiers: ${(v.disqualifiers||[]).slice(0, 4).join("; ")}`);
+    parts.push(`Compliance gates: ${(v.compliance||[]).slice(0, 5).join(", ")}`);
+    parts.push(`What matters: ${(v.usps||[]).slice(0, 4).join("; ")}`);
+    parts.push(`Heuristics: ${(v.heuristics||[]).slice(0, 3).join("; ")}`);
+  }
+  return parts.join("\n") + "\n";
+}
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
@@ -594,10 +632,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n\n`;
 
+  const verticalCtx = getVerticalInjection(sellerICP);
   const baseFull = baseLight +
     `${universalCtx}\n`+
     `SELLER CONTEXT:\n${sellerCtx}${prodCtx}\n`+
     proofPack +
+    verticalCtx +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -2459,6 +2499,7 @@ ${isOpen
       `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid. The framework works for any sales motion.\n`+
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
       (researchCtx?`RESEARCH:\n${researchCtx.slice(0,800)}\n\n`:"")+
+      getVerticalInjection({ marketCategory: researchCtx, sellerDescription: url }) +
       `Seller stage: ${sellerStage||"unknown"}. Be specific and confident — no placeholders.\n\n`+
       `CRITICAL — CONSISTENCY RULES:\n`+
       `- For fields marked "PICK ONE" below, return ONLY the chosen value verbatim. No extra words, no custom ranges, no parentheticals.\n`+
