@@ -2047,6 +2047,11 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 - Each entry should be a company a senior AE would say "yes, that's worth targeting" without further qualification.
 - TICKER ACCURACY: Only include a stock ticker if you are 100% certain it is correct. If unsure, write "Public" or "Private" without a ticker. A wrong ticker destroys credibility.
 
+═══ CONSISTENCY ═══
+- Prefer the MOST RECOGNIZABLE companies in each industry. If two companies are equally good fits, choose the more well-known one. This keeps results stable across multiple runs.
+- Return companies in DESCENDING order by ICP match strength (best fit first).
+- Favor Fortune 500 and household-name companies over obscure ones — a rep should recognize every name on this list.
+
 ═══ OUTPUT (raw JSON only, 20 entries, no prose) ═══
 {"accounts":[
   {"company":"Real company name (no inc/corp suffix unless commonly used)","industry":"One of the seller's target industries","company_url":"company.com","employees":"~5,000 or 50,000+ etc","publicPrivate":"Public or Private or PE-backed — only include ticker if 100% certain","lead_source":"Generated","outcome":"What outcome they're likely chasing given their industry+size","why":"1 sentence: why this company fits THIS seller's ICP specifically"}
