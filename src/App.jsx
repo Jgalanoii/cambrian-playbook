@@ -2010,7 +2010,8 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);},[]);
   // ── FIT SCORING — batch evaluates all accounts against seller profile ────
   const scoreFit = async(members, sellerCtx) => {
-    if(!members?.length) return;
+    if(!members?.length) { console.warn("[scoreFit] No members, skipping"); return; }
+    console.log(`[scoreFit] Starting for ${members.length} members, sellerCtx: "${(sellerCtx||"").slice(0,60)}..."`);
     setFitScoring(true);
     // Lighter than the brief/hypothesis proof pack — scoreFit runs
     // per-batch of 20 accounts and we want it fast. Inject the most
@@ -2086,9 +2087,11 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `Return ONLY raw JSON, start with {:\n`+
         `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size, same buyer persona","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost, displacement opportunity","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
+      console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt);
+      console.log(`[scoreFit] Batch result:`, result ? `${result.scores?.length || 0} scores` : "NULL");
       if (!result?.scores) {
-        console.warn("[scoreFit] Batch returned no scores. Result:", result);
+        console.warn("[scoreFit] Batch returned no scores. Full result:", JSON.stringify(result)?.slice(0, 200));
         return;
       }
 
@@ -2119,14 +2122,18 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         // Normalize ownershipType — prompt returns "public", "pe-backed", "vc-backed", "private", "bootstrapped"
         const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
         const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"#555":"#555";
-        map[s.company]             = {
+        // Match against original member names — API may return slightly different casing/suffix
+        const exactMatch = batch.find(m => m.company === s.company);
+        const fuzzyMatch = !exactMatch && batch.find(m => m.company.toLowerCase() === s.company?.toLowerCase() || s.company?.toLowerCase().includes(m.company.toLowerCase()) || m.company.toLowerCase().includes(s.company?.toLowerCase()));
+        const matchedName = exactMatch?.company || fuzzyMatch?.company || s.company;
+        map[matchedName]             = {
           ...s,
           label: canonicalLabel(s.score),
           reason: cleanReason(s.reason),
           color, bg, ownerColor,
           adoptionProfile: s.adoptionProfile || "",
         };
-        memberUpdates[s.company]   = { orgSize: s.orgSize||"", ownership: s.ownership||"", ownershipType: s.ownershipType||"" };
+        memberUpdates[matchedName]   = { orgSize: s.orgSize||"", ownership: s.ownership||"", ownershipType: s.ownershipType||"" };
       });
 
       // Progressive state update — merge this batch's results so the table
@@ -5395,7 +5402,7 @@ ${isOpen
                                 title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk].filter(Boolean).join(" · ")}>
                                 {fitScores[m.company].score}% · {fitScores[m.company].label}
                               </div>
-                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):(sellerICP?.sellerName||sellerUrl||"the seller")+(sellerICP?.marketCategory?" ("+sellerICP.marketCategory+")":"");scoreFit(allM,sCtx);}}>Run fit check</button>}
+                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);console.log("[Run fit check] clicked, members:",allM.length,"companies:",allM.map(m=>m.company).join(", "));const sCtx=sellerDocs.length>0?sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join(" | "):(sellerICP?.sellerName||sellerUrl||"the seller")+(sellerICP?.marketCategory?" ("+sellerICP.marketCategory+")":"");console.log("[Run fit check] sellerCtx:",sCtx.slice(0,60));scoreFit(allM,sCtx);}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
