@@ -247,8 +247,6 @@ function safeParseJSON(text){
 
 
 // ── AUTH TOKEN — module-level so all AI helpers can include it ─────────────
-// Set by the component on login; cleared on logout. The proxy requires a
-// valid Supabase JWT in the Authorization header (see api/_guard.js).
 let _authToken = "";
 function setAuthToken(token) { _authToken = token || ""; }
 function authHeaders() {
@@ -256,6 +254,15 @@ function authHeaders() {
   if (_authToken) h["Authorization"] = `Bearer ${_authToken}`;
   return h;
 }
+
+// ── CAMBRIAN MAX — premium model toggle ──────────────────────────────────
+// When enabled, AI calls use Opus instead of Haiku. ~15x cost but
+// significantly richer output. Set by the component; read by all AI helpers.
+const HAIKU = "claude-haiku-4-5-20251001";
+const OPUS  = "claude-opus-4-6-20250514";
+let _maxMode = false;
+function setCambrianMaxMode(on) { _maxMode = !!on; }
+function activeModel() { return _maxMode ? OPUS : HAIKU; }
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
@@ -308,7 +315,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: activeModel(),
         max_tokens: maxTok,
         messages: [
           { role: 'user', content: prompt },
@@ -360,7 +367,7 @@ async function callAI(prompt){
         method:"POST",
         headers:authHeaders(),
         body:JSON.stringify({
-          model:"claude-haiku-4-5-20251001",
+          model:activeModel(),
           max_tokens:5500,
           temperature:0,
           system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
@@ -607,7 +614,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     : (async () => {
     try {
       const d = await claudeFetch({
-        model: "claude-haiku-4-5-20251001",
+        model: activeModel(),
         max_tokens: 2000,
         tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
         messages: [{ role: "user", content: baseLight +
@@ -640,7 +647,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     // No pre-cache — fire inline
     try {
       const d = await claudeFetch({
-        model:"claude-haiku-4-5-20251001",
+        model:activeModel(),
         max_tokens:1800,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
         messages:[{role:"user",content:baseLight+
@@ -740,7 +747,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       // useful, the prompt tells Haiku to fall back to training knowledge
       // for the roles section specifically.
       const d = await claudeFetch({
-        model:"claude-haiku-4-5-20251001",
+        model:activeModel(),
         max_tokens:1800,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:3}],
@@ -1683,6 +1690,7 @@ export default function App(){
   const[cmdOpen,setCmdOpen]=useState(false); // Cmd-K command palette
   const[celebrateStep,setCelebrateStep]=useState(null); // milestone celebration pulse
   const[darkMode,setDarkMode]=useState(false); // Phase 3b dark mode toggle
+  const[cambrianMax,setCambrianMax]=useState(false); // Premium Opus tier toggle
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState([]); // [{role:'user'|'assistant', content}]
   const[chatLoading,setChatLoading]=useState(false);
@@ -1890,7 +1898,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
     try {
       const d = await claudeFetch({
-        model: "claude-haiku-4-5-20251001",
+        model: activeModel(),
         max_tokens: 4000,
         tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
         messages: [{ role: "user", content: prompt }],
@@ -2099,7 +2107,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
               try {
                 const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\nACCURACY: NEVER invent facts. Empty string if unknown.\n`;
                 const d = await claudeFetch({
-                  model: "claude-haiku-4-5-20251001", max_tokens: 1800,
+                  model: activeModel(), max_tokens: 1800,
                   tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
                   messages: [{ role: "user", content: base +
                     `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\n` +
@@ -2285,7 +2293,7 @@ ${isOpen
     const fetchClass = async (kind) => {
       try {
         const d = await claudeFetch({
-          model: "claude-haiku-4-5-20251001",
+          model: activeModel(),
           max_tokens: 2500,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
           messages: [{ role: "user", content: buildPrompt(kind) }],
@@ -2426,7 +2434,7 @@ ${isOpen
     let researchCtx = "";
     try{
       const d1 = await claudeFetch({
-        model:"claude-haiku-4-5-20251001",
+        model:activeModel(),
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
@@ -2487,7 +2495,7 @@ ${isOpen
 
     try{
       const d2 = await claudeFetch({
-        model:"claude-haiku-4-5-20251001",
+        model:activeModel(),
         max_tokens:6000,
         temperature:0,
         messages:[
@@ -2554,7 +2562,7 @@ ${isOpen
 
     try{
       const d = await claudeFetch({
-        model:"claude-haiku-4-5-20251001",
+        model:activeModel(),
         max_tokens:2000,
         temperature:0,
         messages:[{role:"user",content:prompt},{role:"assistant",content:"{"}],
@@ -3518,7 +3526,7 @@ ${isOpen
       try {
         const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\n`;
         const d = await claudeFetch({
-          model: "claude-haiku-4-5-20251001",
+          model: activeModel(),
           max_tokens: 1800,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
           messages: [{ role: "user", content: base +
@@ -3563,7 +3571,7 @@ ${isOpen
     const overviewPromise = (async () => {
       try {
         const d = await claudeFetch({
-          model: "claude-haiku-4-5-20251001",
+          model: activeModel(),
           max_tokens: 2000,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
           messages: [{ role: "user", content: light +
@@ -3600,7 +3608,7 @@ ${isOpen
           `Return ONLY raw JSON (start with {):\n` +
           `{"openRoles":{"summary":"What hiring pattern reveals about priorities","roles":[{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]},"recentHeadlines":[{"headline":"","relevance":""},{"headline":"","relevance":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
         const d = await claudeFetch({
-          model: "claude-haiku-4-5-20251001",
+          model: activeModel(),
           max_tokens: 1800, temperature: 0,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
           messages: [{ role: "user", content: prompt }],
@@ -3713,7 +3721,7 @@ ${isOpen
 
     try {
       const d = await claudeFetch({
-        model: "claude-haiku-4-5-20251001",
+        model: activeModel(),
         max_tokens: 800,
         system: ctx,
         messages: history,
@@ -3845,6 +3853,14 @@ ${isOpen
             <button onClick={()=>setDarkMode(d=>!d)} title={darkMode?"Light mode":"Dark mode"}
               style={{padding:"4px 8px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:13,lineHeight:1}}>
               {darkMode?"☀️":"🌙"}
+            </button>
+            <button onClick={()=>{const next=!cambrianMax;setCambrianMax(next);setCambrianMaxMode(next);}}
+              title={cambrianMax?"Switch to Standard (Haiku)":"Switch to Cambrian Max (Opus) — premium output"}
+              style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.3px",
+                border:cambrianMax?"2px solid #8B5CF6":"1.5px solid var(--line-0)",
+                background:cambrianMax?"linear-gradient(135deg,#8B5CF6,#6D28D9)":"var(--surface)",
+                color:cambrianMax?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
+              {cambrianMax?"⚡ MAX":"⚡ Max"}
             </button>
             {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
             {step>0&&(

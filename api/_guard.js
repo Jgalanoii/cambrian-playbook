@@ -17,10 +17,12 @@ const ALLOWED_MODELS = new Set([
   "claude-haiku-4-5-20251001",
   "claude-sonnet-4-5",
   "claude-sonnet-4-5-20250929",
+  "claude-opus-4-6-20250514",     // Cambrian Max — premium tier
 ]);
 
 export const MODEL_FALLBACK = {
   "claude-haiku-4-5-20251001": "claude-sonnet-4-5",
+  "claude-opus-4-6-20250514": "claude-sonnet-4-5",  // Opus overload → Sonnet (not Haiku — preserve quality)
 };
 
 const ALLOWED_TOOL_TYPES = new Set([
