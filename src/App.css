@@ -557,18 +557,11 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .prod-chip-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--tan-0); flex-shrink: 0; }
 
 /* ── PHASE 3a: IN-CALL FOCUS MODE ────────────────────────
-   When .app has [data-focus="call"], the UI strips down to
-   the essentials: smaller header, hidden stepper, calmer bg,
-   larger body type. The rep focuses on listening, not navigating.
-   Toggled via body class when step===7. */
+   When .app has [data-focus="call"], the body uses calmer bg
+   and larger type so the rep can focus on listening. Header
+   and stepper stay consistent with all other steps — no dark
+   mode switch that makes navigation harder mid-call. */
 .app[data-focus="call"] { background: #F0EDE8; }
-.app[data-focus="call"] .header {
-  height: 44px; padding: 0 16px;
-  background: var(--ink-0); border-bottom: none;
-}
-.app[data-focus="call"] .logo { color: var(--surface); font-size: 15px; }
-.app[data-focus="call"] .logo span { color: var(--tan-0); }
-.app[data-focus="call"] .stepper { display: none; }
 .app[data-focus="call"] .session-bar { display: none; }
 .app[data-focus="call"] .footer { display: none; }
 .app[data-focus="call"] .incall-wrap { font-size: 15px; }
