@@ -919,9 +919,57 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     return next;
   };
 
+  // MICRO 6: Dedicated open roles search — separate from p5 so it gets its
+  // own web_search budget. p5 used to combine roles + news + sentiment in one
+  // call, and the model spent its searches on news, leaving roles empty.
+  const p6 = (async () => {
+    try {
+      const d = await claudeFetch({
+        model: activeModel(),
+        max_tokens: 1200,
+        temperature: 0,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+        messages: [{ role: "user", content:
+          `Search for CURRENT open job listings at "${co}". This is critical sales intelligence — hiring patterns reveal strategic priorities and budget allocation.\n\n` +
+          `SEARCH STRATEGY (use both searches):\n` +
+          `1. Search: "${co} careers open positions" OR "site:indeed.com ${co}" OR "site:linkedin.com/jobs ${co}"\n` +
+          `2. Search: "${co} hiring 2025 2026" OR "site:${url}/careers" OR "site:glassdoor.com ${co} jobs"\n\n` +
+          `From the search results, identify 3-5 SPECIFIC open roles. For each role:\n` +
+          `- The exact job title\n` +
+          `- The department (Engineering, Sales, HR, Finance, Operations, Marketing, etc.)\n` +
+          `- What this hire SIGNALS about ${co}'s priorities (e.g. "Hiring a VP of Data = investing in analytics infrastructure")\n\n` +
+          `Also write a 2-3 sentence summary of what the overall hiring pattern reveals about ${co}'s strategic direction.\n\n` +
+          `If web search can't find specific listings, use your training knowledge to infer 3 plausible roles ${co} would likely be hiring for based on their industry, size, and recent news. Be confident.\n\n` +
+          `Return ONLY raw JSON:\n` +
+          `{"openRoles":{"summary":"2-3 sentences on what the hiring pattern reveals","roles":[{"title":"Exact job title","dept":"Department","signal":"What this hire tells a seller about priorities"},{"title":"","dept":"","signal":""},{"title":"","dept":"","signal":""}]}}`
+        }],
+      });
+      if (d.error) return null;
+      const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+      for (let i = textBlocks.length - 1; i >= 0; i--) {
+        const parsed = extractJsonWithKey(textBlocks[i], "openRoles");
+        if (parsed) return parsed;
+      }
+      const raw = textBlocks.join("").trim();
+      return safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
+    } catch (e) { console.warn("Open roles search failed:", e.message); return null; }
+  })();
+
+  // Merge p6 (open roles) into the brief
+  const mergeRoles = (r6) => (prev) => {
+    if (!prev || !r6) return prev;
+    const next = { ...prev };
+    const rolesUseful = r6.openRoles && (
+      r6.openRoles.roles?.some(r => r?.title) ||
+      (r6.openRoles.summary && !/unable|could not|couldn't|not available|no results/i.test(r6.openRoles.summary))
+    );
+    if (rolesUseful) next.openRoles = r6.openRoles;
+    return next;
+  };
+
   // earlyDone resolves when p1+p3+p4 settle (overview, strategy, solutions).
   // Hypothesis only needs these — no reason to wait for slow web_search
-  // calls (p2 executives, p5 live search). Shaves 5-10s off hypothesis start.
+  // calls (p2 executives, p5 live search, p6 roles). Shaves 5-10s off hypothesis start.
   const earlyDone = Promise.allSettled([p1, p3, p4]);
 
   return {
@@ -932,9 +980,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       strategy:  p3.then(mergeStrategy).catch(e => mergeStrategy(null)),
       solutions: p4.then(mergeSolutions).catch(e => mergeSolutions(null)),
       live:      p5.then(mergeLive).catch(e => mergeLive(null)),
+      roles:     p6.then(mergeRoles).catch(e => mergeRoles(null)),
     },
     earlyDone,
-    allDone: Promise.allSettled([p1,p2,p3,p4,p5]),
+    allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6]),
   };
 }
 
