@@ -622,11 +622,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
         messages:[{role:"user",content:base+
           `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL. If you cannot verify a name, return "Verify at LinkedIn".\n\n`+
+          `For each executive provide:\n- background: 1 sentence — prior company, board role, or notable career move\n- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What keeps them up at night? What initiative would they champion? How should a seller approach them? 2-3 specific sentences grounded in ${co}'s current situation.\n\n`+
           `Return ONLY raw JSON:\n`+
           `{"keyExecutives":[`+
-          `{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"1 sentence","angle":"2 sentences"},`+
-          `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"},`+
-          `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"}],`+
+          `{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"Prior role/company in 1 sentence","angle":"Their mandate at ${co}: strategic priority they own, pain they feel most, how a seller earns their attention. 2-3 sentences."},`+
+          `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: cost, growth, compliance, or ops focus. What they need in a business case. 2-3 sentences."},`+
+          `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce, tech, product, or transformation focus. What resonates with their agenda. 2-3 sentences."}],`+
           `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
         }],
       });
@@ -2072,10 +2073,11 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
                   model: "claude-haiku-4-5-20251001", max_tokens: 1800,
                   tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
                   messages: [{ role: "user", content: base +
-                    `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\nReturn ONLY raw JSON:\n` +
-                    `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
-                    `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
-                    `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"}],` +
+                    `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\n` +
+                    `For each executive: background (1 sentence — prior company/role) and angle (their MANDATE at ${co} — what they own, what keeps them up at night, how a seller approaches them. 2-3 sentences).\n\nReturn ONLY raw JSON:\n` +
+                    `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"Prior role/company","angle":"Their mandate at ${co}: strategic priority, pain, seller approach. 2-3 sentences."},` +
+                    `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: cost/growth/compliance. What they need in a business case. 2-3 sentences."},` +
+                    `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce/tech/product. What resonates. 2-3 sentences."}],` +
                     `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
                   }],
                 });
@@ -3412,10 +3414,12 @@ ${isOpen
           max_tokens: 1800,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
           messages: [{ role: "user", content: base +
-            `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\nReturn ONLY raw JSON:\n` +
-            `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
-            `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"},` +
-            `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"1 sentence","angle":"2 sentences"}],` +
+            `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\n` +
+            `For each executive: background (1 sentence — prior company/role) and angle (their MANDATE at ${co} — what they were hired to do, what keeps them up at night, how a seller should approach them. 2-3 specific sentences).\n\n` +
+            `Return ONLY raw JSON:\n` +
+            `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"Prior role/company","angle":"Their mandate at ${co}: strategic priority, pain point, seller approach. 2-3 sentences."},` +
+            `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: cost/growth/compliance focus. What they need in a business case. 2-3 sentences."},` +
+            `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce/tech/product focus. What resonates. 2-3 sentences."}],` +
             `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
           }],
         });
