@@ -2092,7 +2092,10 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size, same buyer persona","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost, displacement opportunity","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       const result = await callAI(prompt);
-      if (!result?.scores) return;
+      if (!result?.scores) {
+        console.warn("[scoreFit] Batch returned no scores. Result:", result);
+        return;
+      }
 
       // Client-side label normalizer. The prompt instructs "Strong Fit" |
       // "Potential Fit" | "Poor Fit" only, but Haiku occasionally leaks
@@ -2118,7 +2121,9 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       result.scores.forEach(s => {
         const color       = s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
         const bg          = s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
-        const ownerColor  = s.ownershipType==="public"?"var(--navy)":s.ownershipType==="pe"?"#6B3A3A":s.ownershipType==="vc"?"var(--green)":"#555";
+        // Normalize ownershipType — prompt returns "public", "pe-backed", "vc-backed", "private", "bootstrapped"
+        const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
+        const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"#555":"#555";
         map[s.company]             = {
           ...s,
           label: canonicalLabel(s.score),
@@ -2142,8 +2147,13 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       })));
     };
 
-    await Promise.all(batches.map(scoreBatch));
-    setFitScoring(false);
+    try {
+      await Promise.all(batches.map(scoreBatch));
+    } catch (e) {
+      console.error("[scoreFit] Batch scoring failed:", e.message);
+    } finally {
+      setFitScoring(false);  // always clear loading state, even on failure
+    }
 
     // Pre-cache top 3 accounts by fit score. The user will almost certainly
     // click a Strong Fit account first — by pre-fetching execs + overview +
@@ -2845,6 +2855,7 @@ ${isOpen
       company_url: (e.url || e._suggested || "").trim(),
       ind: e._industry || "",
       employees: e._employees || "",
+      publicPrivate: "",
       acv: 0, src: "Quick Entry", outcome: "",
     }));
     const syntheticRows = entries.map(e => ({
@@ -2883,10 +2894,10 @@ ${isOpen
       try {
         const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
         const result = await callAI(
-          `For each company, return the primary industry vertical and estimated employee count.\n` +
+          `For each company, return the primary industry vertical, estimated employee count, and ownership type.\n` +
           `Use training knowledge confidently. Empty string if truly unknown.\n\n` +
           `Companies (Name|URL):\n${companiesStr}\n\n` +
-          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","url":"verified domain or empty"}]}`
+          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"e.g. Public (NYSE:XYZ) or Private or PE-backed","url":"verified domain or empty"}]}`
         );
         if (result?.companies) {
           const map = {};
@@ -2900,6 +2911,7 @@ ${isOpen
                 ...m,
                 ind: m.ind || e.industry || "",
                 employees: m.employees || e.employees || "",
+                publicPrivate: m.publicPrivate || e.ownership || "",
                 company_url: m.company_url || e.url || "",
               };
             }),
