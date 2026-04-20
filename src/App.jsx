@@ -2077,16 +2077,17 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `  55-74  → "Potential Fit"\n`+
         `   0-54  → "Poor Fit"\n\n`+
         `━━━ OUTPUT RULES ━━━\n`+
-        `- NEVER invent facts. If you are unsure about a company's incumbent vendor, ownership, or employee count, say "Unknown" — do not guess. Only state what you can verify from training knowledge.\n`+
-        `- 'label' MUST be exactly one of: "Strong Fit" | "Potential Fit" | "Poor Fit".\n`+
-        `- 'reason' is ONE sentence. Say WHY — cite the strongest dimension.\n`+
+        `- Return THREE separate dimension scores (dim1, dim2, dim3). The TOTAL is computed automatically — do NOT return a "score" field.\n`+
+        `- NEVER invent facts. If unsure about a company's incumbent vendor, ownership, or employee count, say "Unknown".\n`+
+        `- 'reason' is ONE sentence citing the strongest dimension.\n`+
         `- 'customerSimilarity' is ONE sentence: most similar named customer + why, or "No close analogue."\n`+
         `- 'incumbentRisk' is ONE sentence: likely incumbent + switching-cost read.\n`+
-        `- Do NOT use "tier", "wall", "band", "bucket" in any field.\n\n`+
+        `- Do NOT use "tier", "wall", "band", "bucket" in any field.\n`+
+        `- CONSISTENCY: For the SAME company across multiple runs, the per-dimension scores should be within 3 points. Anchor your judgment to concrete, observable facts (industry, size, known vendors) not subjective impressions.\n\n`+
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","score":85,"label":"Strong Fit","reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size, same buyer persona","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost, displacement opportunity","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":25,"dim3":24,"reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost","orgSize":"~50K employees","ownership":"Public (NYSE:XYZ)","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt);
@@ -2118,9 +2119,15 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
       const map = {};
       const memberUpdates = {};
       result.scores.forEach(s => {
+        // Compute total from per-dimension scores (deterministic math)
+        const d1 = Math.max(0, Math.min(40, Number(s.dim1) || 0));
+        const d2 = Math.max(0, Math.min(30, Number(s.dim2) || 0));
+        const d3 = Math.max(0, Math.min(30, Number(s.dim3) || 0));
+        const computedScore = Math.round(d1 + d2 + d3);
+        // Fallback: if model returned old-style "score" field, use it
+        s.score = computedScore > 0 ? computedScore : (Number(s.score) || 50);
         const color       = s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
         const bg          = s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
-        // Normalize ownershipType — prompt returns "public", "pe-backed", "vc-backed", "private", "bootstrapped"
         const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
         const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"#555":"#555";
         // Match against original member names — API may return slightly different casing/suffix
