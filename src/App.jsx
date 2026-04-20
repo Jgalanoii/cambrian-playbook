@@ -2,8 +2,9 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
+import { sbAuth, sbGetUser, sbSessions } from "./lib/supabase.js";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
-// ── KNOWLEDGE LAYER ────────────────���──────────────────────────────────────
+// ── KNOWLEDGE LAYER ──────────────────────────────────────────────────────
 // Sensitive heuristics (scoring formulas, industry benchmarks, framework
 // injections) are served from /api/knowledge.js behind JWT auth — they're
 // NOT baked into the client bundle. These module-level vars hold the data
@@ -38,11 +39,7 @@ async function fetchKnowledgeLayer() {
 import "./App.css";
 
 
-const SB_URL=import.meta.env.VITE_SUPABASE_URL;
-const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
-async function sbAuth(path,body){const r=await fetch(SB_URL+'/auth/v1/'+path,{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}
-async function sbGetUser(token){const r=await fetch(SB_URL+'/auth/v1/user',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});return r.ok?r.json():null;}
-async function sbSessions(method,path,token,body){const r=await fetch(SB_URL+'/rest/v1/'+path,{method,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':'return=representation'},body:body?JSON.stringify(body):undefined});const t=await r.text();return t?JSON.parse(t):null;}
+// Supabase functions imported from src/lib/supabase.js
 
 // One-time localStorage cleanup — removes icp:vN:* / rfp:vN:* entries
 // from prior cache versions so they don't accumulate as the schemas
