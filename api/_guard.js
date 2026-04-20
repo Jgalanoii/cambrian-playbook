@@ -5,13 +5,15 @@
 // Vercel from routing this file as an endpoint.
 //
 // Layers of defense (inside-out):
-//   1. JWT auth — requires valid Supabase token (exp + iss check)
+//   1. JWT auth — HMAC-SHA256 signature verification (requires SUPABASE_JWT_SECRET)
 //   2. Origin allow-list — blocks cross-site requests
 //   3. Rate limiting — per-IP sliding window (in-memory, per-instance)
 //   4. Model allow-list — only Haiku + Sonnet fallback
 //   5. Tool allow-list — only web_search
 //   6. Input size cap — 120KB messages + 12KB system prompt
 //   7. max_tokens cap — 8000
+
+import { createHmac, timingSafeEqual } from "crypto";
 
 const ALLOWED_MODELS = new Set([
   "claude-haiku-4-5-20251001",
@@ -33,27 +35,41 @@ const MAX_TOKENS_CAP = 8000;
 const MAX_TOOL_USES = 3;
 
 // ── JWT AUTH ──────────────────────────────────────────────────────────────
-// Decode (no crypto verify) and check exp + iss. This confirms the caller
-// has a Supabase session token that hasn't expired and was issued by our
-// project. For full HMAC-SHA256 verification, set SUPABASE_JWT_SECRET in
-// Vercel env vars and uncomment the crypto check below.
+// Full HMAC-SHA256 signature verification when SUPABASE_JWT_SECRET is set.
+// Falls back to decode-only (exp + iss check) when secret is not configured,
+// so dev/guest mode still works. Production MUST set SUPABASE_JWT_SECRET.
 //
-// Guest mode: if ALLOW_GUEST env var is "true", skip JWT check. This lets
-// the guest-mode path work without auth while still protecting prod.
+// Guest mode: if ALLOW_GUEST env var is "true", skip JWT check entirely.
 const SUPABASE_ISS = "supabase";
 const SUPABASE_REF = process.env.VITE_SUPABASE_URL
   ? new URL(process.env.VITE_SUPABASE_URL).hostname.split(".")[0]
   : "xtnidawfuaxwwwcnkewu";
+const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
+
+function base64UrlDecode(str) {
+  return Buffer.from(str.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+}
 
 function decodeJwtPayload(token) {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(
-      Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()
-    );
-    return payload;
+    return JSON.parse(base64UrlDecode(parts[1]).toString());
   } catch { return null; }
+}
+
+function verifyJwtSignature(token) {
+  if (!JWT_SECRET) return true; // No secret configured — skip crypto (dev mode)
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const expected = createHmac("sha256", JWT_SECRET)
+      .update(parts[0] + "." + parts[1])
+      .digest();
+    const actual = base64UrlDecode(parts[2]);
+    if (expected.length !== actual.length) return false;
+    return timingSafeEqual(expected, actual);
+  } catch { return false; }
 }
 
 function verifyJwt(req) {
@@ -65,6 +81,9 @@ function verifyJwt(req) {
   if (!authHeader.startsWith("Bearer ")) return false;
   const token = authHeader.slice(7);
   if (!token) return false;
+
+  // Cryptographic signature verification (when SUPABASE_JWT_SECRET is set)
+  if (!verifyJwtSignature(token)) return false;
 
   const payload = decodeJwtPayload(token);
   if (!payload) return false;
@@ -190,7 +209,12 @@ export function guard(req, res, { stream = false } = {}) {
   }
 
   // 3. Rate limiting
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim()
+  // Use x-vercel-forwarded-for (Vercel-controlled, not spoofable) first,
+  // then the LAST entry in x-forwarded-for (rightmost = CDN-appended real IP),
+  // then x-real-ip, then socket.
+  const xff = req.headers["x-forwarded-for"];
+  const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
+           || (xff ? xff.split(",").pop().trim() : "")
            || req.headers["x-real-ip"]
            || req.socket?.remoteAddress
            || "unknown";

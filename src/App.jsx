@@ -3600,7 +3600,7 @@ ${isOpen
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Call Summary — ${co}</title>
+<title>Call Summary — ${escHtml(co)}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3663,12 +3663,12 @@ ${isOpen
   <div class="header">
     <div class="header-left">
       <h1>Discovery Call Summary</h1>
-      <div class="sub">${co} · Confidential</div>
+      <div class="sub">${escHtml(co)} · Confidential</div>
     </div>
     <div class="header-right">
       <div><strong>Date:</strong> ${date}</div>
       <div><strong>Prepared by:</strong> ${sellerName}</div>
-      <div><strong>Account:</strong> ${co}</div>
+      <div><strong>Account:</strong> ${escHtml(co)}</div>
     </div>
   </div>
 
@@ -3678,9 +3678,9 @@ ${isOpen
     <div class="summary-box">${callSummary||"Summary of discovery call and key findings."}</div>
   </div>
 
-  ${outcomes?'<div class="section"><div class="section-title">Target Outcomes Discussed</div><div class="outcomes">'+selectedOutcomes.map(o=>'<span class="outcome-pill">'+o+'</span>').join("")+'</div></div>':""}
+  ${outcomes?'<div class="section"><div class="section-title">Target Outcomes Discussed</div><div class="outcomes">'+selectedOutcomes.map(o=>'<span class="outcome-pill">'+escHtml(o)+'</span>').join("")+'</div></div>':""}
 
-  ${solutions.length?'<div class="section"><div class="section-title">Solutions Reviewed</div><div class="solutions">'+solutions.map(s=>'<div class="solution-card"><div class="solution-name">'+s.product+'</div><div class="solution-fit">'+(s.fit?.split(".")[0]||"")+'</div></div>').join("")+'</div></div>':""}
+  ${solutions.length?'<div class="section"><div class="section-title">Solutions Reviewed</div><div class="solutions">'+solutions.map(s=>'<div class="solution-card"><div class="solution-name">'+escHtml(s.product)+'</div><div class="solution-fit">'+escHtml(s.fit?.split(".")[0]||"")+'</div></div>').join("")+'</div></div>':""}
 
   <div class="divider"></div>
 
@@ -3690,18 +3690,18 @@ ${isOpen
     <div class="steps-grid">
       <div class="steps-col">
         <div class="steps-col-title">We Will</div>
-        ${(sellerSteps.length?sellerSteps:nextSteps.slice(0,3)).map((s,i)=>'<div class="step-item"><div class="step-num">'+(i+1)+'</div><div class="step-text">'+s+'</div></div>').join('')}
+        ${(sellerSteps.length?sellerSteps:nextSteps.slice(0,3)).map((s,i)=>'<div class="step-item"><div class="step-num">'+(i+1)+'</div><div class="step-text">'+escHtml(s)+'</div></div>').join('')}
       </div>
       <div class="steps-col">
         <div class="steps-col-title theirs">You Will</div>
-        ${customerSteps.length?customerSteps.map((s,i)=>'<div class="step-item"><div class="step-num green">'+(i+1)+'</div><div class="step-text">'+s+'</div></div>').join(''):'<div class="step-item"><div class="step-num green">1</div><div class="step-text">Review the proposed solutions and share any questions or feedback</div></div><div class="step-item"><div class="step-num green">2</div><div class="step-text">Confirm stakeholders who should be involved in next conversation</div></div>'}
+        ${customerSteps.length?customerSteps.map((s,i)=>'<div class="step-item"><div class="step-num green">'+(i+1)+'</div><div class="step-text">'+escHtml(s)+'</div></div>').join(''):'<div class="step-item"><div class="step-num green">1</div><div class="step-text">Review the proposed solutions and share any questions or feedback</div></div><div class="step-item"><div class="step-num green">2</div><div class="step-text">Confirm stakeholders who should be involved in next conversation</div></div>'}
       </div>
     </div>
   </div>
 
   <!-- Footer -->
   <div class="footer">
-    <div class="footer-left">Prepared for ${co} · ${date}</div>
+    <div class="footer-left">Prepared for ${escHtml(co)} · ${date}</div>
     <div class="footer-right">
       <span class="footer-brand">Cambrian <span>Catalyst</span></span>
     </div>
