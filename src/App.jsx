@@ -2149,15 +2149,15 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
         `━━━ OUTPUT RULES ━━━\n`+
         `- Return THREE separate dimension scores (dim1, dim2, dim3). The TOTAL is computed automatically — do NOT return a "score" field.\n`+
         `- NEVER invent facts. If unsure about a company's incumbent vendor, ownership, or employee count, say "Unknown".\n`+
-        `- 'reason' is ONE sentence citing the strongest dimension.\n`+
-        `- 'customerSimilarity' is ONE sentence: most similar named customer + why, or "No close analogue."\n`+
-        `- 'incumbentRisk' is ONE sentence: likely incumbent + switching-cost read.\n`+
+        `- 'reason' is 2-3 sentences. State WHY this score — cite the strongest dimension AND a specific fact (industry match, size, ownership, known vendor, similar customer win). If a named seller customer is similar, cite them by name.\n`+
+        `- 'customerSimilarity' is 2 sentences: name the MOST similar existing seller customer and explain the parallel (same industry, similar size, same buyer persona, similar use case). If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
+        `- 'incumbentRisk' is 2 sentences: name the likely incumbent vendor in the seller's category at this target (or "No known incumbent"). Assess switching cost and whether this is a displacement, adjacent-land, or greenfield opportunity.\n`+
         `- Do NOT use "tier", "wall", "band", "bucket" in any field.\n`+
         `- CONSISTENCY: For the SAME company across multiple runs, the per-dimension scores should be within 3 points. Anchor your judgment to concrete, observable facts (industry, size, known vendors) not subjective impressions.\n\n`+
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":25,"dim3":24,"reason":"Strong ICP match + similar to existing customer State Farm","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable size","incumbentRisk":"Currently uses legacy rewards vendor — moderate switching cost","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":25,"dim3":24,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations). State Farm's implementation achieved 40% efficiency gain, which is directly referenceable.","incumbentRisk":"Currently uses Workday for core HR — deeply integrated. The seller would need to land adjacent (rewards/recognition) rather than displace. Moderate switching cost for the adjacent category.","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt);
