@@ -1,92 +1,229 @@
----
-title: "ICP Knowledge Base — Index"
-owner: "Cambrian Catalyst LLC"
-purpose: "Navigation and ingestion guide for the ICP knowledge base files."
-last_updated: "2026-04-20"
----
+# US Business Data - Free Knowledge Layer
 
-# ICP Knowledge Base — Index
+A self-contained ingestion + resolution kit for feeding free, publicly available US business data into Cambrian Catalyst's GTM knowledge layer. Pulls from 14 free government/nonprofit sources, normalizes them into a unified schema, and runs cross-source identity resolution so your app sees one canonical entity per real-world business instead of a bunch of disconnected rows.
 
-A structured knowledge layer for Ideal Customer Profile, positioning, and go-to-market work. Designed for ingestion by Claude Code, other LLM retrieval systems, or direct human reference during client engagements.
+## What's in here
 
-## Files in this knowledge base
+| File | Purpose |
+|---|---|
+| `sources_manifest.json` | The catalog. Describes every source — endpoints, schemas, update cadence, vertical mapping, and which handlers are implemented. This is what your app/LLM reads to know what data exists. |
+| `ingest.py` | Pulls data from each source into SQLite. 14 handlers implemented covering all priority-1 and most priority-2 sources. |
+| `resolve.py` | Cross-source identity resolution. Merges records that represent the same real-world entity using hard identifiers (EIN, FDIC cert, CIK, LEI…) and normalized name+state+city matching. |
+| `query.py` | App-facing query API. Library + CLI for searching, hydrating, and filtering entities. |
+| `requirements.txt` | Just `requests`. Everything else is stdlib. |
+| `VERTICAL_MAPPING.md` | Which sources cover which Cambrian Catalyst ICPs. |
+| `samples/` | Seed data pulled at generation time. |
 
-**Core reference:**
-- **`icp-fit-knowledge-base.md`** — Canonical reference. Core concepts, deep dives on foundational thinkers (Murphy, Dunford, Moesta, Fitzpatrick, Laja, Winning by Design, Conant, Moore, Balfour), applied artifacts (ICP scorecard, interview question bank, 1-page template, disqualification framework), glossary. **Start here for any general ICP question.**
+## Architecture
 
-**Vertical playbooks** (each follows the same section structure):
-- **`icp-saas.md`** — Horizontal B2B SaaS. Motion-ICP fit, standard buying committee dynamics, pricing pattern evolution (per-seat under pressure, usage-based ascendant), failure modes.
-- **`icp-fintech.md`** — FinTech subcategory-by-subcategory (BaaS, neobanks, lending, wealth, insurtech, regtech, CFO tools, crypto). Heavy emphasis on buying committee (risk/compliance/legal/bank-partners) and regulatory posture as ICP filter.
-- **`icp-payments.md`** — Payments value chain (merchants, ISVs, PayFacs, ISOs, processors, issuers, banks). Distinct buyer archetypes per value-chain position; network-gated sales; unit-economics-heavy messaging.
-- **`icp-ai.md`** — AI/ML companies, split by foundation labs / infrastructure / applied / services / traditional ML. Fear+FOMO dynamics, governance-posture filter, model-provider risk.
-- **`icp-martech.md`** — Marketing technology and marketing-team buyers. Marketing-as-six-buyers framing, RevOps as decision-maker, privacy/platform-change dynamics.
-- **`icp-manufacturing.md`** — Discrete vs. process vs. hybrid; OEM/Tier-1/Tier-2/CM subdivisions. Long cycles, plant-vs-corporate dynamics, services-heavy implementation.
-- **`icp-incentives-promo.md`** — Digital incentives, rewards, gift cards, promo/merchandise. Multi-buyer reality (HR/marketing/research/sales/CS), financial-product regulatory overlay, competitive landscape mapping.
-- **`icp-cybersecurity.md`** — Fear-based buying dynamics, CISO committee reality, analyst-validation requirements, platform consolidation wave, insurance-driven purchasing.
-- **`icp-healthtech.md`** — Provider/payer/pharma/life sciences subdivisions. EHR integration requirements, regulatory gravity (HIPAA/FDA/CMS), reimbursement pathway as ICP filter.
-- **`icp-professional-services.md`** — Consulting, agencies, fractional execs, advisory firms. Referral-economy dynamics, productization economics, positioning specificity. **Meta-relevant: the vertical Cambrian Catalyst itself lives in.**
+```
+  Source APIs / bulk files
+         │
+         ▼
+   ┌────────────┐
+   │  ingest.py │  — per-source handlers, one per manifest entry
+   └─────┬──────┘
+         │ writes
+         ▼
+   ┌─────────────────────────────────────────────┐
+   │  data/knowledge_layer.sqlite                │
+   │  ┌─────────────┐  ┌──────────────────────┐  │
+   │  │  companies  │  │  financial_snapshots │  │
+   │  │  (per-rec)  │  │  (time-series)       │  │
+   │  └──────┬──────┘  └──────────────────────┘  │
+   │         │         ┌──────────────────────┐  │
+   │         │         │  aggregate_stats     │  │
+   │         │         │  (Census TAM data)   │  │
+   │         │         └──────────────────────┘  │
+   └─────────┼───────────────────────────────────┘
+             │ read by
+             ▼
+      ┌────────────┐
+      │ resolve.py │  — union-find merge across sources
+      └─────┬──────┘
+            │ writes
+            ▼
+   ┌────────────────────┐
+   │ resolved_entities  │  — one row per real-world business
+   │ + entity_id stamps │
+   └─────────┬──────────┘
+             │ read by
+             ▼
+      ┌────────────┐
+      │  query.py  │  — your app / playbook calls this
+      └────────────┘
+```
 
-## How to use this knowledge base
+## Sources (14 implemented, 9 documented)
 
-**For general ICP questions or framework references:**
-Query the core file (`icp-fit-knowledge-base.md`). Each H2/H3 section is self-describing; retrieval by heading should return usable context.
+**Banking / fintech / payments** (direct Cambrian Catalyst ICP match):
+- ✅ FDIC BankFind Institutions (~4,500 banks)
+- ✅ FDIC BankFind Locations (~85,000 branches)
+- ✅ FDIC Call Reports (1,100+ quarterly financial metrics per bank, loaded into `financial_snapshots`)
+- ✅ NCUA Call Reports (~4,600 credit unions)
+- ✅ FinCEN MSB Registrants (~25,000 money services businesses)
+- ✅ CFPB Consumer Complaints (pain signal per institution)
+- ✅ SEC EDGAR Company Tickers (~10,000 public companies)
+- 📋 FFIEC Call Reports, NMLS Consumer Access — documented, handlers TBD
 
-**For vertical-specific client work:**
-Start with the relevant vertical playbook, then cross-reference the core file for framework specifics (e.g., Murphy's RWAS criteria, Dunford's 5-component positioning, Moesta's Four Forces, the interview bank).
+**Broad US business:**
+- ✅ SBA PPP Loan Data (~11.4M SMB records)
+- ✅ SAM.gov Entities (~700K federal contractors, needs free API key)
+- ✅ GLEIF LEI Index (~2.5M global legal entities, filtered to US)
+- ✅ Census SUSB (TAM aggregate stats → `aggregate_stats` table)
+- 📋 Census CBP, BLS QCEW, USAspending — documented, handlers TBD
 
-**For engagements spanning multiple verticals:**
-Pull multiple playbooks. Where verticals share dynamics (e.g., fintech and healthtech both have regulated-vertical parallels; payments and incentives both have financial-product regulatory overlays), read the shared sections in both.
+**Health / wellness B2B:**
+- ✅ CMS NPI Registry (~7M healthcare providers)
+- ✅ DOL Form 5500 (~600K employers with benefit plans — the buyer side of health B2B)
+- 📋 FDA Establishment Registration — documented
 
-**For Cambrian Catalyst's own positioning work:**
-Section 11 of `icp-professional-services.md` applies the framework directly to the firm's own ICP. Use this when positioning the practice, qualifying prospects, or productizing offerings.
+**Nonprofit:**
+- ✅ IRS Exempt Organizations Master File (~1.8M nonprofits)
+- 📋 IRS Form 990, ProPublica Nonprofit Explorer — documented
 
-## File structure convention
+**Corporate identity:**
+- 📋 OpenCorporates — documented (commercial license required at scale)
 
-Each vertical playbook follows this structure for parallel retrieval:
+Run `python ingest.py --list` to see the current status table with handler types per source.
 
-1. What makes this vertical distinct
-2. Sub-categorization (the sub-markets the vertical actually contains)
-3. ICP patterns (firmographic + technographic + operational layers)
-4. The buying committee (personas, blockers, veto points)
-5. Trigger events (what creates in-market urgency)
-6. Positioning — unique-attribute categories (where differentiation lives)
-7. Pricing & model patterns
-8. Compliance / regulatory overlay (where applicable)
-9. Archetypal ICP slices (3–5 concrete example ICPs per vertical)
-10. Common failure modes
-11. Resources (analysts, publications, events, communities)
+## Quickstart
 
-## Metadata schema
+```bash
+pip install -r requirements.txt
 
-Each file includes YAML frontmatter with:
-- `title` — human-readable title
-- `parent` — pointer to the core knowledge base for vertical files
-- `industry` — single-token vertical identifier
-- `tags` — retrieval tags
-- `last_updated` — ISO date
+# 1. See what's available
+python ingest.py --list
 
-## Maintenance
+# 2. Pull the highest-priority sources (~10 min, all API-based)
+python ingest.py --priority 1
 
-- **Review cadence**: Quarterly review of vertical playbooks against actual client experience.
-- **Versioning**: Update `last_updated` and maintain a changelog section per file as content evolves.
-- **Contribution**: When a client engagement surfaces new patterns (new trigger event, new failure mode, new archetype), update the relevant file. The knowledge base compounds with use.
+# 3. Build the cross-source entity resolution graph (~1 min for priority-1 data)
+python resolve.py
 
-## Cross-references between files
+# 4. Query it
+python query.py search "jpmorgan"
+python query.py id fdic_cert 628
+python query.py list --entity-type bank --state WA --min-assets-usd 1000000000
+```
 
-Some verticals share dynamics; when working in one, check the others:
+After step 3 you have `data/knowledge_layer.sqlite` with:
+- `companies` — every source record, stamped with a canonical `entity_id`
+- `resolved_entities` — one row per real-world business with merged identifiers
+- `financial_snapshots` — quarterly bank call report metrics (if you pulled `fdic_financial`)
+- `aggregate_stats` — Census TAM data (if you pulled `census_susb`)
 
-- **FinTech ↔ Payments** — overlapping regulatory, buying-committee, and sponsor-bank dynamics.
-- **FinTech ↔ HealthTech** — both heavily regulated; compliance-as-ICP-filter patterns transfer.
-- **FinTech ↔ Cybersecurity** — both have fear-based buying, CISO involvement, and insurance-driven purchasing.
-- **SaaS ↔ MarTech ↔ AI** — overlapping buyer committees, pricing pressures, and PLG dynamics.
-- **Manufacturing ↔ HealthTech** — both have long cycles, services-heavy implementation, and regulated-vertical dynamics.
-- **Incentives/Promo ↔ MarTech** — overlapping marketing buyers and use cases.
-- **Professional Services ↔ all others** — the consulting playbook applies when the seller *is* a service firm; the vertical playbooks apply when the service firm is selling *into* that vertical.
+## Identity resolution — what it buys you
 
-## Related resources outside this knowledge base
+Without resolution, your playbook sees JPMorgan Chase as (at least) 4 different rows:
+- `fdic_institutions:628` — the insured bank entity
+- `fdic_locations:99999` — one of its branches
+- `sec_company_tickers:0000019617` — the public filer
+- `cfpb_complaints:JPMORGAN CHASE BANK N A` — the complaint-tagged company
 
-See Part 5 of `icp-fit-knowledge-base.md` for the canonical reading/listening/watching list. Each vertical playbook has its own Section 11 Resources tailored to that space.
+With resolution, all 4 collapse into one `entity_id` with a unified identifier set: `{fdic_cert, rssd_id, cik, ticker, fdic_uninumbr}` — so your playbook can reason over "the full picture of this account" in one query instead of doing joins on fuzzy names.
 
----
+**Two-stage algorithm:**
+1. **Hard-key merging** (deterministic, zero false positives): any two records sharing a real identifier (EIN, FDIC cert, RSSD ID, CIK, LEI, NPI, UEI, NMLS, FinCEN MSB) are the same entity. Handled via union-find.
+2. **Name + state + city merging** with entity-type compatibility checks: records with the same normalized name in the same city are merged only if their entity types are compatible (banks can merge with public companies, but not with nonprofit foundations that happen to share a name).
 
-*Maintained by Cambrian Catalyst LLC. Sources: distilled from the practitioners and writers cited in each file, plus operational experience.*
+**Confidence scoring** on each resolved entity:
+- `1.0` — confirmed by 3+ distinct sources
+- `0.9` — confirmed by 2 sources
+- `0.75` — single source but hard identifier present
+- `0.6` — single source, name-match only
+
+## Query patterns for your app
+
+```python
+from query import KnowledgeLayer
+kl = KnowledgeLayer("./data/knowledge_layer.sqlite")
+
+# Find entities by name
+kl.search_by_name("JPMorgan Chase", state="OH")
+
+# Lookup by any hard identifier — works across EIN, CIK, FDIC cert, RSSD, LEI, NPI, UEI…
+kl.find_by_identifier("fdic_cert", "628")
+kl.find_by_identifier("cik", "0000019617")
+
+# Hydrate full multi-source view for an entity (returns canonical + all source rows + snapshots)
+kl.hydrate("cc-a11d2889f019542c")
+
+# ICP-style filters
+wa_banks = kl.list_entities(
+    entity_type="bank",
+    state="WA",
+    min_assets_usd=1_000_000_000,
+)
+
+# TAM sizing from Census aggregates
+kl.get_aggregate(naics="522110", state_fips="53", year="2021")
+```
+
+## Configuration for large bulk sources
+
+Some handlers need env vars because they ship as rotating monthly archives or require free API keys:
+
+```bash
+# Required user-agent for SEC
+export KL_USER_AGENT="Cambrian Catalyst GTM joe@cambriancatalyst.com"
+
+# NCUA quarterly archive URL (rotates each quarter)
+export NCUA_QUARTER_URL="https://www.ncua.gov/files/publications/analysis/call-report-data-2025-q4.zip"
+
+# SAM.gov API key (free registration at api.sam.gov)
+export SAM_API_KEY="your-key-here"
+
+# Census API key (free at api.census.gov/data/key_signup.html)
+export CENSUS_API_KEY="your-key-here"
+export CENSUS_SUSB_YEAR="2021"
+
+# Pre-downloaded bulk files (these are 1-8 GB each)
+export PPP_DATA_DIR="/path/to/ppp/csvs/"
+export NPI_CSV_PATH="/path/to/npidata_pfile_20260301-20260307.csv"
+export FORM5500_CSV_PATH="/path/to/f_5500_2024_latest.csv"
+
+# FDIC call-report period (YYYYMMDD, e.g. 20251231). Default = most recent.
+export FDIC_PERIOD="20251231"
+```
+
+## Refresh cadence
+
+| Source | Recommended rerun |
+|---|---|
+| FDIC, NCUA, FFIEC call reports | Quarterly |
+| CFPB complaints, SEC submissions | Weekly |
+| SAM.gov, USAspending, FinCEN MSB | Monthly |
+| IRS BMF, CMS NPI, IRS 990 | Monthly |
+| DOL 5500, Census, BLS QCEW | Annual |
+| SBA PPP | Static (historical) |
+
+Ingestion is idempotent — re-running replaces records by `(source_id, source_record_id)` primary key. Re-run resolution any time after a fresh pull.
+
+## Extending
+
+To add a source:
+1. Add an entry to `sources_manifest.json`.
+2. Add a handler in `ingest.py` — decorate with `@handler(id)` for company records, `@snapshot_handler(id)` for time-series financials, or `@aggregate_handler(id)` for TAM-style stats.
+3. Add the handler type to the source's `handler_implemented` array in the manifest.
+4. Run `python ingest.py --source your_new_source` then `python resolve.py`.
+
+The manifest is intentionally self-describing so an LLM agent with tool access can read it, understand what sources exist, and know which tables to query for a given prospect research task.
+
+## Verified behavior
+
+End-to-end smoke test in this build confirms:
+
+| Test case | Expected | Result |
+|---|---|---|
+| JPMorgan Chase in FDIC + SEC + FDIC locations + CFPB | All 4 merge → 1 entity with 5 identifiers | ✅ conf 1.0 |
+| Wells Fargo Bank (Sioux Falls) vs Wells Fargo & Co (San Francisco) | Stay separate (different subsidiaries, different cities) | ✅ 2 entities |
+| First National Bank of Omaha vs First National Bank Foundation | Stay separate (bank vs nonprofit type mismatch) | ✅ 2 entities |
+| Hard-key merge via shared RSSD_ID across FDIC institutions and FDIC locations | Merge regardless of name differences | ✅ |
+
+## What this doesn't do
+
+- **No contact data.** Free government sources give firmographic + financial + regulatory depth but not named decision-maker emails/phones. That's the enrichment layer (Clay, Apollo, PDL). The knowledge layer tells your playbook *which accounts matter and why*; the enrichment layer tells you *who to contact there*.
+- **No intent data.** CFPB complaint counts are the closest free intent-adjacent signal included. For buyer intent, pair with Bombora / G2 / web scrape.
+- **No private-company revenue.** Pair with PPP loan amount (rough revenue proxy) + DOL 5500 participant count (employee proxy) + Form 990 for nonprofits.
+- **Doesn't scrape Secretary of State filings.** OpenCorporates aggregates these but free tier is non-commercial only. For commercial use at scale you'd either pay them or build 50 per-state scrapers.

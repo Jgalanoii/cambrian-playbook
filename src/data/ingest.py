@@ -87,9 +87,11 @@ def _init_db(db_path: Path) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(db_path)
     con.executescript("""
+    -- One row per (source, source record). The "long table" of everything ingested.
     CREATE TABLE IF NOT EXISTS companies (
         source_id TEXT NOT NULL,
         source_record_id TEXT NOT NULL,
+        entity_id TEXT,              -- filled in by resolve.py, NULL until resolution runs
         name TEXT,
         entity_type TEXT,
         verticals TEXT,
@@ -114,6 +116,48 @@ def _init_db(db_path: Path) -> sqlite3.Connection:
     CREATE INDEX IF NOT EXISTS idx_state ON companies(state);
     CREATE INDEX IF NOT EXISTS idx_entity_type ON companies(entity_type);
     CREATE INDEX IF NOT EXISTS idx_verticals ON companies(verticals);
+    CREATE INDEX IF NOT EXISTS idx_entity_id ON companies(entity_id);
+
+    -- Time-series financial snapshots (bank call reports, 10-K data, etc.)
+    -- One row per (source, entity key, period_end) with a JSON payload of metrics.
+    CREATE TABLE IF NOT EXISTS financial_snapshots (
+        source_id TEXT NOT NULL,
+        source_record_id TEXT NOT NULL,
+        period_end TEXT NOT NULL,
+        metrics TEXT NOT NULL,       -- JSON: {ASSETS: ..., DEP: ..., NETINC: ..., ROE: ...}
+        last_seen TEXT,
+        PRIMARY KEY (source_id, source_record_id, period_end)
+    );
+    CREATE INDEX IF NOT EXISTS idx_snap_period ON financial_snapshots(period_end);
+
+    -- Aggregate statistics (Census SUSB, CBP, BLS QCEW) - not entity-level.
+    -- Dimensions stored as JSON so any source's grain can fit.
+    CREATE TABLE IF NOT EXISTS aggregate_stats (
+        source_id TEXT NOT NULL,
+        stat_id TEXT NOT NULL,       -- e.g. "naics=522110;state=WA;empsize=05;year=2022"
+        dimensions TEXT NOT NULL,    -- JSON of the dimension key/values
+        metrics TEXT NOT NULL,       -- JSON of the measure values
+        last_seen TEXT,
+        PRIMARY KEY (source_id, stat_id)
+    );
+
+    -- Resolved entities - canonical records pointing to 1..n source rows.
+    -- Populated by resolve.py.
+    CREATE TABLE IF NOT EXISTS resolved_entities (
+        entity_id TEXT PRIMARY KEY,
+        canonical_name TEXT,
+        entity_type TEXT,
+        primary_state TEXT,
+        primary_city TEXT,
+        identifiers TEXT,            -- merged JSON of all known IDs
+        vertical_tags TEXT,          -- union of verticals across source records
+        source_count INTEGER,        -- how many sources confirm this entity
+        confidence REAL,             -- resolution confidence
+        first_seen TEXT,
+        last_seen TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_re_name ON resolved_entities(canonical_name);
+    CREATE INDEX IF NOT EXISTS idx_re_state ON resolved_entities(primary_state);
     """)
     return con
 
@@ -123,7 +167,7 @@ def write_companies(con: sqlite3.Connection, companies: Iterator[Company]) -> in
     batch = []
     for c in companies:
         batch.append((
-            c.source_id, c.source_record_id, c.name, c.entity_type,
+            c.source_id, c.source_record_id, None, c.name, c.entity_type,
             ",".join(c.verticals), ",".join(c.naics),
             json.dumps(c.identifiers), c.street, c.city, c.state, c.zip,
             c.website, c.phone, c.employees, c.revenue_usd, c.assets_usd,
@@ -131,7 +175,7 @@ def write_companies(con: sqlite3.Connection, companies: Iterator[Company]) -> in
         ))
         if len(batch) >= 500:
             con.executemany(
-                "INSERT OR REPLACE INTO companies VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR REPLACE INTO companies VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 batch
             )
             con.commit()
@@ -139,8 +183,54 @@ def write_companies(con: sqlite3.Connection, companies: Iterator[Company]) -> in
             batch = []
     if batch:
         con.executemany(
-            "INSERT OR REPLACE INTO companies VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO companies VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             batch
+        )
+        con.commit()
+        count += len(batch)
+    return count
+
+
+def write_snapshots(con: sqlite3.Connection, rows: Iterator[tuple]) -> int:
+    """rows: iterator of (source_id, source_record_id, period_end, metrics_dict)"""
+    now = datetime.utcnow().isoformat()
+    count = 0
+    batch = []
+    for source_id, rec_id, period_end, metrics in rows:
+        batch.append((source_id, rec_id, period_end, json.dumps(metrics), now))
+        if len(batch) >= 500:
+            con.executemany(
+                "INSERT OR REPLACE INTO financial_snapshots VALUES (?,?,?,?,?)", batch
+            )
+            con.commit()
+            count += len(batch)
+            batch = []
+    if batch:
+        con.executemany(
+            "INSERT OR REPLACE INTO financial_snapshots VALUES (?,?,?,?,?)", batch
+        )
+        con.commit()
+        count += len(batch)
+    return count
+
+
+def write_aggregates(con: sqlite3.Connection, rows: Iterator[tuple]) -> int:
+    """rows: iterator of (source_id, stat_id, dimensions_dict, metrics_dict)"""
+    now = datetime.utcnow().isoformat()
+    count = 0
+    batch = []
+    for source_id, stat_id, dims, metrics in rows:
+        batch.append((source_id, stat_id, json.dumps(dims), json.dumps(metrics), now))
+        if len(batch) >= 500:
+            con.executemany(
+                "INSERT OR REPLACE INTO aggregate_stats VALUES (?,?,?,?,?)", batch
+            )
+            con.commit()
+            count += len(batch)
+            batch = []
+    if batch:
+        con.executemany(
+            "INSERT OR REPLACE INTO aggregate_stats VALUES (?,?,?,?,?)", batch
         )
         con.commit()
         count += len(batch)
@@ -179,9 +269,15 @@ def get(url: str, params: dict | None = None, retries: int = 3, sleep: float = 1
 # ---------------------------------------------------------------------------
 # Source handlers
 # ---------------------------------------------------------------------------
-# Each handler yields Company records. Handlers are registered by source id.
+# Handlers come in three flavors:
+#   @handler             -> yields Company records for the `companies` table
+#   @snapshot_handler    -> yields (source_id, source_record_id, period_end, metrics_dict) tuples
+#   @aggregate_handler   -> yields (source_id, stat_id, dimensions_dict, metrics_dict) tuples
+# A source_id can register with multiple decorators (e.g. FDIC has both).
 
 HANDLERS: dict[str, Callable[[dict], Iterator[Company]]] = {}
+SNAPSHOT_HANDLERS: dict[str, Callable[[dict], Iterator[tuple]]] = {}
+AGGREGATE_HANDLERS: dict[str, Callable[[dict], Iterator[tuple]]] = {}
 
 
 def handler(source_id: str):
@@ -191,14 +287,18 @@ def handler(source_id: str):
     return decorator
 
 
-def _parse_year(val):
-    """Extract a 4-digit year from various date formats (YYYY, MM/DD/YYYY, YYYY-MM-DD, etc.)."""
-    if not val:
-        return None
-    s = str(val)
-    import re
-    m = re.search(r'\b(1[89]\d{2}|20\d{2})\b', s)
-    return int(m.group(1)) if m else None
+def snapshot_handler(source_id: str):
+    def decorator(fn):
+        SNAPSHOT_HANDLERS[source_id] = fn
+        return fn
+    return decorator
+
+
+def aggregate_handler(source_id: str):
+    def decorator(fn):
+        AGGREGATE_HANDLERS[source_id] = fn
+        return fn
+    return decorator
 
 
 @handler("fdic_institutions")
@@ -229,7 +329,7 @@ def ingest_fdic_institutions(src: dict) -> Iterator[Company]:
                 website=d.get("WEBADDR"),
                 employees=int(d["EMPNUM"]) if d.get("EMPNUM") else None,
                 assets_usd=float(d["ASSET"]) * 1000 if d.get("ASSET") else None,
-                founded_year=_parse_year(d.get("ESTYMD")),
+                founded_year=int(str(d.get("ESTYMD"))[:4]) if d.get("ESTYMD") else None,
                 status="active" if d.get("ACTIVE") == 1 else "inactive",
                 last_seen=now,
                 confidence_score=0.95,
@@ -529,6 +629,248 @@ def ingest_cfpb_complaints(src: dict) -> Iterator[Company]:
         )
 
 
+@handler("fdic_locations")
+def ingest_fdic_locations(src: dict) -> Iterator[Company]:
+    """Every FDIC-insured bank branch. ~85K records. Useful for geo targeting."""
+    url = "https://banks.data.fdic.gov/api/locations"
+    fields = "UNINUMBR,CERT,RSSDID,NAMEFULL,ADDRESS,CITY,STALP,ZIP,SERVTYPE,DEPSUMBR,ESTYMD"
+    offset = 0
+    limit = 10000
+    now = datetime.utcnow().isoformat()
+    while True:
+        r = get(url, params={"limit": limit, "offset": offset, "fields": fields})
+        rows = r.json().get("data", [])
+        if not rows:
+            break
+        for row in rows:
+            d = row.get("data", row)
+            yield Company(
+                source_id=src["id"],
+                source_record_id=str(d.get("UNINUMBR")),
+                name=d.get("NAMEFULL", ""),
+                identifiers={
+                    "fdic_cert": str(d.get("CERT")),
+                    "rssd_id": str(d.get("RSSDID") or ""),
+                    "fdic_uninumbr": str(d.get("UNINUMBR")),
+                },
+                entity_type="bank_branch",
+                verticals=src.get("verticals", []),
+                street=d.get("ADDRESS"),
+                city=d.get("CITY"),
+                state=d.get("STALP"),
+                zip=str(d.get("ZIP") or ""),
+                founded_year=int(str(d.get("ESTYMD"))[:4]) if d.get("ESTYMD") else None,
+                status="active",
+                last_seen=now,
+                confidence_score=0.95,
+                raw=d,
+            )
+        offset += limit
+        if len(rows) < limit:
+            break
+        time.sleep(0.2)
+
+
+@snapshot_handler("fdic_financial")
+def ingest_fdic_financial(src: dict) -> Iterator[tuple]:
+    """
+    Quarterly call report data. 1,100+ fields per bank; we pull a curated set
+    of the most useful GTM-relevant metrics and drop them into financial_snapshots.
+    """
+    url = "https://banks.data.fdic.gov/api/financials"
+    # Curated field set - balance sheet, income, asset quality, and tech/trust spend proxies
+    metric_fields = [
+        "ASSET", "DEP", "DEPDOM", "LNLSNET", "LNLSGR", "LNRE", "LNCI",
+        "NETINC", "NIMY", "EQ", "ROA", "ROE",
+        "NPERFV", "NTLNLS",               # non-performing, charge-offs (pain signals)
+        "EINTEXP", "ENONINT", "ETOTNINT", # expense detail — high data-processing spend correlates with tech modernization
+        "SC", "NUMEMP", "OFFDOM",         # services charges, employees, domestic offices
+    ]
+    fields = "CERT,RSSDID,REPDTE," + ",".join(metric_fields)
+    # Default: most recent quarter end. User can override with FDIC_PERIOD env var as YYYYMMDD.
+    period = os.environ.get("FDIC_PERIOD")
+    filters = f"REPDTE:{period}" if period else None
+    offset = 0
+    limit = 10000
+    while True:
+        params = {"limit": limit, "offset": offset, "fields": fields, "sort_by": "CERT"}
+        if filters:
+            params["filters"] = filters
+        r = get(url, params=params)
+        rows = r.json().get("data", [])
+        if not rows:
+            break
+        for row in rows:
+            d = row.get("data", row)
+            cert = str(d.get("CERT"))
+            period_end = str(d.get("REPDTE", ""))
+            if not cert or not period_end:
+                continue
+            metrics = {k: d.get(k) for k in metric_fields if d.get(k) is not None}
+            # Link snapshot back to the institution record by reusing fdic_institutions' ID
+            yield ("fdic_institutions", cert, period_end, metrics)
+        offset += limit
+        if len(rows) < limit:
+            break
+        time.sleep(0.2)
+
+
+@handler("sam_entities")
+def ingest_sam_entities(src: dict) -> Iterator[Company]:
+    """
+    SAM.gov entity registration API. Requires a free API key from sam.gov.
+    Set SAM_API_KEY env var. ~700K active federal contractor registrations.
+    """
+    api_key = os.environ.get("SAM_API_KEY")
+    if not api_key:
+        print("  skip: set SAM_API_KEY (register free at api.sam.gov)", file=sys.stderr)
+        return
+    url = "https://api.sam.gov/entity-information/v3/entities"
+    now = datetime.utcnow().isoformat()
+    page = 0
+    size = 100  # SAM's max per page
+    # Filter to US + active registrations; override via env if you need more
+    filter_q = os.environ.get("SAM_FILTER", "registrationStatus=A&purposeOfRegistrationCode=Z2")
+    while True:
+        params = {
+            "api_key": api_key,
+            "page": page,
+            "size": size,
+            # Example extra filters can be appended via the &filter_q env
+        }
+        r = get(f"{url}?{filter_q}", params=params)
+        data = r.json()
+        entities = data.get("entityData", [])
+        if not entities:
+            break
+        for e in entities:
+            core = e.get("entityRegistration", {})
+            core_data = e.get("coreData", {})
+            physical = core_data.get("physicalAddress", {}) if core_data else {}
+            yield Company(
+                source_id=src["id"],
+                source_record_id=core.get("ueiSAM", ""),
+                name=core.get("legalBusinessName", ""),
+                dba_names=[core.get("dbaName")] if core.get("dbaName") else [],
+                identifiers={
+                    "uei_sam": core.get("ueiSAM"),
+                    "cage_code": core.get("cageCode"),
+                    "duns": core.get("ueiDUNS"),
+                },
+                entity_type="government_contractor",
+                verticals=src.get("verticals", []),
+                street=physical.get("addressLine1"),
+                city=physical.get("city"),
+                state=physical.get("stateOrProvinceCode"),
+                zip=physical.get("zipCode"),
+                status="active" if core.get("registrationStatus") == "Active" else "inactive",
+                last_seen=now,
+                confidence_score=0.95,
+                raw={"registration": core, "core_data": core_data},
+            )
+        page += 1
+        if page * size >= data.get("totalRecords", 0):
+            break
+        time.sleep(0.3)
+
+
+@aggregate_handler("census_susb")
+def ingest_census_susb(src: dict) -> Iterator[tuple]:
+    """
+    Census Statistics of US Businesses - aggregate firm counts by NAICS/state/size.
+    This is TAM-sizing data, not firm-level. Goes into aggregate_stats table.
+
+    Set CENSUS_API_KEY (free at https://api.census.gov/data/key_signup.html)
+    and optionally CENSUS_SUSB_YEAR (default 2021).
+    """
+    key = os.environ.get("CENSUS_API_KEY")
+    if not key:
+        print("  skip: set CENSUS_API_KEY (free at api.census.gov)", file=sys.stderr)
+        return
+    year = os.environ.get("CENSUS_SUSB_YEAR", "2021")
+    # Variables: firm count, establishment count, employment, payroll, by NAICS+state+employee-size
+    url = f"https://api.census.gov/data/{year}/susb"
+    params = {
+        "get": "NAME,FIRM,ESTAB,EMP,PAYANN,NAICS2017_LABEL,ENTRSIZE_LABEL",
+        "for": "state:*",
+        "NAICS2017": "*",
+        "ENTRSIZE": "*",
+        "key": key,
+    }
+    r = get(url, params=params)
+    data = r.json()
+    if not data or len(data) < 2:
+        return
+    header, rows = data[0], data[1:]
+    for row in rows:
+        rec = dict(zip(header, row))
+        stat_id = f"y={year};naics={rec.get('NAICS2017')};state={rec.get('state')};size={rec.get('ENTRSIZE')}"
+        dims = {
+            "year": year,
+            "naics": rec.get("NAICS2017"),
+            "naics_label": rec.get("NAICS2017_LABEL"),
+            "state_fips": rec.get("state"),
+            "entsize_code": rec.get("ENTRSIZE"),
+            "entsize_label": rec.get("ENTRSIZE_LABEL"),
+        }
+        metrics = {
+            "firm_count": int(rec["FIRM"]) if rec.get("FIRM", "").lstrip("-").isdigit() else None,
+            "establishment_count": int(rec["ESTAB"]) if rec.get("ESTAB", "").lstrip("-").isdigit() else None,
+            "employment": int(rec["EMP"]) if rec.get("EMP", "").lstrip("-").isdigit() else None,
+            "annual_payroll_1000s": int(rec["PAYANN"]) if rec.get("PAYANN", "").lstrip("-").isdigit() else None,
+        }
+        yield (src["id"], stat_id, dims, metrics)
+
+
+@handler("gleif_lei")
+def ingest_gleif_lei(src: dict) -> Iterator[Company]:
+    """
+    GLEIF LEI via API, filtered to US entities. Full concatenated file is ~700MB;
+    API approach is far more tractable. Pulls all US records in batches.
+    """
+    url = "https://api.gleif.org/api/v1/lei-records"
+    now = datetime.utcnow().isoformat()
+    page = 1
+    size = 200  # GLEIF max
+    while True:
+        params = {
+            "filter[entity.legalAddress.country]": "US",
+            "filter[entity.status]": "ACTIVE",
+            "page[size]": size,
+            "page[number]": page,
+        }
+        r = get(url, params=params)
+        data = r.json()
+        records = data.get("data", [])
+        if not records:
+            break
+        for rec in records:
+            attrs = rec.get("attributes", {})
+            entity = attrs.get("entity", {})
+            legal_address = entity.get("legalAddress", {})
+            yield Company(
+                source_id=src["id"],
+                source_record_id=attrs.get("lei", ""),
+                name=entity.get("legalName", {}).get("name", ""),
+                identifiers={"lei": attrs.get("lei")},
+                entity_type="legal_entity",
+                verticals=src.get("verticals", []),
+                street=", ".join(legal_address.get("addressLines") or []) or None,
+                city=legal_address.get("city"),
+                state=legal_address.get("region", "").split("-")[-1] if legal_address.get("region") else None,
+                zip=legal_address.get("postalCode"),
+                status="active",
+                last_seen=now,
+                confidence_score=0.9,
+                raw=attrs,
+            )
+        meta = data.get("meta", {}).get("pagination", {})
+        if page >= meta.get("lastPage", page):
+            break
+        page += 1
+        time.sleep(0.3)
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -540,28 +882,40 @@ def load_manifest() -> dict:
 
 def list_sources(manifest: dict) -> None:
     print(f"\n{len(manifest['sources'])} sources in manifest:\n")
-    print(f"{'ID':<28} {'Priority':<10} {'Handler':<10} {'Verticals'}")
+    print(f"{'ID':<28} {'Priority':<10} {'Handlers':<18} {'Verticals'}")
     print("-" * 100)
     for s in sorted(manifest["sources"], key=lambda x: (x.get("priority", 99), x["id"])):
-        has_handler = "✓" if s["id"] in HANDLERS else "—"
-        print(f"{s['id']:<28} {s.get('priority', '?'):<10} {has_handler:<10} {','.join(s.get('verticals', []))}")
-    print(f"\n✓ = has an implemented handler in this script")
-    print(f"— = source is in manifest but handler not yet implemented\n")
+        sid = s["id"]
+        marks = []
+        if sid in HANDLERS: marks.append("company")
+        if sid in SNAPSHOT_HANDLERS: marks.append("snapshot")
+        if sid in AGGREGATE_HANDLERS: marks.append("aggregate")
+        handler_str = ",".join(marks) if marks else "—"
+        print(f"{sid:<28} {s.get('priority', '?'):<10} {handler_str:<18} {','.join(s.get('verticals', []))}")
+    print(f"\ncompany/snapshot/aggregate = which tables this source writes to")
+    print(f"— = source documented in manifest but no handler implemented yet\n")
 
 
-def ingest_source(src: dict, con: sqlite3.Connection) -> int:
-    if src["id"] not in HANDLERS:
-        print(f"[{src['id']}] no handler implemented - skipping")
-        return 0
-    print(f"[{src['id']}] fetching ...")
+def ingest_source(src: dict, con: sqlite3.Connection) -> dict:
+    sid = src["id"]
+    if sid not in HANDLERS and sid not in SNAPSHOT_HANDLERS and sid not in AGGREGATE_HANDLERS:
+        print(f"[{sid}] no handler implemented - skipping")
+        return {"companies": 0, "snapshots": 0, "aggregates": 0}
+    print(f"[{sid}] fetching ...")
+    result = {"companies": 0, "snapshots": 0, "aggregates": 0}
+    t0 = time.time()
     try:
-        t0 = time.time()
-        count = write_companies(con, HANDLERS[src["id"]](src))
-        print(f"[{src['id']}] wrote {count} records in {time.time()-t0:.1f}s")
-        return count
+        if sid in HANDLERS:
+            result["companies"] = write_companies(con, HANDLERS[sid](src))
+        if sid in SNAPSHOT_HANDLERS:
+            result["snapshots"] = write_snapshots(con, SNAPSHOT_HANDLERS[sid](src))
+        if sid in AGGREGATE_HANDLERS:
+            result["aggregates"] = write_aggregates(con, AGGREGATE_HANDLERS[sid](src))
+        total = sum(result.values())
+        print(f"[{sid}] wrote {total} records ({result}) in {time.time()-t0:.1f}s")
     except Exception as e:
-        print(f"[{src['id']}] ERROR: {e}", file=sys.stderr)
-        return 0
+        print(f"[{sid}] ERROR: {e}", file=sys.stderr)
+    return result
 
 
 def main() -> None:
@@ -599,11 +953,18 @@ def main() -> None:
         p.print_help()
         return
 
-    total = 0
+    totals = {"companies": 0, "snapshots": 0, "aggregates": 0}
     for src in selected:
-        total += ingest_source(src, con)
+        r = ingest_source(src, con)
+        for k in totals:
+            totals[k] += r.get(k, 0)
 
-    print(f"\nDone. {total} total records written to {DB_PATH}")
+    print(f"\nDone.")
+    print(f"  companies written:  {totals['companies']:,}")
+    print(f"  snapshots written:  {totals['snapshots']:,}")
+    print(f"  aggregates written: {totals['aggregates']:,}")
+    print(f"  DB: {DB_PATH}")
+    print(f"\nNext: run `python resolve.py` to build the cross-source entity resolution graph.")
 
 
 if __name__ == "__main__":

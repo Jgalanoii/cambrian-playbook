@@ -3371,8 +3371,8 @@ ${isOpen
       });
     });
 
-    // Hard timeout — clear ALL loading states after 25s so user is never stuck.
-    // A well-functioning brief completes in 8-15s; 25s means something stalled.
+    // Hard timeout — clear ALL loading states after 45s so user is never stuck.
+    // Strategy/solutions with full knowledge layer can take 20-30s; 45s gives headroom.
     setTimeout(() => {
       setBrief(prev => {
         if (!prev) return prev;
@@ -3388,7 +3388,7 @@ ${isOpen
         };
       });
       setBriefLoading(false);
-    }, 25000);
+    }, 45000);
 
     // Hypothesis only needs overview + strategy (p1+p3). Fire on earlyDone
     // so it starts 5-10s before slow web_search calls finish.
@@ -3646,7 +3646,7 @@ ${isOpen
           if (parsed.reality?.length) setDiscoveryQs(parsed);
         }
       } catch { /* partial JSON not parseable yet */ }
-    }, 2400);
+    }, 3500);
     // Set the final complete result (streaming callback handles partials,
     // but may not fire if partial JSON never parses mid-stream)
     if (result) {
