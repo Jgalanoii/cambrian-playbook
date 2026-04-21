@@ -101,7 +101,7 @@ const BLANK_BRIEF = {
   mobilizer:{description:"",identifyingBehavior:"",teachingAngle:""},
   caseStudies:[],
   openingAngle:"",watchOuts:["","",""],
-  keyContacts:[{name:"",title:"",initials:"?",angle:""},{name:"",title:"",initials:"?",angle:""}],
+  keyContacts:[{name:"",title:"",initials:"",angle:""},{name:"",title:"",initials:"",angle:""}],
   competitors:[],recentSignals:["","",""],
   fundingProfile:"",strategicTheme:"",growthSignals:[],sellerOpportunity:"",
   publicSentiment:{bbbRating:"",bbbAccredited:null,standoutReview:{text:"",source:"",sentiment:""},onlineSentiment:"",sentimentSummary:""},
@@ -795,7 +795,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `{"product":"","fit":"","provenWith":"","measurableOutcome":""},`+
     `{"product":"","fit":"","provenWith":"","measurableOutcome":""}],`+
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
-    `"keyContacts":[{"name":"Real name if known from web search (leave EMPTY STRING if not verified — do NOT guess names)","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this","initials":"XX or ?? if name unknown","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
+    `"keyContacts":[{"name":"Real name if known from web search (leave EMPTY STRING if not verified — do NOT guess names)","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this","initials":"XX if name known, empty string if not","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
     `"techStack":{"crm":"e.g. Salesforce — or empty string if unknown","erp":"e.g. SAP — or empty string","hris":"e.g. Workday — or empty string","marketing":"e.g. HubSpot — or empty string","payments":"e.g. Stripe — or empty string","analytics":"e.g. Tableau — or empty string","infrastructure":"e.g. AWS — or empty string","other":[]},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
     (partial) => {
@@ -1250,7 +1250,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
 function CompanyLogo({ domain, name, size = 40, style = {} }) {
   const [failed, setFailed] = React.useState(false);
   const cleanDomain = (domain || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
-  const initials = (name || cleanDomain || "?").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
+  const initials = (name || cleanDomain || "").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "··";
 
   if (!cleanDomain || failed) {
     return (
@@ -2064,7 +2064,7 @@ Target industries:    ${(targetIndustries.length ? targetIndustries : (icp.indus
 Buyer size:           ${targetHeadcount || icp.companySize || ""}
 Revenue range:        ${targetRevenue || icp.revenueRange || ""}
 Geographies:          ${(icp.geographies||[]).join(", ")||"North America"}
-Buyer personas:       ${(icp.buyerPersonas||[]).join(", ")}
+Buyer personas:       ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")}
 Priority trigger:     ${icp.priorityInitiative||""}
 Adoption profile:     ${icp.adoptionProfile||""}
 Disqualifiers:        ${(icp.disqualifiers||[]).join("; ")}
@@ -2175,7 +2175,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
     // (existing) + named customer analogues + differentiators (so a
     // company very similar to a known win scores higher).
     const icpContext = sellerICP?.icp
-      ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
+      ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
         + (sellerICP.icp.customerExamples?.length ? `\nKNOWN CUSTOMER ANALOGUES (companies similar to these should score higher; do NOT score these themselves — they're already customers): ${sellerICP.icp.customerExamples.join(", ")}` : "")
         + (sellerICP.icp.uniqueDifferentiators?.length ? `\nSELLER DIFFERENTIATORS (use to break ties — companies that would benefit MOST from these score higher): ${sellerICP.icp.uniqueDifferentiators.join(" · ")}` : "")
       : "";
@@ -2411,7 +2411,7 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
     const icp = sellerICP.icp || {};
     const industries   = (icp.industries || []).filter(Boolean);
     const category     = sellerICP.marketCategory || "";
-    const buyers       = (icp.buyerPersonas || []).filter(Boolean);
+    const buyers       = (icp.buyerPersonas || []).filter(Boolean).map(p=>typeof p==="object"?p.title:p);
     const size         = icp.companySize || "";
     const geo          = (icp.geographies || []).filter(Boolean);
     const trigger      = icp.priorityInitiative || "";
@@ -2695,7 +2695,7 @@ ${isOpen
       `"ownershipTypes":["PICK 1-2 FROM: VC-backed private | PE-backed private | Public | Privately-held (family/founder) | Bootstrapped"],`+
       `"geographies":["PICK 1-2 FROM: North America | EMEA | APAC | LATAM | Global"],`+
       `"adoptionProfile":"PICK ONE: Innovator | Early Adopter | Early Majority | Late Majority",`+
-      `"buyerPersonas":["PICK 2-3 titles FROM: CEO | CFO | CTO | CIO | CISO | CHRO | CMO | COO | VP Sales | VP Marketing | VP Operations | VP HR | VP Finance | VP Engineering | VP Product | Director of IT | Director of Procurement | Director of Customer Success | Head of Digital | Head of Innovation — or a specific title if none fit"],`+
+      `"buyerPersonas":[{"title":"PICK FROM: CEO | CFO | CTO | CIO | CISO | CHRO | CMO | COO | VP Sales | VP Marketing | VP Operations | VP HR | VP Finance | VP Engineering | VP Product | Director of IT | Director of Procurement | Director of Customer Success | Head of Digital | Head of Innovation","role":"economic buyer | champion | technical evaluator | blocker/gatekeeper","whyThisBuyer":"1 sentence: why this person cares about what the seller does — what's their mandate?","keepUpAtNight":"1 sentence: the specific fear or pressure this person faces that the seller's product alleviates","howToReach":"1 sentence: best channel or approach to get this person's attention"}],`+
       `"priorityInitiative":"the specific business trigger that makes a company buy THIS product NOW — not generic pain. 1-2 sentences.",`+
       `"successFactors":"what a successful deployment looks like for their buyer — measurable outcomes. 1-2 sentences.",`+
       `"perceivedBarriers":"the top 2-3 objections a seller hears in the first meeting. Be specific to this product category.",`+
@@ -4859,7 +4859,7 @@ ${isOpen
                             <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Buyer Personas</div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                               {sellerICP.icp.buyerPersonas.slice(0,3).map((p,i)=>(
-                                <span key={i} style={{fontSize:11,background:"var(--navy-bg)",borderRadius:10,padding:"2px 8px",color:"var(--navy)"}}>{p}</span>
+                                <span key={i} style={{fontSize:11,background:"var(--navy-bg)",borderRadius:10,padding:"2px 8px",color:"var(--navy)"}}>{typeof p==="object"?p.title:p}</span>
                               ))}
                             </div>
                           </div>
@@ -5355,16 +5355,33 @@ ${isOpen
                     <div className="bb-icon">👤</div>
                     <div><div className="bb-title">Buyer Personas</div><div className="bb-sub">Economic buyer · Champion · Technical evaluator</div></div>
                   </div>
-                  <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
-                    {(sellerICP.icp.buyerPersonas||[]).filter(Boolean).map((p,i)=>(
-                      <div key={i} style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:8}}>
-                        <span style={{fontSize:20}}>{"💼👷🔧"[i]||"👤"}</span>
-                        <div>
-                          <div style={{fontSize:13,fontWeight:700,color:"var(--navy)"}}>{p}</div>
-                          <div style={{fontSize:10,color:"#aaa"}}>{["Economic Buyer","Champion / User","Technical Evaluator"][i]||"Stakeholder"}</div>
+                  <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
+                    {(sellerICP.icp.buyerPersonas||[]).filter(Boolean).map((p,i)=>{
+                      // Support both old format (plain string) and new format (object)
+                      const isObj = typeof p === "object";
+                      const title = isObj ? p.title : p;
+                      const role = isObj ? p.role : ["Economic Buyer","Champion","Technical Evaluator"][i]||"Stakeholder";
+                      const why = isObj ? p.whyThisBuyer : "";
+                      const fear = isObj ? p.keepUpAtNight : "";
+                      const reach = isObj ? p.howToReach : "";
+                      const roleIcon = role?.toLowerCase().includes("economic")?"💼":role?.toLowerCase().includes("champion")?"⭐":role?.toLowerCase().includes("technical")?"🔧":role?.toLowerCase().includes("blocker")?"🛡":"👤";
+                      const roleColor = role?.toLowerCase().includes("economic")?"var(--navy)":role?.toLowerCase().includes("champion")?"var(--green)":role?.toLowerCase().includes("technical")?"var(--amber)":"var(--ink-2)";
+                      const roleBg = role?.toLowerCase().includes("economic")?"var(--navy-bg)":role?.toLowerCase().includes("champion")?"var(--green-bg)":role?.toLowerCase().includes("technical")?"var(--amber-bg)":"var(--bg-0)";
+                      return (
+                        <div key={i} style={{background:roleBg,border:"1px solid "+roleColor+"33",borderRadius:10,padding:"12px 14px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:(why||fear)?6:0}}>
+                            <span style={{fontSize:16}}>{roleIcon}</span>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{title}</div>
+                              <div style={{fontSize:10,fontWeight:600,color:roleColor,textTransform:"uppercase",letterSpacing:"0.3px"}}>{role}</div>
+                            </div>
+                          </div>
+                          {why&&<div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:4}}><strong style={{color:"var(--ink-0)"}}>Why this buyer:</strong> {why}</div>}
+                          {fear&&<div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:2}}><strong style={{color:"var(--red)"}}>Keeps them up:</strong> {fear}</div>}
+                          {reach&&<div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:2}}><strong style={{color:"var(--green)"}}>How to reach:</strong> {reach}</div>}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -6112,7 +6129,7 @@ ${isOpen
                         <div className="icp-match-col-label" style={{color:"var(--ink-2)"}}>Key Buyers</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                           {sellerICP.icp.buyerPersonas.filter(Boolean).map((p,i)=>(
-                            <span key={i} style={{fontSize:11,background:"var(--navy-bg)",border:"1px solid "+"rgba(27,58,107,0.2)",borderRadius:"var(--r-pill)",padding:"2px 9px",color:"var(--navy)",fontWeight:500}}>{p}</span>
+                            <span key={i} style={{fontSize:11,background:"var(--navy-bg)",border:"1px solid "+"rgba(27,58,107,0.2)",borderRadius:"var(--r-pill)",padding:"2px 9px",color:"var(--navy)",fontWeight:500}}>{typeof p==="object"?p.title:p}</span>
                           ))}
                         </div>
                       </div>
@@ -6427,7 +6444,7 @@ ${isOpen
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                       {(brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
-                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"?"}</div>
+                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)"}}>{ex.name}</div>
                             <div style={{fontSize:13,color:"#777",marginBottom:4}}>{ex.title}</div>
@@ -6609,7 +6626,7 @@ ${isOpen
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                       {(brief.leadershipTeam||[]).filter(l=>l?.name).map((l,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
-                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontSize:11,fontWeight:700}}>{l.initials||"?"}</div>
+                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontSize:11,fontWeight:700}}>{l.initials||l.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)"}}>{l.name}</div>
                             <div style={{fontSize:10,color:"#777",marginBottom:3}}>{l.title}</div>
@@ -6842,7 +6859,7 @@ ${isOpen
 
                 {/* Opening Angle */}
                 <div className="bb">
-                  <div className="bb-hdr"><div className="bb-icon">?</div><div><div className="bb-title">Opening Angle</div></div></div>
+                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div></div>
                   <div className="bb-body">
                     <div className="talk-box">
                       <div className="talk-lbl">Recommended Opening</div>
@@ -6906,7 +6923,7 @@ ${isOpen
                         <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.keyContacts||[]).filter(x=>x?.name||x?.title).length-1)?"1px solid var(--tan-3)":"none"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
                             <div style={{width:30,height:30,borderRadius:"50%",background:"var(--green)",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                              {c.initials||"?"}
+                              {c.initials||c.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}
                             </div>
                             <div>
                               {c.name ? (
