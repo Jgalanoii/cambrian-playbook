@@ -5470,15 +5470,27 @@ ${isOpen
                             const date = isObj ? ev.date : "";
                             const city = isObj ? ev.city : "";
                             const url = isObj ? ev.url : "";
+                            // Extract month abbreviation from date string
+                            const monthMatch = date ? date.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*/i) : null;
+                            const monthAbbr = monthMatch ? monthMatch[1].slice(0,3).toUpperCase() : "";
+                            // Extract day number if present (e.g. "Oct 26-29" → "26")
+                            const dayMatch = date ? date.match(/\b(\d{1,2})\b/) : null;
+                            const dayNum = dayMatch && parseInt(dayMatch[1]) <= 31 ? dayMatch[1] : "";
                             return (
-                              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 12px",background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:8}}>
-                                <div style={{width:36,height:36,borderRadius:6,background:"var(--navy-bg)",border:"1px solid #1B3A6B22",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                                  <div style={{fontSize:8,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",lineHeight:1}}>{date ? date.replace(/.*?(\w{3})\w*\b.*/, "$1").slice(0,3) : ""}</div>
-                                  <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",lineHeight:1}}>{date ? (date.match(/\d{1,2}(?=[,\s\-])/)||[""])[0] : ""}</div>
-                                </div>
+                              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:8}}>
+                                {monthAbbr ? (
+                                  <div style={{width:38,height:38,borderRadius:6,background:"var(--navy-bg)",border:"1px solid #1B3A6B22",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                                    <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",lineHeight:1,marginBottom:1}}>{monthAbbr}</div>
+                                    {dayNum && <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",lineHeight:1}}>{dayNum}</div>}
+                                  </div>
+                                ) : (
+                                  <div style={{width:38,height:38,borderRadius:6,background:"var(--navy-bg)",border:"1px solid #1B3A6B22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:16}}>📅</div>
+                                )}
                                 <div style={{flex:1,minWidth:0}}>
                                   {url ? (
-                                    <a href={url.startsWith("http")?url:"https://"+url} target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:600,color:"var(--navy)",textDecoration:"none"}}>{name}</a>
+                                    <a href={url.startsWith("http")?url:"https://"+url} target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:600,color:"var(--navy)",textDecoration:"none"}}>
+                                      {name} <span style={{fontSize:10,color:"var(--ink-3)"}}>↗</span>
+                                    </a>
                                   ) : (
                                     <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)"}}>{name}</div>
                                   )}
