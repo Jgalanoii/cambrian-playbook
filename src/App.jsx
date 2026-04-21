@@ -4,6 +4,7 @@ import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import { sbAuth, sbGetUser, sbSessions } from "./lib/supabase.js";
 import { fetchOrgContext } from "./lib/org.js";
+import OrgPanel from "./components/OrgPanel.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
 // ── KNOWLEDGE LAYER ──────────────────────────────────────────────────────
 // Sensitive heuristics (scoring formulas, industry benchmarks, framework
@@ -1456,15 +1457,39 @@ function PasswordGate({ onAuth }) {
   const[guestOk,setGuestOk]=React.useState(false);
 
   React.useEffect(()=>{
+    // Check for invitation token in URL
+    const params = new URLSearchParams(window.location.search);
+    const invToken = params.get("token");
+    if (invToken) {
+      // Store invite token for after auth, clean URL
+      sessionStorage.setItem("pending_invite_token", invToken);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
     // Clear any legacy password-gate session data
     sessionStorage.removeItem('cambrian_auth');
     const token=localStorage.getItem('sb_token');
     if(token){
-      sbGetUser(token).then(u=>{
+      sbGetUser(token).then(async u=>{
         if(u?.id){
-          onAuth(u,token); // valid token — skip gate
+          // Accept pending invitation if present
+          const pendingInvite = sessionStorage.getItem("pending_invite_token");
+          if (pendingInvite) {
+            sessionStorage.removeItem("pending_invite_token");
+            try {
+              const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+              const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+              await fetch(`${SB_URL}/rest/v1/rpc/accept_invitation`, {
+                method: "POST",
+                headers: { apikey: SB_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ p_token: pendingInvite, p_user_id: u.id }),
+              });
+              console.log("[invite] Accepted invitation");
+            } catch (e) { console.warn("[invite] Accept failed:", e.message); }
+          }
+          onAuth(u,token);
         } else {
-          localStorage.removeItem('sb_token'); // stale — clear and show form
+          localStorage.removeItem('sb_token');
         }
       });
     }
@@ -1854,6 +1879,7 @@ export default function App(){
   const[icpDeltaLoading,setIcpDeltaLoading]=useState(false);
   const[orgCtx,setOrgCtx]=useState(null); // {id, name, run_count, run_limit, plan, userRole, ...}
   const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
+  const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
   const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
   const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
@@ -4457,6 +4483,10 @@ ${isOpen
                 {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":saveStatus==="saved"?"✓":"💾"} {saveStatus==="saved"?"Saved":"Save"}
               </button>
             )}
+            {orgCtx&&<button onClick={()=>setOrgPanelOpen(true)}
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
+              👥 {orgCtx.userRole==="admin"?"Org":"Team"}
+            </button>}
             {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
@@ -7687,6 +7717,11 @@ ${isOpen
           <span style={{color:"var(--ink-3)"}}>runs</span>
           {orgCtx.plan==="trial"&&<span style={{fontSize:10,color:"var(--amber)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>Trial</span>}
         </div>
+      )}
+
+      {/* Org settings / team panel */}
+      {orgPanelOpen && orgCtx && (
+        <OrgPanel orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} onClose={()=>setOrgPanelOpen(false)} />
       )}
 
       {/* Upgrade prompt modal */}
