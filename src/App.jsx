@@ -3407,6 +3407,7 @@ ${isOpen
     // product-specific questions — NOT generic ones. Wait for allDone so all
     // mergers (including p4 solutions) have applied to the brief state.
     allDone.then(() => {
+      console.log("[brief] allDone resolved — triggering discovery questions");
       setBrief(current => {
         if (current?._error) setBriefError(current._error);
         return current;
@@ -3414,7 +3415,11 @@ ${isOpen
       setTimeout(() => {
         setBrief(current => {
           if (current) {
+            const prodCount = (current.solutionMapping||[]).filter(s=>s?.product).length;
+            console.log("[brief] Firing generateDiscoveryQs with", prodCount, "products, snapshot:", (current.companySnapshot||"").slice(0,50));
             Promise.resolve().then(() => generateDiscoveryQs(current, member));
+          } else {
+            console.warn("[brief] allDone: current is null — skipping discovery");
           }
           return current;
         });
