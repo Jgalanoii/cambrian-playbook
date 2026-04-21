@@ -2712,8 +2712,8 @@ ${isOpen
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
       `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
       `"customerExamples":["VERIFIED customer 1 — from research or certain training knowledge","Customer 2","Customer 3"],`+
-      `"relevantEvents":[{"name":"REAL event name (e.g. Money20/20, SHRM Annual, NRF Big Show)","date":"Specific dates if known (e.g. 'Oct 26-29, 2026') or month+year (e.g. 'June 2026')","city":"City, State/Country","url":"Official event website URL (e.g. https://www.money2020.com)"}]}}`+
-      `\n\nFor relevantEvents: return 3-5 REAL, well-known conferences where the seller's ICP buyers and/or competitors attend. Use your training knowledge for event names, dates, cities, and URLs. Only include events you are confident are real. If unsure of exact dates, use the typical month.`;
+      `"relevantEvents":[{"name":"REAL event name (e.g. Money20/20, SHRM Annual, NRF Big Show)","date":"FUTURE dates only — e.g. 'Oct 26-29, 2026' or 'June 2027'","city":"City, State/Country — use the NEXT scheduled location, not last year's","url":"Official event website URL (e.g. https://www.money2020.com)"}]}}`+
+      `\n\nFor relevantEvents: TODAY IS ${new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}. Return 3-5 REAL conferences where the seller's ICP buyers attend. CRITICAL: every event MUST be in the FUTURE (after today). Use the NEXT upcoming edition — not last year's dates, city, or URL. If you only know the typical month, project forward to the next occurrence (e.g. if it's usually in October, use October ${new Date().getMonth()>=9?new Date().getFullYear()+1:new Date().getFullYear()}). NEVER return a past event.`;
 
     try{
       const d2 = await claudeFetch({
@@ -5459,12 +5459,36 @@ ${isOpen
                         <div style={{fontSize:12,color:"#777"}}>{(sellerICP.icp.customerExamples||[]).filter(Boolean).join(" · ")}</div>
                       </div>
                     )}
-                    {(sellerICP.icp.relevantEvents||[]).filter(ev=>ev&&(typeof ev==="string"?ev:ev.name)).length>0&&(
+                    {(()=>{
+                      // Filter out past events — safety net in case the model returns old dates
+                      const now = new Date();
+                      const currentYear = now.getFullYear();
+                      const currentMonth = now.getMonth(); // 0-indexed
+                      const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+                      const isFuture = (dateStr) => {
+                        if (!dateStr) return true; // no date = keep it (can't filter)
+                        const yearMatch = dateStr.match(/\b(20\d{2})\b/);
+                        const year = yearMatch ? parseInt(yearMatch[1]) : 0;
+                        if (!year) return true; // no year = keep it
+                        if (year > currentYear) return true;
+                        if (year < currentYear) return false;
+                        // Same year — check month
+                        const monthMatch = dateStr.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*/i);
+                        if (!monthMatch) return true; // same year, no month = keep it
+                        const month = months[monthMatch[1].slice(0,3).toLowerCase()];
+                        return month >= currentMonth;
+                      };
+                      const futureEvents = (sellerICP.icp.relevantEvents||[])
+                        .filter(ev => ev && (typeof ev==="string" ? ev : ev.name))
+                        .filter(ev => {
+                          const dateStr = typeof ev==="object" ? ev.date : ev;
+                          return isFuture(dateStr);
+                        });
+                      return futureEvents.length>0&&(
                       <div style={{marginTop:10}}>
-                        <div className="field-label" style={{marginBottom:6}}>Conferences & Events to Target</div>
+                        <div className="field-label" style={{marginBottom:6}}>Upcoming Conferences & Events</div>
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                          {(sellerICP.icp.relevantEvents||[]).filter(ev=>ev&&(typeof ev==="string"?ev:ev.name)).map((ev,i)=>{
-                            // Support both old format (plain string) and new format (object)
+                          {futureEvents.map((ev,i)=>{
                             const isObj = typeof ev === "object";
                             const name = isObj ? ev.name : ev;
                             const date = isObj ? ev.date : "";
@@ -5502,9 +5526,9 @@ ${isOpen
                             );
                           })}
                         </div>
-                        <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>Events where your ICP buyers and competitors are likely present</div>
+                        <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>Upcoming events where your ICP buyers and competitors are likely present</div>
                       </div>
-                    )}
+                    );})()}
                   </div>
                 </div>
 
