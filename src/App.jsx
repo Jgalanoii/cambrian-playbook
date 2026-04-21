@@ -3099,9 +3099,13 @@ ${isOpen
         setCmdOpen(o => !o);
         return;
       }
-      // Don't intercept while typing in a field
-      const tag = document.activeElement?.tagName?.toLowerCase();
+      // Don't intercept while typing in a field or any editable element
+      const el = document.activeElement;
+      const tag = el?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (el?.isContentEditable) return;
+      // Also skip if any overlay/panel is open (OrgPanel, sessions drawer, etc.)
+      if (orgPanelOpen || showSessions || cmdOpen) return;
       // Cmd-S — save session
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
