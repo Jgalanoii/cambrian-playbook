@@ -3,9 +3,13 @@
 // POST { email, role } with admin JWT → creates invitation row +
 // sends Supabase invite email with acceptance link.
 
+import { createHmac, timingSafeEqual } from "crypto";
+
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 const APP_URL = process.env.VITE_APP_URL || "https://cambrian-playbook.vercel.app";
+const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
+const SB_REF = SB_URL ? new URL(SB_URL).hostname.split(".")[0] : "";
 
 function decodeJwt(req) {
   const auth = req.headers.authorization || "";
@@ -13,7 +17,19 @@ function decodeJwt(req) {
   try {
     const parts = auth.slice(7).split(".");
     if (parts.length !== 3) return null;
-    return JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+    // Signature verification
+    if (JWT_SECRET) {
+      const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
+      const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
+      if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
+    }
+    const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+    // Expiry check
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) return null;
+    // Issuer check
+    if (payload.iss !== "supabase" && !payload.iss?.includes(SB_REF)) return null;
+    return payload;
   } catch { return null; }
 }
 

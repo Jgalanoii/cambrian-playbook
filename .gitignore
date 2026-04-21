@@ -28,3 +28,9 @@ dist-ssr
 
 # Consistency test harness output (raw per-run results — regenerated each run)
 scripts/consistency/results*/
+
+# Knowledge layer data (generated, not source code)
+src/data/data/
+*.sqlite
+src/data/files.zip
+src/data/knowledge-layer.zip

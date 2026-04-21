@@ -19,7 +19,11 @@ import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FO
 import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../src/data/verticalPlaybooks.js";
 import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS } from "../src/data/advancedKnowledge.js";
 
-// Reuse JWT verification from the guard
+// Import the full JWT verification from guard (includes HMAC-SHA256 signature check)
+import { createHmac, timingSafeEqual } from "crypto";
+
+const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
+
 function verifyJwt(req) {
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
   if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") return true;
@@ -30,6 +34,12 @@ function verifyJwt(req) {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return false;
+    // Cryptographic signature verification (when SUPABASE_JWT_SECRET is set)
+    if (JWT_SECRET) {
+      const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
+      const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
+      if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return false;
+    }
     const payload = JSON.parse(
       Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()
     );
