@@ -362,15 +362,21 @@ function getVerticalInjection(sellerICP) {
 // Returns the parsed response body. After retries are exhausted, returns
 // { error: { type: "unavailable", ... } } so callers can surface a useful
 // message instead of a silent null.
-async function claudeFetch(body, { retries = 3 } = {}) {
+async function claudeFetch(body, { retries = 3, extraHeaders = {} } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const r = await fetch("/api/claude", {
         method: "POST",
-        headers: authHeaders(),
+        headers: { ...authHeaders(), ...extraHeaders },
         body: JSON.stringify(body),
       });
+      // Handle 402 (usage limit) — surface to caller, don't retry
+      if (r.status === 402) {
+        const d = await r.json();
+        window.dispatchEvent(new CustomEvent("usage-limit-exceeded", { detail: d }));
+        return d;
+      }
       const d = stripCitations(await r.json());
       if (d?.error) {
         const t = d.error.type;
@@ -721,7 +727,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p2 = execCache
     ? (execCache instanceof Promise ? execCache : Promise.resolve(execCache))
     : (async()=>{
-    // No pre-cache — fire inline
+    // No pre-cache — fire inline. Mark as billable run (1 per brief).
     try {
       const d = await claudeFetch({
         model:activeModel(),
@@ -737,7 +743,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce, tech, product, or transformation focus. What resonates with their agenda. 2-3 sentences."}],`+
           `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
         }],
-      });
+      }, { extraHeaders: { "x-billable-run": "1" } });
       if(d.error) return null;
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for(let i=textBlocks.length-1;i>=0;i--){

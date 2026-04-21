@@ -1,4 +1,5 @@
 import { guard, MODEL_FALLBACK } from "./_guard.js";
+import { extractUserId, checkOrgUsage, incrementUsage } from "./_usage.js";
 
 export const config = { maxDuration: 120 };
 
@@ -19,6 +20,23 @@ async function callAnthropic(body) {
 export default async function handler(req, res) {
   const body = guard(req, res, { stream: true });
   if (!body) return;
+
+  // Usage limit enforcement — same as api/claude.js
+  let usageOrgId = null;
+  if (req.headers["x-billable-run"] === "1") {
+    const userId = extractUserId(req);
+    if (userId) {
+      const usage = await checkOrgUsage(userId);
+      if (!usage.allowed) {
+        return res.status(402).json({
+          error: { type: "usage_limit_exceeded", message: `Plan limit reached (${usage.run_count}/${usage.run_limit} runs used)` },
+          run_count: usage.run_count,
+          run_limit: usage.run_limit,
+        });
+      }
+      usageOrgId = usage.org_id;
+    }
+  }
 
   let response = await callAnthropic(body);
 
@@ -44,5 +62,11 @@ export default async function handler(req, res) {
     if (done) break;
     res.write(decoder.decode(value));
   }
+
+  // Increment usage after successful stream
+  if (usageOrgId) {
+    incrementUsage(usageOrgId).catch(() => {});
+  }
+
   res.end();
 }

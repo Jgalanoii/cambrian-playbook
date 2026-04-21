@@ -1,4 +1,5 @@
 import { guard, MODEL_FALLBACK } from "./_guard.js";
+import { extractUserId, checkOrgUsage, incrementUsage } from "./_usage.js";
 
 const ANTHROPIC_HEADERS = {
   "Content-Type": "application/json",
@@ -19,6 +20,24 @@ export default async function handler(req, res) {
   const body = guard(req, res, { stream: false });
   if (!body) return;
 
+  // Usage limit enforcement for billable runs (brief generation).
+  // Client sends x-billable-run: 1 on the first micro-call of each brief.
+  let usageOrgId = null;
+  if (req.headers["x-billable-run"] === "1") {
+    const userId = extractUserId(req);
+    if (userId) {
+      const usage = await checkOrgUsage(userId);
+      if (!usage.allowed) {
+        return res.status(402).json({
+          error: { type: "usage_limit_exceeded", message: `Plan limit reached (${usage.run_count}/${usage.run_limit} runs used)` },
+          run_count: usage.run_count,
+          run_limit: usage.run_limit,
+        });
+      }
+      usageOrgId = usage.org_id;
+    }
+  }
+
   let response = await callAnthropic(body);
   let usedFallback = false;
 
@@ -36,9 +55,13 @@ export default async function handler(req, res) {
 
   const data = await response.json();
   if (usedFallback) {
-    // Tag the response body too so downstream callers/loggers can see it
-    // without parsing headers. Non-breaking: clients ignore unknown keys.
     data._fallbackModel = MODEL_FALLBACK[body.model];
   }
+
+  // Increment usage counter after successful Anthropic response
+  if (usageOrgId && response.status >= 200 && response.status < 300) {
+    incrementUsage(usageOrgId).catch(() => {}); // fire-and-forget
+  }
+
   res.status(response.status).json(data);
 }
