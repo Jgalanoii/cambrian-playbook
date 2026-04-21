@@ -2143,30 +2143,35 @@ URL: ${sellerUrl}
 Market category: ${sellerICP.marketCategory||""}
 What they sell: ${sellerICP.sellerDescription||""}
 
-═══ IDEAL BUYER (this is who we want to find) ═══
+═══ IDEAL BUYER — HARD FILTERS (every company MUST match ALL of these) ═══
 Target industries:    ${(targetIndustries.length ? targetIndustries : (icp.industries||[])).join(", ")}
-Buyer size:           ${targetHeadcount || icp.companySize || ""}
-Revenue range:        ${targetRevenue || icp.revenueRange || ""}
+Employee count:       ${targetHeadcount || icp.companySize || "any"} — STRICT: do NOT return companies outside this range
+Revenue range:        ${targetRevenue || icp.revenueRange || "any"} — STRICT: do NOT return companies outside this range
 Geographies:          ${(icp.geographies||[]).join(", ")||"North America"}
+${icpConstraints.trim() ? `\n═══ ADDITIONAL CONSTRAINTS (MUST RESPECT) ═══\n${icpConstraints.trim()}\n` : ""}
+═══ CONTEXT (use for relevance, but hard filters above take priority) ═══
 Buyer personas:       ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")}
 Priority trigger:     ${icp.priorityInitiative||""}
 Adoption profile:     ${icp.adoptionProfile||""}
 Disqualifiers:        ${(icp.disqualifiers||[]).join("; ")}
 Known customers:      ${(icp.customerExamples||[]).join(", ")}
-${icpConstraints.trim() ? `\n═══ SELLER CONSTRAINTS (MUST RESPECT) ═══\n${icpConstraints.trim()}\nThese constraints override the ICP defaults above where they conflict.\n` : ""}
+
 ═══ SELECTION CRITERIA — be strict ═══
-- Only return REAL, recognizable companies (Fortune 1000, prominent private companies, well-known mid-market). Do NOT invent companies.
-- Each company MUST clearly match the target industries listed above AND buyer size AND geography. Distribute results across the listed industries — do not cluster in one.
-- AVOID anything matching the disqualifiers — those are explicit non-fits.
-- Do NOT return companies in the "known customers" list above (those are already customers, not prospects).
-- Mix public + private. Mix industries within the seller's target list (don't return 20 banks if the ICP has 3 target industries).
-- Each entry should be a company a senior AE would say "yes, that's worth targeting" without further qualification.
-- TICKER ACCURACY: Only include a stock ticker if you are 100% certain it is correct. If unsure, write "Public" or "Private" without a ticker. A wrong ticker destroys credibility.
+- Only return REAL companies that exist. Do NOT invent companies.
+- SIZE ENFORCEMENT: If employee count is specified (e.g. "100-499 employees"), EVERY company must PLAUSIBLY fall within that range based on your training knowledge. McDonalds (~200K employees) does NOT match "100-499 employees." A single-location restaurant does NOT match "500+ employees." Use your best estimate — you do NOT need to verify exact headcount via web search.
+- REVENUE ENFORCEMENT: Same rule. "$1M-$10M" means regional multi-unit operators, NOT billion-dollar public chains. Use your knowledge of company scale.
+- If the size range targets mid-market or SMB (under 5,000 employees), focus on: regional chains, multi-unit franchise groups, growing brands, well-known local/regional operators. Do NOT default to Fortune 500.
+- Each company MUST match the target industries AND approximate employee count AND approximate revenue range AND geography.
+- AVOID anything matching the disqualifiers.
+- Do NOT return companies in the "known customers" list (already customers).
+- Distribute across industries — do not cluster.
+- CONFIDENCE: You know thousands of real companies from training data. Use that knowledge confidently. Do NOT refuse or apologize — return 20 real companies that fit the profile. If exact employee count is uncertain, include the company with your best estimate.
+- TICKER ACCURACY: Only include a stock ticker if 100% certain. If unsure, write "Public" or "Private."
 
 ═══ CONSISTENCY ═══
-- Prefer the MOST RECOGNIZABLE companies in each industry. If two companies are equally good fits, choose the more well-known one. This keeps results stable across multiple runs.
+- Prefer RECOGNIZABLE companies that match the size filters. If targeting 100-499 employees, return well-known mid-market companies — NOT Fortune 500. If targeting 50,000+, then Fortune 500 is appropriate.
 - Return companies in DESCENDING order by ICP match strength (best fit first).
-- Favor Fortune 500 and household-name companies over obscure ones — a rep should recognize every name on this list.
+- A rep should recognize the names on this list as realistic targets for their size range.
 
 ═══ OUTPUT (raw JSON only, 20 entries, no prose) ═══
 {"accounts":[
@@ -2174,10 +2179,16 @@ ${icpConstraints.trim() ? `\n═══ SELLER CONSTRAINTS (MUST RESPECT) ══�
 ]}`;
 
     try {
+      // Use web_search for large-company searches; skip it for mid-market/SMB
+      // where training knowledge is more reliable (web_search can't find
+      // employee counts for regional chains, causing the model to refuse).
+      const sizeStr = (targetHeadcount || icp.companySize || "").toLowerCase();
+      const isSmallTarget = sizeStr.includes("1-49") || sizeStr.includes("50-") || sizeStr.includes("100-") || sizeStr.includes("500-") || sizeStr.includes("1,000-");
+      const useSearch = !isSmallTarget;
       const d = await claudeFetch({
         model: activeModel(),
         max_tokens: 4000,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+        ...(useSearch ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }] } : {}),
         messages: [{ role: "user", content: prompt }],
       });
       if (d?.error) {
