@@ -2712,7 +2712,8 @@ ${isOpen
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
       `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
       `"customerExamples":["VERIFIED customer 1 — from research or certain training knowledge","Customer 2","Customer 3"],`+
-      `"relevantEvents":["3-5 conferences, trade shows, or industry events where the seller's ICP buyers and/or competitors are likely to attend. Use REAL, well-known events (e.g. 'Money20/20', 'SHRM Annual', 'AWS re:Invent'). Include the typical month if known. Format: 'Event Name (Month, City)'"]}}`;
+      `"relevantEvents":[{"name":"REAL event name (e.g. Money20/20, SHRM Annual, NRF Big Show)","date":"Specific dates if known (e.g. 'Oct 26-29, 2026') or month+year (e.g. 'June 2026')","city":"City, State/Country","url":"Official event website URL (e.g. https://www.money2020.com)"}]}}`+
+      `\n\nFor relevantEvents: return 3-5 REAL, well-known conferences where the seller's ICP buyers and/or competitors attend. Use your training knowledge for event names, dates, cities, and URLs. Only include events you are confident are real. If unsure of exact dates, use the typical month.`;
 
     try{
       const d2 = await claudeFetch({
@@ -5441,16 +5442,36 @@ ${isOpen
                         <div style={{fontSize:12,color:"#777"}}>{(sellerICP.icp.customerExamples||[]).filter(Boolean).join(" · ")}</div>
                       </div>
                     )}
-                    {(sellerICP.icp.relevantEvents||[]).filter(Boolean).length>0&&(
+                    {(sellerICP.icp.relevantEvents||[]).filter(ev=>ev&&(typeof ev==="string"?ev:ev.name)).length>0&&(
                       <div style={{marginTop:10}}>
                         <div className="field-label" style={{marginBottom:6}}>Conferences & Events to Target</div>
-                        <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                          {(sellerICP.icp.relevantEvents||[]).filter(Boolean).map((ev,i)=>(
-                            <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:8}}>
-                              <span style={{fontSize:14,flexShrink:0}}>📅</span>
-                              <span style={{fontSize:13,color:"var(--ink-1)"}}>{ev}</span>
-                            </div>
-                          ))}
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {(sellerICP.icp.relevantEvents||[]).filter(ev=>ev&&(typeof ev==="string"?ev:ev.name)).map((ev,i)=>{
+                            // Support both old format (plain string) and new format (object)
+                            const isObj = typeof ev === "object";
+                            const name = isObj ? ev.name : ev;
+                            const date = isObj ? ev.date : "";
+                            const city = isObj ? ev.city : "";
+                            const url = isObj ? ev.url : "";
+                            return (
+                              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 12px",background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:8}}>
+                                <div style={{width:36,height:36,borderRadius:6,background:"var(--navy-bg)",border:"1px solid #1B3A6B22",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                                  <div style={{fontSize:8,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",lineHeight:1}}>{date ? date.replace(/.*?(\w{3})\w*\b.*/, "$1").slice(0,3) : ""}</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",lineHeight:1}}>{date ? (date.match(/\d{1,2}(?=[,\s\-])/)||[""])[0] : ""}</div>
+                                </div>
+                                <div style={{flex:1,minWidth:0}}>
+                                  {url ? (
+                                    <a href={url.startsWith("http")?url:"https://"+url} target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:600,color:"var(--navy)",textDecoration:"none"}}>{name}</a>
+                                  ) : (
+                                    <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)"}}>{name}</div>
+                                  )}
+                                  <div style={{fontSize:11,color:"var(--ink-2)",marginTop:1}}>
+                                    {[date, city].filter(Boolean).join(" · ")}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                         <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>Events where your ICP buyers and competitors are likely present</div>
                       </div>
