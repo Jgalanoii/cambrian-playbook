@@ -4681,7 +4681,7 @@ ${isOpen
                 <div style={{marginTop:12}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                    {["Bootstrapped","Series A","Series B","Series C","Series D+","PE-Backed","Public"].map(stage=>(
+                    {["Bootstrapped","Angel","Seed","Series A","Series B","Series C","Series D+","PE-Backed","Public"].map(stage=>(
                       <button key={stage} onClick={()=>setSellerStage(stage)}
                         style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"var(--ink-0)":"var(--line-0)"),
                           background:sellerStage===stage?"var(--ink-0)":"#fff",color:sellerStage===stage?"#fff":"#555",
@@ -4692,6 +4692,8 @@ ${isOpen
                   </div>
                   {sellerStage&&(
                     <div style={{fontSize:11,color:"var(--tan-0)",marginTop:6}}>
+                      {sellerStage==="Angel"&&"💡 Tip: You're pre-product-market-fit. Focus on design partners who'll co-build with you — not paying customers yet. Every conversation is a learning opportunity."}
+                      {sellerStage==="Seed"&&"💡 Tip: Prove the wedge. Find 5-10 customers who feel the pain acutely and will champion you internally. Founder-led sales is your superpower right now."}
                       {sellerStage==="Series A"&&"💡 Tip: Land in innovation arms or sub-divisions of large enterprises — not enterprise-wide. Channel through partners where possible."}
                       {sellerStage==="Series B"&&"💡 Tip: Departmental landing is your best motion. Find the pain closest to your sweet spot and prove ROI there first."}
                       {(sellerStage==="Series C"||sellerStage==="Series D+")&&"💡 Tip: You have enough logos and proof points for enterprise. Lead with case studies and SLA commitments."}
