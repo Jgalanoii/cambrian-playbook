@@ -119,9 +119,9 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
       {/* Backdrop */}
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} />
 
-      {/* Panel */}
-      <div style={{
-        position: "relative", width: 460, maxWidth: "90vw", background: "var(--surface)",
+      {/* Panel — stopPropagation prevents backdrop click from stealing input focus */}
+      <div onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
+        position: "relative", zIndex: 1, width: 460, maxWidth: "90vw", background: "var(--surface)",
         borderLeft: "1px solid var(--line-0)", display: "flex", flexDirection: "column",
         boxShadow: "-4px 0 20px rgba(0,0,0,0.1)", overflow: "hidden"
       }}>
