@@ -1905,6 +1905,18 @@ export default function App(){
   const[targetIndInput,setTargetIndInput]=useState(""); // free-text input for custom industry
   const[targetHeadcount,setTargetHeadcount]=useState(""); // e.g. "50-499 employees"
   const[targetRevenue,setTargetRevenue]=useState(""); // e.g. "$10M-$100M"
+  // Auto-populate target generation dropdowns from structured targeting preferences
+  React.useEffect(() => {
+    if (icpTargeting.headcount && !targetHeadcount) {
+      // Map targeting format "50-499" to dropdown format "50-499 employees"
+      const hMap = {"1-49":"1-49 employees","50-499":"50-99 employees","500-4,999":"500-999 employees","5,000-49,999":"5,000-9,999 employees","50,000+":"50,000+ employees"};
+      setTargetHeadcount(hMap[icpTargeting.headcount] || icpTargeting.headcount + " employees");
+    }
+    if (icpTargeting.revenue && !targetRevenue) {
+      const rMap = {"<$1M":"Under $1M","$1M-$10M":"$1M-$10M","$10M-$100M":"$10M-$50M","$100M-$1B":"$100M-$500M","$1B+":"$1B-$10B"};
+      setTargetRevenue(rMap[icpTargeting.revenue] || icpTargeting.revenue);
+    }
+  }, [icpTargeting.headcount, icpTargeting.revenue]);
   const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
   const[dealClassification,setDealClassification]=useState(""); // "Top-Line Revenue" etc // "csv" | "quick"
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
@@ -5450,6 +5462,56 @@ ${isOpen
               </div>
               );
             })()}
+
+            {/* Your Targeting Preferences — reflects user inputs from Session page */}
+            {icpTab==="icp"&&sellerICP?.icp&&(icpTargeting.segment||icpTargeting.headcount||icpTargeting.revenue||icpTargeting.ownership||icpTargeting.geography||(icpTargeting.excludes||[]).length>0)&&(
+              <div className="bb" style={{marginBottom:16,borderLeft:"3px solid var(--navy)"}}>
+                <div className="bb-hdr">
+                  <div className="bb-icon" style={{fontSize:12}}>🎯</div>
+                  <div>
+                    <div className="bb-title">Your Targeting Preferences</div>
+                    <div className="bb-sub">You set these on the Session page — they shape your ICP, targets, and scoring</div>
+                  </div>
+                </div>
+                <div className="bb-body">
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {icpTargeting.segment&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--ink-0)",color:"#fff"}}>{icpTargeting.segment}</span>}
+                    {icpTargeting.headcount&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid var(--navy)44"}}>{icpTargeting.headcount} employees</span>}
+                    {icpTargeting.revenue&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",border:"1px solid var(--green)44"}}>{icpTargeting.revenue} revenue</span>}
+                    {icpTargeting.ownership&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--bg-1)",color:"var(--tan-0)",border:"1px solid var(--tan-0)44"}}>{icpTargeting.ownership}</span>}
+                    {icpTargeting.geography&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--amber-bg)",color:"var(--amber)",border:"1px solid var(--amber)44"}}>{icpTargeting.geography}</span>}
+                    {(icpTargeting.excludes||[]).map((ex,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"var(--red-bg)",color:"var(--red)",border:"1px solid var(--red)44",textDecoration:"line-through"}}>Excl: {ex}</span>)}
+                  </div>
+                  {/* Delta callouts — compare user targeting vs AI-derived ICP */}
+                  {(()=>{
+                    const deltas = [];
+                    if (icpTargeting.headcount && sellerICP.icp.companySize && !sellerICP.icp.companySize.includes(icpTargeting.headcount.split("-")[0])) {
+                      deltas.push({field:"Company Size", yours:icpTargeting.headcount+" employees", theirs:sellerICP.icp.companySize});
+                    }
+                    if (icpTargeting.revenue && sellerICP.icp.revenueRange && icpTargeting.revenue !== sellerICP.icp.revenueRange) {
+                      deltas.push({field:"Revenue", yours:icpTargeting.revenue, theirs:sellerICP.icp.revenueRange});
+                    }
+                    if (icpTargeting.ownership) {
+                      const icpOwn = (sellerICP.icp.ownershipTypes||[]).join(", ").toLowerCase();
+                      if (icpOwn && !icpOwn.includes(icpTargeting.ownership.toLowerCase())) {
+                        deltas.push({field:"Ownership", yours:icpTargeting.ownership, theirs:(sellerICP.icp.ownershipTypes||[]).join(", ")});
+                      }
+                    }
+                    return deltas.length > 0 && (
+                      <div style={{marginTop:10,padding:"8px 12px",background:"var(--amber-bg)",border:"1px solid var(--amber)",borderRadius:8}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Differences from public ICP</div>
+                        {deltas.map((d,i)=>(
+                          <div key={i} style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5}}>
+                            <strong>{d.field}:</strong> You say <strong>{d.yours}</strong>, public ICP says <strong>{d.theirs}</strong>
+                          </div>
+                        ))}
+                        <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>Your preferences take priority in target generation and scoring.</div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Internal ICP Input + Delta Analysis — hidden from print when empty */}
             {icpTab==="icp"&&sellerICP?.icp&&(
