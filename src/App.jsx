@@ -1945,11 +1945,60 @@ export default function App(){
     return "Reference Doc";
   };
 
-  const readDocFile = file => new Promise(resolve=>{
-    const reader = new FileReader();
+  // Extract text from XLSX/XLS files (ZIP-based Office format).
+  // Reads the shared strings XML and sheet data to produce CSV-like text.
+  const readXlsxAsText = async (file) => {
+    try {
+      const { entries } = await import("https://cdn.jsdelivr.net/npm/@aspect-build/zipfile@1.0.0/+esm")
+        .catch(() => null) || {};
+      // Fallback: use the browser's built-in decompression if available
+      const buf = await file.arrayBuffer();
+      const blob = new Blob([buf]);
+      // Simple approach: use fflate via CDN for ZIP decompression
+      const { unzipSync } = await import("https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js");
+      const data = new Uint8Array(buf);
+      const unzipped = unzipSync(data);
+      // Get shared strings
+      const decoder = new TextDecoder();
+      const ssXml = unzipped["xl/sharedStrings.xml"] ? decoder.decode(unzipped["xl/sharedStrings.xml"]) : "";
+      const strings = [...ssXml.matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map(m => m[1]);
+      // Get first sheet
+      const sheetXml = unzipped["xl/worksheets/sheet1.xml"] ? decoder.decode(unzipped["xl/worksheets/sheet1.xml"]) : "";
+      const rows = [...sheetXml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)];
+      const lines = rows.map(row => {
+        const cells = [...row[1].matchAll(/<c[^>]*(?:t="s"[^>]*)?>[\s\S]*?<v>(\d+)<\/v>/g)];
+        const inlineCells = [...row[1].matchAll(/<c[^>]*>[\s\S]*?<v>([^<]+)<\/v>/g)];
+        // Map shared string indices to actual strings
+        return (cells.length ? cells : inlineCells).map(c => {
+          const idx = parseInt(c[1]);
+          // Check if it's a shared string reference (has t="s")
+          const isShared = c[0].includes('t="s"');
+          return isShared && strings[idx] !== undefined ? strings[idx] : c[1];
+        }).join(", ");
+      });
+      return lines.filter(l => l.trim()).join("\n").slice(0, 12000);
+    } catch (e) {
+      console.warn("XLSX parse failed, falling back to text:", e.message);
+      return null;
+    }
+  };
+
+  const readDocFile = file => new Promise(async resolve=>{
     const name = file.name;
     const ext = name.split(".").pop().toLowerCase();
-    // For binary formats we attempt text extraction; FileReader gives raw text for txt/md/csv
+
+    // Excel files: parse the ZIP structure to extract cell text
+    if (ext === "xlsx" || ext === "xls") {
+      const text = await readXlsxAsText(file);
+      if (text) {
+        resolve({ name, label: guessLabel(name), content: text, ext });
+        return;
+      }
+      // Fallback: try reading as text (won't work well but won't crash)
+    }
+
+    // CSV files: read as text directly (already works)
+    const reader = new FileReader();
     reader.onload = e => {
       let content = "";
       try{
@@ -1962,7 +2011,6 @@ export default function App(){
       resolve({name, label:guessLabel(name), content, ext});
     };
     reader.onerror = ()=>resolve({name, label:guessLabel(name), content:"[Could not read file]", ext});
-    // Read as text — works well for txt, md, csv, html; gives partial content for pdf/docx
     reader.readAsText(file);
   });
 
@@ -4496,7 +4544,7 @@ ${isOpen
                 </span>
               )}
               <label style={{fontSize:10,color:"var(--tan-0)",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-                <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
+                <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
               {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
@@ -4601,10 +4649,10 @@ ${isOpen
                   <div className="doc-upload-text">
                     <div className="doc-upload-title">Drop files or click to upload</div>
                     <div className="doc-upload-hint">Pitch decks · Product overviews · Case studies · Training docs · Use cases · One-pagers</div>
-                    <div className="doc-upload-hint" style={{marginTop:3}}>PDF, DOCX, TXT, MD — up to 6 files</div>
+                    <div className="doc-upload-hint" style={{marginTop:3}}>PDF, DOCX, XLSX, CSV, TXT, MD — up to 6 files</div>
                   </div>
                   <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();docRef.current.click();}}>Add Files</button>
-                  <input ref={docRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv" multiple style={{display:"none"}}
+                  <input ref={docRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}}
                     onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 </div>
 
