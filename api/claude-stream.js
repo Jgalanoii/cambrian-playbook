@@ -1,5 +1,5 @@
 import { guard, MODEL_FALLBACK } from "./_guard.js";
-import { extractUserId, checkOrgUsage, incrementUsage } from "./_usage.js";
+import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage } from "./_usage.js";
 
 export const config = { maxDuration: 120 };
 
@@ -22,19 +22,24 @@ export default async function handler(req, res) {
   if (!body) return;
 
   // Usage limit enforcement — same as api/claude.js
+  const isBillable = req.headers["x-billable-run"] === "1";
+  const isBillableMax = req.headers["x-billable-max"] === "1";
   let usageOrgId = null;
-  if (req.headers["x-billable-run"] === "1") {
+  let isMaxRun = false;
+
+  if (isBillable || isBillableMax) {
     const userId = extractUserId(req);
     if (userId) {
-      const usage = await checkOrgUsage(userId);
+      const usage = await checkOrgUsage(userId, { isMax: isBillableMax });
       if (!usage.allowed) {
         return res.status(402).json({
-          error: { type: "usage_limit_exceeded", message: `Plan limit reached (${usage.run_count}/${usage.run_limit} runs used)` },
-          run_count: usage.run_count,
-          run_limit: usage.run_limit,
+          error: { type: usage.reason || "usage_limit_exceeded", message: usage.message || "Plan limit reached" },
+          run_count: usage.run_count, run_limit: usage.run_limit,
+          max_run_count: usage.max_run_count, max_run_limit: usage.max_run_limit,
         });
       }
       usageOrgId = usage.org_id;
+      isMaxRun = isBillableMax;
     }
   }
 
@@ -65,7 +70,11 @@ export default async function handler(req, res) {
 
   // Increment usage after successful stream
   if (usageOrgId) {
-    incrementUsage(usageOrgId).catch(() => {});
+    if (isMaxRun) {
+      incrementMaxUsage(usageOrgId).catch(() => {});
+    } else {
+      incrementUsage(usageOrgId).catch(() => {});
+    }
   }
 
   res.end();

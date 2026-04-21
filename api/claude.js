@@ -1,5 +1,5 @@
 import { guard, MODEL_FALLBACK } from "./_guard.js";
-import { extractUserId, checkOrgUsage, incrementUsage } from "./_usage.js";
+import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage } from "./_usage.js";
 
 const ANTHROPIC_HEADERS = {
   "Content-Type": "application/json",
@@ -20,31 +20,38 @@ export default async function handler(req, res) {
   const body = guard(req, res, { stream: false });
   if (!body) return;
 
-  // Usage limit enforcement for billable runs (brief generation).
-  // Client sends x-billable-run: 1 on the first micro-call of each brief.
+  // Usage limit enforcement for billable runs.
+  // x-billable-run: "1" = standard run (Haiku)
+  // x-billable-max: "1" = Max run (Opus) — also counts as a standard run
+  const isBillable = req.headers["x-billable-run"] === "1";
+  const isBillableMax = req.headers["x-billable-max"] === "1";
   let usageOrgId = null;
-  if (req.headers["x-billable-run"] === "1") {
+  let isMaxRun = false;
+
+  if (isBillable || isBillableMax) {
     const userId = extractUserId(req);
     if (userId) {
-      const usage = await checkOrgUsage(userId);
+      const usage = await checkOrgUsage(userId, { isMax: isBillableMax });
       if (!usage.allowed) {
+        const errType = usage.reason === "max_not_available" ? "max_not_available"
+          : usage.reason === "max_limit_exceeded" ? "max_limit_exceeded"
+          : "usage_limit_exceeded";
         return res.status(402).json({
-          error: { type: "usage_limit_exceeded", message: `Plan limit reached (${usage.run_count}/${usage.run_limit} runs used)` },
+          error: { type: errType, message: usage.message || `Plan limit reached` },
           run_count: usage.run_count,
           run_limit: usage.run_limit,
+          max_run_count: usage.max_run_count,
+          max_run_limit: usage.max_run_limit,
         });
       }
       usageOrgId = usage.org_id;
+      isMaxRun = isBillableMax;
     }
   }
 
   let response = await callAnthropic(body);
   let usedFallback = false;
 
-  // Server-side fallback: on 529 (overloaded), retry once with the mapped
-  // fallback model. Lets us stay operational through Haiku capacity blips
-  // at the cost of ~3x token rate for that single request. Client sees
-  // "x-fallback-model" response header and can surface that if desired.
   if (response.status === 529 && MODEL_FALLBACK[body.model]) {
     const fallbackModel = MODEL_FALLBACK[body.model];
     console.log(`[fallback] ${body.model} -> ${fallbackModel} (529 from Anthropic)`);
@@ -58,9 +65,13 @@ export default async function handler(req, res) {
     data._fallbackModel = MODEL_FALLBACK[body.model];
   }
 
-  // Increment usage counter after successful Anthropic response
+  // Increment usage after successful response
   if (usageOrgId && response.status >= 200 && response.status < 300) {
-    incrementUsage(usageOrgId).catch(() => {}); // fire-and-forget
+    if (isMaxRun) {
+      incrementMaxUsage(usageOrgId).catch(() => {});
+    } else {
+      incrementUsage(usageOrgId).catch(() => {});
+    }
   }
 
   res.status(response.status).json(data);

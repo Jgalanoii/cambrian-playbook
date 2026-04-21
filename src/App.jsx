@@ -745,7 +745,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce, tech, product, or transformation focus. What resonates with their agenda. 2-3 sentences."}],`+
           `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
         }],
-      }, { extraHeaders: { "x-billable-run": "1" } });
+      }, { extraHeaders: _maxMode ? { "x-billable-max": "1" } : { "x-billable-run": "1" } });
       if(d.error) return null;
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for(let i=textBlocks.length-1;i>=0;i--){
@@ -3280,7 +3280,12 @@ ${isOpen
     setBriefLoading(false);
     setBriefStatus("");
     // Optimistically increment local usage counter (server increments authoritatively)
-    setOrgCtx(prev => prev ? { ...prev, run_count: prev.run_count + 1 } : prev);
+    setOrgCtx(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, run_count: prev.run_count + 1 };
+      if (cambrianMax) next.max_run_count = (prev.max_run_count || 0) + 1;
+      return next;
+    });
 
     // Wire each section's merger to fire as it resolves.
     // Also track timing so we can warn if calls are taking too long.
@@ -4457,13 +4462,22 @@ ${isOpen
               style={{padding:"4px 8px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:13,lineHeight:1}}>
               {darkMode?"☀️":"🌙"}
             </button>
-            <button onClick={()=>{const next=!cambrianMax;setCambrianMax(next);setCambrianMaxMode(next);}}
-              title={cambrianMax?"Switch to Standard":"Switch to Cambrian Max — premium intelligence"}
+            <button onClick={()=>{
+                // Gate Max behind org limit
+                if (!cambrianMax && orgCtx && (orgCtx.max_run_limit||0) <= 0) {
+                  setUpgradeOpen(true); return;
+                }
+                if (!cambrianMax && orgCtx && (orgCtx.max_run_count||0) >= (orgCtx.max_run_limit||0)) {
+                  alert(`You've used all ${orgCtx.max_run_limit} Max runs this month. Runs reset monthly, or upgrade for more.`); return;
+                }
+                const next=!cambrianMax;setCambrianMax(next);setCambrianMaxMode(next);
+              }}
+              title={cambrianMax?"Switch to Standard":`Cambrian Max — premium intelligence${orgCtx?.max_run_limit?` (${orgCtx.max_run_count||0}/${orgCtx.max_run_limit} used)`:""}`}
               style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.3px",
                 border:cambrianMax?"2px solid #8B5CF6":"1.5px solid var(--line-0)",
                 background:cambrianMax?"linear-gradient(135deg,#8B5CF6,#6D28D9)":"var(--surface)",
                 color:cambrianMax?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
-              {cambrianMax?"⚡ MAX":"⚡ Max"}
+              {cambrianMax?"⚡ MAX":`⚡ Max${orgCtx?.max_run_limit?` ${orgCtx.max_run_count||0}/${orgCtx.max_run_limit}`:""}`}
             </button>
             <button onClick={()=>setResourcesOpen(r=>!r)}
               title="Resources — uploads, outputs, tools"
@@ -7709,13 +7723,24 @@ ${isOpen
       </div>
       {/* Usage badge — visible to all org members */}
       {orgCtx && (
-        <div style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"6px 12px",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",fontSize:12,display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:40,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
-            <div style={{height:"100%",borderRadius:2,background:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--green)",width:Math.min(100,Math.round(orgCtx.run_count/orgCtx.run_limit*100))+"%",transition:"width 0.3s"}}/>
+        <div style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"6px 12px 6px 10px",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+          <div style={{display:"flex",flexDirection:"column",gap:3}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{width:36,height:3,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:2,background:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--green)",width:Math.min(100,Math.round(orgCtx.run_count/orgCtx.run_limit*100))+"%",transition:"width 0.3s"}}/>
+              </div>
+              <span style={{color:"var(--ink-1)",fontWeight:600,fontSize:11}}>{orgCtx.run_count}/{orgCtx.run_limit}</span>
+            </div>
+            {(orgCtx.max_run_limit||0)>0&&(
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:36,height:3,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
+                  <div style={{height:"100%",borderRadius:2,background:(orgCtx.max_run_count||0)>=(orgCtx.max_run_limit||0)?"var(--red)":"#8B5CF6",width:Math.min(100,Math.round((orgCtx.max_run_count||0)/(orgCtx.max_run_limit||1)*100))+"%",transition:"width 0.3s"}}/>
+                </div>
+                <span style={{color:"#8B5CF6",fontWeight:600,fontSize:11}}>⚡{orgCtx.max_run_count||0}/{orgCtx.max_run_limit}</span>
+              </div>
+            )}
           </div>
-          <span style={{color:"var(--ink-1)",fontWeight:600}}>{orgCtx.run_count}/{orgCtx.run_limit}</span>
-          <span style={{color:"var(--ink-3)"}}>runs</span>
-          {orgCtx.plan==="trial"&&<span style={{fontSize:10,color:"var(--amber)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>Trial</span>}
+          {orgCtx.plan==="trial"&&<span style={{fontSize:9,color:"var(--amber)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>Trial</span>}
         </div>
       )}
 

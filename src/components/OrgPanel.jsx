@@ -198,6 +198,30 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                       : (orgCtx?.run_count || 0) >= (orgCtx?.run_limit || 5) * 0.8 ? "var(--amber)" : "var(--green)",
                   }} />
                 </div>
+                {/* Max runs */}
+                {(orgCtx?.max_run_limit || 0) > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: "#8B5CF6", fontFamily: "Lora,serif" }}>⚡ {orgCtx?.max_run_count || 0}</span>
+                      <span style={{ fontSize: 12, color: "var(--ink-3)" }}>/ {orgCtx?.max_run_limit} Max runs</span>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 2, background: "var(--bg-2)", overflow: "hidden" }}>
+                      <div style={{
+                        height: "100%", borderRadius: 2, transition: "width 0.3s",
+                        width: Math.min(100, Math.round((orgCtx?.max_run_count || 0) / (orgCtx?.max_run_limit || 1) * 100)) + "%",
+                        background: (orgCtx?.max_run_count || 0) >= (orgCtx?.max_run_limit || 0) ? "var(--red)" : "#8B5CF6",
+                      }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>
+                      Cambrian Max uses Opus for deeper, richer intelligence on your most important deals.
+                    </div>
+                  </div>
+                )}
+                {(orgCtx?.max_run_limit || 0) === 0 && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: "var(--ink-3)", fontStyle: "italic" }}>
+                    ⚡ Cambrian Max not included in your plan. Upgrade to unlock premium Opus intelligence.
+                  </div>
+                )}
               </div>
 
               {/* Role */}
