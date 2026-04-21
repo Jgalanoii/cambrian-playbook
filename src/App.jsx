@@ -2779,6 +2779,12 @@ ${isOpen
       }catch{}
     }
 
+    // Check usage limit before starting a billable ICP build
+    if (orgCtx && orgCtx.run_count >= orgCtx.run_limit) {
+      setUpgradeOpen(true);
+      return;
+    }
+
     setIcpLoading(true);
 
     // Phase 1 — research (training-knowledge recall, no web_search tool yet)
@@ -2875,9 +2881,15 @@ ${isOpen
           {role:"user",content:icpPrompt},
           {role:"assistant",content:"{"},
         ],
-      });
+      }, { extraHeaders: _maxMode ? { "x-billable-max": "1" } : { "x-billable-run": "1" } });
       if(d2.error){
         console.warn("ICP phase 2 error:",d2.error);
+        // Surface usage limit errors
+        if (d2.error.type === "usage_limit_exceeded" || d2.error.type === "max_limit_exceeded" || d2.error.type === "max_not_available") {
+          setSellerICP(prev => prev || ({ _error: "You've reached your plan limit. Upgrade to continue building ICPs." }));
+          setIcpLoading(false);
+          return;
+        }
         // Surface a user-actionable error in state so the UI can show it.
         if (d2.error.type === "unavailable" || d2.error.type === "overloaded_error") {
           setSellerICP(prev => prev || ({ _error: "Our AI engine is temporarily overloaded. Click Regenerate ICP in a moment to retry." }));
@@ -2893,6 +2905,13 @@ ${isOpen
           const parsed = JSON.parse(m[0]);
           if(parsed.sellerName||parsed.icp){
             setSellerICP(parsed);
+            // Optimistically increment local usage counter (server increments authoritatively)
+            setOrgCtx(prev => {
+              if (!prev) return prev;
+              const next = { ...prev, run_count: prev.run_count + 1 };
+              if (_maxMode) next.max_run_count = (prev.max_run_count || 0) + 1;
+              return next;
+            });
             // Only cache if the ICP is usable. Catches: model echoed "PICK ONE"
             // instructions verbatim, returned "unknown", or web_search failed.
             const badPattern = /unknown|unable to determine|insufficient data|n\/a|PICK ONE|PICK FROM|PICK 1-2|PICK 2-3|PICK 2-4/i;

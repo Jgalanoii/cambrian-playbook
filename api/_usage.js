@@ -53,6 +53,52 @@ export function extractUserId(req) {
 }
 
 /**
+ * Auto-provision a trial org for a user who has no org_id.
+ * Returns the new org_id, or null on failure.
+ */
+async function provisionTrialOrg(userId) {
+  try {
+    // Get user email/name for the org name
+    const userRes = await sbFetch(`users?id=eq.${userId}&select=email,name`);
+    const users = await userRes.json();
+    const user = users?.[0];
+    const orgName = user?.name || user?.email || "My Organization";
+
+    // Create a trial org with default limits (run_limit=5, max_run_limit=0)
+    const createRes = await fetch(`${SB_URL}/rest/v1/orgs`, {
+      method: "POST",
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({ name: orgName }),
+    });
+    const created = await createRes.json();
+    const newOrgId = created?.[0]?.id;
+    if (!newOrgId) return null;
+
+    // Bind user to the new org as admin
+    await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ org_id: newOrgId, role: "admin" }),
+    });
+
+    console.log(`[usage] Auto-provisioned trial org ${newOrgId} for user ${userId}`);
+    return newOrgId;
+  } catch (e) {
+    console.warn("[usage] Failed to provision trial org:", e.message);
+    return null;
+  }
+}
+
+/**
  * Check if the user's org has remaining runs.
  * isMax=true checks max_run_count/max_run_limit (Opus).
  * isMax=false checks run_count/run_limit (Haiku, default).
@@ -63,8 +109,15 @@ export async function checkOrgUsage(userId, { isMax = false } = {}) {
   try {
     const userRes = await sbFetch(`users?id=eq.${userId}&select=org_id`);
     const users = await userRes.json();
-    const orgId = users?.[0]?.org_id;
-    if (!orgId) return { allowed: true };
+    let orgId = users?.[0]?.org_id;
+
+    // Auto-provision a trial org for users without one
+    if (!orgId) {
+      orgId = await provisionTrialOrg(userId);
+      if (!orgId) {
+        return { allowed: false, reason: "no_org", message: "Account setup failed. Please try again or contact support." };
+      }
+    }
 
     const orgRes = await sbFetch(`orgs?id=eq.${orgId}&select=run_count,run_limit,max_run_count,max_run_limit,plan`);
     const orgs = await orgRes.json();
