@@ -1,0 +1,752 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-04-21",
+  "description": "Catalog of free US business/firmographic data sources for ingestion into a GTM knowledge layer. Each entry contains everything an ingestor needs: endpoints, update cadence, entity type, key fields, and vertical mapping. All sources listed here are in the public domain or otherwise licensed for commercial use by US businesses.",
+  "maintainer": "Cambrian Catalyst",
+  "normalized_entity_schema": {
+    "company": {
+      "source_id": "Which source this record came from (matches sources[].id)",
+      "source_record_id": "Primary key within the source system",
+      "name": "Legal or operating name",
+      "dba_names": "List of doing-business-as names",
+      "identifiers": {
+        "duns": "Dun & Bradstreet DUNS number",
+        "ein": "IRS Employer ID Number",
+        "cik": "SEC Central Index Key",
+        "lei": "Global Legal Entity Identifier",
+        "fdic_cert": "FDIC Certificate Number",
+        "rssd_id": "Federal Reserve RSSD ID",
+        "ncua_charter": "NCUA Charter Number",
+        "nmls_id": "NMLS Unique Identifier",
+        "npi": "National Provider Identifier",
+        "uei_sam": "SAM.gov Unique Entity ID",
+        "state_filing_id": "State incorporation ID",
+        "ticker": "Stock ticker if public"
+      },
+      "classification": {
+        "naics": "NAICS code(s) - primary first",
+        "sic": "SIC code(s)",
+        "entity_type": "corporation|llc|partnership|sole_prop|bank|credit_union|nonprofit|government|other",
+        "verticals": "Cambrian Catalyst vertical tags"
+      },
+      "address": {
+        "street": "string",
+        "city": "string",
+        "state": "2-letter USPS code",
+        "zip": "string",
+        "country": "US"
+      },
+      "contact": {
+        "website": "string",
+        "phone": "string"
+      },
+      "size": {
+        "employees": "number",
+        "employees_range": "e.g. 50-99",
+        "revenue_usd": "number",
+        "assets_usd": "number (for financial institutions)",
+        "founded_year": "number"
+      },
+      "status": "active|inactive|failed|merged|unknown",
+      "last_seen": "ISO date when this record was last verified in source",
+      "confidence_score": "0-1, higher = more trustworthy source",
+      "raw": "Original source record preserved verbatim"
+    }
+  },
+  "verticals": {
+    "fintech": "Fintech, embedded finance, digital-first financial products",
+    "payments": "Payment processors, acquirers, networks, money transmitters",
+    "banking": "Banks, savings institutions, holding companies",
+    "credit_unions": "Federal and state-chartered credit unions",
+    "rewards_incentives": "Digital rewards, gift cards, loyalty, incentives platforms",
+    "health_wellness_b2b": "B2B health, wellness, benefits platforms",
+    "smb_broad": "Cross-vertical SMB coverage",
+    "mid_market": "50-500 employee segment",
+    "enterprise": "500+ employees",
+    "nonprofit": "501(c) exempt organizations",
+    "government_contractors": "Federal contract recipients"
+  },
+  "sources": [
+    {
+      "id": "fdic_institutions",
+      "name": "FDIC BankFind Suite - Institutions",
+      "provider": "Federal Deposit Insurance Corporation",
+      "provider_type": "us_federal_government",
+      "description": "Every FDIC-insured depository institution in the US. Core registry for banks, savings institutions, and their holding company relationships. Primary key is FDIC Certificate Number (CERT).",
+      "verticals": ["banking", "fintech", "payments"],
+      "entity_types": ["bank", "savings_institution"],
+      "geographic_coverage": {"country": "US", "territories": true},
+      "record_count_approx": 4500,
+      "access": {
+        "auth_required": false,
+        "api_key_optional": true,
+        "rate_limit_requests_per_minute": null,
+        "cors_enabled": false,
+        "user_agent_required": false
+      },
+      "endpoints": [
+        {
+          "name": "institutions",
+          "url": "https://banks.data.fdic.gov/api/institutions",
+          "method": "GET",
+          "format": "json",
+          "pagination": {"type": "offset_limit", "limit_param": "limit", "offset_param": "offset", "max_limit": 10000},
+          "example": "https://banks.data.fdic.gov/api/institutions?limit=100&fields=NAME,CERT,CITY,STALP,ASSET,DEP,NETINC,ESTYMD,WEBADDR",
+          "docs": "https://banks.data.fdic.gov/docs/"
+        }
+      ],
+      "bulk_download": {
+        "available": true,
+        "url": "https://banks.data.fdic.gov/bankfind-suite/bulkData",
+        "format": "csv_zip",
+        "update_frequency": "quarterly"
+      },
+      "update_frequency": "daily_for_status_quarterly_for_financials",
+      "key_fields": [
+        {"name": "CERT", "description": "FDIC Certificate Number - primary key"},
+        {"name": "NAME", "description": "Institution legal name"},
+        {"name": "ADDRESS", "description": "Headquarters street address"},
+        {"name": "CITY", "description": "HQ city"},
+        {"name": "STALP", "description": "State 2-letter code"},
+        {"name": "ZIP", "description": "ZIP code"},
+        {"name": "WEBADDR", "description": "Primary website"},
+        {"name": "ASSET", "description": "Total assets in thousands USD"},
+        {"name": "DEP", "description": "Total deposits in thousands USD"},
+        {"name": "NETINC", "description": "Net income YTD in thousands USD"},
+        {"name": "EMPNUM", "description": "Number of employees"},
+        {"name": "ESTYMD", "description": "Established date"},
+        {"name": "BKCLASS", "description": "Bank class/charter type"},
+        {"name": "RSSDID", "description": "Federal Reserve RSSD ID for cross-linking"}
+      ],
+      "id_mapping": {"primary_key": "CERT", "maps_to": "identifiers.fdic_cert"},
+      "license": "Public domain (US Government work)",
+      "priority": 1
+    },
+    {
+      "id": "fdic_locations",
+      "name": "FDIC BankFind Suite - Locations",
+      "provider": "Federal Deposit Insurance Corporation",
+      "provider_type": "us_federal_government",
+      "description": "Branch-level data for every FDIC-insured institution. ~85,000 branch locations with addresses, deposits per branch, and service type. Useful for geographic targeting and branch-level TAM.",
+      "verticals": ["banking", "fintech", "payments"],
+      "entity_types": ["bank_branch"],
+      "record_count_approx": 85000,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "locations",
+          "url": "https://banks.data.fdic.gov/api/locations",
+          "method": "GET",
+          "format": "json",
+          "pagination": {"type": "offset_limit", "max_limit": 10000}
+        }
+      ],
+      "update_frequency": "quarterly",
+      "id_mapping": {"primary_key": "UNINUMBR", "parent_fk": "CERT"},
+      "license": "Public domain",
+      "priority": 2
+    },
+    {
+      "id": "fdic_financial",
+      "name": "FDIC BankFind Suite - Financial (Call Report Data)",
+      "provider": "Federal Deposit Insurance Corporation",
+      "provider_type": "us_federal_government",
+      "description": "1,100+ quarterly call report variables per institution: balance sheet, income statement, asset quality, capital ratios, loan composition. This is the deepest free source of bank financial data and directly relevant for RFM modeling of banks as prospects.",
+      "verticals": ["banking", "fintech", "payments"],
+      "record_count_approx": 4500,
+      "record_count_notes": "~4,500 institutions x 1,100+ fields x quarterly history",
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "financials",
+          "url": "https://banks.data.fdic.gov/api/financials",
+          "method": "GET",
+          "format": "json",
+          "pagination": {"type": "offset_limit"}
+        }
+      ],
+      "update_frequency": "quarterly",
+      "license": "Public domain",
+      "priority": 3
+    },
+    {
+      "id": "ncua_call_report",
+      "name": "NCUA Credit Union Call Reports",
+      "provider": "National Credit Union Administration",
+      "provider_type": "us_federal_government",
+      "description": "Every federally-insured credit union in the US, quarterly call reports with balance sheet, income, membership, and branch data. Direct match for any GTM playbook targeting credit unions.",
+      "verticals": ["credit_unions", "fintech", "payments"],
+      "entity_types": ["credit_union"],
+      "record_count_approx": 4600,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "call_report_bulk",
+          "url": "https://www.ncua.gov/analysis/credit-union-corporate-call-report-data/quarterly-data",
+          "format": "csv_zip",
+          "notes": "Zipped quarterly archives. Each quarter ships as a set of related CSVs (FOICU, ATM, Branch, Income, etc.)"
+        },
+        {
+          "name": "research_tool_profile",
+          "url": "https://mapping.ncua.gov/ResearchCreditUnion.aspx",
+          "format": "html",
+          "notes": "Individual credit union profiles - not bulk-accessible but useful for enrichment"
+        }
+      ],
+      "update_frequency": "quarterly",
+      "key_fields": [
+        {"name": "CU_NUMBER", "description": "NCUA Charter Number - primary key"},
+        {"name": "CU_NAME", "description": "Credit union name"},
+        {"name": "ADDRESS", "description": "HQ address"},
+        {"name": "CITY", "description": "City"},
+        {"name": "STATE", "description": "State"},
+        {"name": "ZIP_CODE", "description": "ZIP"},
+        {"name": "TOTASSETS", "description": "Total assets"},
+        {"name": "MEMBERS", "description": "Total members"},
+        {"name": "TOTAL_BRANCHES", "description": "Branch count"}
+      ],
+      "id_mapping": {"primary_key": "CU_NUMBER", "maps_to": "identifiers.ncua_charter"},
+      "license": "Public domain",
+      "priority": 1
+    },
+    {
+      "id": "ffiec_cdr",
+      "name": "FFIEC Central Data Repository - Call Reports",
+      "provider": "Federal Financial Institutions Examination Council",
+      "provider_type": "us_federal_government",
+      "description": "Authoritative source for commercial bank call reports (Form 031/041/051). Deeper than FDIC API for historical and granular line items. Good for scoring banks on tech-spend proxies (e.g. data processing expense, trust services, etc.)",
+      "verticals": ["banking", "fintech", "payments"],
+      "record_count_approx": 4500,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "cdr_bulk",
+          "url": "https://cdr.ffiec.gov/public/PWS/DownloadBulkData.aspx",
+          "format": "xbrl_and_tab_delimited",
+          "notes": "Quarterly ZIP archives"
+        }
+      ],
+      "update_frequency": "quarterly",
+      "license": "Public domain",
+      "priority": 3
+    },
+    {
+      "id": "fincen_msb",
+      "name": "FinCEN MSB Registrant Search",
+      "provider": "Financial Crimes Enforcement Network",
+      "provider_type": "us_federal_government",
+      "description": "Every Money Services Business (MSB) registered with FinCEN. Includes money transmitters, check cashers, prepaid access providers, and currency dealers. Critical for payments vertical targeting - covers fintech players that are not depository institutions.",
+      "verticals": ["payments", "fintech", "rewards_incentives"],
+      "entity_types": ["money_services_business"],
+      "record_count_approx": 25000,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "msb_bulk_list",
+          "url": "https://www.fincen.gov/msb-state-selector",
+          "format": "csv_per_state",
+          "notes": "Downloadable list by state or national roll-up; also exposes structured activity type codes"
+        }
+      ],
+      "update_frequency": "daily",
+      "key_fields": [
+        {"name": "RSSD_ID", "description": "FinCEN identifier"},
+        {"name": "LEGAL_NAME", "description": "Legal business name"},
+        {"name": "DBA_NAME", "description": "DBA"},
+        {"name": "ACTIVITIES", "description": "MSB activity codes (money transmitter, check casher, etc.)"},
+        {"name": "STATES_LICENSED", "description": "States where licensed"},
+        {"name": "REGISTRATION_STATUS", "description": "Active/expired"}
+      ],
+      "license": "Public domain",
+      "priority": 1
+    },
+    {
+      "id": "nmls_consumer_access",
+      "name": "NMLS Consumer Access - Licensed Entities",
+      "provider": "Nationwide Multistate Licensing System (CSBS)",
+      "provider_type": "state_regulator_cooperative",
+      "description": "Every state-licensed mortgage lender, mortgage broker, money transmitter, consumer finance company, and debt collector. The authoritative registry for non-bank financial service providers. NMLS unique ID is the de facto identifier for payments industry and consumer finance companies.",
+      "verticals": ["payments", "fintech", "banking"],
+      "record_count_approx": 250000,
+      "access": {"auth_required": false, "notes": "No bulk API; structured search + scraping required. NMLS publishes quarterly statistics reports in PDF/Excel."},
+      "endpoints": [
+        {
+          "name": "consumer_access_search",
+          "url": "https://www.nmlsconsumeraccess.org/",
+          "format": "html",
+          "notes": "Web search interface. For bulk work, use quarterly reports below."
+        },
+        {
+          "name": "nmls_reports",
+          "url": "https://www.nmls.org/about/NMLS-Reports.aspx",
+          "format": "excel_pdf",
+          "notes": "Quarterly Mortgage Call Report, Money Services Businesses Call Report aggregates"
+        }
+      ],
+      "update_frequency": "daily_for_licenses_quarterly_for_reports",
+      "license": "Free for public use; terms prohibit systematic scraping - prefer quarterly bulk reports",
+      "priority": 2
+    },
+    {
+      "id": "cfpb_complaints",
+      "name": "CFPB Consumer Complaint Database",
+      "provider": "Consumer Financial Protection Bureau",
+      "provider_type": "us_federal_government",
+      "description": "Every consumer complaint submitted to CFPB about financial products, tagged by company. Excellent secondary signal for pain-points at named financial institutions - useful for account-based signals in playbook (e.g. a bank with spiking complaints on 'account management' is a candidate for your product).",
+      "verticals": ["banking", "fintech", "payments", "credit_unions"],
+      "record_count_approx": 6000000,
+      "access": {"auth_required": false, "cors_enabled": true},
+      "endpoints": [
+        {
+          "name": "complaints_api",
+          "url": "https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/",
+          "method": "GET",
+          "format": "json",
+          "pagination": {"type": "size_from", "max_size": 1000}
+        },
+        {
+          "name": "complaints_bulk_csv",
+          "url": "https://files.consumerfinance.gov/ccdb/complaints.csv.zip",
+          "format": "csv_zip",
+          "size_approx_mb": 300
+        }
+      ],
+      "update_frequency": "daily",
+      "key_fields": [
+        {"name": "company", "description": "Named company (matches FDIC/NCUA when possible)"},
+        {"name": "product", "description": "Product category"},
+        {"name": "issue", "description": "Specific issue taxonomy"},
+        {"name": "state", "description": "Consumer state"},
+        {"name": "date_received", "description": "Complaint receipt date"}
+      ],
+      "license": "Public domain",
+      "priority": 2
+    },
+    {
+      "id": "sec_company_tickers",
+      "name": "SEC EDGAR Company Tickers",
+      "provider": "US Securities and Exchange Commission",
+      "provider_type": "us_federal_government",
+      "description": "Every company that files with the SEC, mapped from ticker -> CIK -> name. Entry point for accessing 10-K, 10-Q, 8-K filings via the submissions API. ~10,000 public entities.",
+      "verticals": ["enterprise", "mid_market"],
+      "record_count_approx": 10000,
+      "access": {"auth_required": false, "user_agent_required": true, "user_agent_format": "FirmName Contact user@example.com"},
+      "endpoints": [
+        {
+          "name": "company_tickers",
+          "url": "https://www.sec.gov/files/company_tickers.json",
+          "method": "GET",
+          "format": "json"
+        },
+        {
+          "name": "company_tickers_exchange",
+          "url": "https://www.sec.gov/files/company_tickers_exchange.json",
+          "method": "GET",
+          "format": "json"
+        },
+        {
+          "name": "submissions",
+          "url_template": "https://data.sec.gov/submissions/CIK{cik_10digit_zero_padded}.json",
+          "format": "json",
+          "notes": "Company metadata + most recent 1,000 filings"
+        },
+        {
+          "name": "company_facts",
+          "url_template": "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik_10digit_zero_padded}.json",
+          "format": "json",
+          "notes": "All XBRL-tagged financial facts for the company"
+        }
+      ],
+      "update_frequency": "daily",
+      "rate_limit": "10 requests/second per IP",
+      "id_mapping": {"primary_key": "cik_str", "maps_to": "identifiers.cik"},
+      "license": "Public domain",
+      "priority": 1
+    },
+    {
+      "id": "census_susb",
+      "name": "Census Statistics of US Businesses (SUSB)",
+      "provider": "US Census Bureau",
+      "provider_type": "us_federal_government",
+      "description": "Aggregate firm counts by NAICS industry, employment size band, state, and county. Not firm-level but the definitive source for TAM sizing. If a playbook claims 'there are X SMB fintechs in Washington state,' this is where you verify.",
+      "verticals": ["smb_broad", "mid_market"],
+      "entity_types": ["aggregate"],
+      "record_count_approx": null,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "susb_annual",
+          "url": "https://www.census.gov/data/tables/time-series/econ/susb/susb-historical.html",
+          "format": "csv_xlsx",
+          "notes": "Annual datasets by NAICS/state/employee-size"
+        },
+        {
+          "name": "susb_api",
+          "url": "https://api.census.gov/data/timeseries/susb",
+          "format": "json",
+          "notes": "Programmatic API; requires free API key for high-volume use"
+        }
+      ],
+      "update_frequency": "annual",
+      "license": "Public domain",
+      "priority": 2
+    },
+    {
+      "id": "census_cbp",
+      "name": "Census County Business Patterns (CBP)",
+      "provider": "US Census Bureau",
+      "provider_type": "us_federal_government",
+      "description": "Annual employment, establishment counts, and payroll by NAICS and geography down to ZIP code. Use for density maps and geographic ICP refinement.",
+      "verticals": ["smb_broad"],
+      "access": {"auth_required": false, "api_key_for_volume": true},
+      "endpoints": [
+        {
+          "name": "cbp_api",
+          "url_template": "https://api.census.gov/data/{year}/cbp",
+          "format": "json"
+        },
+        {
+          "name": "cbp_zbp",
+          "url_template": "https://api.census.gov/data/{year}/zbp",
+          "format": "json",
+          "notes": "ZIP-level version: County Business Patterns Zip Business Patterns"
+        }
+      ],
+      "update_frequency": "annual",
+      "license": "Public domain",
+      "priority": 3
+    },
+    {
+      "id": "bls_qcew",
+      "name": "BLS Quarterly Census of Employment and Wages",
+      "provider": "Bureau of Labor Statistics",
+      "provider_type": "us_federal_government",
+      "description": "Establishment-level employment and wage data covering ~9.1M US establishments. More granular and more current than Census CBP. Aggregated (not firm-named) but highest-fidelity US employment dataset.",
+      "verticals": ["smb_broad", "mid_market"],
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "qcew_files",
+          "url": "https://www.bls.gov/cew/downloadable-data-files.htm",
+          "format": "csv_zip"
+        },
+        {
+          "name": "qcew_api",
+          "url_template": "https://data.bls.gov/cew/data/api/{year}/{quarter}/industry/{naics}.csv",
+          "format": "csv"
+        }
+      ],
+      "update_frequency": "quarterly",
+      "license": "Public domain",
+      "priority": 3
+    },
+    {
+      "id": "sba_ppp",
+      "name": "SBA Paycheck Protection Program Loan Data",
+      "provider": "US Small Business Administration",
+      "provider_type": "us_federal_government",
+      "description": "Every business (~11.4M loans to ~6.5M unique borrowers) that received a PPP loan during COVID. Includes business name, address, NAICS, jobs retained, loan amount, forgiveness status. This is the single largest named-SMB dataset the US government has released. Gold for SMB ICP modeling - you can filter by industry, employee proxy (jobs retained), geography, and loan size.",
+      "verticals": ["smb_broad"],
+      "entity_types": ["company", "sole_prop", "nonprofit"],
+      "record_count_approx": 11400000,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "ppp_foia",
+          "url": "https://data.sba.gov/dataset/ppp-foia",
+          "format": "csv",
+          "notes": "FOIA public release - split across multiple files by loan size band"
+        }
+      ],
+      "update_frequency": "static_historical",
+      "key_fields": [
+        {"name": "BorrowerName", "description": "Legal name"},
+        {"name": "BorrowerAddress", "description": "Street"},
+        {"name": "BorrowerCity", "description": "City"},
+        {"name": "BorrowerState", "description": "State"},
+        {"name": "BorrowerZip", "description": "ZIP"},
+        {"name": "NAICSCode", "description": "Industry"},
+        {"name": "JobsReported", "description": "Employee proxy"},
+        {"name": "InitialApprovalAmount", "description": "Loan amount (revenue proxy)"},
+        {"name": "BusinessType", "description": "Entity structure"},
+        {"name": "DateApproved", "description": "Approval date"}
+      ],
+      "license": "Public domain (FOIA release)",
+      "priority": 1,
+      "notes": "Cross-reference with more recent sources to filter out businesses that have since closed. Still the highest-volume free SMB dataset available."
+    },
+    {
+      "id": "sam_entities",
+      "name": "SAM.gov Entity Registration",
+      "provider": "US General Services Administration",
+      "provider_type": "us_federal_government",
+      "description": "Every entity registered to do business with the US federal government. Contains UEI (new replacement for DUNS in federal use), addresses, NAICS, certifications (small business, woman-owned, etc.). ~700K active registrations.",
+      "verticals": ["government_contractors", "smb_broad"],
+      "record_count_approx": 700000,
+      "access": {"auth_required": false, "api_key_required_for_api": true, "api_key_free": true},
+      "endpoints": [
+        {
+          "name": "entity_api",
+          "url": "https://api.sam.gov/entity-information/v3/entities",
+          "method": "GET",
+          "format": "json",
+          "notes": "Requires free API key from api.sam.gov"
+        },
+        {
+          "name": "public_extracts",
+          "url": "https://sam.gov/data-services",
+          "format": "csv_monthly",
+          "notes": "Monthly bulk extracts of all registrations"
+        }
+      ],
+      "update_frequency": "daily",
+      "license": "Public domain",
+      "priority": 2
+    },
+    {
+      "id": "usaspending",
+      "name": "USAspending.gov",
+      "provider": "US Treasury",
+      "provider_type": "us_federal_government",
+      "description": "Every federal contract, grant, loan, and assistance award. Includes recipient name, UEI, award amount, agency, NAICS, and geography. Complements SAM.gov: SAM says who CAN receive federal money; USAspending says who ACTUALLY DID.",
+      "verticals": ["government_contractors", "enterprise", "mid_market"],
+      "record_count_approx": 100000000,
+      "record_count_notes": "Award-level records since FY2001",
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "api",
+          "url": "https://api.usaspending.gov/api/v2/",
+          "format": "json",
+          "docs": "https://api.usaspending.gov/docs/"
+        },
+        {
+          "name": "bulk_downloads",
+          "url": "https://files.usaspending.gov/database_download/",
+          "format": "csv_postgres_dump"
+        }
+      ],
+      "update_frequency": "daily",
+      "license": "Public domain",
+      "priority": 3
+    },
+    {
+      "id": "gleif_lei",
+      "name": "GLEIF Global Legal Entity Identifier Index",
+      "provider": "Global Legal Entity Identifier Foundation",
+      "provider_type": "international_nonprofit",
+      "description": "Global registry of Legal Entity Identifiers (LEIs). Every US entity that does derivatives trading, cross-border payments, or has EU counterparties has one. Useful for corporate hierarchy resolution.",
+      "verticals": ["fintech", "banking", "enterprise"],
+      "record_count_approx": 2500000,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "concatenated_file",
+          "url": "https://www.gleif.org/en/lei-data/gleif-concatenated-file/download-the-concatenated-file",
+          "format": "csv_xml",
+          "notes": "Daily full dump of all active LEIs globally"
+        },
+        {
+          "name": "api",
+          "url": "https://api.gleif.org/api/v1/lei-records",
+          "format": "json_api"
+        }
+      ],
+      "update_frequency": "daily",
+      "license": "CC0 public domain",
+      "priority": 3
+    },
+    {
+      "id": "cms_npi",
+      "name": "CMS National Provider Identifier (NPI) Registry",
+      "provider": "Centers for Medicare & Medicaid Services",
+      "provider_type": "us_federal_government",
+      "description": "Every healthcare provider in the US - individual practitioners AND organizational providers (hospitals, clinics, group practices, DME suppliers, home health, etc.). ~7M records. For health/wellness B2B targeting, this is the foundational dataset.",
+      "verticals": ["health_wellness_b2b"],
+      "entity_types": ["healthcare_org", "healthcare_individual"],
+      "record_count_approx": 7000000,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "nppes_api",
+          "url": "https://npiregistry.cms.hhs.gov/api/",
+          "method": "GET",
+          "format": "json",
+          "notes": "Interactive queries - paginated, 200 per response"
+        },
+        {
+          "name": "nppes_bulk",
+          "url": "https://download.cms.gov/nppes/NPI_Files.html",
+          "format": "csv_zip",
+          "size_approx_gb": 8,
+          "notes": "Monthly full dataset dumps"
+        }
+      ],
+      "update_frequency": "weekly_for_api_monthly_for_bulk",
+      "key_fields": [
+        {"name": "NPI", "description": "10-digit NPI - primary key"},
+        {"name": "Entity_Type_Code", "description": "1=individual, 2=organization"},
+        {"name": "Provider_Organization_Name", "description": "Org name"},
+        {"name": "Provider_Business_Practice_Location_Address_*", "description": "Practice address fields"},
+        {"name": "Healthcare_Provider_Taxonomy_Code_*", "description": "Specialty codes"}
+      ],
+      "license": "Public domain",
+      "priority": 1
+    },
+    {
+      "id": "dol_form5500",
+      "name": "DOL Form 5500 - Employee Benefit Plans",
+      "provider": "US Department of Labor - EBSA",
+      "provider_type": "us_federal_government",
+      "description": "Every employer-sponsored benefit plan (health, retirement, etc.) filed annually. Contains sponsor name (the employer!), EIN, plan details, participant counts, assets, and administrator. Near-complete list of US employers with 100+ employees. For health/wellness B2B, this is how you find the HR/benefits buyer side of the market.",
+      "verticals": ["health_wellness_b2b", "mid_market", "enterprise"],
+      "entity_types": ["employer", "benefit_plan"],
+      "record_count_approx": 800000,
+      "record_count_notes": "Filings per year; unique sponsors ~600K",
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "efast2_bulk",
+          "url": "https://www.efast.dol.gov/5500search/",
+          "format": "csv",
+          "notes": "Annual bulk datasets available at https://www.dol.gov/agencies/ebsa/about-ebsa/our-activities/public-disclosure/foia/form-5500-datasets"
+        }
+      ],
+      "update_frequency": "annual",
+      "key_fields": [
+        {"name": "SPONS_DFE_EIN", "description": "Plan sponsor EIN"},
+        {"name": "SPONSOR_DFE_NAME", "description": "Sponsor (employer) legal name"},
+        {"name": "SPONS_DFE_MAIL_US_STATE", "description": "State"},
+        {"name": "BUSINESS_CODE", "description": "Industry code"},
+        {"name": "TOT_PARTCP_BOY_CNT", "description": "Participants count - employee proxy"},
+        {"name": "TOT_ASSETS_EOY_AMT", "description": "Plan assets"}
+      ],
+      "license": "Public domain",
+      "priority": 1
+    },
+    {
+      "id": "fda_establishment",
+      "name": "FDA Establishment Registration & Device Listing",
+      "provider": "US Food and Drug Administration",
+      "provider_type": "us_federal_government",
+      "description": "Every establishment registered with FDA to manufacture, process, or hold food, drugs, devices, or biologics. Includes medical device makers, food facilities, drug manufacturers. Relevant for health/wellness B2B supply-side targeting.",
+      "verticals": ["health_wellness_b2b"],
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "openfda_device",
+          "url": "https://api.fda.gov/device/registrationlisting.json",
+          "format": "json"
+        },
+        {
+          "name": "drug_registration",
+          "url": "https://www.accessdata.fda.gov/scripts/cder/daf/",
+          "format": "html_bulk"
+        }
+      ],
+      "update_frequency": "weekly",
+      "license": "Public domain",
+      "priority": 3
+    },
+    {
+      "id": "irs_eo_bmf",
+      "name": "IRS Exempt Organizations Business Master File",
+      "provider": "Internal Revenue Service",
+      "provider_type": "us_federal_government",
+      "description": "Every 501(c) tax-exempt organization in the US. ~1.8M nonprofits with EIN, name, address, NTEE code, subsection, and deductibility status. Updated monthly.",
+      "verticals": ["nonprofit"],
+      "entity_types": ["nonprofit", "church", "foundation"],
+      "record_count_approx": 1800000,
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "bmf_by_region",
+          "url": "https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf",
+          "format": "csv",
+          "notes": "Four regional files (East, Central, West, Territories) plus all-rollup"
+        }
+      ],
+      "update_frequency": "monthly",
+      "license": "Public domain",
+      "priority": 2
+    },
+    {
+      "id": "irs_form990",
+      "name": "IRS Form 990 E-File Data",
+      "provider": "Internal Revenue Service",
+      "provider_type": "us_federal_government",
+      "description": "Every electronically filed Form 990 (nonprofit annual return). Financial detail for ~400K nonprofits annually. Revenue, expenses, executive comp, program details, governance. Hosted on AWS Open Data.",
+      "verticals": ["nonprofit"],
+      "record_count_approx": 3000000,
+      "record_count_notes": "Filings since 2011",
+      "access": {"auth_required": false},
+      "endpoints": [
+        {
+          "name": "aws_open_data",
+          "url": "s3://irs-form-990/",
+          "format": "xml",
+          "notes": "Files indexed by year in AWS S3; use https://registry.opendata.aws/irs990/"
+        },
+        {
+          "name": "irs_index",
+          "url_template": "https://apps.irs.gov/pub/epostcard/990/xml/{year}/index_{year}.csv",
+          "format": "csv"
+        }
+      ],
+      "update_frequency": "monthly",
+      "license": "Public domain",
+      "priority": 3
+    },
+    {
+      "id": "propublica_nonprofit",
+      "name": "ProPublica Nonprofit Explorer API",
+      "provider": "ProPublica",
+      "provider_type": "nonprofit_journalism",
+      "description": "Cleaned, API-friendly wrapper around IRS EO BMF and Form 990 data. Much easier to work with than raw IRS XML. Free for reasonable use.",
+      "verticals": ["nonprofit"],
+      "access": {"auth_required": false, "attribution_required": true},
+      "endpoints": [
+        {
+          "name": "search",
+          "url": "https://projects.propublica.org/nonprofits/api/v2/search.json",
+          "format": "json"
+        },
+        {
+          "name": "organization",
+          "url_template": "https://projects.propublica.org/nonprofits/api/v2/organizations/{ein}.json",
+          "format": "json"
+        }
+      ],
+      "update_frequency": "monthly",
+      "license": "Free for use with attribution",
+      "priority": 3
+    },
+    {
+      "id": "opencorporates",
+      "name": "OpenCorporates State Filing Aggregator",
+      "provider": "OpenCorporates Ltd",
+      "provider_type": "commercial_with_free_tier",
+      "description": "Aggregates state Secretary of State business registration filings from all 50 states into a single searchable database. The free tier allows limited API access. Full commercial access is paid - but the free tier can backfill incorporation dates, officer names, and status for entities you have names for.",
+      "verticals": ["smb_broad", "mid_market"],
+      "record_count_approx": 220000000,
+      "record_count_notes": "Global, not just US",
+      "access": {"auth_required": false, "api_key_free_tier_available": true, "rate_limited": true},
+      "endpoints": [
+        {
+          "name": "search",
+          "url": "https://api.opencorporates.com/v0.4/companies/search",
+          "format": "json"
+        },
+        {
+          "name": "company",
+          "url_template": "https://api.opencorporates.com/v0.4/companies/{jurisdiction}/{company_number}",
+          "format": "json"
+        }
+      ],
+      "update_frequency": "continuous",
+      "license": "Free tier: non-commercial + attribution; paid required for commercial use at volume",
+      "priority": 4,
+      "notes": "Read the license carefully. State-by-state scraping of Secretary of State sites directly is free and fully commercial-usable but requires 50 different scrapers."
+    }
+  ]
+}
