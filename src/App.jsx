@@ -1867,13 +1867,14 @@ export default function App(){
   const[sellerStage,setSellerStage]=useState(""); // Bootstrapped/Series A/B/C/D+/PE-Backed/Public
   // Structured ICP targeting preferences — selected by user on Session page.
   // Each field is a string (selected value) or empty string (no preference).
+  // Structured ICP targeting. segment=single select, others=multi-select arrays.
   const[icpTargeting,setIcpTargeting]=useState({
-    segment: "",       // SMB | Mid-Market | Enterprise | ""
-    headcount: "",     // 1-49 | 50-499 | 500-4,999 | 5,000-49,999 | 50,000+ | ""
-    revenue: "",       // <$1M | $1M-$10M | $10M-$100M | $100M-$1B | $1B+ | ""
-    ownership: "",     // Public | Private | PE-Backed | VC-Backed | ""
-    geography: "",     // USA | North America | EMEA | APAC | Global | ""
-    excludes: [],      // ["Healthcare","Government", ...]
+    segment: "",           // single: SMB | Mid-Market | Enterprise
+    headcount: [],         // up to 2: ["50-499","500-4,999"]
+    revenue: [],           // up to 2: ["$1M-$10M","$10M-$100M"]
+    ownership: [],         // up to 2: ["Public","PE-Backed"]
+    geography: [],         // up to 3: ["USA","EMEA","APAC"]
+    excludes: [],          // unlimited: ["Healthcare","Government",...]
   });
   const[sellerLinkedIn,setSellerLinkedIn]=useState(""); // personal LinkedIn URL
   const[sellerProofPoints,setSellerProofPoints]=useState([]); // [{type:"Case Study"|"ROI Metric"|..., content:"text"}]
@@ -1907,14 +1908,15 @@ export default function App(){
   const[targetRevenue,setTargetRevenue]=useState(""); // e.g. "$10M-$100M"
   // Auto-populate target generation dropdowns from structured targeting preferences
   React.useEffect(() => {
-    if (icpTargeting.headcount && !targetHeadcount) {
-      // Map targeting format "50-499" to dropdown format "50-499 employees"
+    const hArr = Array.isArray(icpTargeting.headcount) ? icpTargeting.headcount : (icpTargeting.headcount ? [icpTargeting.headcount] : []);
+    const rArr = Array.isArray(icpTargeting.revenue) ? icpTargeting.revenue : (icpTargeting.revenue ? [icpTargeting.revenue] : []);
+    if (hArr.length && !targetHeadcount) {
       const hMap = {"1-49":"1-49 employees","50-499":"50-99 employees","500-4,999":"500-999 employees","5,000-49,999":"5,000-9,999 employees","50,000+":"50,000+ employees"};
-      setTargetHeadcount(hMap[icpTargeting.headcount] || icpTargeting.headcount + " employees");
+      setTargetHeadcount(hMap[hArr[0]] || hArr[0] + " employees");
     }
-    if (icpTargeting.revenue && !targetRevenue) {
+    if (rArr.length && !targetRevenue) {
       const rMap = {"<$1M":"Under $1M","$1M-$10M":"$1M-$10M","$10M-$100M":"$10M-$50M","$100M-$1B":"$100M-$500M","$1B+":"$1B-$10B"};
-      setTargetRevenue(rMap[icpTargeting.revenue] || icpTargeting.revenue);
+      setTargetRevenue(rMap[rArr[0]] || rArr[0]);
     }
   }, [icpTargeting.headcount, icpTargeting.revenue]);
   const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
@@ -2157,9 +2159,14 @@ export default function App(){
     setTargetGenNote("");
 
     const icp = sellerICP.icp;
-    // Determine the target company scale from structured targeting OR dropdown overrides OR ICP
-    const effectiveHeadcount = targetHeadcount || icpTargeting.headcount || icp.companySize || "";
-    const effectiveRevenue = targetRevenue || icpTargeting.revenue || icp.revenueRange || "";
+    // Determine the target company scale. icpTargeting fields are now arrays.
+    const arrJoin = (v) => Array.isArray(v) ? v.join(" OR ") : (v || "");
+    const arrFirst = (v) => Array.isArray(v) ? v[0] : (v || "");
+    const effectiveHeadcount = targetHeadcount || arrJoin(icpTargeting.headcount) || icp.companySize || "";
+    const effectiveRevenue = targetRevenue || arrJoin(icpTargeting.revenue) || icp.revenueRange || "";
+    const effectiveOwnership = arrJoin(icpTargeting.ownership) || "";
+    const effectiveGeo = arrJoin(icpTargeting.geography) || (icp.geographies||[]).join(", ") || "North America";
+    const effectiveExcludes = (icpTargeting.excludes||[]).join(", ");
     const effectiveSegment = icpTargeting.segment || "";
     const sizeStr = effectiveHeadcount.toLowerCase();
     const revStr = effectiveRevenue.toLowerCase();
@@ -2184,9 +2191,9 @@ What they sell: ${sellerICP.sellerDescription||""}
 Target industries:    ${(targetIndustries.length ? targetIndustries : (icp.industries||[])).join(", ")}
 Employee count:       ${effectiveHeadcount || "any"} ${effectiveHeadcount ? "— STRICT: reject companies outside this range" : ""}
 Revenue range:        ${effectiveRevenue || "any"} ${effectiveRevenue ? "— STRICT: reject companies outside this range" : ""}
-Ownership:            ${icpTargeting.ownership || "any"}
-Geographies:          ${icpTargeting.geography || (icp.geographies||[]).join(", ") || "North America"}
-${(icpTargeting.excludes||[]).length ? "EXCLUDED industries: " + icpTargeting.excludes.join(", ") + " — do NOT return companies in these industries" : ""}
+Ownership:            ${effectiveOwnership || "any"}
+Geographies:          ${effectiveGeo}
+${effectiveExcludes ? "EXCLUDED industries: " + effectiveExcludes + " — do NOT return companies in these industries" : ""}
 ${buildTargetingText() ? `\n═══ SELLER TARGETING PREFERENCES (MUST RESPECT) ═══\n${buildTargetingText()}\nThese override the ICP defaults above where they conflict.\n` : ""}
 ═══ CONTEXT ═══
 Buyer personas:       ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")}
@@ -2296,12 +2303,13 @@ ${scaleGuidance}
   // Returns empty string if nothing is selected (no constraints).
   const buildTargetingText = () => {
     const t = icpTargeting;
+    const arr = (v) => Array.isArray(v) ? v : (v ? [v] : []); // handles both old string and new array format
     const parts = [];
     if (t.segment) parts.push(`Market segment: ${t.segment}`);
-    if (t.headcount) parts.push(`Employee count: ${t.headcount} employees — STRICT FILTER`);
-    if (t.revenue) parts.push(`Revenue range: ${t.revenue} — STRICT FILTER`);
-    if (t.ownership) parts.push(`Ownership: ${t.ownership} companies only`);
-    if (t.geography) parts.push(`Geography: ${t.geography}`);
+    if (arr(t.headcount).length) parts.push(`Employee count: ${arr(t.headcount).join(" OR ")} employees — STRICT FILTER`);
+    if (arr(t.revenue).length) parts.push(`Revenue range: ${arr(t.revenue).join(" OR ")} — STRICT FILTER`);
+    if (arr(t.ownership).length) parts.push(`Ownership: ${arr(t.ownership).join(" OR ")} companies only`);
+    if (arr(t.geography).length) parts.push(`Geography: ${arr(t.geography).join(", ")}`);
     if (t.excludes?.length) parts.push(`EXCLUDE these industries: ${t.excludes.join(", ")}`);
     return parts.length ? parts.join("\n") : "";
   };
@@ -4774,9 +4782,29 @@ ${isOpen
                     Target Customer Profile <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"#bbb"}}>select what you know — shapes ICP + targets</span>
                   </div>
 
-                  {/* Segment */}
+                  {/* Multi-select helper */}
+                  {(()=>{
+                    const toggleArr = (field, val, max) => {
+                      setIcpTargeting(p => {
+                        const arr = p[field] || [];
+                        if (arr.includes(val)) return { ...p, [field]: arr.filter(x => x !== val) };
+                        if (arr.length >= max) return p; // at limit
+                        return { ...p, [field]: [...arr, val] };
+                      });
+                    };
+                    const isIn = (field, val) => (icpTargeting[field] || []).includes(val);
+                    const pill = (field, val, color, max) => {
+                      const sel = isIn(field, val);
+                      const atLimit = !sel && (icpTargeting[field] || []).length >= max;
+                      return <button key={val} onClick={() => toggleArr(field, val, max)} disabled={atLimit && !sel}
+                        style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: atLimit && !sel ? "not-allowed" : "pointer", transition: "all 0.13s", opacity: atLimit && !sel ? 0.4 : 1,
+                          border: `1.5px solid ${sel ? color : "var(--line-0)"}`, background: sel ? color : "#fff", color: sel ? "#fff" : "#555" }}>{val}</button>;
+                    };
+                    return <>
+
+                  {/* Segment — single select */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Market Segment</div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Market Segment <span style={{fontWeight:400,color:"#bbb"}}>pick 1</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {["SMB","Mid-Market","Enterprise"].map(v=>{
                         const sel=icpTargeting.segment===v;
@@ -4787,64 +4815,44 @@ ${isOpen
                     </div>
                   </div>
 
-                  {/* Headcount */}
+                  {/* Headcount — up to 2 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Company Size (Employees)</div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Company Size <span style={{fontWeight:400,color:"#bbb"}}>up to 2</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["1-49","50-499","500-4,999","5,000-49,999","50,000+"].map(v=>{
-                        const sel=icpTargeting.headcount===v;
-                        return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,headcount:sel?"":v}))}
-                          style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--navy)":"var(--line-0)"),background:sel?"var(--navy)":"#fff",color:sel?"#fff":"#555"}}>{v}</button>;
-                      })}
+                      {["1-49","50-499","500-4,999","5,000-49,999","50,000+"].map(v=>pill("headcount",v,"var(--navy)",2))}
                     </div>
                   </div>
 
-                  {/* Revenue */}
+                  {/* Revenue — up to 2 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Revenue Range</div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Revenue Range <span style={{fontWeight:400,color:"#bbb"}}>up to 2</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["<$1M","$1M-$10M","$10M-$100M","$100M-$1B","$1B+"].map(v=>{
-                        const sel=icpTargeting.revenue===v;
-                        return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,revenue:sel?"":v}))}
-                          style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),background:sel?"var(--green)":"#fff",color:sel?"#fff":"#555"}}>{v}</button>;
-                      })}
+                      {["<$1M","$1M-$10M","$10M-$100M","$100M-$1B","$1B+"].map(v=>pill("revenue",v,"var(--green)",2))}
                     </div>
                   </div>
 
-                  {/* Ownership */}
+                  {/* Ownership — up to 2 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Ownership Type</div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Ownership Type <span style={{fontWeight:400,color:"#bbb"}}>up to 2</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["Public","Private","PE-Backed","VC-Backed","Bootstrapped"].map(v=>{
-                        const sel=icpTargeting.ownership===v;
-                        return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,ownership:sel?"":v}))}
-                          style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--tan-0)":"var(--line-0)"),background:sel?"var(--tan-0)":"#fff",color:sel?"#fff":"#555"}}>{v}</button>;
-                      })}
+                      {["Public","Private","PE-Backed","VC-Backed","Bootstrapped"].map(v=>pill("ownership",v,"var(--tan-0)",2))}
                     </div>
                   </div>
 
-                  {/* Geography */}
+                  {/* Geography — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Geography</div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Geography <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["USA","North America","EMEA","APAC","LATAM","Global"].map(v=>{
-                        const sel=icpTargeting.geography===v;
-                        return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,geography:sel?"":v}))}
-                          style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--amber)":"var(--line-0)"),background:sel?"var(--amber)":"#fff",color:sel?"#fff":"#555"}}>{v}</button>;
-                      })}
+                      {["USA","North America","EMEA","APAC","LATAM","Global"].map(v=>pill("geography",v,"var(--amber)",3))}
                     </div>
                   </div>
 
-                  {/* Exclude Industries */}
+                  {/* Exclude Industries — unlimited */}
                   <div style={{marginBottom:6}}>
                     <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Exclude Industries <span style={{fontWeight:400,color:"#bbb"}}>click to exclude</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                      {["Healthcare","Government","Education","Nonprofit","Energy","Defense","Agriculture"].map(v=>{
-                        const sel=icpTargeting.excludes?.includes(v);
+                      {["Healthcare","Government","Education","Nonprofit","Energy","Defense","Agriculture","Real Estate","Construction","Mining","Telecom","Media & Entertainment","Automotive","Pharmaceuticals"].map(v=>{
+                        const sel=(icpTargeting.excludes||[]).includes(v);
                         return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,excludes:sel?(p.excludes||[]).filter(x=>x!==v):[...(p.excludes||[]),v]}))}
                           style={{padding:"4px 9px",borderRadius:20,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all 0.13s",
                             border:"1.5px solid "+(sel?"var(--red)":"var(--line-0)"),background:sel?"var(--red-bg)":"#fff",color:sel?"var(--red)":"#999",
@@ -4853,12 +4861,21 @@ ${isOpen
                     </div>
                   </div>
 
-                  {/* Summary of selections */}
-                  {(icpTargeting.segment||icpTargeting.headcount||icpTargeting.revenue||icpTargeting.ownership||icpTargeting.geography||icpTargeting.excludes?.length>0)&&(
-                    <div style={{fontSize:11,color:"var(--green)",marginTop:6,display:"flex",alignItems:"center",gap:5}}>
-                      <span>✓</span> Targeting: {[icpTargeting.segment, icpTargeting.headcount&&(icpTargeting.headcount+" employees"), icpTargeting.revenue, icpTargeting.ownership, icpTargeting.geography, icpTargeting.excludes?.length>0&&("excl. "+icpTargeting.excludes.join(", "))].filter(Boolean).join(" · ")}
+                  {/* Summary */}
+                  {(icpTargeting.segment||(icpTargeting.headcount||[]).length||(icpTargeting.revenue||[]).length||(icpTargeting.ownership||[]).length||(icpTargeting.geography||[]).length||(icpTargeting.excludes||[]).length>0)&&(
+                    <div style={{fontSize:11,color:"var(--green)",marginTop:6,display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+                      <span>✓</span> Targeting: {[
+                        icpTargeting.segment,
+                        (icpTargeting.headcount||[]).length>0&&((icpTargeting.headcount||[]).join(" or ")+" employees"),
+                        (icpTargeting.revenue||[]).length>0&&((icpTargeting.revenue||[]).join(" or ")),
+                        (icpTargeting.ownership||[]).length>0&&((icpTargeting.ownership||[]).join(" or ")),
+                        (icpTargeting.geography||[]).length>0&&((icpTargeting.geography||[]).join(", ")),
+                        (icpTargeting.excludes||[]).length>0&&("excl. "+(icpTargeting.excludes||[]).join(", "))
+                      ].filter(Boolean).join(" · ")}
                     </div>
                   )}
+
+                  </>;})()}
                 </div>
 
                 <div style={{fontSize:11,color:"#aaa",marginTop:6}}>Cambrian will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
@@ -5469,7 +5486,7 @@ ${isOpen
             })()}
 
             {/* Your Targeting Preferences — reflects user inputs from Session page */}
-            {icpTab==="icp"&&sellerICP?.icp&&(icpTargeting.segment||icpTargeting.headcount||icpTargeting.revenue||icpTargeting.ownership||icpTargeting.geography||(icpTargeting.excludes||[]).length>0)&&(
+            {icpTab==="icp"&&sellerICP?.icp&&(icpTargeting.segment||(icpTargeting.headcount||[]).length||(icpTargeting.revenue||[]).length||(icpTargeting.ownership||[]).length||(icpTargeting.geography||[]).length||(icpTargeting.excludes||[]).length>0)&&(
               <div className="bb" style={{marginBottom:16,borderLeft:"3px solid var(--navy)"}}>
                 <div className="bb-hdr">
                   <div className="bb-icon" style={{fontSize:12}}>🎯</div>
@@ -5481,11 +5498,11 @@ ${isOpen
                 <div className="bb-body">
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {icpTargeting.segment&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--ink-0)",color:"#fff"}}>{icpTargeting.segment}</span>}
-                    {icpTargeting.headcount&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid var(--navy)44"}}>{icpTargeting.headcount} employees</span>}
-                    {icpTargeting.revenue&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",border:"1px solid var(--green)44"}}>{icpTargeting.revenue} revenue</span>}
-                    {icpTargeting.ownership&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--bg-1)",color:"var(--tan-0)",border:"1px solid var(--tan-0)44"}}>{icpTargeting.ownership}</span>}
-                    {icpTargeting.geography&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--amber-bg)",color:"var(--amber)",border:"1px solid var(--amber)44"}}>{icpTargeting.geography}</span>}
-                    {(icpTargeting.excludes||[]).map((ex,i)=><span key={i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"var(--red-bg)",color:"var(--red)",border:"1px solid var(--red)44",textDecoration:"line-through"}}>Excl: {ex}</span>)}
+                    {(Array.isArray(icpTargeting.headcount)?icpTargeting.headcount:[icpTargeting.headcount]).filter(Boolean).map((v,i)=><span key={"h"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid var(--navy)44"}}>{v} employees</span>)}
+                    {(Array.isArray(icpTargeting.revenue)?icpTargeting.revenue:[icpTargeting.revenue]).filter(Boolean).map((v,i)=><span key={"r"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",border:"1px solid var(--green)44"}}>{v}</span>)}
+                    {(Array.isArray(icpTargeting.ownership)?icpTargeting.ownership:[icpTargeting.ownership]).filter(Boolean).map((v,i)=><span key={"o"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--bg-1)",color:"var(--tan-0)",border:"1px solid var(--tan-0)44"}}>{v}</span>)}
+                    {(Array.isArray(icpTargeting.geography)?icpTargeting.geography:[icpTargeting.geography]).filter(Boolean).map((v,i)=><span key={"g"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--amber-bg)",color:"var(--amber)",border:"1px solid var(--amber)44"}}>{v}</span>)}
+                    {(icpTargeting.excludes||[]).map((ex,i)=><span key={"e"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:"var(--red-bg)",color:"var(--red)",border:"1px solid var(--red)44",textDecoration:"line-through"}}>Excl: {ex}</span>)}
                   </div>
                   {/* Delta callouts — compare user targeting vs AI-derived ICP */}
                   {(()=>{
