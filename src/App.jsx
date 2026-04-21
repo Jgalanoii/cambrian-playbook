@@ -2698,7 +2698,8 @@ ${isOpen
       `"tractionChannels":["Primary GTM channel","Secondary","Tertiary"],`+
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
       `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
-      `"customerExamples":["VERIFIED customer 1 — from research or certain training knowledge","Customer 2","Customer 3"]}}`;
+      `"customerExamples":["VERIFIED customer 1 — from research or certain training knowledge","Customer 2","Customer 3"],`+
+      `"relevantEvents":["3-5 conferences, trade shows, or industry events where the seller's ICP buyers and/or competitors are likely to attend. Use REAL, well-known events (e.g. 'Money20/20', 'SHRM Annual', 'AWS re:Invent'). Include the typical month if known. Format: 'Event Name (Month, City)'"]}}`;
 
     try{
       const d2 = await claudeFetch({
@@ -5285,6 +5286,20 @@ ${isOpen
                       <div>
                         <div className="field-label" style={{marginBottom:4}}>Known Customers</div>
                         <div style={{fontSize:12,color:"#777"}}>{(sellerICP.icp.customerExamples||[]).filter(Boolean).join(" · ")}</div>
+                      </div>
+                    )}
+                    {(sellerICP.icp.relevantEvents||[]).filter(Boolean).length>0&&(
+                      <div style={{marginTop:10}}>
+                        <div className="field-label" style={{marginBottom:6}}>Conferences & Events to Target</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                          {(sellerICP.icp.relevantEvents||[]).filter(Boolean).map((ev,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:8}}>
+                              <span style={{fontSize:14,flexShrink:0}}>📅</span>
+                              <span style={{fontSize:13,color:"var(--ink-1)"}}>{ev}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>Events where your ICP buyers and competitors are likely present</div>
                       </div>
                     )}
                   </div>
