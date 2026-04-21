@@ -5491,9 +5491,14 @@ ${isOpen
                           {futureEvents.map((ev,i)=>{
                             const isObj = typeof ev === "object";
                             const name = isObj ? ev.name : ev;
-                            const date = isObj ? ev.date : "";
-                            const city = isObj ? ev.city : "";
+                            // For old string format like "HR Tech (October, Las Vegas)", try to extract date and city
+                            const dateRaw = isObj ? ev.date : "";
+                            const cityRaw = isObj ? ev.city : "";
                             const url = isObj ? ev.url : "";
+                            // Try parsing date from old string format: "Event Name (Month, City)"
+                            const oldMatch = !isObj && typeof ev === "string" ? ev.match(/\(([^)]+)\)/) : null;
+                            const date = dateRaw || (oldMatch ? oldMatch[1].split(",")[0].trim() : "");
+                            const city = cityRaw || (oldMatch && oldMatch[1].includes(",") ? oldMatch[1].split(",").slice(1).join(",").trim() : "");
                             // Extract month abbreviation from date string
                             const monthMatch = date ? date.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*/i) : null;
                             const monthAbbr = monthMatch ? monthMatch[1].slice(0,3).toUpperCase() : "";
@@ -5508,7 +5513,9 @@ ${isOpen
                                     {dayNum && <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",lineHeight:1}}>{dayNum}</div>}
                                   </div>
                                 ) : (
-                                  <div style={{width:38,height:38,borderRadius:6,background:"var(--navy-bg)",border:"1px solid #1B3A6B22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:16}}>📅</div>
+                                  <div style={{width:38,height:38,borderRadius:6,background:"var(--navy-bg)",border:"1px solid #1B3A6B22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                                    <span style={{fontSize:11,fontWeight:700,color:"var(--navy)"}}>TBD</span>
+                                  </div>
                                 )}
                                 <div style={{flex:1,minWidth:0}}>
                                   {url ? (
