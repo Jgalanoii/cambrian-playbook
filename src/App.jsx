@@ -1865,6 +1865,7 @@ export default function App(){
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
   const[sellerStage,setSellerStage]=useState(""); // Bootstrapped/Series A/B/C/D+/PE-Backed/Public
+  const[icpConstraints,setIcpConstraints]=useState(""); // free-form ICP requirements (e.g. "500+ employees, public companies only")
   const[sellerLinkedIn,setSellerLinkedIn]=useState(""); // personal LinkedIn URL
   const[sellerProofPoints,setSellerProofPoints]=useState([]); // [{type:"Case Study"|"ROI Metric"|..., content:"text"}]
   const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
@@ -2152,7 +2153,7 @@ Priority trigger:     ${icp.priorityInitiative||""}
 Adoption profile:     ${icp.adoptionProfile||""}
 Disqualifiers:        ${(icp.disqualifiers||[]).join("; ")}
 Known customers:      ${(icp.customerExamples||[]).join(", ")}
-
+${icpConstraints.trim() ? `\n═══ SELLER CONSTRAINTS (MUST RESPECT) ═══\n${icpConstraints.trim()}\nThese constraints override the ICP defaults above where they conflict.\n` : ""}
 ═══ SELECTION CRITERIA — be strict ═══
 - Only return REAL, recognizable companies (Fortune 1000, prominent private companies, well-known mid-market). Do NOT invent companies.
 - Each company MUST clearly match the target industries listed above AND buyer size AND geography. Distribute results across the listed industries — do not cluster in one.
@@ -2758,7 +2759,8 @@ ${isOpen
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
       (researchCtx?`RESEARCH (use these facts as ground truth):\n${researchCtx.slice(0,1500)}\n\n`:"")+
       getVerticalInjection({ marketCategory: researchCtx, sellerDescription: url }) +
-      `Seller stage: ${sellerStage||"unknown"}.\n\n`+
+      `Seller stage: ${sellerStage||"unknown"}.\n`+
+      (icpConstraints.trim() ? `\nSELLER-SPECIFIED ICP CONSTRAINTS (MUST RESPECT — these override any conflicting inference from the website):\n${icpConstraints.trim()}\n\n` : "\n")+
       `CRITICAL — CONSISTENCY & ACCURACY RULES:\n`+
       `- For "PICK ONE" fields: return ONLY the exact value from the list. No extra words, no custom ranges, no parentheticals.\n`+
       `- For "PICK FROM" fields: choose from the canonical list provided. Do NOT invent your own labels.\n`+
@@ -2954,7 +2956,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,productUrls,sellerICP,sellerICPInput,icpDelta,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpConstraints,productUrls,sellerICP,sellerICPInput,icpDelta,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -2983,6 +2985,7 @@ ${isOpen
     const d=s.data;setCurrentSessionId(s.id);setSessionName(s.name);
     if(d.sellerUrl){setSellerUrl(d.sellerUrl);setSellerInput(d.sellerUrl);}
     if(d.sellerStage) setSellerStage(d.sellerStage);
+    if(d.icpConstraints) setIcpConstraints(d.icpConstraints);
     if(d.sellerLinkedIn) setSellerLinkedIn(d.sellerLinkedIn);
     if(d.sellerICPInput) setSellerICPInput(d.sellerICPInput);
     if(d.icpDelta) setIcpDelta(d.icpDelta);
@@ -4698,6 +4701,20 @@ ${isOpen
                     </div>
                   )}
                 </div>
+                {/* ICP Constraints */}
+                <div style={{marginTop:12}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5}}>
+                    ICP Constraints <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"#bbb"}}>optional</span>
+                  </div>
+                  <textarea
+                    value={icpConstraints}
+                    onChange={e=>setIcpConstraints(e.target.value)}
+                    placeholder={"Tell us what your ICP should include or exclude. Examples:\n• \"Only companies with 500+ employees\"\n• \"Must be publicly traded\"\n• \"QSR restaurants only, USA\"\n• \"No healthcare, no government\"\n• \"Focus on companies with $10M+ revenue\""}
+                    style={{width:"100%",minHeight:60,padding:"8px 12px",fontSize:13,border:"1.5px solid var(--line-0)",borderRadius:8,resize:"vertical",fontFamily:"inherit",lineHeight:1.5,background:"var(--bg-0)"}}
+                  />
+                  <div style={{fontSize:11,color:"#aaa",marginTop:3}}>These constraints will shape your ICP build and target account generation. Use this when your website doesn't fully reflect who you actually sell to.</div>
+                </div>
+
                 <div style={{fontSize:11,color:"#aaa",marginTop:6}}>Cambrian will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
                 {/* Manual scan button — fallback when onBlur doesn't fire (mobile, etc.) */}
                 {sellerInput.trim() && urlScanStatus !== "scanning" && !urlScanConfirmed && (
