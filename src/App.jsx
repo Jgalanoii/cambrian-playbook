@@ -2519,9 +2519,19 @@ ${isOpen
         for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
           parsed = extractJsonWithKey(textBlocks[i], "rows");
         }
+        // Fallback: join all text blocks and try safeParseJSON (handles cases
+        // where JSON is split across blocks or extractJsonWithKey chokes on
+        // embedded search-result JSON).
         if (!parsed) {
-          console.warn(`RFP ${kind} parse failed. Content:`, d.content);
-          return { kind, error: `Couldn't parse ${kind} response — try Refresh` };
+          const joined = textBlocks.join("").trim();
+          const jsonStart = joined.lastIndexOf('{"rows"');
+          if (jsonStart >= 0) {
+            parsed = safeParseJSON(joined.slice(jsonStart));
+          }
+        }
+        if (!parsed) {
+          console.warn(`RFP ${kind} parse failed. textBlocks:`, textBlocks.length, textBlocks.map(t => t.slice(0, 80)));
+          return { kind, rows: [] }; // Return empty instead of error — missing RFPs is not a fatal error
         }
         return { kind, rows: (parsed.rows || []).map(fixGov) };
       } catch (e) {
