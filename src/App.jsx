@@ -3364,7 +3364,8 @@ ${isOpen
   // Informed by: seller products, prospect context, 5 listening frameworks
   // Fires after brief completes, alongside hypothesis build
   const generateDiscoveryQs = async(briefData, member) => {
-    if(!briefData) return;
+    if(!briefData) { console.warn("[discovery] no briefData, skipping"); return; }
+    console.log("[discovery] Starting for", member.company, "products:", (briefData.solutionMapping||[]).filter(s=>s?.product).length);
     const co = member.company;
     const products_ctx = (briefData.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product+": "+s.fit).join("; ");
     const seller = sellerUrl;
@@ -3434,6 +3435,14 @@ ${isOpen
         }
       } catch { /* partial JSON not parseable yet */ }
     }, 2400);
+    // Set the final complete result (streaming callback handles partials,
+    // but may not fire if partial JSON never parses mid-stream)
+    if (result) {
+      console.log("[discovery] Generated", Object.keys(result).length, "stages");
+      setDiscoveryQs(result);
+    } else {
+      console.warn("[discovery] streamAI returned null — no questions generated");
+    }
   };
 
   // ── SOLUTION ARCHITECTURE REVIEW ──────────────────────────────────────────
