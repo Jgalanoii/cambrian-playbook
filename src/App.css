@@ -715,27 +715,55 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 @media print {
   @page { margin: 16mm 14mm; size: A4; }
   body { background: #fff !important; font-size: 12px !important; }
-  .header, .session-bar, .footer, .actions-row, .incall-header, button, .btn, .river-pills, .stepper, [class*="load-"], .load-box { display: none !important; }
+
+  /* Hide chrome — header, footer, nav, action buttons, loading states */
+  .header, .session-bar, .footer, .actions-row, .incall-header,
+  .river-pills, .stepper, .account-strip,
+  [class*="load-"], .load-box, .no-print { display: none !important; }
+
+  /* Hide buttons but keep non-interactive elements that look like buttons (pills, chips) */
+  button, .btn { display: none !important; }
+
+  /* Show ALL collapsed sections — user may not have expanded everything */
+  .bb-body-wrap.collapsed { max-height: none !important; overflow: visible !important; }
+  .bb-body-wrap.collapsed .bb-body { display: block !important; }
+  .bb-collapse-icon { display: none !important; }
+
+  /* Layout fixes for print */
   .page { max-width: 100% !important; padding: 0 !important; }
+  .app { min-height: auto !important; }
+
+  /* Section styling */
   .bb { break-inside: avoid; border: 1px solid #ddd !important; margin-bottom: 10px !important; }
-  .no-print { display: none !important; }
   .bb-hdr { background: #f5f5f5 !important; }
   .contact-row { break-inside: avoid; }
   .card { break-inside: avoid; }
+
+  /* In-Call layout → linearize for print */
   .incall-wrap { padding: 0 !important; }
   .incall-grid { grid-template-columns: 1fr !important; }
   .incall-sidebar { display: none !important; }
-  /* In-Call full-screen split-pane → linearize for print */
   .call-layout { display: block !important; height: auto !important; overflow: visible !important; }
   .call-left, .call-right { width: 100% !important; border-right: none !important; overflow: visible !important; }
   .panel-body { overflow: visible !important; }
-  /* Account-strip horizontal scroller becomes wrap */
+
+  /* Overflow containers → let content flow */
+  .tbl-wrap { overflow: visible !important; max-height: none !important; }
   .account-strip { overflow: visible !important; flex-wrap: wrap !important; }
-  /* Tables that scroll horizontally on screen — let them flow naturally */
-  .tbl-wrap { overflow: visible !important; }
-  /* Hide all SVG pie charts in print (they don't add value vs the data table) */
+
+  /* Hide SVG pie charts (no value in print) */
   .pie-card svg { display: none !important; }
-  /* Remove sticky positioning in print — sticky breaks pagination */
+
+  /* Remove sticky positioning — breaks pagination */
   thead th { position: static !important; }
+
+  /* Ensure background colors print */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Links — show URL in parentheses */
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9px; color: #888; word-break: break-all; }
+  a[href^="http"] { color: #1B3A6B !important; text-decoration: underline !important; }
+
+  /* Textareas and inputs — show value as text */
+  textarea, input[type="text"], select { border: none !important; background: transparent !important; padding: 0 !important; resize: none !important; }
 }
