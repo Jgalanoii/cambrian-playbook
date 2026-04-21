@@ -137,6 +137,7 @@ function isAllowedOrigin(origin) {
   const h = u.hostname;
   if (h === "cambrian-playbook.vercel.app") return true;
   if (/^cambrian-playbook-[a-z0-9-]+\.vercel\.app$/.test(h)) return true;
+  if (h === "cambriancatalyst.ai" || h === "www.cambriancatalyst.ai") return true;
   if (h === "localhost" || h === "127.0.0.1") return true;
   return false;
 }
