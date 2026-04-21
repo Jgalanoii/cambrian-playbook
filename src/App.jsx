@@ -3,6 +3,7 @@ import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import { sbAuth, sbGetUser, sbSessions } from "./lib/supabase.js";
+import { fetchOrgContext } from "./lib/org.js";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
 // ── KNOWLEDGE LAYER ──────────────────────────────────────────────────────
 // Sensitive heuristics (scoring formulas, industry benchmarks, framework
@@ -1851,6 +1852,8 @@ export default function App(){
   const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
   const[icpDelta,setIcpDelta]=useState(null); // {alignments:[], gaps:[], recommendations:[]}
   const[icpDeltaLoading,setIcpDeltaLoading]=useState(false);
+  const[orgCtx,setOrgCtx]=useState(null); // {id, name, run_count, run_limit, plan, userRole, ...}
+  const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
   const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
   const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
@@ -3179,6 +3182,11 @@ ${isOpen
   };
 
   const pickAccount = async member => {
+    // Check usage limit before starting a billable brief generation
+    if (orgCtx && orgCtx.run_count >= orgCtx.run_limit) {
+      setUpgradeOpen(true);
+      return;
+    }
     setSelectedAccount(member);
     setBriefLoading(true);
     setBriefError("");
@@ -3245,6 +3253,8 @@ ${isOpen
     setBrief(skeleton);
     setBriefLoading(false);
     setBriefStatus("");
+    // Optimistically increment local usage counter (server increments authoritatively)
+    setOrgCtx(prev => prev ? { ...prev, run_count: prev.run_count + 1 } : prev);
 
     // Wire each section's merger to fire as it resolves.
     // Also track timing so we can warn if calls are taking too long.
@@ -4109,7 +4119,17 @@ ${isOpen
   const routeClass=postCall?.dealRoute==="FAST_TRACK"?"route-fast":postCall?.dealRoute==="NURTURE"?"route-nurture":"route-disq";
   const routeLabel=postCall?.dealRoute==="FAST_TRACK"?"Fast Track →":postCall?.dealRoute==="NURTURE"?"Nurture":"Disqualify";
 
-  if(!authed) return <PasswordGate onAuth={(u,tok)=>{setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();}}/>;
+  // Listen for usage-limit-exceeded events from claudeFetch 402 handler
+  React.useEffect(() => {
+    const handler = (e) => { setUpgradeOpen(true); if (e.detail) setOrgCtx(prev => prev ? { ...prev, run_count: e.detail.run_count, run_limit: e.detail.run_limit } : prev); };
+    window.addEventListener("usage-limit-exceeded", handler);
+    return () => window.removeEventListener("usage-limit-exceeded", handler);
+  }, []);
+
+  if(!authed) return <PasswordGate onAuth={(u,tok)=>{
+    setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
+    if(u?.id) fetchOrgContext(u.id,tok).then(org=>{ if(org) setOrgCtx(org); });
+  }}/>;
 
   // ── COMMAND PALETTE REGISTRY ────────────────────────────────────────────────
   // Declarative list of all actions. Built at render time so commands have
@@ -7657,6 +7677,53 @@ ${isOpen
         </div>{/* end stage-transition wrapper */}
 
       </div>
+      {/* Usage badge — visible to all org members */}
+      {orgCtx && (
+        <div style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"6px 12px",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",fontSize:12,display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:40,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
+            <div style={{height:"100%",borderRadius:2,background:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--green)",width:Math.min(100,Math.round(orgCtx.run_count/orgCtx.run_limit*100))+"%",transition:"width 0.3s"}}/>
+          </div>
+          <span style={{color:"var(--ink-1)",fontWeight:600}}>{orgCtx.run_count}/{orgCtx.run_limit}</span>
+          <span style={{color:"var(--ink-3)"}}>runs</span>
+          {orgCtx.plan==="trial"&&<span style={{fontSize:10,color:"var(--amber)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>Trial</span>}
+        </div>
+      )}
+
+      {/* Upgrade prompt modal */}
+      {upgradeOpen && (
+        <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.5)"}}>
+          <div style={{background:"var(--surface)",borderRadius:16,padding:"32px 36px",maxWidth:440,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
+            <div style={{fontSize:40,marginBottom:12}}>🚀</div>
+            <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
+              You've used all {orgCtx?.run_limit||5} playbook runs
+            </div>
+            <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:20}}>
+              Your {orgCtx?.plan==="trial"?"trial":"plan"} includes {orgCtx?.run_limit||5} playbook runs.
+              Upgrade to continue building briefs and running sales calls.
+            </div>
+            <div style={{background:"var(--bg-1)",borderRadius:10,padding:"14px 16px",marginBottom:20,textAlign:"left"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>What you get with an upgrade:</div>
+              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
+                ✓ Unlimited playbook runs<br/>
+                ✓ Full ICP + brief + hypothesis pipeline<br/>
+                ✓ In-call coaching + post-call analysis<br/>
+                ✓ Team collaboration (invite reps + managers)<br/>
+                ✓ Priority support
+              </div>
+            </div>
+            <a href="mailto:joe@cambriancatalyst.com?subject=Upgrade%20Cambrian%20Playbook&body=Hi%20Joe%2C%0A%0AI'd%20like%20to%20upgrade%20my%20Cambrian%20Playbook%20account.%0A%0AOrg%3A%20"
+              style={{display:"inline-block",padding:"12px 28px",borderRadius:10,background:"var(--ink-0)",color:"#fff",fontSize:15,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",marginBottom:12}}>
+              Contact Us to Upgrade
+            </a>
+            <div>
+              <button onClick={()=>setUpgradeOpen(false)} style={{background:"none",border:"none",fontSize:13,color:"var(--ink-3)",cursor:"pointer",padding:"8px 16px",fontFamily:"inherit"}}>
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <footer className="footer">
         © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved
       </footer>
