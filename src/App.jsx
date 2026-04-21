@@ -5507,17 +5507,22 @@ ${isOpen
                   {/* Delta callouts — compare user targeting vs AI-derived ICP */}
                   {(()=>{
                     const deltas = [];
-                    if (icpTargeting.headcount && sellerICP.icp.companySize && !sellerICP.icp.companySize.includes(icpTargeting.headcount.split("-")[0])) {
-                      deltas.push({field:"Company Size", yours:icpTargeting.headcount+" employees", theirs:sellerICP.icp.companySize});
+                    const hArr = Array.isArray(icpTargeting.headcount) ? icpTargeting.headcount : (icpTargeting.headcount ? [icpTargeting.headcount] : []);
+                    const rArr = Array.isArray(icpTargeting.revenue) ? icpTargeting.revenue : (icpTargeting.revenue ? [icpTargeting.revenue] : []);
+                    const oArr = Array.isArray(icpTargeting.ownership) ? icpTargeting.ownership : (icpTargeting.ownership ? [icpTargeting.ownership] : []);
+                    if (hArr.length && sellerICP.icp.companySize) {
+                      const icpSize = sellerICP.icp.companySize.toLowerCase();
+                      const anyMatch = hArr.some(h => icpSize.includes(h.split("-")[0]));
+                      if (!anyMatch) deltas.push({field:"Company Size", yours:hArr.join(" or ")+" employees", theirs:sellerICP.icp.companySize});
                     }
-                    if (icpTargeting.revenue && sellerICP.icp.revenueRange && icpTargeting.revenue !== sellerICP.icp.revenueRange) {
-                      deltas.push({field:"Revenue", yours:icpTargeting.revenue, theirs:sellerICP.icp.revenueRange});
+                    if (rArr.length && sellerICP.icp.revenueRange) {
+                      const anyMatch = rArr.some(r => r === sellerICP.icp.revenueRange);
+                      if (!anyMatch) deltas.push({field:"Revenue", yours:rArr.join(" or "), theirs:sellerICP.icp.revenueRange});
                     }
-                    if (icpTargeting.ownership) {
+                    if (oArr.length) {
                       const icpOwn = (sellerICP.icp.ownershipTypes||[]).join(", ").toLowerCase();
-                      if (icpOwn && !icpOwn.includes(icpTargeting.ownership.toLowerCase())) {
-                        deltas.push({field:"Ownership", yours:icpTargeting.ownership, theirs:(sellerICP.icp.ownershipTypes||[]).join(", ")});
-                      }
+                      const anyMatch = oArr.some(o => icpOwn.includes(o.toLowerCase()));
+                      if (icpOwn && !anyMatch) deltas.push({field:"Ownership", yours:oArr.join(" or "), theirs:(sellerICP.icp.ownershipTypes||[]).join(", ")});
                     }
                     return deltas.length > 0 && (
                       <div style={{marginTop:10,padding:"8px 12px",background:"var(--amber-bg)",border:"1px solid var(--amber)",borderRadius:8}}>
