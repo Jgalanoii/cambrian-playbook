@@ -5179,9 +5179,9 @@ ${isOpen
               );
             })()}
 
-            {/* Internal ICP Input + Delta Analysis */}
+            {/* Internal ICP Input + Delta Analysis — hidden from print when empty */}
             {icpTab==="icp"&&sellerICP?.icp&&(
-              <div className="bb" style={{marginBottom:16}}>
+              <div className={`bb${!sellerICPInput.trim()&&!icpDelta?" no-print":""}`} style={{marginBottom:16}}>
                 <div className="bb-hdr">
                   <div className="bb-icon">📋</div>
                   <div>
