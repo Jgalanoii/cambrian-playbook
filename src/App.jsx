@@ -1842,6 +1842,9 @@ export default function App(){
   const[sellerICP,setSellerICP]=useState(null); // built from seller URL
   const[icpLoading,setIcpLoading]=useState(false);
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
+  const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
+  const[icpDelta,setIcpDelta]=useState(null); // {alignments:[], gaps:[], recommendations:[]}
+  const[icpDeltaLoading,setIcpDeltaLoading]=useState(false);
   const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
   const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
@@ -2756,7 +2759,50 @@ ${isOpen
     setIcpLoading(false);
   };
 
-  // Session restore is handled by Supabase (restoreSession fn) or guest localStorage below
+  // ── ICP DELTA ANALYSIS — compare seller's internal ICP vs public signals ─
+  // Shows where the seller's self-reported ICP diverges from what the market
+  // sees. Highlights blind spots (e.g. "your website says enterprise, but you
+  // say you have a big SMB team") and alignment strengths.
+  const analyzeICPDelta = async () => {
+    if (!sellerICP?.icp || !sellerICPInput.trim()) return;
+    setIcpDeltaLoading(true);
+    setIcpDelta(null);
+    try {
+      const publicICP = JSON.stringify({
+        marketCategory: sellerICP.marketCategory,
+        industries: sellerICP.icp.industries,
+        companySize: sellerICP.icp.companySize,
+        revenueRange: sellerICP.icp.revenueRange,
+        buyerPersonas: sellerICP.icp.buyerPersonas,
+        priorityInitiative: sellerICP.icp.priorityInitiative,
+        competitiveAlternatives: sellerICP.icp.competitiveAlternatives,
+        uniqueDifferentiators: sellerICP.icp.uniqueDifferentiators,
+        dealSize: sellerICP.icp.dealSize,
+        salesCycle: sellerICP.icp.salesCycle,
+        customerExamples: sellerICP.icp.customerExamples,
+      }, null, 2);
+      const result = await callAI(
+        `You are a GTM strategy analyst. Compare a company's INTERNAL ICP definition (what they say about themselves) with the PUBLICLY DERIVED ICP (what the market sees from their website, press, and positioning).\n\n` +
+        `═══ INTERNAL ICP (seller's own words) ═══\n${sellerICPInput.slice(0, 2000)}\n\n` +
+        `═══ PUBLIC ICP (derived from ${sellerUrl}) ═══\n${publicICP}\n\n` +
+        `Analyze every dimension and categorize each as ALIGNED, GAP, or OPPORTUNITY:\n` +
+        `- ALIGNED: internal and public signals agree\n` +
+        `- GAP: internal says one thing, public positioning says another — this confuses buyers\n` +
+        `- OPPORTUNITY: the seller knows something the market doesn't see yet — this is a GTM advantage if surfaced\n\n` +
+        `Be SPECIFIC. Name the exact fields that diverge. For each gap, explain the business impact.\n\n` +
+        `Return ONLY raw JSON:\n` +
+        `{"alignments":[{"field":"e.g. Industries","detail":"Both agree on Banking and Insurance as primary verticals"}],` +
+        `"gaps":[{"field":"e.g. Company Size","internal":"SMB (1-49 employees)","public":"Enterprise (5,000-49,999)","impact":"Website positioning may repel SMB prospects who don't see themselves reflected","recommendation":"Add SMB case studies and pricing to the website"}],` +
+        `"opportunities":[{"field":"e.g. Buyer Persona","detail":"Seller reports strong traction with COOs — not visible in public positioning. Surfacing this could open a new entry point."}],` +
+        `"summary":"2-3 sentence executive summary of the biggest delta and what to do about it"}`
+      );
+      if (result) {
+        console.log("[icpDelta] Analysis complete:", result.gaps?.length, "gaps,", result.alignments?.length, "alignments");
+        setIcpDelta(result);
+      }
+    } catch (e) { console.warn("ICP delta analysis failed:", e.message); }
+    setIcpDeltaLoading(false);
+  };
 
   // ── SCAN SELLER URL FOR PRODUCT PAGES ────────────────────────────────────
   const scanSellerUrl = async(rawUrl) => {
@@ -2824,7 +2870,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,productUrls,sellerICP,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,productUrls,sellerICP,sellerICPInput,icpDelta,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -2854,6 +2900,8 @@ ${isOpen
     if(d.sellerUrl){setSellerUrl(d.sellerUrl);setSellerInput(d.sellerUrl);}
     if(d.sellerStage) setSellerStage(d.sellerStage);
     if(d.sellerLinkedIn) setSellerLinkedIn(d.sellerLinkedIn);
+    if(d.sellerICPInput) setSellerICPInput(d.sellerICPInput);
+    if(d.icpDelta) setIcpDelta(d.icpDelta);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
@@ -5129,6 +5177,92 @@ ${isOpen
               </div>
               );
             })()}
+
+            {/* Internal ICP Input + Delta Analysis */}
+            {icpTab==="icp"&&sellerICP?.icp&&(
+              <div className="bb" style={{marginBottom:16}}>
+                <div className="bb-hdr">
+                  <div className="bb-icon">📋</div>
+                  <div>
+                    <div className="bb-title">Your Internal ICP</div>
+                    <div className="bb-sub">Paste your team's ICP definition — we'll compare it against what the market sees</div>
+                  </div>
+                </div>
+                <div className="bb-body">
+                  <textarea
+                    value={sellerICPInput}
+                    onChange={e=>setSellerICPInput(e.target.value)}
+                    placeholder={"Describe your ideal customer in your own words. Examples:\n• \"We sell to SMB restaurants with 1-5 locations, owner-operators, $500K-$5M revenue\"\n• \"Our ICP is mid-market financial services, 500-5000 employees, VP of Ops or CFO\"\n• Or paste from your sales playbook, battlecard, or CRM notes"}
+                    style={{width:"100%",minHeight:80,padding:"10px 12px",fontSize:13,border:"1.5px solid var(--line-0)",borderRadius:8,resize:"vertical",fontFamily:"inherit",lineHeight:1.6,background:"var(--bg-0)"}}
+                  />
+                  {sellerICPInput.trim().length > 20 && (
+                    <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
+                      <button className="btn btn-primary btn-sm" onClick={analyzeICPDelta} disabled={icpDeltaLoading}>
+                        {icpDeltaLoading ? "Analyzing..." : "Compare Against Public ICP"}
+                      </button>
+                      {icpDelta && <span style={{fontSize:11,color:"var(--green)"}}>Analysis ready</span>}
+                    </div>
+                  )}
+
+                  {/* Delta Analysis Results */}
+                  {icpDelta && (
+                    <div style={{marginTop:14}}>
+                      {/* Summary */}
+                      {icpDelta.summary && (
+                        <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Delta Summary</div>
+                          <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{icpDelta.summary}</div>
+                        </div>
+                      )}
+
+                      {/* Gaps — most important */}
+                      {icpDelta.gaps?.length > 0 && (
+                        <div style={{marginBottom:10}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Gaps — Internal vs. Public Positioning</div>
+                          {icpDelta.gaps.map((g,i)=>(
+                            <div key={i} style={{padding:"8px 12px",background:"var(--red-bg)",border:"1px solid var(--red)",borderRadius:8,marginBottom:6,borderLeftWidth:3}}>
+                              <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:2}}>{g.field}</div>
+                              <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5}}>
+                                <strong>You say:</strong> {g.internal} &nbsp;·&nbsp; <strong>Market sees:</strong> {g.public}
+                              </div>
+                              <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:2,fontStyle:"italic"}}>{g.impact}</div>
+                              {g.recommendation && <div style={{fontSize:11,color:"var(--green)",marginTop:3,fontWeight:600}}>{g.recommendation}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Opportunities */}
+                      {icpDelta.opportunities?.length > 0 && (
+                        <div style={{marginBottom:10}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Opportunities — Market Doesn't See This Yet</div>
+                          {icpDelta.opportunities.map((o,i)=>(
+                            <div key={i} style={{padding:"8px 12px",background:"var(--amber-bg)",border:"1px solid var(--amber)",borderRadius:8,marginBottom:6,borderLeftWidth:3}}>
+                              <div style={{fontSize:12,fontWeight:700,color:"var(--amber)",marginBottom:2}}>{o.field}</div>
+                              <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5}}>{o.detail}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Alignments */}
+                      {icpDelta.alignments?.length > 0 && (
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Aligned — Internal matches Public</div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                            {icpDelta.alignments.map((a,i)=>(
+                              <div key={i} style={{padding:"4px 10px",background:"var(--green-bg)",border:"1px solid #2E6B2E44",borderRadius:20,fontSize:11,color:"var(--green)",fontWeight:600}} title={a.detail}>
+                                {a.field}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {icpTab==="icp"&&sellerICP?.icp&&(
               <div style={{display:"flex",flexDirection:"column",gap:16}}>
