@@ -2136,59 +2136,66 @@ export default function App(){
     setTargetGenNote("");
 
     const icp = sellerICP.icp;
-    const prompt = `You are a target-account analyst. Use web_search to identify 20 REAL, well-known organizations that closely match the seller's Ideal Customer Profile below. These accounts will be served to a sales rep as "high-fit candidates worth pursuing."
+    // Determine the target company scale for prompt tuning
+    const sizeStr = (targetHeadcount || icp.companySize || "").toLowerCase();
+    const revStr = (targetRevenue || icp.revenueRange || "").toLowerCase();
+    const isEnterprise = sizeStr.includes("50,000") || sizeStr.includes("10,000-") || revStr.includes("$10b") || revStr.includes("$1b-");
+    const isMidMarket = !isEnterprise && (sizeStr.includes("5,000-") || sizeStr.includes("1,000-") || revStr.includes("$100m") || revStr.includes("$500m"));
+    const isSMB = !isEnterprise && !isMidMarket;
+    const scaleLabel = isEnterprise ? "enterprise" : isMidMarket ? "mid-market" : "SMB/growth-stage";
+    const scaleGuidance = isEnterprise
+      ? "Target Fortune 500, large public companies, and enterprise organizations. These are well-known, highly visible companies."
+      : isMidMarket
+      ? "Target well-known mid-market companies — recognized regional leaders, growing national brands, established private companies. NOT Fortune 500 unless they happen to fall in the size range."
+      : "Target SMB and growth-stage companies — regional operators, local market leaders, multi-location businesses, emerging brands, established independents. These are companies a rep in the territory would know. Do NOT return Fortune 500 or large enterprises.";
+
+    const prompt = `You are a target-account analyst identifying 20 REAL ${scaleLabel} companies that match the seller's Ideal Customer Profile. These are ${scaleLabel} companies — size your recommendations accordingly.
 
 ═══ SELLER PROFILE ═══
 URL: ${sellerUrl}
 Market category: ${sellerICP.marketCategory||""}
 What they sell: ${sellerICP.sellerDescription||""}
 
-═══ IDEAL BUYER — HARD FILTERS (every company MUST match ALL of these) ═══
+═══ HARD FILTERS (every company MUST match ALL of these) ═══
 Target industries:    ${(targetIndustries.length ? targetIndustries : (icp.industries||[])).join(", ")}
-Employee count:       ${targetHeadcount || icp.companySize || "any"} — STRICT: do NOT return companies outside this range
-Revenue range:        ${targetRevenue || icp.revenueRange || "any"} — STRICT: do NOT return companies outside this range
+Employee count:       ${targetHeadcount || icp.companySize || "any"} — STRICT: reject companies outside this range
+Revenue range:        ${targetRevenue || icp.revenueRange || "any"} — STRICT: reject companies outside this range
 Geographies:          ${(icp.geographies||[]).join(", ")||"North America"}
-${icpConstraints.trim() ? `\n═══ ADDITIONAL CONSTRAINTS (MUST RESPECT) ═══\n${icpConstraints.trim()}\n` : ""}
-═══ CONTEXT (use for relevance, but hard filters above take priority) ═══
+${icpConstraints.trim() ? `\nAdditional constraints: ${icpConstraints.trim()}\n` : ""}
+═══ CONTEXT ═══
 Buyer personas:       ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")}
 Priority trigger:     ${icp.priorityInitiative||""}
-Adoption profile:     ${icp.adoptionProfile||""}
 Disqualifiers:        ${(icp.disqualifiers||[]).join("; ")}
 Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
-═══ SELECTION CRITERIA — be strict ═══
-- Only return REAL companies that exist. Do NOT invent companies.
-- SIZE ENFORCEMENT: If employee count is specified (e.g. "100-499 employees"), EVERY company must PLAUSIBLY fall within that range based on your training knowledge. McDonalds (~200K employees) does NOT match "100-499 employees." A single-location restaurant does NOT match "500+ employees." Use your best estimate — you do NOT need to verify exact headcount via web search.
-- REVENUE ENFORCEMENT: Same rule. "$1M-$10M" means regional multi-unit operators, NOT billion-dollar public chains. Use your knowledge of company scale.
-- If the size range targets mid-market or SMB (under 5,000 employees), focus on: regional chains, multi-unit franchise groups, growing brands, well-known local/regional operators. Do NOT default to Fortune 500.
-- Each company MUST match the target industries AND approximate employee count AND approximate revenue range AND geography.
-- AVOID anything matching the disqualifiers.
-- Do NOT return companies in the "known customers" list (already customers).
-- Distribute across industries — do not cluster.
-- CONFIDENCE: You know thousands of real companies from training data. Use that knowledge confidently. Do NOT refuse or apologize — return 20 real companies that fit the profile. If exact employee count is uncertain, include the company with your best estimate.
-- TICKER ACCURACY: Only include a stock ticker if 100% certain. If unsure, write "Public" or "Private."
+═══ SCALE GUIDANCE: ${scaleLabel.toUpperCase()} ═══
+${scaleGuidance}
 
-═══ CONSISTENCY ═══
-- Prefer RECOGNIZABLE companies that match the size filters. If targeting 100-499 employees, return well-known mid-market companies — NOT Fortune 500. If targeting 50,000+, then Fortune 500 is appropriate.
-- Return companies in DESCENDING order by ICP match strength (best fit first).
-- A rep should recognize the names on this list as realistic targets for their size range.
+═══ RULES ═══
+- Return ONLY real companies. Do NOT invent names.
+- SIZE IS A HARD FILTER. If the range is "100-499 employees", a 50,000-employee company is REJECTED. If "50,000+", a 200-person startup is REJECTED. Use your training knowledge to estimate — you do not need web verification of exact headcount.
+- REVENUE IS A HARD FILTER. "$1M-$10M" means do NOT include billion-dollar enterprises. "$1B+" means do NOT include small startups.
+- Do NOT return companies from the "known customers" list — they are already customers.
+- AVOID companies matching the disqualifiers.
+- Distribute across the listed industries — do not cluster in one vertical.
+- Be CONFIDENT. You know tens of thousands of real companies across every US industry from training data. Use that knowledge. Do NOT refuse, apologize, or say you can't verify. Return 20 companies.
+- TICKER ACCURACY: Only include a ticker if 100% certain. Otherwise write "Public" or "Private."
+- Return in DESCENDING order by ICP fit strength.
 
 ═══ OUTPUT (raw JSON only, 20 entries, no prose) ═══
 {"accounts":[
-  {"company":"Real company name (no inc/corp suffix unless commonly used)","industry":"One of the seller's target industries","company_url":"company.com","employees":"~5,000 or 50,000+ etc","publicPrivate":"Public or Private or PE-backed — only include ticker if 100% certain","lead_source":"Generated","outcome":"What outcome they're likely chasing given their industry+size","why":"1 sentence: why this company fits THIS seller's ICP specifically"}
+  {"company":"Real company name","industry":"One of the target industries","company_url":"company.com","employees":"~estimated headcount","publicPrivate":"Public or Private or PE-backed","lead_source":"Generated","outcome":"What outcome they're likely chasing","why":"1 sentence: why this company fits"}
 ]}`;
 
     try {
-      // Use web_search for large-company searches; skip it for mid-market/SMB
-      // where training knowledge is more reliable (web_search can't find
-      // employee counts for regional chains, causing the model to refuse).
-      const sizeStr = (targetHeadcount || icp.companySize || "").toLowerCase();
-      const isSmallTarget = sizeStr.includes("1-49") || sizeStr.includes("50-") || sizeStr.includes("100-") || sizeStr.includes("500-") || sizeStr.includes("1,000-");
-      const useSearch = !isSmallTarget;
+      // Enterprise targets: web_search helps find real companies and verify data.
+      // Mid-market/SMB: skip web_search — training knowledge is more reliable
+      // for regional companies, and web_search causes the model to refuse when
+      // it can't verify exact employee counts for smaller firms.
       const d = await claudeFetch({
         model: activeModel(),
         max_tokens: 4000,
-        ...(useSearch ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }] } : {}),
+        ...(isEnterprise ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }] } : {}),
         messages: [{ role: "user", content: prompt }],
       });
       if (d?.error) {
