@@ -2370,7 +2370,9 @@ ${scaleGuidance}
 - Distribute across the listed industries — do not cluster in one vertical.
 - Be CONFIDENT. You know tens of thousands of real companies across every US industry from training data. Use that knowledge. Do NOT refuse, apologize, or say you can't verify. Return 20 companies.
 - TICKER ACCURACY: Only include a ticker if 100% certain. Otherwise write "Public" or "Private."
-- Return in DESCENDING order by ICP fit strength.
+- QUALITY THRESHOLD: Only include companies you are confident are a STRONG ICP fit (≥65% match). If a company is marginal, replace it with a better-fitting one.
+- CONSISTENCY: For the same seller and ICP inputs, return the same core companies every time. Anchor on the most obvious, well-known companies first, then fill remaining slots. Sort output alphabetically by company name.
+- Return sorted ALPHABETICALLY by company name (for consistency across runs).
 
 ═══ OUTPUT (raw JSON only, 20 entries, no prose) ═══
 {"accounts":[
@@ -2422,17 +2424,32 @@ ${scaleGuidance}
       setMapping(m);
       setFileName(`generated_${generated.length}_targets.csv`);
 
-      // Build cohorts + score, just like sample-load does
+      // Build cohorts + score, then filter out low-fit companies
       const cohortsBuilt = buildCohorts(generated, m);
       if (cohortsBuilt.length) {
         setCohorts(cohortsBuilt);
         const sel = cohortsBuilt.find(c => c.members.length > 1) || cohortsBuilt[0];
         setSelectedCohort(sel);
-        const allMembers = cohortsBuilt.flatMap(c => c.members);
-        scoreFit(allMembers, buildSellerCtx());
       }
-      setTargetGenNote(`Generated ${generated.length} ICP-matched targets. Fit scoring runs now — Strong Fit (≥75%) candidates will surface at the top.`);
+      setTargetGenNote(`Generated ${generated.length} targets. Scoring now — companies below 65% fit will be filtered out.`);
       setStep(3);
+
+      // Score and filter — await completion, then remove <65% fit
+      const allMembers = cohortsBuilt.flatMap(c => c.members);
+      scoreFit(allMembers, buildSellerCtx()).then(() => {
+        setFitScores(prev => {
+          const MIN_FIT = 65;
+          const belowThreshold = Object.entries(prev).filter(([, v]) => v.score < MIN_FIT).map(([k]) => k);
+          if (belowThreshold.length) {
+            setCohorts(prevC => prevC.map(c => ({
+              ...c,
+              members: c.members.filter(m => !belowThreshold.includes(m.company)),
+            })).filter(c => c.members.length > 0));
+            setTargetGenNote(`Filtered to ${Object.keys(prev).length - belowThreshold.length} companies with 65%+ fit. Removed ${belowThreshold.length} below threshold.`);
+          }
+          return prev;
+        });
+      });
     } catch (e) {
       console.error("generateTargets error:", e);
       setTargetGenError("Unexpected error: " + e.message);
