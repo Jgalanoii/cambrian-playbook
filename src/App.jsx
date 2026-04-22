@@ -5057,8 +5057,8 @@ ${isOpen
 
         {/* ── STEP 0: SESSION SETUP ── */}
         {step===0&&(
-          <div className="page" style={{maxWidth:720,paddingTop:40}}>
-            <div className="setup-card" style={{maxWidth:"100%",margin:0}}>
+          <div className="page" style={{maxWidth:1200,paddingTop:40}}>
+            <div className="setup-card" style={{maxWidth:800,margin:"0 auto"}}>
               <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
               <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Revenue Playbook Engine · RIVER Framework</div>
               <div style={{textAlign:"center",marginBottom:10}}>
