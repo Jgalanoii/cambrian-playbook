@@ -5621,10 +5621,11 @@ ${isOpen
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
                   <ExportMenu onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
                   <button
-                    onClick={()=>{if(confirm("Regenerate ICP from scratch? The cached version will be replaced."))buildSellerICP(sellerUrl,{forceRefresh:true});}}
+                    onClick={()=>{if(!icpLoading&&confirm("Regenerate ICP from scratch? The cached version will be replaced."))buildSellerICP(sellerUrl,{forceRefresh:true});}}
+                    disabled={icpLoading}
                     title="Force rebuild ICP (clears cache)"
-                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
-                    ↻ Regenerate
+                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:icpLoading?"var(--bg-1)":"#fff",color:icpLoading?"var(--ink-3)":"#555",cursor:icpLoading?"wait":"pointer"}}>
+                    {icpLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
                   </button>
                   <div style={{display:"flex",gap:0,border:"1.5px solid var(--line-0)",borderRadius:8,overflow:"hidden"}}>
                     {[["icp","🎯 Your ICP"],["rfp","📡 RFP Intel"]].map(([tab,label])=>(
@@ -7081,7 +7082,7 @@ ${isOpen
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
                       <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
-                      <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
+                      <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>pickAccount(selectedAccount)}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                       <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                     </div>
                   </div>
@@ -7757,7 +7758,7 @@ ${isOpen
 
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
-                  <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
+                  <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>pickAccount(selectedAccount)}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                 </div>
@@ -7945,7 +7946,7 @@ ${isOpen
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(5)}>← Back to Brief</button>
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
-                ↻ Regenerate
+                {riverHypoLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
               </button>
               <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
               <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(7);}}>
@@ -8317,7 +8318,7 @@ ${isOpen
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
-                  <button className="btn btn-gold" onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>Regenerate</button>
+                  <button className="btn btn-gold" disabled={postLoading} onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>{postLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(9);}}>
                     Solution Fit Review →
                   </button>
