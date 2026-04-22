@@ -34,3 +34,5 @@ src/data/data/
 *.sqlite
 src/data/files.zip
 src/data/knowledge-layer.zip
+.env.test
+.env.production

@@ -2467,23 +2467,26 @@ ${scaleGuidance}
         `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
         `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n\n`+
         `━━━ DIMENSION 1: ICP ALIGNMENT (40 points max) ━━━\n`+
-        `Score by adding/subtracting fixed points from a BASE of 20:\n`+
-        `INDUSTRY MATCH:\n`+
-        `  +12 = target industry is in the seller's ICP industry list (exact match)\n`+
-        `  +6  = target is in an adjacent/related industry\n`+
-        `  +0  = no industry match\n`+
-        `  -10 = HIGH-FRICTION INDUSTRY: ${highFrictionCtx}\n`+
-        `SIZE MATCH:\n`+
-        `  +5  = target size matches seller's ICP companySize\n`+
-        `  +2  = target is one bracket away from ICP companySize\n`+
-        `  -3  = target is 2+ brackets away\n`+
-        `OWNERSHIP:\n`+
-        `  +3  = VC-backed or PE-backed (active buying mandate)\n`+
-        `  +1  = private\n`+
-        `  +0  = public\n`+
-        `SELLER STAGE THRESHOLDS: ${stageCtx}\n`+
-        `BUYING SIGNALS: ${signalCtx}\n`+
-        `Clamp dim1 to 0-40.\n\n`+
+        `Pick dim1 using this 3-step lookup. Do NOT do arithmetic — just pick the value from each row.\n\n`+
+        `STEP A — INDUSTRY: Seller's target industries: [${(sellerICP?.icp?.industries||[]).join(", ")}]\n`+
+        `  Pick ONE:\n`+
+        `  32 = target's industry IS one of the seller's target industries, or a direct sub-segment (e.g. "Fintech" matches "Finance")\n`+
+        `  26 = target is in a DIFFERENT industry but shares the same buyer persona or problem domain\n`+
+        `  20 = no meaningful industry connection\n`+
+        `  10 = HIGH-FRICTION INDUSTRY (${(KL_FIT_RULES.highFriction?.industries||[]).map(i=>i.name).join(", ")})\n`+
+        `  RULE: sub-sectors always match their parent. Fintech=Finance. HealthIT=Healthcare. AdTech=Media.\n\n`+
+        `STEP B — SIZE: Seller's target: ${sellerICP?.icp?.companySize || "any"} | Brackets: 1-49 | 50-499 | 500-4,999 | 5,000-49,999 | 50,000+\n`+
+        `  Add to your Step A value:\n`+
+        `  +5 = target is in the SAME bracket as seller's ICP\n`+
+        `  +2 = target is ONE bracket away (adjacent)\n`+
+        `  +0 = target is 2+ brackets away\n\n`+
+        `STEP C — OWNERSHIP:\n`+
+        `  Add to your Step A+B value:\n`+
+        `  +3 = VC-backed or PE-backed\n`+
+        `  +1 = private\n`+
+        `  +0 = public\n\n`+
+        `dim1 = Step A + Step B + Step C (clamp to 0-40)\n`+
+        `IMPORTANT: Step A dominates. Most dim1 scores should be one of: 35-40 (industry match + size match), 28-33 (industry match + size mismatch), 23-27 (adjacent industry), or 20-22 (no match).\n\n`+
         `━━━ DIMENSION 2: CUSTOMER SIMILARITY (30 points max) ━━━\n`+
         (customerList.length
           ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
@@ -2496,12 +2499,12 @@ ${scaleGuidance}
           : `No named customers available — score this dimension at 15 (fixed neutral) for ALL targets.\n\n`)+
         `━━━ DIMENSION 3: COMPETITIVE LANDSCAPE (30 points max) ━━━\n`+
         `Score using EXACTLY these fixed values based on VERIFIABLE knowledge only:\n`+
-        `  26 = target uses a competitor the seller commonly displaces (known displacement opportunity)\n`+
-        `  20 = no known incumbent in the seller's category (greenfield — DEFAULT when uncertain)\n`+
-        `  10 = target is locked into a deep incumbent with high switching costs (Oracle, SAP, Salesforce enterprise-wide)\n`+
-        `IMPORTANT: If you are NOT CERTAIN what vendor the target uses in this category, score 20 (greenfield default). Do NOT guess — guessing causes score variance.\n`+
-        (competitorList.length ? `Seller commonly displaces: ${competitorList.join(", ")}.\n` : "")+
-        `In "incumbentRisk": name the incumbent vendor ONLY if you are certain, otherwise say "No known incumbent in this category." 1-sentence switching-cost assessment.\n\n`+
+        `  26 = you can name the SPECIFIC competitor product the target uses AND that competitor is in the seller's competitive alternatives list below\n`+
+        `  20 = DEFAULT — use this for ALL other cases, including: no known incumbent, uncertain, probable but unverified, or the target uses a vendor NOT in the seller's competitive alternatives list\n`+
+        `  10 = target has a PUBLICLY DOCUMENTED enterprise-wide deployment of a deep platform incumbent (e.g. Palantir Foundry, SAP, Oracle) with multi-year contract — only score 10 if you can cite the specific deployment\n`+
+        (competitorList.length ? `Seller's competitive alternatives: ${competitorList.join(", ")}.\n` : "")+
+        `CONSISTENCY RULE: Score 26 ONLY if you can name "Company X uses [specific product from competitive list above]." If you cannot complete that sentence with certainty, score 20. This is the #1 rule for reducing score variance.\n`+
+        `In "incumbentRisk": name the incumbent vendor ONLY if you scored 26 or 10, otherwise say "No verified incumbent in this category."\n\n`+
         `━━━ TOTAL SCORE = dim1 + dim2 + dim3 (max 100) ━━━\n`+
         `Band mapping — score MUST match label:\n`+
         `  75-100 → "Strong Fit"\n`+
