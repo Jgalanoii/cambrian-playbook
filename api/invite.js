@@ -7,7 +7,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
-const APP_URL = process.env.VITE_APP_URL || "https://cambrian-playbook.vercel.app";
+const APP_URL = process.env.VITE_APP_URL || "https://www.cambriancatalyst.ai";
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
 const SB_REF = SB_URL ? new URL(SB_URL).hostname.split(".")[0] : "";
 
