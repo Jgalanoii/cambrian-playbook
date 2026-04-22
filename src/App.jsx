@@ -1786,6 +1786,92 @@ function RiverFieldCard({fieldKey, label, icon, sub, color, value, onChange}){
 }
 
 
+// ── CSV EXPORT HELPER ─────────────────────────────────────────────────────────
+// Converts structured data into a flat CSV. Handles nested objects/arrays
+// by flattening keys. Returns a downloadable CSV string.
+function toCSV(data, filename) {
+  const flatten = (obj, prefix = "") => {
+    const out = {};
+    for (const [k, v] of Object.entries(obj || {})) {
+      const key = prefix ? `${prefix}.${k}` : k;
+      if (Array.isArray(v)) {
+        v.forEach((item, i) => {
+          if (typeof item === "object" && item !== null) {
+            Object.assign(out, flatten(item, `${key}[${i}]`));
+          } else {
+            out[`${key}[${i}]`] = item;
+          }
+        });
+      } else if (typeof v === "object" && v !== null) {
+        Object.assign(out, flatten(v, key));
+      } else {
+        out[key] = v;
+      }
+    }
+    return out;
+  };
+
+  // If data is an array of objects (e.g. accounts), make a proper table
+  let csvStr;
+  if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object") {
+    const rows = data.map(r => flatten(r));
+    const allKeys = [...new Set(rows.flatMap(r => Object.keys(r)))];
+    const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    csvStr = [allKeys.map(esc).join(","), ...rows.map(r => allKeys.map(k => esc(r[k])).join(","))].join("\n");
+  } else {
+    const flat = flatten(data);
+    const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    csvStr = ["Field,Value", ...Object.entries(flat).map(([k, v]) => `${esc(k)},${esc(v)}`)].join("\n");
+  }
+
+  const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ── EXPORT MENU ──────────────────────────────────────────────────────────────
+// Dropdown button with PDF + CSV options. Used on every page.
+function ExportMenu({ onPDF, onCSV, label = "Export", style = {} }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
+      <button onClick={() => setOpen(!open)}
+        style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, border: "1.5px solid var(--line-0)", borderRadius: 8, background: "#fff", color: "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+        {label} <span style={{ fontSize: 9 }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#fff", border: "1.5px solid var(--line-0)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 150, overflow: "hidden" }}>
+          <button onClick={() => { onPDF(); setOpen(false); }}
+            style={{ display: "block", width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer", textAlign: "left", color: "#333" }}
+            onMouseEnter={e => e.target.style.background = "var(--bg-0)"}
+            onMouseLeave={e => e.target.style.background = "none"}>
+            🖨 Export to PDF
+          </button>
+          <button onClick={() => { onCSV(); setOpen(false); }}
+            style={{ display: "block", width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer", textAlign: "left", color: "#333", borderTop: "1px solid var(--line-0)" }}
+            onMouseEnter={e => e.target.style.background = "var(--bg-0)"}
+            onMouseLeave={e => e.target.style.background = "none"}>
+            📊 Export to CSV
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── EDITABLE FIELD ────────────────────────────────────────────────────────────
 
 function EF({value,onChange,single=false,placeholder="Click to edit..."}){
@@ -4067,6 +4153,52 @@ ${isOpen
     } catch (e) { console.error("download failed:", e); }
   };
 
+  // CSV export helper — builds a filename and triggers download
+  const csvExport = (stageName, data) => {
+    if (!data) return;
+    const ts = new Date().toISOString().slice(0, 10);
+    const subject = (selectedAccount?.company || sellerICP?.sellerName || sellerUrl || "cambrian")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    toCSV(data, `${stageName.toLowerCase().replace(/\s+/g, "-")}__${subject}__${ts}.csv`);
+  };
+
+  // Per-page CSV data builders
+  const getICPCSVData = () => {
+    if (!sellerICP?.icp) return sellerICP;
+    const icp = sellerICP.icp;
+    return {
+      sellerName: sellerICP.sellerName, sellerDescription: sellerICP.sellerDescription,
+      marketCategory: sellerICP.marketCategory,
+      industries: (icp.industries || []).join("; "), companySize: icp.companySize,
+      revenueRange: icp.revenueRange, dealSize: icp.dealSize, salesCycle: icp.salesCycle,
+      adoptionProfile: icp.adoptionProfile,
+      ownershipTypes: (icp.ownershipTypes || []).join("; "),
+      geographies: (icp.geographies || []).join("; "),
+      disqualifiers: (icp.disqualifiers || []).join("; "),
+      topPains: (icp.topPains || []).join("; "), topGains: (icp.topGains || []).join("; "),
+      customerJobs: (icp.customerJobs || []).join("; "),
+      competitiveAlternatives: (icp.competitiveAlternatives || []).join("; "),
+      uniqueDifferentiators: (icp.uniqueDifferentiators || []).join("; "),
+      customerExamples: (icp.customerExamples || []).join("; "),
+      tractionChannels: (icp.tractionChannels || []).join("; "),
+      priorityInitiative: icp.priorityInitiative, successFactors: icp.successFactors,
+      perceivedBarriers: icp.perceivedBarriers, decisionCriteria: icp.decisionCriteria,
+      buyerJourney: icp.buyerJourney,
+    };
+  };
+
+  const getAccountsCSVData = () => {
+    return cohorts.flatMap(c => c.members.map(m => ({
+      cohort: c.name, company: m.company, industry: m.ind || "",
+      employees: m.employees || "", website: m.company_url || "",
+      fitScore: fitScores[m.company]?.score ?? "", fitLabel: fitScores[m.company]?.label ?? "",
+      fitReason: fitScores[m.company]?.reason ?? "",
+      ownership: fitScores[m.company]?.ownership ?? "",
+      customerSimilarity: fitScores[m.company]?.customerSimilarity ?? "",
+      incumbentRisk: fitScores[m.company]?.incumbentRisk ?? "",
+    })));
+  };
+
   // ── PRE-FETCH: executives search fires when account is selected (step 4)
   // So by the time the user clicks "Build Brief" (step 5), exec data is
   // already cached. Eliminates the ~10-15s web_search bottleneck from p2.
@@ -4456,8 +4588,7 @@ ${isOpen
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>RIVER Brief — {selectedAccount?.company}</div>
                       <div style={{display:"flex",gap:6}}>
-                        <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Brief",brief)}>💾 JSON</button>
-                        <button className="btn btn-navy btn-sm" onClick={doExport}>🖨 PDF</button>
+                        <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                       </div>
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Company overview, executives, strategy, solutions, sentiment</div>
@@ -4469,7 +4600,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>RIVER Hypothesis</div>
-                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Hypothesis",riverHypo)}>💾 JSON</button>
+                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Reality, Impact, Vision, Entry, Route + indecision plan + talk tracks</div>
                   </div>
@@ -4480,7 +4611,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Discovery Questions</div>
-                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Discovery",discoveryQs)}>💾 JSON</button>
+                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Discovery", discoveryQs)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Sales + Architecture tracks per RIVER stage</div>
                   </div>
@@ -4491,7 +4622,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Post-Call Route</div>
-                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Post-Call",postCall)}>💾 JSON</button>
+                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Deal route: {postCall.dealRoute} · CRM note · follow-up email</div>
                   </div>
@@ -4502,7 +4633,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Solution Fit Review</div>
-                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Solution-Fit",solutionFit)}>💾 JSON</button>
+                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Solution-Fit", solutionFit)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Product-market fit assessment, maturity stage, architecture gaps</div>
                   </div>
@@ -4513,7 +4644,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Ideal Customer Profile</div>
-                      <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("ICP",sellerICP)}>💾 JSON</button>
+                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("ICP", getICPCSVData())} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>{sellerICP.sellerName} · {sellerICP.marketCategory}</div>
                   </div>
@@ -5328,18 +5459,7 @@ ${isOpen
               </div>
               {sellerICP?.icp&&(
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-                  <button
-                    onClick={doExport}
-                    title="Print this view as PDF"
-                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
-                    🖨 PDF
-                  </button>
-                  <button
-                    onClick={()=>downloadStageData(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:sellerICP)}
-                    title="Download structured data as JSON"
-                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"#fff",color:"#555",cursor:"pointer"}}>
-                    💾 Data
-                  </button>
+                  <ExportMenu onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
                   <button
                     onClick={()=>{if(confirm("Regenerate ICP from scratch? The cached version will be replaced."))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     title="Force rebuild ICP (clears cache)"
@@ -6508,8 +6628,7 @@ ${isOpen
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
-              <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
-              <button className="btn btn-secondary" onClick={()=>downloadStageData("Accounts",{cohorts,fitScores})}>💾 Data</button>
+              <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Accounts", getAccountsCSVData())} />
               <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(4);}}} disabled={!selectedCohort}>
                 Select Account → {selectedCohort?`(${selectedCohort.name})`:""}
               </button>
@@ -6542,8 +6661,7 @@ ${isOpen
                     Next →
                   </button>
                 </>)}
-                {sa && <button className="btn btn-navy btn-sm" onClick={doExport} title="Print this account view as PDF">🖨 PDF</button>}
-                {sa && <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("Account-Review",{account:sa,fit:fitScores[sa.company],icpMatch:sellerICP?.icp})} title="Download account context as JSON">💾 Data</button>}
+                {sa && <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Account-Review", {company:sa.company,industry:sa.ind,...fitScores[sa.company]})} />}
               </div>
             </div>
             <div className="page-sub" style={{marginBottom:14}}>
@@ -6802,8 +6920,7 @@ ${isOpen
                       <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}/>
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
-                      <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
-                      <button className="btn btn-secondary" onClick={()=>downloadStageData("Brief",brief)}>💾 Data</button>
+                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                       <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
                       <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                     </div>
@@ -7481,8 +7598,7 @@ ${isOpen
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
                   <button className="btn btn-secondary" onClick={()=>pickAccount(selectedAccount)}>↻ Regenerate</button>
-                  <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
-                  <button className="btn btn-secondary" onClick={()=>downloadStageData("Brief",brief)}>💾 Data</button>
+                  <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                 </div>
               </>
@@ -7671,8 +7787,7 @@ ${isOpen
               <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
                 ↻ Regenerate
               </button>
-              <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
-              <button className="btn btn-secondary" onClick={()=>downloadStageData("Hypothesis",riverHypo)}>💾 Data</button>
+              <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
               <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(7);}}>
                 Start In-Call →
               </button>
@@ -7694,8 +7809,7 @@ ${isOpen
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
                 <div style={{fontSize:12,color:"#aaa"}}>confidence</div>
                 <button className="btn btn-secondary btn-sm" onClick={()=>setStep(5)}>← Hypothesis</button>
-                <button className="btn btn-navy btn-sm" onClick={doExport} title="Print captured call notes">🖨 PDF</button>
-                <button className="btn btn-secondary btn-sm" onClick={()=>downloadStageData("In-Call",{gateAnswers,riverData,gateNotes,notes,confidence})} title="Download captured call notes as JSON">💾 Data</button>
+                <ExportMenu onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
                 <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
                   {postLoading?"Routing...":"End Call →"}
                 </button>
@@ -8039,8 +8153,7 @@ ${isOpen
                 </div>
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Back to Call</button>
-                  <button className="btn btn-navy" onClick={doExport}>🖨 Save as PDF</button>
-                  <button className="btn btn-secondary" onClick={()=>downloadStageData("Post-Call",postCall)}>💾 Data</button>
+                  <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
@@ -8066,7 +8179,7 @@ ${isOpen
             onRegenerate={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}
             onBack={()=>setStep(8)}
             onExport={doExport}
-            onDownloadData={()=>downloadStageData("Solution-Fit",solutionFit)}
+            onCSV={()=>csvExport("Solution-Fit", solutionFit)}
             onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}
           />
         )}
