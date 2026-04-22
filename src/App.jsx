@@ -5728,7 +5728,19 @@ ${isOpen
                           </span>
                         ))}
                       </div>
-                      <div style={{fontSize:11,color:"#aaa"}}>Competitive alternatives: {(sellerICP.icp.competitiveAlternatives||[]).filter(Boolean).join(", ")||"—"}</div>
+                      <div style={{fontSize:11,color:"#aaa"}}>
+                        Competitive alternatives:
+                        <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
+                          {(sellerICP.icp.competitiveAlternatives||[]).filter(Boolean).map((c,i)=>(
+                            <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"2px 8px",fontSize:11,color:"#555",display:"flex",alignItems:"center",gap:3}}>
+                              <span contentEditable suppressContentEditableWarning
+                                onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==c)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}));}}
+                                style={{outline:"none",cursor:"text"}}>{c}</span>
+                              <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"#aaa",padding:0}}>✕</button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -5766,8 +5778,13 @@ ${isOpen
                     <div>
                       <div className="field-label" style={{marginBottom:4}}>Hard Disqualifiers</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                        {(sellerICP.icp.disqualifiers||[]).filter(Boolean).slice(0,3).map((d,i)=>(
-                          <span key={i} style={{background:"var(--red-bg)",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--red)"}}>{d}</span>
+                        {(sellerICP.icp.disqualifiers||[]).filter(Boolean).map((d,i)=>(
+                          <span key={i} style={{background:"var(--red-bg)",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--red)",display:"flex",alignItems:"center",gap:4}}>
+                            <span contentEditable suppressContentEditableWarning
+                              onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==d)setSellerICP(p=>({...p,icp:{...p.icp,disqualifiers:p.icp.disqualifiers.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,disqualifiers:p.icp.disqualifiers.filter((_,j)=>j!==i)}}));}}
+                              style={{outline:"none",cursor:"text"}}>{d}</span>
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,disqualifiers:p.icp.disqualifiers.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--red)",padding:0}}>✕</button>
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -5797,17 +5814,18 @@ ${isOpen
                       const roleColor = role?.toLowerCase().includes("economic")?"var(--navy)":role?.toLowerCase().includes("champion")?"var(--green)":role?.toLowerCase().includes("technical")?"var(--amber)":"var(--ink-2)";
                       const roleBg = role?.toLowerCase().includes("economic")?"var(--navy-bg)":role?.toLowerCase().includes("champion")?"var(--green-bg)":role?.toLowerCase().includes("technical")?"var(--amber-bg)":"var(--bg-0)";
                       return (
-                        <div key={i} style={{background:roleBg,border:"1px solid "+roleColor+"33",borderRadius:10,padding:"12px 14px"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:(why||fear)?6:0}}>
+                        <div key={i} style={{background:roleBg,border:"1px solid "+roleColor+"33",borderRadius:10,padding:"12px 14px",position:"relative"}}>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,buyerPersonas:prev.icp.buyerPersonas.filter((_,j)=>j!==i)}}))} style={{position:"absolute",top:8,right:10,background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#aaa",padding:0}}>✕</button>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                             <span style={{fontSize:16}}>{roleIcon}</span>
                             <div style={{flex:1}}>
-                              <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{title}</div>
+                              <EF value={title} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,buyerPersonas:prev.icp.buyerPersonas.map((bp,j)=>j===i?(typeof bp==="object"?{...bp,title:v}:v):bp)}}))} single/>
                               <div style={{fontSize:10,fontWeight:600,color:roleColor,textTransform:"uppercase",letterSpacing:"0.3px"}}>{role}</div>
                             </div>
                           </div>
-                          {why&&<div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:4}}><strong style={{color:"var(--ink-0)"}}>Why this buyer:</strong> {why}</div>}
-                          {fear&&<div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:2}}><strong style={{color:"var(--red)"}}>Keeps them up:</strong> {fear}</div>}
-                          {reach&&<div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:2}}><strong style={{color:"var(--green)"}}>How to reach:</strong> {reach}</div>}
+                          <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:4}}><strong style={{color:"var(--ink-0)"}}>Why this buyer:</strong> <EF value={why} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,buyerPersonas:prev.icp.buyerPersonas.map((bp,j)=>j===i&&typeof bp==="object"?{...bp,whyThisBuyer:v}:bp)}}))} single/></div>
+                          <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:2}}><strong style={{color:"var(--red)"}}>Keeps them up:</strong> <EF value={fear} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,buyerPersonas:prev.icp.buyerPersonas.map((bp,j)=>j===i&&typeof bp==="object"?{...bp,keepUpAtNight:v}:bp)}}))} single/></div>
+                          <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,marginTop:2}}><strong style={{color:"var(--green)"}}>How to reach:</strong> <EF value={reach} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,buyerPersonas:prev.icp.buyerPersonas.map((bp,j)=>j===i&&typeof bp==="object"?{...bp,howToReach:v}:bp)}}))} single/></div>
                         </div>
                       );
                     })}
@@ -5847,20 +5865,30 @@ ${isOpen
                     <div>
                       <div className="field-label" style={{marginBottom:6}}>Top Pains We Solve</div>
                       {(sellerICP.icp.topPains||[]).filter(Boolean).map((p,i)=>(
-                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>• {p}</div>
+                        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:4,padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
+                          <span style={{fontSize:12,color:"#555",flexShrink:0}}>•</span>
+                          <EF value={p} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topPains:prev.icp.topPains.map((x,j)=>j===i?v:x)}}))} single/>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topPains:prev.icp.topPains.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0,flexShrink:0}}>✕</button>
+                        </div>
                       ))}
                     </div>
                     <div>
                       <div className="field-label" style={{marginBottom:6}}>Top Gains We Create</div>
                       {(sellerICP.icp.topGains||[]).filter(Boolean).map((g,i)=>(
-                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>• {g}</div>
+                        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:4,padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
+                          <span style={{fontSize:12,color:"#555",flexShrink:0}}>•</span>
+                          <EF value={g} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topGains:prev.icp.topGains.map((x,j)=>j===i?v:x)}}))} single/>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topGains:prev.icp.topGains.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0,flexShrink:0}}>✕</button>
+                        </div>
                       ))}
                     </div>
                     <div style={{gridColumn:"1/-1"}}>
                       <div className="field-label" style={{marginBottom:6}}>Customer Jobs-to-be-Done</div>
                       {(sellerICP.icp.customerJobs||[]).filter(Boolean).map((j,i)=>(
-                        <div key={i} style={{fontSize:12,color:"#555",padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
-                          <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",marginRight:6}}>{["Functional","Emotional","Social"][i]||""}</span>{j}
+                        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:4,padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
+                          <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",flexShrink:0,paddingTop:2}}>{["Functional","Emotional","Social"][i]||""}</span>
+                          <EF value={j} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,customerJobs:prev.icp.customerJobs.map((x,k)=>k===i?v:x)}}))} single/>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,customerJobs:prev.icp.customerJobs.filter((_,k)=>k!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0,flexShrink:0}}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -5878,14 +5906,28 @@ ${isOpen
                       <div className="field-label" style={{marginBottom:6}}>Best Channels to Reach This Buyer</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                         {(sellerICP.icp.tractionChannels||[]).filter(Boolean).map((c,i)=>(
-                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555"}}>{c}</span>
+                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                            <span contentEditable suppressContentEditableWarning
+                              onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==c)setSellerICP(p=>({...p,icp:{...p.icp,tractionChannels:p.icp.tractionChannels.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,tractionChannels:p.icp.tractionChannels.filter((_,j)=>j!==i)}}));}}
+                              style={{outline:"none",cursor:"text"}}>{c}</span>
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,tractionChannels:p.icp.tractionChannels.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                          </span>
                         ))}
                       </div>
                     </div>
                     {(sellerICP.icp.customerExamples||[]).filter(Boolean).length>0&&(
                       <div>
                         <div className="field-label" style={{marginBottom:4}}>Known Customers</div>
-                        <div style={{fontSize:12,color:"#777"}}>{(sellerICP.icp.customerExamples||[]).filter(Boolean).join(" · ")}</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                          {(sellerICP.icp.customerExamples||[]).filter(Boolean).map((c,i)=>(
+                            <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                              <span contentEditable suppressContentEditableWarning
+                                onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==c)setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.filter((_,j)=>j!==i)}}));}}
+                                style={{outline:"none",cursor:"text"}}>{c}</span>
+                              <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {(()=>{
