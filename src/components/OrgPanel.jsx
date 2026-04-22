@@ -17,8 +17,10 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMsg, setInviteMsg] = useState("");
   const [orgName, setOrgName] = useState(orgCtx?.name || "");
+  const [orgSellerUrl, setOrgSellerUrl] = useState(orgCtx?.seller_url || "");
   const [teamSessions, setTeamSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionFilter, setSessionFilter] = useState(""); // user_id filter
 
   const isAdmin = orgCtx?.userRole === "admin";
   const isManager = orgCtx?.userRole === "manager";
@@ -36,6 +38,12 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
     if (!orgName.trim() || !isAdmin) return;
     const result = await sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { name: orgName.trim() });
     if (result?.[0]) setOrgCtx(prev => ({ ...prev, name: orgName.trim() }));
+  };
+
+  const saveOrgSellerUrl = async () => {
+    if (!isAdmin) return;
+    const result = await sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { seller_url: orgSellerUrl.trim() });
+    if (result?.[0]) setOrgCtx(prev => ({ ...prev, seller_url: orgSellerUrl.trim() }));
   };
 
   const sendInvite = async () => {
@@ -85,7 +93,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
     setSessionsLoading(true);
     try {
       const res = await fetch(
-        `${SB_URL}/rest/v1/sessions?select=id,name,seller_url,updated_at,user_id&order=updated_at.desc&limit=50`,
+        `${SB_URL}/rest/v1/sessions?select=id,name,seller_url,updated_at,user_id&order=updated_at.desc&limit=100`,
         { headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } }
       );
       const rows = await res.json();
@@ -169,6 +177,26 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                   </div>
                 ) : (
                   <div style={{ fontSize: 14, color: "var(--ink-1)" }}>{orgCtx?.name}</div>
+                )}
+              </div>
+
+              {/* Default Seller URL */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Default Seller URL</div>
+                <div style={{ fontSize: 10, color: "var(--ink-3)", marginBottom: 6 }}>Pre-fills new sessions for all team members</div>
+                {isAdmin ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input value={orgSellerUrl} onChange={e => setOrgSellerUrl(e.target.value)}
+                      placeholder="https://yourcompany.com"
+                      style={{ flex: 1, fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}
+                      onKeyDown={e => e.key === "Enter" && saveOrgSellerUrl()} />
+                    <button onClick={saveOrgSellerUrl}
+                      style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: "var(--ink-1)" }}>{orgCtx?.seller_url || "Not set"}</div>
                 )}
               </div>
 
@@ -347,35 +375,71 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
           {/* ═══ SESSIONS TAB ═══ */}
           {tab === "sessions" && canViewTeam && (
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  Team Sessions ({teamSessions.length})
+                  Team Sessions
                 </div>
                 <button onClick={loadTeamSessions} disabled={sessionsLoading}
                   style={{ fontSize: 11, color: "var(--ink-3)", background: "none", border: "none", cursor: "pointer" }}>
                   {sessionsLoading ? "Loading..." : "↻ Refresh"}
                 </button>
               </div>
+
+              {/* Filter by team member */}
+              {members.length > 1 && (
+                <select value={sessionFilter} onChange={e => setSessionFilter(e.target.value)}
+                  style={{ width: "100%", fontSize: 12, padding: "7px 10px", border: "1.5px solid var(--line-0)", borderRadius: 8, marginBottom: 10, color: sessionFilter ? "var(--ink-0)" : "var(--ink-3)" }}>
+                  <option value="">All team members ({teamSessions.length})</option>
+                  {members.map(m => (
+                    <option key={m.id} value={m.id}>{m.name || m.email} ({teamSessions.filter(s => s.user_id === m.id).length})</option>
+                  ))}
+                </select>
+              )}
+
               {teamSessions.length === 0 && !sessionsLoading && (
                 <div style={{ fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: 20 }}>
                   No team sessions yet. Sessions appear here when team members save their work.
                 </div>
               )}
-              {teamSessions.map(s => (
-                <div key={s.id} style={{
-                  padding: "10px 12px", background: "#fff", border: "1px solid var(--line-0)",
-                  borderRadius: 8, marginBottom: 6,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{s.name || "Untitled"}</div>
-                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                        {memberName(s.user_id)} · {s.seller_url || "no URL"} · {new Date(s.updated_at).toLocaleDateString()}
+              {teamSessions
+                .filter(s => !sessionFilter || s.user_id === sessionFilter)
+                .map(s => {
+                  const ago = Date.now() - new Date(s.updated_at).getTime();
+                  const isRecent = ago < 86400000; // 24 hours
+                  const timeStr = ago < 60000 ? "just now"
+                    : ago < 3600000 ? `${Math.floor(ago/60000)}m ago`
+                    : ago < 86400000 ? `${Math.floor(ago/3600000)}h ago`
+                    : ago < 604800000 ? `${Math.floor(ago/86400000)}d ago`
+                    : new Date(s.updated_at).toLocaleDateString();
+                  const member = members.find(m => m.id === s.user_id);
+                  return (
+                    <div key={s.id} style={{
+                      padding: "10px 12px", background: "#fff", border: "1px solid var(--line-0)",
+                      borderRadius: 8, marginBottom: 6,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {isRecent && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)", flexShrink: 0 }} title="Active in last 24h" />}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {s.name || "Untitled"}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--ink-3)", display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>{member?.name || member?.email || "Unknown"}</span>
+                            {member?.role && (
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 10, background: roleBg(member.role), color: roleColor(member.role) }}>
+                                {member.role}
+                              </span>
+                            )}
+                            <span>·</span>
+                            <span>{s.seller_url || "no URL"}</span>
+                            <span>·</span>
+                            <span>{timeStr}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
           )}
 
