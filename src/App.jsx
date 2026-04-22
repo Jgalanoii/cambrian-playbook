@@ -5,6 +5,7 @@ import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import { sbAuth, sbGetUser, sbSessions, sbStoreTokens, sbRestoreSession, sbRefreshSession, sbClearTokens, sbSetTokenCallback } from "./lib/supabase.js";
 import { fetchOrgContext } from "./lib/org.js";
 import OrgPanel from "./components/OrgPanel.jsx";
+import SuperAdmin from "./components/SuperAdmin.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
 
 // ── PRODUCTION CONSOLE GUARD ─────────────────────────────────────────────
@@ -2046,6 +2047,7 @@ export default function App(){
   const[orgCtx,setOrgCtx]=useState(null); // {id, name, run_count, run_limit, plan, userRole, ...}
   const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
   const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
+  const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
   const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
   const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
@@ -4920,6 +4922,10 @@ ${isOpen
             {orgCtx&&<button onClick={()=>setOrgPanelOpen(true)}
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               👥 {orgCtx.userRole==="admin"?"Org":"Team"}
+            </button>}
+            {sbUser?.email==="itsjoegalano@gmail.com"&&<button onClick={()=>setSuperAdminOpen(true)}
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid #8B5CF6",background:"#8B5CF622",color:"#8B5CF6",cursor:"pointer"}}>
+              Admin
             </button>}
             {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
@@ -8350,6 +8356,11 @@ ${isOpen
       {/* Org settings / team panel */}
       {orgPanelOpen && orgCtx && (
         <OrgPanel orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} onClose={()=>setOrgPanelOpen(false)} />
+      )}
+
+      {/* Superuser analytics */}
+      {superAdminOpen && (
+        <SuperAdmin sbUser={sbUser} sbToken={sbToken} onClose={()=>setSuperAdminOpen(false)} />
       )}
 
       {/* Upgrade prompt modal */}
