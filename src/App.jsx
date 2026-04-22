@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
-import { sbAuth, sbGetUser, sbSessions } from "./lib/supabase.js";
+import { sbAuth, sbGetUser, sbSessions, sbStoreTokens, sbRestoreSession, sbRefreshSession, sbClearTokens, sbSetTokenCallback } from "./lib/supabase.js";
 import { fetchOrgContext } from "./lib/org.js";
 import OrgPanel from "./components/OrgPanel.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
@@ -1525,8 +1525,19 @@ function PasswordGate({ onAuth }) {
 
     // Clear any legacy password-gate session data
     sessionStorage.removeItem('cambrian_auth');
-    const token=localStorage.getItem('sb_token') || sessionStorage.getItem('sb_token');
-    if(token){
+
+    const restored = sbRestoreSession();
+    if (restored?.needsRefresh) {
+      // Token expired but refresh token exists — try refreshing
+      sbRefreshSession().then(async newToken => {
+        if (newToken) {
+          const u = await sbGetUser(newToken);
+          if (u?.id) { onAuth(u, newToken); return; }
+        }
+        sbClearTokens();
+      });
+    } else if (restored?.token) {
+      const token = restored.token;
       sbGetUser(token).then(async u=>{
         if(u?.id){
           // Accept pending invitation if present
@@ -1546,7 +1557,7 @@ function PasswordGate({ onAuth }) {
           }
           onAuth(u,token);
         } else {
-          sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');
+          sbClearTokens();
         }
       });
     }
@@ -1558,12 +1569,12 @@ function PasswordGate({ onAuth }) {
     setErr("");setLoading(true);
     if(mode==="signup"){
       const d=await sbAuth('signup',{email,password:pw,data:{first_name:first,last_name:last,full_name:first+' '+last}});
-      if(d.access_token){sessionStorage.setItem('sb_token',d.access_token);sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');onAuth(d.user,d.access_token);}
+      if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
       else if(d.id){setVerifying(true);}
       else setErr(d.msg||d.error_description||'Sign up failed');
     } else {
       const d=await sbAuth('token?grant_type=password',{email,password:pw});
-      if(d.access_token){sessionStorage.setItem('sb_token',d.access_token);sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');onAuth(d.user,d.access_token);}
+      if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
       else setErr(d.error_description||'Incorrect email or password');
     }
     setLoading(false);
@@ -3321,6 +3332,13 @@ ${isOpen
 
   React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
 
+  // Auto-populate seller URL from org defaults for new sessions
+  useEffect(() => {
+    if (orgCtx?.seller_url && !sellerUrl && !currentSessionId && !sellerInput) {
+      setSellerInput(orgCtx.seller_url);
+    }
+  }, [orgCtx?.seller_url]);
+
   // ── AUTO-SAVE ─────────────────────────────────────────────────────────────
   // Debounced auto-save: writes to Supabase 30s after the last meaningful
   // state change. Skips if user is not logged in, or if there's no seller URL
@@ -4561,6 +4579,8 @@ ${isOpen
   if(!authed) return <PasswordGate onAuth={(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
     if(u?.id) fetchOrgContext(u.id,tok).then(org=>{ if(org) setOrgCtx(org); });
+    // Auto-refresh tokens — update app state when token is silently refreshed
+    sbSetTokenCallback((newToken) => { setSbToken(newToken); setAuthToken(newToken); });
   }}/>;
 
   // ── COMMAND PALETTE REGISTRY ────────────────────────────────────────────────
@@ -4905,7 +4925,7 @@ ${isOpen
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
             </button>}
-            {sbUser&&<button onClick={()=>{sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');window.location.reload();}}
+            {sbUser&&<button onClick={()=>{sbClearTokens();window.location.reload();}}
               style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#aaa",cursor:"pointer"}}>
               {sbUser.user_metadata?.first_name||sbUser.email?.split('@')[0]} · Sign out
             </button>}
