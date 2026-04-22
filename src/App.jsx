@@ -2349,49 +2349,61 @@ ${scaleGuidance}
       const signalCtx = [...KL_FIT_RULES.signals.positive, ...KL_FIT_RULES.signals.negative].join("; ");
 
       const prompt =
-        `You are a sales strategist scoring ICP fit. Use THREE dimensions:\n\n`+
-        `━━━ DIMENSION 1: ICP ALIGNMENT (40% of score) ━━━\n`+
-        `Does the target match the seller's ideal buyer profile?\n`+
-        `HIGH-FRICTION INDUSTRIES (research-backed avg fit scores): ${highFrictionCtx}\n`+
-        `UNDERSERVED HIGH-FIT SEGMENTS: ${highFitCtx}\n`+
+        `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
+        `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n\n`+
+        `━━━ DIMENSION 1: ICP ALIGNMENT (40 points max) ━━━\n`+
+        `Score by adding/subtracting fixed points from a BASE of 20:\n`+
+        `INDUSTRY MATCH:\n`+
+        `  +12 = target industry is in the seller's ICP industry list (exact match)\n`+
+        `  +6  = target is in an adjacent/related industry\n`+
+        `  +0  = no industry match\n`+
+        `  -10 = HIGH-FRICTION INDUSTRY: ${highFrictionCtx}\n`+
+        `SIZE MATCH:\n`+
+        `  +5  = target size matches seller's ICP companySize\n`+
+        `  +2  = target is one bracket away from ICP companySize\n`+
+        `  -3  = target is 2+ brackets away\n`+
+        `OWNERSHIP:\n`+
+        `  +3  = VC-backed or PE-backed (active buying mandate)\n`+
+        `  +1  = private\n`+
+        `  +0  = public\n`+
         `SELLER STAGE THRESHOLDS: ${stageCtx}\n`+
         `BUYING SIGNALS: ${signalCtx}\n`+
-        `Ownership: VC-backed +2 · PE-backed = cost-driven buyer · Private +2 vs public.\n\n`+
-        `━━━ DIMENSION 2: CUSTOMER SIMILARITY (30% of score) ━━━\n`+
+        `Clamp dim1 to 0-40.\n\n`+
+        `━━━ DIMENSION 2: CUSTOMER SIMILARITY (30 points max) ━━━\n`+
         (customerList.length
           ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
-            `For each target, assess similarity to these named customers:\n`+
-            `- Same industry AND similar size as a named customer → score contribution 25-30\n`+
-            `- Same industry, different size → 15-20\n`+
-            `- Different industry but similar buyer persona/use case → 8-12\n`+
-            `- No meaningful similarity → 0-5\n`+
-            `In "customerSimilarity" field: name the most similar existing customer and WHY (1 sentence). If no close match, say "No close analogue in current customer base."\n\n`
-          : `No named customers available — score this dimension at 15 (neutral) for all targets.\n\n`)+
-        `━━━ DIMENSION 3: COMPETITIVE LANDSCAPE (30% of score) ━━━\n`+
-        `From your training knowledge (press releases, partnership announcements, tech databases, earnings calls):\n`+
-        `- What vendors does this target CURRENTLY USE in the seller's category?\n`+
-        `- If the target uses a competitor the seller commonly displaces → score contribution 22-30 (displacement opportunity)\n`+
-        `- If the target is locked into a deep incumbent with high switching costs (Oracle, SAP, Salesforce enterprise-wide) → 5-12 (hard displacement)\n`+
-        `- If no known incumbent in the seller's category → 18-25 (greenfield opportunity)\n`+
+            `Score using EXACTLY these fixed values (pick the HIGHEST that applies):\n`+
+            `  27 = same industry AND similar size (within one bracket) as a named customer\n`+
+            `  17 = same industry, different size (2+ brackets apart)\n`+
+            `  10 = different industry but similar buyer persona or use case\n`+
+            `   3 = no meaningful similarity to any named customer\n`+
+            `In "customerSimilarity": name the most similar existing customer and WHY (1 sentence). If no close match, say "No close analogue in current customer base."\n\n`
+          : `No named customers available — score this dimension at 15 (fixed neutral) for ALL targets.\n\n`)+
+        `━━━ DIMENSION 3: COMPETITIVE LANDSCAPE (30 points max) ━━━\n`+
+        `Score using EXACTLY these fixed values based on VERIFIABLE knowledge only:\n`+
+        `  26 = target uses a competitor the seller commonly displaces (known displacement opportunity)\n`+
+        `  20 = no known incumbent in the seller's category (greenfield — DEFAULT when uncertain)\n`+
+        `  10 = target is locked into a deep incumbent with high switching costs (Oracle, SAP, Salesforce enterprise-wide)\n`+
+        `IMPORTANT: If you are NOT CERTAIN what vendor the target uses in this category, score 20 (greenfield default). Do NOT guess — guessing causes score variance.\n`+
         (competitorList.length ? `Seller commonly displaces: ${competitorList.join(", ")}.\n` : "")+
-        `In "incumbentRisk" field: name the likely incumbent vendor (or "No known incumbent") and 1-sentence switching-cost assessment.\n\n`+
-        `━━━ TOTAL SCORE = Dim1 + Dim2 + Dim3 (max 100) ━━━\n`+
+        `In "incumbentRisk": name the incumbent vendor ONLY if you are certain, otherwise say "No known incumbent in this category." 1-sentence switching-cost assessment.\n\n`+
+        `━━━ TOTAL SCORE = dim1 + dim2 + dim3 (max 100) ━━━\n`+
         `Band mapping — score MUST match label:\n`+
         `  75-100 → "Strong Fit"\n`+
         `  55-74  → "Potential Fit"\n`+
         `   0-54  → "Poor Fit"\n\n`+
         `━━━ OUTPUT RULES ━━━\n`+
         `- Return THREE separate dimension scores (dim1, dim2, dim3). The TOTAL is computed automatically — do NOT return a "score" field.\n`+
-        `- NEVER invent facts. If unsure about a company's incumbent vendor, ownership, or employee count, say "Unknown".\n`+
-        `- 'reason' is 2-3 sentences. State WHY this score — cite the strongest dimension AND a specific fact (industry match, size, ownership, known vendor, similar customer win). If a named seller customer is similar, cite them by name.\n`+
-        `- 'customerSimilarity' is 2 sentences: name the MOST similar existing seller customer and explain the parallel (same industry, similar size, same buyer persona, similar use case). If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
-        `- 'incumbentRisk' is 2 sentences: name the likely incumbent vendor in the seller's category at this target (or "No known incumbent"). Assess switching cost and whether this is a displacement, adjacent-land, or greenfield opportunity.\n`+
-        `- Do NOT use "tier", "wall", "band", "bucket" in any field.\n`+
-        `- CONSISTENCY: For the SAME company across multiple runs, the per-dimension scores should be within 3 points. Anchor your judgment to concrete, observable facts (industry, size, known vendors) not subjective impressions.\n\n`+
+        `- Each dimension score MUST be one of the fixed values above. Do NOT pick values between the fixed points.\n`+
+        `- NEVER invent facts. If unsure about a company's incumbent vendor, ownership, or employee count, say "Unknown" and use the default score.\n`+
+        `- 'reason' is 2-3 sentences. Cite the specific facts that drove each dimension score.\n`+
+        `- 'customerSimilarity' is 1-2 sentences: name the MOST similar existing seller customer and explain the parallel. If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
+        `- 'incumbentRisk' is 1-2 sentences: name the incumbent vendor ONLY if certain, and assess switching cost.\n`+
+        `- Do NOT use "tier", "wall", "band", "bucket" in any field.\n\n`+
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":25,"dim3":24,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations). State Farm's implementation achieved 40% efficiency gain, which is directly referenceable.","incumbentRisk":"Currently uses Workday for core HR — deeply integrated. The seller would need to land adjacent (rewards/recognition) rather than displace. Moderate switching cost for the adjacent category.","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations).","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt, { maxTokens: 7500 });
@@ -3097,6 +3109,8 @@ ${isOpen
     if(d.postCall) setPostCall(d.postCall);
     if(d.solutionFit) setSolutionFit(d.solutionFit);
     setShowSessions(false);setStep(d.sellerUrl?1:0);
+    // Reset auto-save snapshot so restored state isn't immediately re-saved
+    lastAutoSaveSnap.current = JSON.stringify(d);
   };
 
   const deleteSession=async(id)=>{
@@ -3106,6 +3120,37 @@ ${isOpen
   };
 
   React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
+
+  // ── AUTO-SAVE ─────────────────────────────────────────────────────────────
+  // Debounced auto-save: writes to Supabase 30s after the last meaningful
+  // state change. Skips if user is not logged in, or if there's no seller URL
+  // (nothing worth saving yet). Uses a snapshot comparison to avoid redundant
+  // writes.
+  const lastAutoSaveSnap = useRef(null);
+  useEffect(() => {
+    if (!sbUser || !sbToken || !sellerUrl) return;
+    const timer = setTimeout(async () => {
+      const snap = getSessionSnap();
+      const snapJson = JSON.stringify(snap);
+      if (snapJson === lastAutoSaveSnap.current) return; // no changes
+      lastAutoSaveSnap.current = snapJson;
+      try {
+        const nm = sessionName || sellerUrl || 'Session ' + new Date().toLocaleDateString();
+        await sbSessions('POST', 'users?on_conflict=id', sbToken, { id: sbUser.id, email: sbUser.email, name: sbUser.user_metadata?.full_name || sbUser.email, role: 'rep' });
+        if (currentSessionId) {
+          await sbSessions('PATCH', `sessions?id=eq.${currentSessionId}`, sbToken, { name: nm, seller_url: sellerUrl, data: snap });
+        } else {
+          const res = await sbSessions('POST', 'sessions', sbToken, { user_id: sbUser.id, name: nm, seller_url: sellerUrl, data: snap });
+          if (res?.[0]?.id) { setCurrentSessionId(res[0].id); setSessionName(nm); }
+        }
+        setSaveStatus('auto-saved'); setTimeout(() => setSaveStatus(''), 3000);
+      } catch (e) { console.warn('[auto-save] failed:', e.message); }
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [sellerUrl, sellerICP, sellerICPInput, icpDelta, products, sellerDocs, sellerProofPoints,
+      rows, cohorts, fitScores, accountQueue, selectedAccount, brief, riverHypo,
+      gateAnswers, riverData, notes, postCall, solutionFit, dealValue, dealClassification,
+      sellerStage, icpTargeting, productUrls, contactRole]);
 
   // ── KEYBOARD SHORTCUTS (Phase 2c) ─────────────────────────────────────────
   // Global keydown listener. Only fires when no input/textarea has focus
@@ -4599,9 +4644,9 @@ ${isOpen
               <button onClick={saveSession}
                 style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,cursor:"pointer",
                   border:"1.5px solid "+(sbUser?"var(--green)":"var(--amber)"),
-                  background:saveStatus==="saved"?"var(--green-bg)":sbUser?"#fff":"var(--amber-bg)",
-                  color:sbUser?(saveStatus==="saved"?"var(--green)":"var(--green)"):"#7A5010"}}>
-                {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":saveStatus==="saved"?"✓":"💾"} {saveStatus==="saved"?"Saved":"Save"}
+                  background:(saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green-bg)":sbUser?"#fff":"var(--amber-bg)",
+                  color:sbUser?((saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green)":"var(--green)"):"#7A5010"}}>
+                {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":(saveStatus==="saved"||saveStatus==="auto-saved")?"✓":"💾"} {saveStatus==="auto-saved"?"Auto-saved":saveStatus==="saved"?"Saved":"Save"}
               </button>
             )}
             {orgCtx&&<button onClick={()=>setOrgPanelOpen(true)}
@@ -4681,7 +4726,7 @@ ${isOpen
               <div style={{padding:12,borderTop:"1px solid var(--line-0)"}}>
                 <input value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder={sellerUrl||"Session name..."} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
                 <button onClick={saveSession} style={{width:"100%",padding:"10px",borderRadius:8,background:"var(--ink-0)",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"}}>
-                  {saveStatus==="saving"?"Saving...":saveStatus==="saved"?"✓ Saved":"Save Session"}
+                  {saveStatus==="saving"?"Saving...":saveStatus==="saved"?"✓ Saved":saveStatus==="auto-saved"?"✓ Auto-saved":"Save Session"}
                 </button>
               </div>
             </div>
