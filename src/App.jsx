@@ -577,7 +577,7 @@ async function callAI(prompt, { maxTokens = 5500 } = {}){
 // CRITICAL: includes explicit instructions telling Haiku to GROUND every
 // claim in this proof — cite named customers, name differentiators, flag
 // unsupported claims rather than asserting them.
-function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], sellerProofPoints = [] }) {
+function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], sellerProofPoints = [], icpEdits = [] }) {
   if (!sellerICP?.icp) return "";
   const icp = sellerICP.icp;
   const out = [];
@@ -644,7 +644,34 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   out.push(`8. NEVER INVENT STATISTICS ABOUT THE SELLER. Do not fabricate customer counts, revenue numbers, market share, network size, retailer counts, or any other quantitative claim about the selling organization. Only cite numbers that appear in the proof points, uploaded docs, or ICP above. If you don't have a verified number, describe the capability qualitatively ("extensive retail network" not "500K+ retailers"). Making up stats destroys rep credibility.`);
   out.push(`9. NEVER INVENT FACTS ABOUT THE TARGET COMPANY. Do not fabricate revenue, employee counts, executives, products, partnerships, or acquisitions. Use training knowledge confidently for well-known companies. For genuinely unknown facts, use an empty string — do NOT write "[Verify]" or placeholder text. A rep who cites a wrong fact in a sales call loses credibility instantly.`);
 
+  // Append user corrections — these override any conflicting AI inference
+  const editCtx = buildUserEditContext(icpEdits);
+  if (editCtx) out.push(editCtx);
+
   return out.join("\n") + "\n\n";
+}
+
+// ── USER EDIT CONTEXT ────────────────────────────────────────────────────
+// Formats user ICP edits into a prompt injection that tells the AI engine
+// to treat user corrections as highest-priority ground truth. User edits
+// represent proprietary knowledge that may not be publicly available.
+function buildUserEditContext(edits) {
+  if (!edits?.length) return "";
+  const out = ["\n═══ USER CORRECTIONS (HIGHEST PRIORITY — override all other signals) ═══"];
+  out.push("The seller has manually edited the following ICP fields. These corrections");
+  out.push("reflect proprietary knowledge and MUST take precedence over web research,");
+  out.push("training data, or any other inference. Treat these as ground truth.\n");
+  // Dedupe to most recent edit per field
+  const latest = {};
+  edits.forEach(e => { latest[e.field] = e; });
+  Object.values(latest).forEach(e => {
+    out.push(`  CORRECTED: ${e.field}`);
+    if (e.oldValue) out.push(`    Was: ${String(e.oldValue).slice(0, 200)}`);
+    out.push(`    Now: ${String(e.newValue).slice(0, 200)}`);
+  });
+  out.push("\nWhen any AI-generated content conflicts with these corrections, ALWAYS");
+  out.push("use the corrected values. The user knows their business better than any model.\n");
+  return out.join("\n");
 }
 
 // generateBrief is NON-ASYNC so it returns skeleton + raw promises
@@ -673,7 +700,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // catalog, and proof points. generateBrief doesn't have sellerProofPoints
   // in scope (it's component state, not a param) — those are injected by the
   // component-level calls (hypothesis, post-call, solution fit).
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products });
+  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, icpEdits });
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
@@ -1969,6 +1996,7 @@ export default function App(){
   const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
   const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
   const[sellerICP,setSellerICP]=useState(null); // built from seller URL
+  const[icpEdits,setIcpEdits]=useState([]); // [{field, oldValue, newValue, timestamp}]
   const[icpLoading,setIcpLoading]=useState(false);
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
   const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
@@ -2414,6 +2442,7 @@ ${scaleGuidance}
       ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
         + (sellerICP.icp.customerExamples?.length ? `\nKNOWN CUSTOMER ANALOGUES (companies similar to these should score higher; do NOT score these themselves — they're already customers): ${sellerICP.icp.customerExamples.join(", ")}` : "")
         + (sellerICP.icp.uniqueDifferentiators?.length ? `\nSELLER DIFFERENTIATORS (use to break ties — companies that would benefit MOST from these score higher): ${sellerICP.icp.uniqueDifferentiators.join(" · ")}` : "")
+        + buildUserEditContext(icpEdits)
       : "";
 
     // Batches run in PARALLEL via Promise.all, each updating state as it
@@ -2884,6 +2913,7 @@ ${isOpen
     }
 
     setIcpLoading(true);
+    setIcpEdits([]); // Clear edits on regeneration — fresh start
 
     // Phase 1 — research (training-knowledge recall, no web_search tool yet)
     const researchPrompt =
@@ -3028,6 +3058,56 @@ ${isOpen
     setIcpLoading(false);
   };
 
+  // ── ICP EDIT TRACKING ──────────────────────────────────────────────────────
+  // Detects when user edits ICP fields (vs. AI generation) and logs the
+  // changes. Skips the initial AI-generated set (when icpLoading transitions
+  // from true to false). Only tracks changes after the ICP is built.
+  const prevICPRef = useRef(null);
+  const icpBuiltRef = useRef(false);
+  useEffect(() => {
+    if (icpLoading) { icpBuiltRef.current = false; return; }
+    if (!sellerICP?.icp) { prevICPRef.current = null; return; }
+    if (!icpBuiltRef.current) {
+      // First time ICP is set after loading — this is AI-generated, not a user edit
+      icpBuiltRef.current = true;
+      prevICPRef.current = JSON.parse(JSON.stringify(sellerICP));
+      return;
+    }
+    const prev = prevICPRef.current;
+    if (!prev?.icp) { prevICPRef.current = JSON.parse(JSON.stringify(sellerICP)); return; }
+
+    // Diff top-level fields
+    const newEdits = [];
+    const topFields = ["sellerDescription", "marketCategory", "sellerName"];
+    topFields.forEach(f => {
+      if (sellerICP[f] !== prev[f]) newEdits.push({ field: f, oldValue: prev[f], newValue: sellerICP[f], timestamp: Date.now() });
+    });
+    // Diff ICP sub-fields
+    const icpFields = ["companySize", "revenueRange", "dealSize", "salesCycle", "adoptionProfile",
+      "priorityInitiative", "successFactors", "perceivedBarriers", "decisionCriteria", "buyerJourney"];
+    icpFields.forEach(f => {
+      if (sellerICP.icp[f] !== prev.icp[f]) newEdits.push({ field: `icp.${f}`, oldValue: prev.icp[f], newValue: sellerICP.icp[f], timestamp: Date.now() });
+    });
+    // Diff array fields
+    const arrFields = ["industries", "disqualifiers", "topPains", "topGains", "customerJobs",
+      "competitiveAlternatives", "uniqueDifferentiators", "tractionChannels", "customerExamples", "ownershipTypes", "geographies"];
+    arrFields.forEach(f => {
+      const oldArr = JSON.stringify(prev.icp[f] || []);
+      const newArr = JSON.stringify(sellerICP.icp[f] || []);
+      if (oldArr !== newArr) newEdits.push({ field: `icp.${f}`, oldValue: (prev.icp[f]||[]).join("; "), newValue: (sellerICP.icp[f]||[]).join("; "), timestamp: Date.now() });
+    });
+    // Diff buyer personas
+    const oldPersonas = JSON.stringify(prev.icp.buyerPersonas || []);
+    const newPersonas = JSON.stringify(sellerICP.icp.buyerPersonas || []);
+    if (oldPersonas !== newPersonas) newEdits.push({ field: "icp.buyerPersonas", oldValue: (prev.icp.buyerPersonas||[]).map(p => typeof p === "object" ? p.title : p).join("; "), newValue: (sellerICP.icp.buyerPersonas||[]).map(p => typeof p === "object" ? p.title : p).join("; "), timestamp: Date.now() });
+
+    if (newEdits.length) {
+      console.log("[icp-edit]", newEdits.map(e => `${e.field}: "${e.oldValue}" → "${e.newValue}"`).join(", "));
+      setIcpEdits(prev => [...prev, ...newEdits]);
+    }
+    prevICPRef.current = JSON.parse(JSON.stringify(sellerICP));
+  }, [sellerICP, icpLoading]);
+
   // ── ICP DELTA ANALYSIS — compare seller's internal ICP vs public signals ─
   // Shows where the seller's self-reported ICP diverges from what the market
   // sees. Highlights blind spots (e.g. "your website says enterprise, but you
@@ -3139,7 +3219,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -3174,6 +3254,7 @@ ${isOpen
     if(d.sellerLinkedIn) setSellerLinkedIn(d.sellerLinkedIn);
     if(d.sellerICPInput) setSellerICPInput(d.sellerICPInput);
     if(d.icpDelta) setIcpDelta(d.icpDelta);
+    if(d.icpEdits?.length) setIcpEdits(d.icpEdits);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
@@ -3645,7 +3726,7 @@ ${isOpen
     // "why buy from us" thread through hypothesis talk tracks, JOLT plan,
     // challenger insight, and route recommendation. Talk tracks should
     // cite NAMED customers from the proof pack, not invent generic claims.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits });
 
     // Build negotiation framework context from imported knowledge layer
     const joltCtx = KL_JOLT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
@@ -3772,6 +3853,8 @@ ${isOpen
 
       `═══ INPUTS ═══\n`+
       `SELLER: ${seller} | PRODUCTS: ${products_ctx}\n`+
+      (sellerICP?.icp ? `ICP CONTEXT: Industries: ${(sellerICP.icp.industries||[]).join(", ")} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Pains: ${(sellerICP.icp.topPains||[]).join("; ")}\n` : "")+
+      buildUserEditContext(icpEdits)+
       `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n\n`+
 
       `═══ OUTPUT REQUIREMENTS ═══\n`+
@@ -3839,7 +3922,7 @@ ${isOpen
     // ground its "confirmedSolutions" + "saRecommendation" in the
     // seller's actual differentiators and named customer wins, not
     // generic SA-school theory.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits });
 
     const prompt =
       proofPack +
@@ -3926,7 +4009,7 @@ ${isOpen
     }).join("\n");
 
     // Inject seller proof pack so deal routing is grounded in real capabilities
-    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints });
+    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits });
 
     const postCallPrompt =
       postCallProof +
@@ -4407,7 +4490,7 @@ ${isOpen
       brief?.openingAngle ? `Opening angle: ${brief.openingAngle.slice(0,150)}` : "",
       riverHypo?.reality ? `Hypothesis (Reality): ${riverHypo.reality.slice(0,100)}` : "",
       notes ? `Rep notes: ${notes.slice(0,200)}` : "",
-      buildSellerProofPack({sellerICP, sellerDocs, products, sellerProofPoints}).slice(0, 800),
+      buildSellerProofPack({sellerICP, sellerDocs, products, sellerProofPoints, icpEdits}).slice(0, 800),
     ].filter(Boolean).join("\n");
 
     // Build conversation history (last 6 turns max)
