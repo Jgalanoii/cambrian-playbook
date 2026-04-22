@@ -2048,6 +2048,21 @@ export default function App(){
   const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
   const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
   const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
+  // Track input signatures for each stage to detect "no change" on regenerate.
+  // Each key stores a JSON string of the inputs used for the last generation.
+  const lastGenSig = useRef({ icp: "", brief: "", hypo: "", postCall: "" });
+  const getIcpSig = () => JSON.stringify([sellerUrl, sellerStage, icpTargeting]);
+  const getBriefSig = () => JSON.stringify([selectedAccount?.company, sellerICP?.marketCategory, icpEdits.length, contactRole]);
+  const getHypoSig = () => JSON.stringify([brief?.companySnapshot?.slice(0,50), brief?.strategicTheme?.slice(0,50), selectedAccount?.company]);
+  const getPostCallSig = () => JSON.stringify([gateAnswers, riverData, notes, selectedAccount?.company]);
+  const checkNoChange = (stage, getSig) => {
+    const sig = getSig();
+    if (lastGenSig.current[stage] && lastGenSig.current[stage] === sig) {
+      return !confirm("No inputs have changed since the last generation — results are unlikely to differ. Regenerate anyway?");
+    }
+    lastGenSig.current[stage] = sig;
+    return false;
+  };
   const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
   const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
@@ -3096,6 +3111,7 @@ ${isOpen
           const parsed = JSON.parse(m[0]);
           if(parsed.sellerName||parsed.icp){
             setSellerICP(parsed);
+            lastGenSig.current.icp = getIcpSig();
             // Optimistically increment local usage counter (server increments authoritatively)
             setOrgCtx(prev => {
               if (!prev) return prev;
@@ -3643,6 +3659,7 @@ ${isOpen
       skeleton = result.skeleton;
       mergers = result.mergers;
       earlyDone = result.earlyDone;
+      lastGenSig.current.brief = getBriefSig();
       allDone = result.allDone;
     } catch (e) {
       console.error("[pickAccount] generateBrief CRASHED:", e);
@@ -3876,6 +3893,7 @@ ${isOpen
 
     if(result){
       setRiverHypo(normalizeRiverHypo(result));
+      lastGenSig.current.hypo = getHypoSig();
     } else {
       setRiverHypo({
         reality:"Could not generate — click to edit manually.",
@@ -4124,7 +4142,7 @@ ${isOpen
         const last = partial.lastIndexOf('}');
         if (last > 0) {
           const parsed = JSON.parse(partial.slice(0, last + 1));
-          if (parsed.callSummary) setPostCall(parsed);
+          if (parsed.callSummary) { setPostCall(parsed); lastGenSig.current.postCall = getPostCallSig(); }
         }
       } catch { /* partial JSON */ }
     }, 3500);
@@ -4621,12 +4639,12 @@ ${isOpen
     { id:"act-save",    icon:"💾", label:"Save session",        section:"Actions", hint:"⌘S", action:saveSession },
     { id:"act-print",   icon:"🖨", label:"Print / Save as PDF", section:"Actions", hint:"⌘P", action:doExport },
     ...(sellerICP?.icp ? [
-      { id:"act-regen-icp", icon:"↻", label:"Regenerate ICP",   section:"Actions", action:()=>{if(confirm("Regenerate ICP?"))buildSellerICP(sellerUrl,{forceRefresh:true});} },
+      { id:"act-regen-icp", icon:"↻", label:"Regenerate ICP",   section:"Actions", action:()=>{if(!checkNoChange("icp",getIcpSig))buildSellerICP(sellerUrl,{forceRefresh:true});} },
       { id:"act-rfp",       icon:"📡", label:"Refresh RFP Intel",section:"Actions", action:()=>fetchRFPIntel({forceRefresh:true}) },
       { id:"act-resources", icon:"📁", label:"Open Resources",    section:"Actions", action:()=>setResourcesOpen(true) },
     ] : []),
     ...(brief ? [
-      { id:"act-regen-brief", icon:"↻", label:"Regenerate Brief", section:"Actions", action:()=>pickAccount(selectedAccount) },
+      { id:"act-regen-brief", icon:"↻", label:"Regenerate Brief", section:"Actions", action:()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);} },
     ] : []),
     // Accounts (searchable by company name)
     ...(cohorts.flatMap(c => c.members.map(m => ({
@@ -5621,7 +5639,7 @@ ${isOpen
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
                   <ExportMenu onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
                   <button
-                    onClick={()=>{if(!icpLoading&&confirm("Regenerate ICP from scratch? The cached version will be replaced."))buildSellerICP(sellerUrl,{forceRefresh:true});}}
+                    onClick={()=>{if(!icpLoading&&!checkNoChange("icp",getIcpSig))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     disabled={icpLoading}
                     title="Force rebuild ICP (clears cache)"
                     style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:icpLoading?"var(--bg-1)":"#fff",color:icpLoading?"var(--ink-3)":"#555",cursor:icpLoading?"wait":"pointer"}}>
@@ -7082,7 +7100,7 @@ ${isOpen
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
                       <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
-                      <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>pickAccount(selectedAccount)}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                      <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                       <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                     </div>
                   </div>
@@ -7758,7 +7776,7 @@ ${isOpen
 
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
-                  <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>pickAccount(selectedAccount)}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                  <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                 </div>
@@ -7945,7 +7963,7 @@ ${isOpen
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(5)}>← Back to Brief</button>
-              <button className="btn btn-secondary" onClick={()=>buildRiverHypo(brief,selectedAccount)} disabled={riverHypoLoading}>
+              <button className="btn btn-secondary" onClick={()=>{if(!checkNoChange("hypo",getHypoSig))buildRiverHypo(brief,selectedAccount);}} disabled={riverHypoLoading}>
                 {riverHypoLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
               </button>
               <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
@@ -8318,7 +8336,7 @@ ${isOpen
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
-                  <button className="btn btn-gold" disabled={postLoading} onClick={()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}>{postLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                  <button className="btn btn-gold" disabled={postLoading} onClick={()=>{if(!checkNoChange("postCall",getPostCallSig)){setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}}>{postLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(9);}}>
                     Solution Fit Review →
                   </button>
