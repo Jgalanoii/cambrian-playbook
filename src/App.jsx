@@ -6,6 +6,22 @@ import { sbAuth, sbGetUser, sbSessions } from "./lib/supabase.js";
 import { fetchOrgContext } from "./lib/org.js";
 import OrgPanel from "./components/OrgPanel.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
+
+// ── PRODUCTION CONSOLE GUARD ─────────────────────────────────────────────
+// Suppress all console output in production to prevent IP/trade secret
+// leakage via DevTools. Only keeps console.error for critical failures.
+if (import.meta.env.PROD) {
+  const noop = () => {};
+  console.log = noop;
+  console.warn = noop;
+  console.info = noop;
+  console.debug = noop;
+  console.table = noop;
+  console.dir = noop;
+  console.trace = noop;
+  // Keep console.error for crash debugging
+}
+
 // ── KNOWLEDGE LAYER ──────────────────────────────────────────────────────
 // Sensitive heuristics (scoring formulas, industry benchmarks, framework
 // injections) are served from /api/knowledge.js behind JWT auth — they're
