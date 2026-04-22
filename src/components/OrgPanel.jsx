@@ -245,11 +245,11 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
               {isAdmin && (
                 <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Invite a Team Member</div>
+                  <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                    placeholder="email@company.com" type="email"
+                    style={{ width: "100%", fontSize: 13, padding: "10px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8, marginBottom: 8, boxSizing: "border-box" }}
+                    onKeyDown={e => e.key === "Enter" && sendInvite()} />
                   <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                    <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                      placeholder="email@company.com" type="email"
-                      style={{ flex: 1, fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}
-                      onKeyDown={e => e.key === "Enter" && sendInvite()} />
                     <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
                       style={{ fontSize: 12, padding: "8px 10px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}>
                       <option value="rep">Rep</option>
@@ -258,7 +258,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                     </select>
                     <button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()}
                       style={{
-                        padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "#fff",
+                        flex: 1, padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "#fff",
                         border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
                         opacity: inviteLoading || !inviteEmail.trim() ? 0.5 : 1,
                       }}>
