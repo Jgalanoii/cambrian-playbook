@@ -678,7 +678,7 @@ function buildUserEditContext(edits) {
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
 // wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
-function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null){
+function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null, icpEdits=[]){
   const co  = member.company;
   const url = member.company_url || co;
 
@@ -3570,7 +3570,8 @@ ${isOpen
         productUrls,
         sellerICP,
         { execs: cachedExecs, brief: cachedBrief },
-        onStream
+        onStream,
+        icpEdits
       );
       skeleton = result.skeleton;
       mergers = result.mergers;
