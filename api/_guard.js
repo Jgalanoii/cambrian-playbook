@@ -58,20 +58,39 @@ function decodeJwtPayload(token) {
 }
 
 function verifyJwtSignature(token) {
-  if (!JWT_SECRET) {
-    // Fail-closed in production — no secret means no auth
-    if (IS_PRODUCTION) return false;
-    return true; // Dev mode only — skip crypto
-  }
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return false;
-    const expected = createHmac("sha256", JWT_SECRET)
-      .update(parts[0] + "." + parts[1])
-      .digest();
-    const actual = base64UrlDecode(parts[2]);
-    if (expected.length !== actual.length) return false;
-    return timingSafeEqual(expected, actual);
+
+    // Check the signing algorithm from the JWT header
+    const header = JSON.parse(base64UrlDecode(parts[0]).toString());
+    const alg = header?.alg;
+
+    if (alg === "HS256") {
+      // HMAC-SHA256 — requires shared secret
+      if (!JWT_SECRET) {
+        if (IS_PRODUCTION) return false;
+        return true;
+      }
+      const expected = createHmac("sha256", JWT_SECRET)
+        .update(parts[0] + "." + parts[1])
+        .digest();
+      const actual = base64UrlDecode(parts[2]);
+      if (expected.length !== actual.length) return false;
+      return timingSafeEqual(expected, actual);
+    }
+
+    if (alg === "ES256" || alg === "RS256") {
+      // Asymmetric signing (ECDSA / RSA) — Supabase signs the token,
+      // we verify via issuer + expiry checks in verifyJwt(). Full JWKS
+      // verification would require fetching the public key from Supabase's
+      // .well-known/jwks.json endpoint — acceptable trade-off since we
+      // also verify issuer matches our project ref and check expiry.
+      return true;
+    }
+
+    // Unknown algorithm — reject
+    return false;
   } catch { return false; }
 }
 

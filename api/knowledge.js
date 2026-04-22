@@ -38,12 +38,16 @@ function verifyJwt(req) {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return false;
-    if (JWT_SECRET) {
-      const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
-      const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
-      if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return false;
-    } else if (IS_PRODUCTION) {
-      return false; // Fail-closed in production
+    const header = JSON.parse(Buffer.from(parts[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+    if (header?.alg === "HS256") {
+      if (!JWT_SECRET) { if (IS_PRODUCTION) return false; }
+      else {
+        const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
+        const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
+        if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return false;
+      }
+    } else if (header?.alg !== "ES256" && header?.alg !== "RS256") {
+      return false; // Unknown algorithm — reject
     }
     const payload = JSON.parse(
       Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()

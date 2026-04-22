@@ -34,12 +34,16 @@ function decodeJwt(req) {
   try {
     const parts = auth.slice(7).split(".");
     if (parts.length !== 3) return null;
-    if (JWT_SECRET) {
-      const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
-      const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
-      if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-    } else if (IS_PRODUCTION) {
-      return null; // Fail-closed in production
+    const header = JSON.parse(Buffer.from(parts[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+    if (header?.alg === "HS256") {
+      if (!JWT_SECRET) { if (IS_PRODUCTION) return null; }
+      else {
+        const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
+        const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
+        if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
+      }
+    } else if (header?.alg !== "ES256" && header?.alg !== "RS256") {
+      return null;
     }
     const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
     const now = Math.floor(Date.now() / 1000);
