@@ -570,6 +570,20 @@ async function callAI(prompt, { maxTokens = 5500 } = {}){
 // customer-facing prompt (brief, hypothesis, solution fit, fit-score).
 // This is the system's "why buy from US" thread — without it, downstream
 // prompts invent generic claims instead of citing real proof. The pack
+// ── PROMPT INJECTION SANITIZER ────────────────────────────────────────────
+// Strips common prompt injection patterns from user input before
+// interpolation into AI prompts. Not a complete defense (impossible with
+// LLMs), but raises the bar significantly against casual/automated attacks.
+function sanitizeForPrompt(str) {
+  if (typeof str !== "string") return str;
+  return str
+    .replace(/\b(ignore|disregard|forget|override)\s+(all\s+)?(previous|above|prior|earlier)\s+(instructions?|rules?|constraints?|prompts?)/gi, "[filtered]")
+    .replace(/\b(you are now|act as|pretend to be|switch to|new instructions?:)/gi, "[filtered]")
+    .replace(/\b(system\s*prompt|<\/?system>|<\/?instructions?>)/gi, "[filtered]")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/[<>]/g, "");
+}
+
 // composes everything the seller has captured: ICP differentiators,
 // named customers, competitive alternatives, success factors, priority
 // trigger, traction channels, uploaded docs, and product catalog.
@@ -1495,7 +1509,7 @@ function PasswordGate({ onAuth }) {
 
     // Clear any legacy password-gate session data
     sessionStorage.removeItem('cambrian_auth');
-    const token=localStorage.getItem('sb_token');
+    const token=localStorage.getItem('sb_token') || sessionStorage.getItem('sb_token');
     if(token){
       sbGetUser(token).then(async u=>{
         if(u?.id){
@@ -1516,7 +1530,7 @@ function PasswordGate({ onAuth }) {
           }
           onAuth(u,token);
         } else {
-          localStorage.removeItem('sb_token');
+          sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');
         }
       });
     }
@@ -1528,12 +1542,12 @@ function PasswordGate({ onAuth }) {
     setErr("");setLoading(true);
     if(mode==="signup"){
       const d=await sbAuth('signup',{email,password:pw,data:{first_name:first,last_name:last,full_name:first+' '+last}});
-      if(d.access_token){localStorage.setItem('sb_token',d.access_token);onAuth(d.user,d.access_token);}
+      if(d.access_token){sessionStorage.setItem('sb_token',d.access_token);sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');onAuth(d.user,d.access_token);}
       else if(d.id){setVerifying(true);}
       else setErr(d.msg||d.error_description||'Sign up failed');
     } else {
       const d=await sbAuth('token?grant_type=password',{email,password:pw});
-      if(d.access_token){localStorage.setItem('sb_token',d.access_token);onAuth(d.user,d.access_token);}
+      if(d.access_token){sessionStorage.setItem('sb_token',d.access_token);sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');onAuth(d.user,d.access_token);}
       else setErr(d.error_description||'Incorrect email or password');
     }
     setLoading(false);
@@ -2405,11 +2419,11 @@ ${scaleGuidance}
   // Uses the richest available data: uploaded docs > ICP name + category + product pages > URL.
   const buildSellerCtx = () => {
     if (sellerDocs.length > 0) {
-      return sellerDocs.map(d => d.label + ": " + d.content.slice(0, 400)).join(" | ");
+      return sellerDocs.map(d => sanitizeForPrompt(d.label) + ": " + sanitizeForPrompt(d.content.slice(0, 400))).join(" | ");
     }
-    let ctx = sellerICP?.sellerName || sellerUrl || "the seller";
-    if (sellerICP?.marketCategory) ctx += " (" + sellerICP.marketCategory + ")";
-    if (productUrls.filter(u => u.url).length) ctx += " | Pages: " + productUrls.filter(u => u.url).map(u => u.url).join(", ");
+    let ctx = sanitizeForPrompt(sellerICP?.sellerName || sellerUrl || "the seller");
+    if (sellerICP?.marketCategory) ctx += " (" + sanitizeForPrompt(sellerICP.marketCategory) + ")";
+    if (productUrls.filter(u => u.url).length) ctx += " | Pages: " + productUrls.filter(u => u.url).map(u => sanitizeForPrompt(u.url)).join(", ");
     return ctx;
   };
 
@@ -4875,7 +4889,7 @@ ${isOpen
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
             </button>}
-            {sbUser&&<button onClick={()=>{localStorage.removeItem('sb_token');window.location.reload();}}
+            {sbUser&&<button onClick={()=>{sessionStorage.removeItem('sb_token');localStorage.removeItem('sb_token');window.location.reload();}}
               style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#aaa",cursor:"pointer"}}>
               {sbUser.user_metadata?.first_name||sbUser.email?.split('@')[0]} · Sign out
             </button>}

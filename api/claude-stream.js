@@ -55,6 +55,13 @@ export default async function handler(req, res) {
     res.setHeader("x-fallback-model", fallbackModel);
   }
 
+  // Only stream and bill on successful Anthropic responses
+  if (response.status < 200 || response.status >= 300) {
+    const errBody = await response.text();
+    res.status(response.status).end(errBody);
+    return;
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -68,7 +75,7 @@ export default async function handler(req, res) {
     res.write(decoder.decode(value));
   }
 
-  // Increment usage after successful stream
+  // Increment usage only after successful stream (2xx verified above)
   if (usageOrgId) {
     if (isMaxRun) {
       incrementMaxUsage(usageOrgId).catch(() => {});

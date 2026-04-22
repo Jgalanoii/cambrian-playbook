@@ -19,14 +19,18 @@ import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FO
 import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../src/data/verticalPlaybooks.js";
 import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS } from "../src/data/advancedKnowledge.js";
 
-// Import the full JWT verification from guard (includes HMAC-SHA256 signature check)
 import { createHmac, timingSafeEqual } from "crypto";
+import { checkRateLimit } from "./_guard.js";
 
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
+const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
+const SUPABASE_REF = process.env.VITE_SUPABASE_URL
+  ? new URL(process.env.VITE_SUPABASE_URL).hostname.split(".")[0]
+  : "";
 
 function verifyJwt(req) {
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
-  if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") return true;
+  if (!IS_PRODUCTION && (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes")) return true;
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return false;
   const token = authHeader.slice(7);
@@ -34,24 +38,37 @@ function verifyJwt(req) {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return false;
-    // Cryptographic signature verification (when SUPABASE_JWT_SECRET is set)
     if (JWT_SECRET) {
       const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
       const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
       if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return false;
+    } else if (IS_PRODUCTION) {
+      return false; // Fail-closed in production
     }
     const payload = JSON.parse(
       Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString()
     );
     const now = Math.floor(Date.now() / 1000);
     if (payload.exp && payload.exp < now) return false;
-    if (payload.iss !== "supabase" && !payload.iss?.includes("xtnidawfuaxwwwcnkewu")) return false;
+    if (!SUPABASE_REF) return false;
+    if (payload.iss !== "supabase" && !payload.iss?.includes(SUPABASE_REF)) return false;
     return true;
   } catch { return false; }
 }
 
 export default function handler(req, res) {
   if (req.method !== "GET") { res.status(405).end(); return; }
+
+  // Rate limiting
+  const xff = req.headers["x-forwarded-for"];
+  const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
+           || (xff ? xff.split(",").pop().trim() : "")
+           || req.headers["x-real-ip"]
+           || req.socket?.remoteAddress || "unknown";
+  if (!checkRateLimit(ip)) {
+    res.status(429).json({ error: "rate limit exceeded" });
+    return;
+  }
 
   if (!verifyJwt(req)) {
     res.status(401).json({ error: "authentication required" });

@@ -35,16 +35,15 @@ const MAX_TOKENS_CAP = 8000;
 const MAX_TOOL_USES = 3;
 
 // ── JWT AUTH ──────────────────────────────────────────────────────────────
-// Full HMAC-SHA256 signature verification when SUPABASE_JWT_SECRET is set.
-// Falls back to decode-only (exp + iss check) when secret is not configured,
-// so dev/guest mode still works. Production MUST set SUPABASE_JWT_SECRET.
-//
-// Guest mode: if ALLOW_GUEST env var is "true", skip JWT check entirely.
+// Full HMAC-SHA256 signature verification. In production, SUPABASE_JWT_SECRET
+// MUST be set — without it, auth is rejected (fail-closed). The only exception
+// is explicit ALLOW_GUEST mode for local development.
 const SUPABASE_ISS = "supabase";
 const SUPABASE_REF = process.env.VITE_SUPABASE_URL
   ? new URL(process.env.VITE_SUPABASE_URL).hostname.split(".")[0]
-  : "xtnidawfuaxwwwcnkewu";
+  : "";
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
+const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 
 function base64UrlDecode(str) {
   return Buffer.from(str.replace(/-/g, "+").replace(/_/g, "/"), "base64");
@@ -59,7 +58,11 @@ function decodeJwtPayload(token) {
 }
 
 function verifyJwtSignature(token) {
-  if (!JWT_SECRET) return true; // No secret configured — skip crypto (dev mode)
+  if (!JWT_SECRET) {
+    // Fail-closed in production — no secret means no auth
+    if (IS_PRODUCTION) return false;
+    return true; // Dev mode only — skip crypto
+  }
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return false;
@@ -73,16 +76,16 @@ function verifyJwtSignature(token) {
 }
 
 function verifyJwt(req) {
-  // Allow guest mode if explicitly enabled (handle quoted/unquoted values)
+  // Allow guest mode ONLY in non-production environments
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
-  if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") return true;
+  if (!IS_PRODUCTION && (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes")) return true;
 
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return false;
   const token = authHeader.slice(7);
   if (!token) return false;
 
-  // Cryptographic signature verification (when SUPABASE_JWT_SECRET is set)
+  // Cryptographic signature verification — fails closed in production
   if (!verifyJwtSignature(token)) return false;
 
   const payload = decodeJwtPayload(token);
@@ -92,11 +95,15 @@ function verifyJwt(req) {
   const now = Math.floor(Date.now() / 1000);
   if (payload.exp && payload.exp < now) return false;
 
-  // Check issuer matches our Supabase project
+  // Check issuer matches our Supabase project (require ref to be configured)
+  if (!SUPABASE_REF) return false;
   if (payload.iss !== SUPABASE_ISS && !payload.iss?.includes(SUPABASE_REF)) return false;
 
   return true;
 }
+
+// Export rate limiter for use by other endpoints
+export { checkRateLimit, isAllowedOrigin };
 
 // ── RATE LIMITING ────────────────────────────────────────────────────────
 // Simple sliding window per IP. Vercel keeps serverless instances warm for
@@ -131,7 +138,7 @@ setInterval(() => {
 
 // ── ORIGIN CHECK ─────────────────────────────────────────────────────────
 function isAllowedOrigin(origin) {
-  if (!origin) return true;  // server-to-server / test harness
+  if (!origin) return !IS_PRODUCTION;  // Allow missing origin in dev only
   let u;
   try { u = new URL(origin); } catch { return false; }
   const h = u.hostname;
