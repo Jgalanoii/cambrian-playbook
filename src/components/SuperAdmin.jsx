@@ -59,6 +59,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "users", label: `Users (${s.total_users})` },
+    { id: "usage", label: "Usage" },
     { id: "activity", label: "Activity" },
     { id: "urls", label: `URLs (${s.unique_seller_urls})` },
   ];
@@ -199,6 +200,77 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>{timeAgo(a.updated_at)}</div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ═══ USAGE ═══ */}
+          {tab === "usage" && (
+            <div>
+              {/* Environment status */}
+              {data.environment && (
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Environment</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                    {[
+                      { label: "Guest Mode", value: data.environment.guest_mode, ok: data.environment.guest_mode === "disabled" },
+                      { label: "Environment", value: data.environment.environment, ok: data.environment.environment === "production" },
+                      { label: "JWT Secret", value: data.environment.jwt_secret_set ? "Set" : "MISSING", ok: data.environment.jwt_secret_set },
+                      { label: "API Key", value: data.environment.api_key_set ? "Set" : "MISSING", ok: data.environment.api_key_set },
+                    ].map(e => (
+                      <div key={e.label} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 8, background: e.ok ? "var(--green-bg)" : "var(--red-bg)", color: e.ok ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
+                        {e.label}: {e.value}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Per-org usage */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Usage by Organization</div>
+              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Org</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Plan</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Members</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Runs</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Max Runs</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Seller URL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.orgs.sort((a, b) => (b.run_count || 0) - (a.run_count || 0)).map(o => (
+                    <tr key={o.id} style={{ borderBottom: "1px solid var(--line-0)" }}>
+                      <td style={{ padding: "8px 6px", fontWeight: 600 }}>{o.name}</td>
+                      <td style={{ padding: "8px 6px" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10,
+                          background: o.plan === "paid" ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
+                          color: o.plan === "paid" ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>
+                          {o.plan}
+                        </span>
+                      </td>
+                      <td style={{ padding: "8px 6px" }}>{o.member_count}</td>
+                      <td style={{ padding: "8px 6px" }}>
+                        <span style={{ fontWeight: 600 }}>{o.run_count}</span>
+                        <span style={{ color: "var(--ink-3)" }}>/{o.run_limit}</span>
+                        {o.run_count >= o.run_limit && <span style={{ color: "var(--red)", fontWeight: 700, marginLeft: 4 }}>LIMIT</span>}
+                      </td>
+                      <td style={{ padding: "8px 6px" }}>
+                        <span style={{ fontWeight: 600, color: "#8B5CF6" }}>{o.max_run_count}</span>
+                        <span style={{ color: "var(--ink-3)" }}>/{o.max_run_limit}</span>
+                      </td>
+                      <td style={{ padding: "8px 6px", fontSize: 11, color: "var(--ink-3)" }}>{o.seller_url || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Totals */}
+              <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px 16px", background: "var(--bg-1)", borderRadius: 10 }}>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>total runs</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "#8B5CF6" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max runs</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_orgs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>orgs</span></div>
+              </div>
             </div>
           )}
 

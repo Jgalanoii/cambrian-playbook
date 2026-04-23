@@ -7276,15 +7276,15 @@ ${isOpen
                   )}
                 </div></div>{/* /bb-body-wrap overview */}
 
-                {/* Key Executives */}
-                {(brief.keyExecutives||[]).filter(e=>e?.name).length>0&&(
-                  <div className="bb">
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:10}}>👤</div>
-                      <div><div className="bb-title">Key Executives</div><div className="bb-sub">Executive Perspectives — click to edit</div></div>
-                    </div>
-                    <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
-                      {(brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
+                {/* Key Executives — always show section */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon" style={{fontSize:10}}>👤</div>
+                    <div><div className="bb-title">Key Executives</div><div className="bb-sub">{brief._loadingSections?.executives ? "Searching..." : "Executive Perspectives — click to edit"}</div></div>
+                  </div>
+                  <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+                    {(brief.keyExecutives||[]).filter(e=>e?.name).length > 0
+                      ? (brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
                           <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
@@ -7298,10 +7298,13 @@ ${isOpen
                               placeholder="What personally drives them..."/>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      ))
+                      : brief._loadingSections?.executives
+                        ? <div style={{fontSize:13,color:"var(--ink-3)",padding:12}}>Searching for executive team...</div>
+                        : <div style={{fontSize:13,color:"var(--ink-3)",padding:12}}>Executive data not available — click Regenerate to retry.</div>
+                    }
                   </div>
-                )}
+                </div>
 
                 {/* Recent Headlines */}
                 {(brief.recentHeadlines||[]).filter(h=>h?.headline||typeof h==="string").length>0&&(

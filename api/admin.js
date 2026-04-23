@@ -113,6 +113,15 @@ export default async function handler(req, res) {
       if (u.org_id && orgMap[u.org_id]) orgMap[u.org_id].member_count++;
     });
 
+    // Environment status
+    const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
+    const envStatus = {
+      guest_mode: guestFlag === "true" || guestFlag === "1" || guestFlag === "yes" ? "ENABLED" : "disabled",
+      environment: process.env.VERCEL_ENV || "unknown",
+      jwt_secret_set: !!process.env.SUPABASE_JWT_SECRET,
+      api_key_set: !!process.env.ANTHROPIC_API_KEY,
+    };
+
     // Summary stats
     const activeToday = Object.values(userMap).filter(u => u.last_active && (now - new Date(u.last_active).getTime()) < 86400000).length;
     const activeWeek = Object.values(userMap).filter(u => u.last_active && (now - new Date(u.last_active).getTime()) < 604800000).length;
@@ -144,6 +153,7 @@ export default async function handler(req, res) {
         total_orgs: (orgs || []).length,
         unique_seller_urls: allSellerUrls.length,
       },
+      environment: envStatus,
       users: Object.entries(userMap).map(([id, u]) => ({
         id,
         ...u,
