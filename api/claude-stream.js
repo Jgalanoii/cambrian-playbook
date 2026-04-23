@@ -1,5 +1,5 @@
 import { guard, MODEL_FALLBACK } from "./_guard.js";
-import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage } from "./_usage.js";
+import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage } from "./_usage.js";
 
 export const config = { maxDuration: 120 };
 
@@ -68,12 +68,37 @@ export default async function handler(req, res) {
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+  let streamedText = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    res.write(decoder.decode(value));
+    const chunk = decoder.decode(value);
+    streamedText += chunk;
+    res.write(chunk);
   }
+
+  // Parse token usage from SSE stream for cost tracking
+  const userId = extractUserId(req);
+  try {
+    // Extract usage from message_start and message_delta events
+    const msgStart = streamedText.match(/"message_start".*?"usage"\s*:\s*(\{[^}]+\})/);
+    const msgDelta = streamedText.match(/"message_delta".*?"usage"\s*:\s*(\{[^}]+\})/);
+    const startUsage = msgStart ? JSON.parse(msgStart[1]) : {};
+    const deltaUsage = msgDelta ? JSON.parse(msgDelta[1]) : {};
+    const modelMatch = streamedText.match(/"model"\s*:\s*"([^"]+)"/);
+    const inputTokens = (startUsage.input_tokens || 0) + (startUsage.cache_creation_input_tokens || 0) + (startUsage.cache_read_input_tokens || 0);
+    const outputTokens = deltaUsage.output_tokens || startUsage.output_tokens || 0;
+    if (inputTokens || outputTokens) {
+      logTokenUsage({
+        userId,
+        orgId: usageOrgId,
+        model: modelMatch?.[1] || body.model,
+        inputTokens, outputTokens,
+        endpoint: "claude-stream",
+      });
+    }
+  } catch {} // best-effort — don't fail the stream
 
   // Increment usage only after successful stream (2xx verified above)
   if (usageOrgId) {

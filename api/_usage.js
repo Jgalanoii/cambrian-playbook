@@ -12,6 +12,28 @@
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 
+/** Log API token usage for cost tracking. Fire-and-forget. */
+export function logTokenUsage({ userId, orgId, model, inputTokens, outputTokens, webSearches = 0, endpoint = "claude" }) {
+  if (!SB_URL || !SB_KEY) return;
+  fetch(`${SB_URL}/rest/v1/api_usage_log`, {
+    method: "POST",
+    headers: {
+      apikey: SB_KEY,
+      Authorization: `Bearer ${SB_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      user_id: userId || null,
+      org_id: orgId || null,
+      model: model || "unknown",
+      input_tokens: inputTokens || 0,
+      output_tokens: outputTokens || 0,
+      web_searches: webSearches || 0,
+      endpoint,
+    }),
+  }).catch(() => {}); // fire-and-forget
+}
+
 function sbFetch(path, method = "GET", body = null) {
   const headers = {
     apikey: SB_KEY,

@@ -56,8 +56,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   if (!data) return null;
 
   const s = data.summary;
+  const c = data.costs?.total || {};
   const tabs = [
     { id: "overview", label: "Overview" },
+    { id: "costs", label: `Costs ($${(c.cost||0).toFixed(2)})` },
     { id: "users", label: `Users (${s.total_users})` },
     { id: "usage", label: "Usage" },
     { id: "activity", label: "Activity" },
@@ -137,6 +139,80 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       {a.user_name} · {a.seller_url || "no URL"} · {timeAgo(a.updated_at)}
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ COSTS ═══ */}
+          {tab === "costs" && data.costs && (
+            <div>
+              {/* Summary cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
+                {[
+                  { label: "Total Cost", value: `$${c.cost?.toFixed(2)}`, color: "var(--ink-0)" },
+                  { label: "API Calls", value: c.api_calls?.toLocaleString(), color: "var(--navy)" },
+                  { label: "Input Tokens", value: `${(c.input_tokens / 1000).toFixed(0)}K`, color: "var(--green)" },
+                  { label: "Output Tokens", value: `${(c.output_tokens / 1000).toFixed(0)}K`, color: "var(--amber)" },
+                  { label: "Web Searches", value: c.web_searches, color: "#8B5CF6" },
+                ].map(m => (
+                  <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cost by user */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Cost by User</div>
+              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", marginBottom: 20 }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
+                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>User</th>
+                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Cost</th>
+                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Calls</th>
+                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Input</th>
+                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Output</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.costs.by_user || []).map((u, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid var(--line-0)" }}>
+                      <td style={{ padding: "6px" }}>
+                        <div style={{ fontWeight: 600 }}>{u.user_name}</div>
+                        {u.user_email && <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{u.user_email}</div>}
+                      </td>
+                      <td style={{ padding: "6px", fontWeight: 700, color: "var(--ink-0)" }}>${u.cost.toFixed(3)}</td>
+                      <td style={{ padding: "6px" }}>{u.calls}</td>
+                      <td style={{ padding: "6px", fontSize: 11, color: "var(--ink-3)" }}>{(u.input / 1000).toFixed(1)}K</td>
+                      <td style={{ padding: "6px", fontSize: 11, color: "var(--ink-3)" }}>{(u.output / 1000).toFixed(1)}K</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Cost by model */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Cost by Model</div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+                {(data.costs.by_model || []).map((m, i) => (
+                  <div key={i} style={{ background: "var(--bg-1)", borderRadius: 8, padding: "10px 14px", minWidth: 180 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-0)", marginBottom: 4 }}>{m.model}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: m.model.includes("opus") ? "#8B5CF6" : "var(--green)", fontFamily: "Lora,serif" }}>${m.cost.toFixed(3)}</div>
+                    <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{m.calls} calls · {(m.input / 1000).toFixed(0)}K in · {(m.output / 1000).toFixed(0)}K out</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cost by day */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Daily Cost</div>
+              {(data.costs.by_day || []).slice(0, 14).map((d, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--line-0)" }}>
+                  <div style={{ fontSize: 12, color: "var(--ink-1)", width: 90, fontWeight: 600 }}>{d.day}</div>
+                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 4, background: "var(--green)", width: Math.min(100, c.cost > 0 ? (d.cost / c.cost * 100 * (data.costs.by_day || []).length) : 0) + "%" }} />
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, width: 60, textAlign: "right" }}>${d.cost.toFixed(3)}</div>
+                  <div style={{ fontSize: 10, color: "var(--ink-3)", width: 50, textAlign: "right" }}>{d.calls} calls</div>
                 </div>
               ))}
             </div>

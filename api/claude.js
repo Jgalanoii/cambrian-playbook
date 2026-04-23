@@ -1,5 +1,5 @@
 import { guard, MODEL_FALLBACK } from "./_guard.js";
-import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage } from "./_usage.js";
+import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage } from "./_usage.js";
 
 const ANTHROPIC_HEADERS = {
   "Content-Type": "application/json",
@@ -63,6 +63,21 @@ export default async function handler(req, res) {
   const data = await response.json();
   if (usedFallback) {
     data._fallbackModel = MODEL_FALLBACK[body.model];
+  }
+
+  // Log token usage for cost tracking
+  if (response.status >= 200 && response.status < 300 && data.usage) {
+    const userId = extractUserId(req);
+    const webSearches = (data.content || []).filter(b => b.type === "web_search_tool_result").length;
+    logTokenUsage({
+      userId,
+      orgId: usageOrgId,
+      model: data.model || body.model,
+      inputTokens: (data.usage.input_tokens || 0) + (data.usage.cache_creation_input_tokens || 0) + (data.usage.cache_read_input_tokens || 0),
+      outputTokens: data.usage.output_tokens || 0,
+      webSearches,
+      endpoint: "claude",
+    });
   }
 
   // Increment usage after successful response

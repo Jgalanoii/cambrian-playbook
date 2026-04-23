@@ -58,10 +58,11 @@ export default async function handler(req, res) {
 
   try {
     // Fetch all data in parallel
-    const [users, orgs, sessions] = await Promise.all([
+    const [users, orgs, sessions, usageLogs] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
       sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=500"),
+      sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc&limit=5000"),
     ]);
 
     // Build user activity map
@@ -146,6 +147,68 @@ export default async function handler(req, res) {
     // All unique seller URLs being researched
     const allSellerUrls = [...new Set((sessions || []).map(s => s.seller_url).filter(Boolean))];
 
+    // ── Cost tracking from api_usage_log ──
+    const PRICING = {
+      "claude-haiku-4-5-20251001": { input: 0.80, output: 4.00 },
+      "claude-sonnet-4-5": { input: 3.00, output: 15.00 },
+      "claude-sonnet-4-5-20250929": { input: 3.00, output: 15.00 },
+      "claude-opus-4-6-20250514": { input: 15.00, output: 75.00 },
+    };
+    const DEFAULT_PRICING = { input: 1.00, output: 5.00 };
+
+    const costByUser = {};
+    const costByDay = {};
+    const costByModel = {};
+    let totalCost = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalWebSearches = 0;
+    let totalApiCalls = 0;
+
+    (usageLogs || []).forEach(log => {
+      const pricing = PRICING[log.model] || DEFAULT_PRICING;
+      const cost = (log.input_tokens * pricing.input + log.output_tokens * pricing.output) / 1_000_000;
+      totalCost += cost;
+      totalInputTokens += log.input_tokens || 0;
+      totalOutputTokens += log.output_tokens || 0;
+      totalWebSearches += log.web_searches || 0;
+      totalApiCalls++;
+
+      // By user
+      const uid = log.user_id || "guest";
+      if (!costByUser[uid]) costByUser[uid] = { cost: 0, calls: 0, input: 0, output: 0 };
+      costByUser[uid].cost += cost;
+      costByUser[uid].calls++;
+      costByUser[uid].input += log.input_tokens || 0;
+      costByUser[uid].output += log.output_tokens || 0;
+
+      // By day
+      const day = log.created_at?.slice(0, 10) || "unknown";
+      if (!costByDay[day]) costByDay[day] = { cost: 0, calls: 0 };
+      costByDay[day].cost += cost;
+      costByDay[day].calls++;
+
+      // By model
+      const model = log.model || "unknown";
+      if (!costByModel[model]) costByModel[model] = { cost: 0, calls: 0, input: 0, output: 0 };
+      costByModel[model].cost += cost;
+      costByModel[model].calls++;
+      costByModel[model].input += log.input_tokens || 0;
+      costByModel[model].output += log.output_tokens || 0;
+    });
+
+    const costs = {
+      total: { cost: totalCost, api_calls: totalApiCalls, input_tokens: totalInputTokens, output_tokens: totalOutputTokens, web_searches: totalWebSearches },
+      by_user: Object.entries(costByUser).map(([uid, d]) => ({
+        user_id: uid,
+        user_name: userMap[uid]?.name || userMap[uid]?.email || (uid === "guest" ? "Guest" : "Unknown"),
+        user_email: userMap[uid]?.email || "",
+        ...d,
+      })).sort((a, b) => b.cost - a.cost),
+      by_day: Object.entries(costByDay).map(([day, d]) => ({ day, ...d })).sort((a, b) => b.day.localeCompare(a.day)),
+      by_model: Object.entries(costByModel).map(([model, d]) => ({ model, ...d })).sort((a, b) => b.cost - a.cost),
+    };
+
     res.setHeader("Cache-Control", "private, no-cache");
     res.json({
       summary: {
@@ -169,6 +232,7 @@ export default async function handler(req, res) {
       orgs: Object.entries(orgMap).map(([id, o]) => ({ id, ...o })),
       recent_activity: recentActivity,
       seller_urls: allSellerUrls,
+      costs,
     });
   } catch (e) {
     res.status(500).json({ error: "Failed to fetch analytics" });
