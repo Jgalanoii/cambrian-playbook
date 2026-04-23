@@ -115,6 +115,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   { label: "Max (Opus) Runs", value: s.total_max_runs, color: "#8B5CF6" },
                   { label: "Organizations", value: s.total_orgs, color: "var(--navy)" },
                   { label: "Unique Sellers", value: s.unique_seller_urls, color: "var(--green)" },
+                  { label: "Milton Messages", value: s.total_milton_messages || 0, color: "#cc2222" },
                 ].map(m => (
                   <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", textAlign: "center" }}>
                     <div style={{ fontSize: 28, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
@@ -152,6 +153,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Plan</th>
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Sessions</th>
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Last Active</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Milton</th>
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Seller URLs</th>
                   </tr>
                 </thead>
@@ -172,6 +174,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       </td>
                       <td style={{ padding: "8px 6px", fontWeight: 600, color: "var(--ink-0)" }}>{u.session_count}</td>
                       <td style={{ padding: "8px 6px", color: "var(--ink-3)" }}>{timeAgo(u.last_active)}</td>
+                      <td style={{ padding: "8px 6px", fontWeight: 600, color: u.milton_messages > 0 ? "#cc2222" : "var(--ink-3)" }}>{u.milton_messages || 0}</td>
                       <td style={{ padding: "8px 6px", fontSize: 11, color: "var(--ink-3)" }}>
                         {u.seller_urls.slice(0, 3).join(", ") || "—"}
                         {u.seller_urls.length > 3 && ` +${u.seller_urls.length - 3}`}
@@ -195,6 +198,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>{a.user_name}</span>
                       {a.user_email && <span> ({a.user_email})</span>}
                       {a.seller_url && <span> · {a.seller_url}</span>}
+                      {a.milton_messages > 0 && <span style={{ color: "#cc2222" }}> · {a.milton_messages} Milton msgs</span>}
                     </div>
                   </div>
                   <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>{timeAgo(a.updated_at)}</div>

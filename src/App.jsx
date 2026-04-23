@@ -2117,6 +2117,7 @@ export default function App(){
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState([]); // [{role:'user'|'assistant', content}]
   const[chatLoading,setChatLoading]=useState(false);
+  const[miltonMsgCount,setMiltonMsgCount]=useState(0); // total Milton messages this session
   const[resourcesOpen,setResourcesOpen]=useState(false);
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
@@ -3308,7 +3309,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -3344,6 +3345,7 @@ ${isOpen
     if(d.sellerICPInput) setSellerICPInput(d.sellerICPInput);
     if(d.icpDelta) setIcpDelta(d.icpDelta);
     if(d.icpEdits?.length) setIcpEdits(d.icpEdits);
+    if(d.miltonMsgCount) setMiltonMsgCount(d.miltonMsgCount);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
@@ -4628,6 +4630,7 @@ ${isOpen
       });
       const reply = d?.content?.[0]?.text || d?.error?.message || "Sorry, I couldn't generate a response. Try again.";
       setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      setMiltonMsgCount(prev => prev + 1);
     } catch (e) {
       setChatMessages(prev => [...prev, { role: "assistant", content: "Error: " + e.message }]);
     } finally {

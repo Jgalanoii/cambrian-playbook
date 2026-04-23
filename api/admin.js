@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     const [users, orgs, sessions] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
-      sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at&order=updated_at.desc&limit=500"),
+      sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=500"),
     ]);
 
     // Build user activity map
@@ -81,9 +81,13 @@ export default async function handler(req, res) {
     });
 
     // Enrich with session data
+    let totalMiltonMessages = 0;
     (sessions || []).forEach(s => {
+      const miltonCount = Number(s.data?.miltonMsgCount) || 0;
+      totalMiltonMessages += miltonCount;
       if (userMap[s.user_id]) {
         userMap[s.user_id].session_count++;
+        userMap[s.user_id].milton_messages = (userMap[s.user_id].milton_messages || 0) + miltonCount;
         if (!userMap[s.user_id].last_active || new Date(s.updated_at) > new Date(userMap[s.user_id].last_active)) {
           userMap[s.user_id].last_active = s.updated_at;
         }
@@ -136,6 +140,7 @@ export default async function handler(req, res) {
       user_email: userMap[s.user_id]?.email || "",
       updated_at: s.updated_at,
       created_at: s.created_at,
+      milton_messages: Number(s.data?.miltonMsgCount) || 0,
     }));
 
     // All unique seller URLs being researched
@@ -152,6 +157,7 @@ export default async function handler(req, res) {
         total_max_runs: totalMaxRuns,
         total_orgs: (orgs || []).length,
         unique_seller_urls: allSellerUrls.length,
+        total_milton_messages: totalMiltonMessages,
       },
       environment: envStatus,
       users: Object.entries(userMap).map(([id, u]) => ({
