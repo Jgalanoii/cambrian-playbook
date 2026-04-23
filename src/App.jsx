@@ -1178,7 +1178,7 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
       ["",""],["TOP BUYING SIGNALS",""],
       ...(brief?.recentSignals||[]).filter(Boolean).map((s,i)=>[`Signal ${i+1}`,s]),
     ]},
-    {name:"RIVER Brief",rows:[
+    {name:"Sales Brief",rows:[
       ["RIVER BRIEF — PRE-CALL HYPOTHESIS",""],["",""],
       ["STAGE","HYPOTHESIS"],
       ...RIVER_STAGES.map((s,i)=>[`${s.letter} — ${s.label}`,brief?.riverHypothesis?.[RKEYS[i]]||""]),
@@ -4829,7 +4829,7 @@ ${isOpen
                 {brief && (
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>RIVER Brief — {selectedAccount?.company}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Sales Brief — {selectedAccount?.company}</div>
                       <div style={{display:"flex",gap:6}}>
                         <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                       </div>
@@ -7132,7 +7132,7 @@ ${isOpen
               <div style={{fontSize:18,color:"var(--ink-3)",fontWeight:300}}>→</div>
               <CompanyLogo domain={selectedAccount?.company_url} name={selectedAccount?.company} size={44}/>
               <div style={{flex:1}}>
-                <div className="page-title" style={{margin:0}}>RIVER Brief</div>
+                <div className="page-title" style={{margin:0}}>Sales Brief — {selectedAccount?.company}</div>
                 <div style={{fontSize:13,color:"var(--ink-1)",marginTop:2}}>
                   <strong>{sellerICP?.sellerName||sellerUrl}</strong> selling to <strong>{selectedAccount?.company}</strong>
                 </div>
