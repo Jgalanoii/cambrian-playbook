@@ -2596,10 +2596,11 @@ ${scaleGuidance}
         `- Return THREE separate dimension scores (dim1, dim2, dim3). The TOTAL is computed automatically — do NOT return a "score" field.\n`+
         `- Each dimension score MUST be one of the fixed values above. Do NOT pick values between the fixed points.\n`+
         `- NEVER invent facts. If unsure about a company's incumbent vendor, ownership, or employee count, say "Unknown" and use the default score.\n`+
-        `- 'reason' is 2-3 sentences. Cite the specific facts that drove each dimension score.\n`+
-        `- 'customerSimilarity' is 1-2 sentences: name the MOST similar existing seller customer and explain the parallel. If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
-        `- 'incumbentRisk' is 1-2 sentences: name the incumbent vendor ONLY if certain, and assess switching cost.\n`+
-        `- Do NOT use "tier", "wall", "band", "bucket" in any field.\n\n`+
+        `- 'reason' is 2-3 sentences written for a SALESPERSON, not an engineer. Explain WHY this company is a good/bad fit in plain business language. Example: "Mid-market financial services company with a cost-optimization mandate — the PE-backed ownership creates urgency and budget alignment."\n`+
+        `- CRITICAL: The 'reason', 'customerSimilarity', and 'incumbentRisk' fields are CUSTOMER-FACING. NEVER include: point values (+32, +5), dimension labels (dim1, dim2, dim3), step references (Step A, Step B), bracket terminology, scoring formulas, threshold numbers, or ANY internal methodology. A salesperson reads these fields — they should sound like expert judgment, not a scorecard calculation.\n`+
+        `- 'customerSimilarity' is 1-2 sentences: name the MOST similar existing seller customer and explain the parallel in business terms. If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
+        `- 'incumbentRisk' is 1-2 sentences: name the incumbent vendor ONLY if certain, and assess switching cost in business terms.\n`+
+        `- Do NOT use "tier", "wall", "band", "bucket", "dimension", "score", "points", "bracket" in any customer-facing field.\n\n`+
         `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -2629,6 +2630,11 @@ ${scaleGuidance}
       // we don't want the seller to see.
       const cleanReason = (r) => (r || "")
         .replace(/\b(tier\s*\d+|the\s+wall|band\s*\d+|bucket\s*\d+)\b/gi, "")
+        .replace(/\b(dim[123]\s*[=:]\s*\d+|total\s*dim\d*\s*[=:]\s*\d+)\b/gi, "")
+        .replace(/\(\s*[+\-]?\d+\s*\)/g, "") // strip "(+32)", "(+2)", etc.
+        .replace(/\bscored?\s+dim\d\s*[=:]\s*\d+/gi, "")
+        .replace(/\b(step\s+[abc]|bracket|dimension\s+\d)\b/gi, "")
+        .replace(/[+\-]\d+\s*(?:points?|pts?)\b/gi, "")
         .replace(/\s+/g, " ")
         .trim();
 
@@ -2654,6 +2660,8 @@ ${scaleGuidance}
           ...s,
           label: canonicalLabel(s.score),
           reason: cleanReason(s.reason),
+          customerSimilarity: cleanReason(s.customerSimilarity),
+          incumbentRisk: cleanReason(s.incumbentRisk),
           color, bg, ownerColor,
           adoptionProfile: s.adoptionProfile || "",
         };
