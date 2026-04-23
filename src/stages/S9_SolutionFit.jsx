@@ -221,6 +221,22 @@ export default function S9SolutionFit({
             </div>
           )}
 
+          {/* Discovery Gaps — what the rep needs to capture next */}
+          {(solutionFit.discoveryGaps||[]).filter(Boolean).length > 0 && (
+            <div style={{background:"#FEF6E4",border:"1.5px solid #BA751744",borderRadius:14,padding:"16px 20px",marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Missing Discovery Data — Capture on Next Call</div>
+              <div style={{fontSize:13,color:"#333",lineHeight:1.7,marginBottom:8}}>
+                The following information was not captured during discovery. This SA review is based on incomplete data — go back and capture these on your next interaction to strengthen the assessment.
+              </div>
+              {solutionFit.discoveryGaps.filter(Boolean).map((g, i) => (
+                <div key={i} style={{display:"flex",gap:8,marginBottom:6,alignItems:"flex-start"}}>
+                  <span style={{color:"#BA7517",fontWeight:700,flexShrink:0}}>!</span>
+                  <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{g}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* SA Recommendation */}
           {solutionFit.saRecommendation && (
             <div style={{background:"#1a1a18",borderRadius:14,padding:"20px 22px",marginBottom:16}}>

@@ -4016,6 +4016,22 @@ ${isOpen
     if(!brief||!postCall) return;
     setSolutionFitLoading(true);
 
+    // Check what discovery data is missing and warn the user
+    const missingItems = [];
+    const totalGates = RIVER_STAGES.flatMap(s => s.gates);
+    const answeredGates = totalGates.filter(g => gateAnswers[g.id]);
+    const totalDisc = RIVER_STAGES.flatMap(s => s.discovery);
+    const capturedDisc = totalDisc.filter(p => riverData[p.id]);
+
+    if (answeredGates.length < totalGates.length * 0.5) missingItems.push(`Gate questions: only ${answeredGates.length}/${totalGates.length} answered — the more gates you answer during the call, the more accurate the SA review`);
+    if (capturedDisc.length < totalDisc.length * 0.3) missingItems.push(`Discovery notes: only ${capturedDisc.length}/${totalDisc.length} captured — pain points, budget signals, and technical requirements drive the architecture assessment`);
+    if (!notes?.trim()) missingItems.push("Call notes: no free-form notes entered — capture what you heard in the prospect's own words");
+    RIVER_STAGES.forEach(s => {
+      const stageGates = s.gates.filter(g => gateAnswers[g.id]);
+      const stageDisc = s.discovery.filter(p => riverData[p.id]);
+      if (stageGates.length === 0 && stageDisc.length === 0) missingItems.push(`${s.letter} — ${s.label}: no data captured for this RIVER stage`);
+    });
+
     const solutions = (brief.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product+": "+s.fit).join("\n");
     const riverCapture = RIVER_STAGES.map(s=>{
       const gates = s.gates.map(g=>`${g.q}: ${gateAnswers[g.id]||"Not answered"}`).join("; ");
@@ -4041,6 +4057,7 @@ ${isOpen
       `DISCOVERY CAPTURE (what we actually heard):\n${riverCapture}\n\n`+
       `CALL NOTES:\n${notes||"None"}\n\n`+
       `POST-CALL SUMMARY: ${postCall?.callSummary||""}\n\n`+
+      (missingItems.length ? `═══ MISSING DISCOVERY DATA ═══\nThe following inputs are missing or light. Acknowledge these gaps in your assessment — do NOT fill them with assumptions. For each gap, note what it means for the SA review quality and what the rep should capture on the next call:\n${missingItems.map(m => `- ${m}`).join("\n")}\n\nInclude a "discoveryGaps" array in your output listing what specific information the rep needs to go back and capture.\n\n` : "") +
       `ACCURACY: NEVER invent facts. Every confirmed solution, architecture note, gap, and metric must be grounded in the discovery capture or proof pack above. If something was not discussed or verified, do not assert it — say "[Not confirmed in discovery]". Do not fabricate integration requirements, tech stack details, or implementation timelines that were not surfaced in the call.\n\n`+
       `Apply Solution Architecture principles:\n`+
       `- Business alignment: does what we sell map to what they need to BUILD?\n`+
@@ -4060,6 +4077,7 @@ ${isOpen
       `"implementationRoadmap":"2-3 sentence recommended phasing: what to implement first and why, framed around their desired outcomes",`+
       `"integrationComplexity":"Low / Medium / High with 1-sentence explanation",`+
       `"successMetrics":["Specific measurable outcome 1 tied to their stated goals","Metric 2","Metric 3"],`+
+      `"discoveryGaps":["Specific info the rep needs to capture on the next call to strengthen this assessment"],`+
       `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`;
 
     // Stream solution fit for progressive rendering
