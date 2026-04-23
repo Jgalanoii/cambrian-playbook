@@ -192,9 +192,9 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
     throw { status: 400, message: `model "${body.model}" not permitted` };
   }
 
-  // Cap total input size (~120KB) to prevent billing abuse
+  // Cap total input size (~150KB) to prevent billing abuse
   const inputSize = JSON.stringify(body.messages).length + (body.system?.length || 0);
-  if (inputSize > 120_000) {
+  if (inputSize > 150_000) {
     throw { status: 400, message: "input too large" };
   }
 
@@ -204,7 +204,7 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
     temperature: 0,
     messages: body.messages,
   };
-  if (typeof body.system === "string" && body.system.length && body.system.length <= 12_000) {
+  if (typeof body.system === "string" && body.system.length && body.system.length <= 30_000) {
     clean.system = body.system;
   }
   const tools = sanitizeTools(body.tools);
