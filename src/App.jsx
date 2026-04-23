@@ -4617,6 +4617,18 @@ ${isOpen
       brief?.openingAngle ? `Opening angle: ${brief.openingAngle.slice(0,150)}` : "",
       riverHypo?.reality ? `Hypothesis (Reality): ${riverHypo.reality.slice(0,100)}` : "",
       notes ? `Rep notes: ${notes.slice(0,200)}` : "",
+      dealValue ? `Deal value: ${dealValue}` : "",
+      dealClassification ? `Deal classification: ${dealClassification}` : "",
+      contactRole ? `Contact role: ${contactRole}` : "",
+      // User's gate answers (discovery capture)
+      Object.keys(gateAnswers).length > 0 ? `\nDiscovery answers captured:\n${Object.entries(gateAnswers).filter(([,v])=>v).map(([k,v])=>`  ${k}: ${v}`).join("\n")}` : "",
+      // User's RIVER notes
+      Object.keys(riverData).length > 0 ? `\nRIVER notes captured:\n${Object.entries(riverData).filter(([,v])=>v).map(([k,v])=>`  ${k}: ${String(v).slice(0,100)}`).join("\n")}` : "",
+      // Post-call results
+      postCall?.dealRoute ? `Deal route: ${postCall.dealRoute}` : "",
+      postCall?.callSummary ? `Call summary: ${postCall.callSummary.slice(0,200)}` : "",
+      // ICP edits the user made this session
+      icpEdits.length > 0 ? `\n═══ CHANGES THE USER MADE THIS SESSION ═══\n${icpEdits.map(e => `  Changed "${e.field}": "${String(e.oldValue).slice(0,80)}" → "${String(e.newValue).slice(0,80)}"`).join("\n")}\nIf the user asks about their changes, reference this list.` : "",
       buildSellerProofPack({sellerICP, sellerDocs, products, sellerProofPoints, icpEdits}).slice(0, 800),
     ].filter(Boolean).join("\n");
 
