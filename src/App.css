@@ -766,4 +766,20 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 
   /* Textareas and inputs — show value as text */
   textarea, input[type="text"], select { border: none !important; background: transparent !important; padding: 0 !important; resize: none !important; }
+
+  /* Print footer — appears on every page */
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #aaa;
+    padding: 8px 0;
+    border-top: 1px solid #eee;
+  }
+  .print-footer .pf-brand { font-family: 'Lora', serif; font-weight: 700; color: #1a1a18; }
+  .print-footer .pf-brand span { color: #8B6F47; }
 }

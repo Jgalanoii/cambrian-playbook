@@ -8509,6 +8509,11 @@ ${isOpen
       <footer className="footer">
         © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved
       </footer>
+
+      {/* Print-only footer — appears on every printed page */}
+      <div className="print-footer" style={{display:"none"}}>
+        <span className="pf-brand">Cambrian <span>Catalyst</span></span> · © 2026 Cambrian Catalyst LLC · Seattle, WA · Confidential
+      </div>
     </>
   );
 }
