@@ -1,4 +1,4 @@
-import { guard, MODEL_FALLBACK } from "./_guard.js";
+import { guard, MODEL_FALLBACK, checkGuestLimit, incrementGuestUsage, getGuestRemaining } from "./_guard.js";
 import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage } from "./_usage.js";
 
 export const config = { maxDuration: 120 };
@@ -20,6 +20,21 @@ async function callAnthropic(body) {
 export default async function handler(req, res) {
   const body = guard(req, res, { stream: true });
   if (!body) return;
+
+  // Guest usage limit — 2 calls total
+  if (req._isGuest) {
+    const xff = req.headers["x-forwarded-for"];
+    const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
+             || (xff ? xff.split(",").pop().trim() : "")
+             || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
+    if (!checkGuestLimit(ip)) {
+      return res.status(402).json({
+        error: { type: "guest_limit_exceeded", message: "You've used your 2 free runs. Create a free account to continue." },
+        guest_remaining: 0,
+      });
+    }
+    incrementGuestUsage(ip);
+  }
 
   // Usage limit enforcement — same as api/claude.js
   const isBillable = req.headers["x-billable-run"] === "1";

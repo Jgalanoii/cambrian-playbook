@@ -94,10 +94,35 @@ function verifyJwtSignature(token) {
   } catch { return false; }
 }
 
+// ── GUEST USAGE TRACKING ──────────────────────────────────────────────────
+// Per-IP counter for unauthenticated guest usage. Guests get 2 API calls
+// total (not per minute — lifetime of the server instance). This is a
+// lightweight barrier; determined users can bypass by changing IP, but it
+// prevents casual abuse and encourages signup.
+const GUEST_LIMIT = 2;
+const guestUsage = new Map(); // ip → call count
+
+export function checkGuestLimit(ip) {
+  const count = guestUsage.get(ip) || 0;
+  return count < GUEST_LIMIT;
+}
+
+export function incrementGuestUsage(ip) {
+  guestUsage.set(ip, (guestUsage.get(ip) || 0) + 1);
+}
+
+export function getGuestRemaining(ip) {
+  return Math.max(0, GUEST_LIMIT - (guestUsage.get(ip) || 0));
+}
+
 function verifyJwt(req) {
-  // Allow guest mode ONLY in non-production environments
+  // Guest mode — allowed everywhere but limited to 2 uses
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
-  if (!IS_PRODUCTION && (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes")) return true;
+  if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") {
+    // Mark as guest so the handler can enforce limits
+    req._isGuest = true;
+    return true;
+  }
 
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return false;
