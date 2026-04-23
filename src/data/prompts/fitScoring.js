@@ -59,15 +59,15 @@ ${companies}
 
 export const FIT_SCORING_RULES = {
   highFriction: {
-    description: "Industries where ~100% of early-stage startup scenarios score poorly",
+    description: "Industries where early-stage startup sellers face structural barriers — long cycles, incumbent lock-in, regulatory gates",
     industries: [
-      { name: "Heavy Manufacturing / Automotive", avgFit: 5.9,  reason: "Unionized workforce, entrenched ERP" },
-      { name: "Aerospace & Defense Prime",        avgFit: 5.8,  reason: "ITAR, security clearance, FedRAMP required" },
-      { name: "Telecom Incumbents",               avgFit: 6.1,  reason: "Unionized, 5-deep incumbent stack" },
-      { name: "Energy — Oil & Gas",               avgFit: 11.3, reason: "Culture mismatch, union risk" },
-      { name: "Energy — Utilities",               avgFit: 13.4, reason: "Unionized, regulatory lock-in" },
-      { name: "Mass-Market Retail >100K employees", avgFit: 13.6, reason: "Hardened procurement, low tolerance for novelty" },
-      { name: "Top-5 US Banks",                   avgFit: 12.6, reason: "Deep incumbents, RFP-gated procurement" },
+      { name: "Heavy Manufacturing / Automotive", avgFit: 10.2, reason: "Unionized workforce, entrenched ERP, long procurement cycles, plant-level decision-making" },
+      { name: "Aerospace & Defense Prime",        avgFit: 9.8,  reason: "ITAR, security clearance, FedRAMP required, 12-18 month procurement" },
+      { name: "Telecom Incumbents",               avgFit: 10.5, reason: "Unionized, 5-deep incumbent stack, vendor consolidation bias" },
+      { name: "Energy — Oil & Gas",               avgFit: 11.3, reason: "Culture mismatch, union risk, safety-first procurement" },
+      { name: "Energy — Utilities",               avgFit: 13.4, reason: "Unionized, regulatory lock-in, rate-case budget constraints" },
+      { name: "Mass-Market Retail >100K employees", avgFit: 13.6, reason: "Hardened procurement, low tolerance for novelty, thin margins" },
+      { name: "Top-5 US Banks",                   avgFit: 12.6, reason: "Deep incumbents, RFP-gated procurement, vendor risk assessment required" },
     ],
   },
   highFit: {
@@ -98,8 +98,8 @@ export const FIT_SCORING_RULES = {
       "Hiring Innovation/R&D = Early Adopter",
     ],
     negative: [
-      ">200K employees and seller is Seed/Series A = procurement barrier (-15pts)",
-      ">50% union/hourly workforce (-20pts)",
+      ">200K employees and seller is Seed/Series A = procurement barrier (caps score at ~30% regardless of other factors)",
+      ">50% union/hourly workforce = change resistance barrier (caps score at ~25%)",
     ],
   },
 };

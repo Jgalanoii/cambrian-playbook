@@ -30,7 +30,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   fintech: {
     name: "FinTech",
-    keywords: ["fintech", "financial technology", "neobank", "banking as a service", "baas", "lending", "regtech"],
+    keywords: ["fintech", "financial technology", "neobank", "banking as a service", "baas", "lending", "regtech", "banking", "finance", "insurance", "financial services"],
     personas: ["CFO", "Head of Payments", "VP Finance Ops", "Chief Risk Officer", "CCO", "BSA Officer", "Engineering Lead", "Sponsor Bank"],
     triggers: ["Regulatory action (exam finding, MRA, consent order)", "Incumbent vendor sunset/failure", "Volume threshold crossed", "New product/rail launch (FedNow, RTP)", "Fraud/loss event", "Sponsor bank change", "Funding round or M&A", "New Head of Risk/CCO hire"],
     disqualifiers: ["Treating fintech as single market", "Missing compliance kit for bank buyer", "No external compelling event", "Ignoring sponsor bank dynamics", "Under-resourcing reference calls"],
@@ -40,7 +40,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   healthtech: {
     name: "HealthTech",
-    keywords: ["healthtech", "healthcare", "health tech", "digital health", "medtech", "clinical", "ehr", "epic", "payer", "provider"],
+    keywords: ["healthtech", "healthcare", "health tech", "digital health", "medtech", "clinical", "ehr", "epic", "payer", "provider", "pharmaceuticals", "pharma", "biotech", "life sciences"],
     personas: ["CFO", "COO", "CMO", "CIO", "CMIO", "Chief Quality Officer", "CNO", "Service Line Leader", "HIPAA Security Officer", "Value Analysis Committee"],
     triggers: ["New C-suite hire (CMO, CMIO, CIO — first 6-12 months)", "EHR implementation/upgrade", "Reimbursement change (new CPT code, VBC contract)", "Regulatory change (CMS rule)", "Quality/accreditation event (Joint Commission findings)", "Merger/acquisition", "Financial pressure (margin compression)", "Workforce crisis (nurse shortage)"],
     disqualifiers: ["No EHR integration", "No clinical evidence (peer-reviewed)", "No reimbursement pathway", "Product adds clinician workflow burden", "Ignoring GPO gatekeepers"],
@@ -50,7 +50,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   "incentives-promo": {
     name: "Digital Incentives, Rewards & Promo",
-    keywords: ["incentives", "rewards", "gift card", "recognition", "promo", "merchandise", "loyalty", "employee recognition"],
+    keywords: ["incentives", "rewards", "gift card", "recognition", "promo", "merchandise", "loyalty", "employee recognition", "retail", "e-commerce", "consumer goods", "hospitality", "travel", "cpg"],
     personas: ["CHRO", "VP Total Rewards", "CMO", "VP Growth", "VP Research", "CRO", "VP Channel", "Research Ops Manager"],
     triggers: ["New CHRO/VP Total Rewards (first 6 months)", "Engagement survey drop", "M&A integration", "Budget cycle (Q3/Q4)", "Program audit / cost review", "Compliance event (tax, escheatment)", "Incumbent vendor failure", "Internationalization"],
     disqualifiers: ["Treating all use cases as one ICP", "Buyers who don't understand compliance", "Selling platform to service buyer", "Inability to profitably serve volume"],
@@ -60,7 +60,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   manufacturing: {
     name: "Manufacturing / Industrial",
-    keywords: ["manufacturing", "industrial", "factory", "plant", "oem", "discrete", "process", "automotive", "aerospace"],
+    keywords: ["manufacturing", "industrial", "factory", "plant", "oem", "discrete", "process", "automotive", "aerospace", "construction", "agriculture", "energy", "utilities"],
     personas: ["CFO", "COO", "VP Operations", "VP Supply Chain", "Plant Manager", "Continuous Improvement Manager", "OT Team", "Quality", "EHS"],
     triggers: ["Supply chain disruption", "ERP upgrade (SAP S/4HANA, Oracle)", "Plant expansion/greenfield", "M&A integration", "Regulatory action (FDA warning, recall)", "Labor shortage", "Quality event (major recall, OEE miss)", "Industry 4.0 mandate"],
     disqualifiers: ["Treating manufacturing as one market", "Pitching software-only ROI (must use mfg KPIs)", "No plant floor experience", "Corporate-only selling (plants resist)", "No legacy OT integration"],
@@ -100,7 +100,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   saas: {
     name: "SaaS (Horizontal B2B)",
-    keywords: ["saas", "software as a service", "b2b software", "cloud software", "plg", "product-led"],
+    keywords: ["saas", "software as a service", "b2b software", "cloud software", "plg", "product-led", "technology", "tech", "software", "telecom", "media", "entertainment", "education", "edtech"],
     personas: ["VP/Director of function", "CFO", "CTO", "Champion (Senior IC/Manager)", "IT/Security", "RevOps", "Procurement", "Legal"],
     triggers: ["New executive hire (first 6 months)", "Funding round", "Incumbent renewal window (60-90 days out)", "Stack consolidation (CFO-led)", "Compliance finding", "Security incident", "Product/market launch", "Key-person dependency failure"],
     disqualifiers: ["Defining ICP as market segment", "Ignoring motion-ICP fit (PLG vs enterprise)", "Over-indexing on deal size without success validation", "Static ICP (annual review too slow)", "No disqualifiers list", "Ignoring 18-month retention cohorts"],

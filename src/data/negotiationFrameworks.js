@@ -5,11 +5,11 @@
 
 export const FRAMEWORK_STAGE_MAP = {
   S3_Accounts:      ["artOfWar", "intelligentInvestor"],
-  S4_AccountReview: ["intelligentInvestor", "graham"],
+  S4_AccountReview: ["intelligentInvestor"],
   S5_Brief:         ["cialdini", "artOfWar", "challenger"],
   S6_Hypothesis:    ["jolt", "cialdini", "camp", "fisherUry"],
   S7_InCall:        ["voss", "crucialConversations", "fisherUry"],
-  S8_PostCall:      ["fisherUry", "negotiationGenius", "graham"],
+  S8_PostCall:      ["fisherUry", "negotiationGenius", "intelligentInvestor"],
 };
 
 export const VOSS_TACTICS = {
@@ -173,13 +173,41 @@ export const JOLT_EFFECT = {
   ]
 };
 
+export const CAMP_NEGOTIATION = {
+  name: "Start with No — Jim Camp",
+  stage: "S6 Hypothesis",
+  description: "System of decisions, not emotions — the buyer should feel in control by saying No before they say Yes",
+  tactics: [
+    { name: "Mission & Purpose", salesApplication: "Define the mission for THEIR world, not yours. Your pitch should describe their problem, not your product." },
+    { name: "Let Them Say No", salesApplication: "Give permission to say no early: 'If this doesn't make sense for you, just say so — no hard feelings.' Paradoxically increases trust and engagement." },
+    { name: "No Neediness", salesApplication: "Never show that you need the deal. Neediness kills deals faster than price. Have a full pipeline — or act like you do." },
+    { name: "Decisions, Not Emotions", salesApplication: "When a prospect gets emotional (excited or anxious), slow down. Decisions made from emotion reverse. Guide them back to logic." },
+    { name: "Blank Slate", salesApplication: "Ask questions you already know the answer to. Let them tell you their problem — they'll own the solution more when it comes from their mouth." }
+  ]
+};
+
+export const NEGOTIATION_GENIUS = {
+  name: "Negotiation Genius — Deepak Malhotra & Max Bazerman (Harvard)",
+  stage: "S8 Post-Call",
+  description: "Systematic negotiation for complex, multi-party B2B deals",
+  tactics: [
+    { name: "Investigative Negotiation", salesApplication: "Before negotiating terms, investigate their constraints. The prospect's demands often hide flexible constraints you can solve creatively." },
+    { name: "ZOPA Mapping", salesApplication: "Map the Zone of Possible Agreement: what's the least you'd accept, what's the most they'd pay? If no overlap exists, restructure the deal (phased, pilot, success-based)." },
+    { name: "Contingency Contracts", salesApplication: "When you disagree on projections: 'If we hit X metric in 90 days, the full contract activates. If not, you walk.' Eliminates risk objections." },
+    { name: "Post-Settlement Settlement", salesApplication: "After reaching agreement, ask: 'Is there a way to make this even better for both of us?' Often surfaces creative value neither side considered." },
+    { name: "Acknowledge Their Constraints", salesApplication: "Don't fight procurement. Say: 'I understand you need to show the board 3 bids. Let me help you build the comparison so ours looks fair, not rigged.'" }
+  ]
+};
+
 export const CHALLENGER_FRAMEWORK = {
   name: "Challenger Customer — CEB/Gartner",
   stage: "S5 Brief",
   mobilizer: {
     definition: "Only 13% of stakeholders are Mobilizers — they ask how to make it happen",
     identify: "They ask 'how do we make this happen?' not 'interesting, let me think about it'",
-    notMobilizers: ["Talkers — share info but can't move deals", "Blockers — actively oppose change"]
+    notMobilizers: ["Talkers — share info but can't move deals", "Blockers — actively oppose change"],
+    talkerTactics: "Talkers are friendly but lack authority. Use them for intel gathering, NOT as champions. Ask: 'Who else needs to be convinced?' to identify the real Mobilizer.",
+    blockerTactics: "Blockers fear change or loss of control. Don't fight them — reframe your solution as protecting their domain: 'This actually strengthens your team's position by...'",
   },
   teachingAngle: "Challenge a widely-held assumption about their industry using data or a case study they haven't seen"
 };
@@ -192,5 +220,7 @@ export const ALL_FRAMEWORKS = {
   intelligentInvestor: INTELLIGENT_INVESTOR_SALES,
   crucialConversations: CRUCIAL_CONVERSATIONS,
   jolt: JOLT_EFFECT,
-  challenger: CHALLENGER_FRAMEWORK
+  challenger: CHALLENGER_FRAMEWORK,
+  camp: CAMP_NEGOTIATION,
+  negotiationGenius: NEGOTIATION_GENIUS,
 };
