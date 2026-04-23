@@ -29,7 +29,7 @@ const SUPABASE_REF = process.env.VITE_SUPABASE_URL
   : "";
 
 function verifyJwt(req) {
-  const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
+  const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
   if (!IS_PRODUCTION && (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes")) return true;
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return false;

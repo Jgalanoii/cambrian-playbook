@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     });
 
     // Environment status
-    const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
+    const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
     const envStatus = {
       guest_mode: guestFlag === "true" || guestFlag === "1" || guestFlag === "yes" ? "ENABLED" : "disabled",
       environment: process.env.VERCEL_ENV || "unknown",

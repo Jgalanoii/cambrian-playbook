@@ -117,7 +117,7 @@ export function getGuestRemaining(ip) {
 
 function verifyJwt(req) {
   // Guest mode — allowed everywhere but limited to 2 uses
-  const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").trim().toLowerCase();
+  const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
   if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") {
     // Mark as guest so the handler can enforce limits
     req._isGuest = true;
