@@ -1808,7 +1808,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
                     <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:12,
                       background:fitScores[m.company].bg,color:fitScores[m.company].color,
                       border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap",display:"inline-block"}}
-                      title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk].filter(Boolean).join(" · ")}>
+                      title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk, fitScores[m.company].score < 65 ? "Stretch target — may be viable with additional relationship context or intel" : ""].filter(Boolean).join(" · ")}>
                       {fitScores[m.company].score}% · {fitScores[m.company].label}
                     </div>
                   ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:"—"}</td>
@@ -2363,7 +2363,7 @@ export default function App(){
       ? "Target well-known mid-market companies — recognized regional leaders, growing national brands, established private companies. NOT Fortune 500 unless they happen to fall in the size range."
       : "Target SMB and growth-stage companies — regional operators, local market leaders, multi-location businesses, emerging brands, established independents. These are companies a rep in the territory would know. Do NOT return Fortune 500 or large enterprises.";
 
-    const prompt = `You are a target-account analyst identifying 20 REAL ${scaleLabel} companies that match the seller's Ideal Customer Profile. These are ${scaleLabel} companies — size your recommendations accordingly.
+    const prompt = `You are a target-account analyst identifying 30 REAL ${scaleLabel} companies that match the seller's Ideal Customer Profile. These are ${scaleLabel} companies — size your recommendations accordingly.
 
 ═══ SELLER PROFILE ═══
 URL: ${sellerUrl}
@@ -2396,11 +2396,11 @@ ${scaleGuidance}
 - Distribute across the listed industries — do not cluster in one vertical.
 - Be CONFIDENT. You know tens of thousands of real companies across every US industry from training data. Use that knowledge. Do NOT refuse, apologize, or say you can't verify. Return 20 companies.
 - TICKER ACCURACY: Only include a ticker if 100% certain. Otherwise write "Public" or "Private."
-- QUALITY THRESHOLD: Only include companies you are confident are a STRONG ICP fit (≥65% match). If a company is marginal, replace it with a better-fitting one.
+- QUALITY MIX: Return 15-20 STRONG fits (companies you are confident match the ICP well) followed by 10-15 STRETCH targets (companies that partially match — right industry but wrong size, right size but adjacent industry, or companies where a specific relationship or context could make them viable). This gives the seller both high-confidence targets and exploratory opportunities.
 - CONSISTENCY: For the same seller and ICP inputs, return the same core companies every time. Anchor on the most obvious, well-known companies first, then fill remaining slots. Sort output alphabetically by company name.
 - Return sorted ALPHABETICALLY by company name (for consistency across runs).
 
-═══ OUTPUT (raw JSON only, 20 entries, no prose) ═══
+═══ OUTPUT (raw JSON only, 25-30 entries, no prose) ═══
 {"accounts":[
   {"company":"Real company name","industry":"One of the target industries","company_url":"company.com","employees":"~estimated headcount","publicPrivate":"Public or Private or PE-backed","lead_source":"Generated","outcome":"What outcome they're likely chasing","why":"1 sentence: why this company fits"}
 ]}`;
@@ -2412,7 +2412,7 @@ ${scaleGuidance}
       // it can't verify exact employee counts for smaller firms.
       const d = await claudeFetch({
         model: activeModel(),
-        max_tokens: 4000,
+        max_tokens: 6000,
         ...(isEnterprise ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }] } : {}),
         messages: [{ role: "user", content: prompt }],
       });
@@ -2457,21 +2457,17 @@ ${scaleGuidance}
         const sel = cohortsBuilt.find(c => c.members.length > 1) || cohortsBuilt[0];
         setSelectedCohort(sel);
       }
-      setTargetGenNote(`Generated ${generated.length} targets. Scoring now — companies below 65% fit will be filtered out.`);
+      setTargetGenNote(`Generated ${generated.length} ICP-matched targets. Scoring now — Strong Fit accounts will surface at the top.`);
       setStep(3);
 
-      // Score and filter — await completion, then remove <65% fit
+      // Score all accounts — keep everything, don't filter
       const allMembers = cohortsBuilt.flatMap(c => c.members);
       scoreFit(allMembers, buildSellerCtx()).then(() => {
         setFitScores(prev => {
-          const MIN_FIT = 65;
-          const belowThreshold = Object.entries(prev).filter(([, v]) => v.score < MIN_FIT).map(([k]) => k);
-          if (belowThreshold.length) {
-            setCohorts(prevC => prevC.map(c => ({
-              ...c,
-              members: c.members.filter(m => !belowThreshold.includes(m.company)),
-            })).filter(c => c.members.length > 0));
-            setTargetGenNote(`Filtered to ${Object.keys(prev).length - belowThreshold.length} companies with 65%+ fit. Removed ${belowThreshold.length} below threshold.`);
+          const strong = Object.values(prev).filter(v => v.score >= 65).length;
+          const stretch = Object.values(prev).filter(v => v.score < 65).length;
+          if (stretch > 0) {
+            setTargetGenNote(`${strong} Strong Fit accounts (65%+) and ${stretch} Stretch targets. Stretch targets may be viable with additional relationship context or intel.`);
           }
           return prev;
         });
@@ -6762,8 +6758,8 @@ ${isOpen
                           <td onClick={e=>e.stopPropagation()}>
                             {fitScores[m.company]?(
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
-                                title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk].filter(Boolean).join(" · ")}>
-                                {fitScores[m.company].score}% · {fitScores[m.company].label}
+                                title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk, fitScores[m.company].score < 65 ? "Stretch target — may be viable with additional relationship context or intel" : ""].filter(Boolean).join(" · ")}>
+                                {fitScores[m.company].score}% · {fitScores[m.company].label}{fitScores[m.company].score < 65 ? " · Stretch" : ""}
                               </div>
                             ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
                           </td>
