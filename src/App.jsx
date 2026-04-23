@@ -794,16 +794,23 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     try {
       const d = await claudeFetch({
         model:activeModel(),
-        max_tokens:1800,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        max_tokens:3000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:baseLight+
-          `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL. If you cannot verify a name, return "Verify at LinkedIn".\n\n`+
-          `For each executive provide:\n- background: 1 sentence — prior company, board role, or notable career move\n- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What keeps them up at night? What initiative would they champion? How should a seller approach them? 2-3 specific sentences grounded in ${co}'s current situation.\n\n`+
+          `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n`+
+          `ACCURACY RULES:\n`+
+          `- For well-known public companies (Fortune 500, major brands), you KNOW these executives from training data. Search to confirm and get the latest.\n`+
+          `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit that role entirely.\n`+
+          `- If a specific role is genuinely unknown after searching, skip it. Do NOT invent names. 4 verified executives is better than 6 with guesses.\n`+
+          `- Include: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders most relevant to what ${sellerUrl} sells.\n\n`+
+          `For each executive provide:\n`+
+          `- name: their full real name (NEVER a placeholder)\n`+
+          `- title: their exact current title\n`+
+          `- initials: first letter of first + last name\n`+
+          `- background: 1 sentence — prior company, prior role, board seats, or notable career move\n`+
+          `- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What strategic priority do they own? What keeps them up at night? How should a seller at ${sellerUrl} approach them? 2-3 specific sentences grounded in ${co}'s current situation and recent moves.\n\n`+
           `Return ONLY raw JSON:\n`+
-          `{"keyExecutives":[`+
-          `{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"Prior role/company in 1 sentence","angle":"Their mandate at ${co}: strategic priority they own, pain they feel most, how a seller earns their attention. 2-3 sentences."},`+
-          `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: cost, growth, compliance, or ops focus. What they need in a business case. 2-3 sentences."},`+
-          `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce, tech, product, or transformation focus. What resonates with their agenda. 2-3 sentences."}],`+
+          `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role at Prior Company","angle":"Their mandate at ${co}. 2-3 sentences."}],`+
           `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
         }],
       }, { extraHeaders: _maxMode ? { "x-billable-max": "1" } : { "x-billable-run": "1" } });
@@ -2697,14 +2704,14 @@ ${scaleGuidance}
               try {
                 const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\nACCURACY: NEVER invent facts. Empty string if unknown.\n`;
                 const d = await claudeFetch({
-                  model: activeModel(), max_tokens: 1800,
-                  tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+                  model: activeModel(), max_tokens: 3000,
+                  tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
                   messages: [{ role: "user", content: base +
-                    `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\n` +
-                    `For each executive: background (1 sentence — prior company/role) and angle (their MANDATE at ${co} — what they own, what keeps them up at night, how a seller approaches them. 2-3 sentences).\n\nReturn ONLY raw JSON:\n` +
-                    `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"Prior role/company","angle":"Their mandate at ${co}: strategic priority, pain, seller approach. 2-3 sentences."},` +
-                    `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: cost/growth/compliance. What they need in a business case. 2-3 sentences."},` +
-                    `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce/tech/product. What resonates. 2-3 sentences."}],` +
+                    `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n` +
+                    `ACCURACY: For well-known companies, you KNOW these executives. Search to confirm. NEVER return "Verify at LinkedIn" — either return the real name or omit the role. 4 verified execs > 6 with guesses.\n` +
+                    `Include: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders relevant to ${sellerUrl}.\n\n` +
+                    `For each: background (1 sentence — prior company/role) and angle (MANDATE at ${co} — what they own, what keeps them up, how seller approaches. 2-3 sentences).\n\nReturn ONLY raw JSON:\n` +
+                    `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role at Prior Company","angle":"Mandate at ${co}. 2-3 sentences."}],` +
                     `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
                   }],
                 });
@@ -4390,15 +4397,14 @@ ${isOpen
         const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\n`;
         const d = await claudeFetch({
           model: activeModel(),
-          max_tokens: 1800,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+          max_tokens: 3000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
           messages: [{ role: "user", content: base +
-            `Search for the CURRENT C-suite leadership of ${co}. ACCURACY IS CRITICAL.\n\n` +
-            `For each executive: background (1 sentence — prior company/role) and angle (their MANDATE at ${co} — what they were hired to do, what keeps them up at night, how a seller should approach them. 2-3 specific sentences).\n\n` +
-            `Return ONLY raw JSON:\n` +
-            `{"keyExecutives":[{"name":"VERIFIED CEO","title":"CEO","initials":"XX","background":"Prior role/company","angle":"Their mandate at ${co}: strategic priority, pain point, seller approach. 2-3 sentences."},` +
-            `{"name":"VERIFIED CFO/COO","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: cost/growth/compliance focus. What they need in a business case. 2-3 sentences."},` +
-            `{"name":"VERIFIED CHRO/CPO or 'Verify at LinkedIn'","title":"exact","initials":"XX","background":"Prior role/company","angle":"Their mandate: workforce/tech/product focus. What resonates. 2-3 sentences."}],` +
+            `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n` +
+            `ACCURACY: For well-known companies, you KNOW these executives. Search to confirm. NEVER return "Verify at LinkedIn" — either return the real name or omit the role. 4 verified execs > 6 with guesses.\n` +
+            `Include: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders relevant to ${sellerUrl}.\n\n` +
+            `For each: background (1 sentence — prior company/role) and angle (MANDATE at ${co} — what they own, what keeps them up, how seller approaches. 2-3 sentences).\n\nReturn ONLY raw JSON:\n` +
+            `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role at Prior Company","angle":"Mandate at ${co}. 2-3 sentences."}],` +
             `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
           }],
         });
