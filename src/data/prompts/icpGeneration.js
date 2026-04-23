@@ -28,7 +28,7 @@
 //       salesCycle:     <30 days | 30-60 | 60-90 | 90-180 | 180+ days
 //       adoptionProfile: Innovator | Early Adopter | Early Majority | Late Majority
 //
-//   - localStorage cache key: `icp:v2:<normalized-url>`
+//   - localStorage cache key: `icp:v3:<normalized-url>`
 //   - Bump ICP_CACHE_VERSION in App.jsx when the schema shape changes.
 //   - ICPs containing "Unknown" / "Unable to determine" / "PICK ONE" in
 //     core fields are NOT cached — next load retries.

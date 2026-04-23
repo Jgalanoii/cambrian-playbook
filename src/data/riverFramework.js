@@ -1,3 +1,10 @@
+// RIVER Framework — Cambrian Catalyst proprietary sales discovery methodology.
+// Reality → Impact → Vision → Entry Points → Route
+// Each stage maps to a phase of the sales conversation, from diagnosis (R)
+// through quantification (I), future-state painting (V), stakeholder mapping (E),
+// to deal routing and next steps (R). Gates qualify the deal at each stage.
+// Discovery prompts capture intel in the prospect's own words.
+
 export const RIVER_STAGES = [
   {id:"R1",letter:"R",label:"Reality",sub:"Current state — where are they broken?",
     gates:[

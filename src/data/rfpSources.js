@@ -285,7 +285,7 @@ export const NAICS_CATEGORY_MAP = {
   "AI/ML": ["541715", "541511", "541512"],
   "Data Analytics": ["541511", "541519", "518210"],
   "Compliance/RegTech": ["541611", "541690", "522320"],
-  "Digital Rewards": ["541613", "541810", "454111"],
+  "Digital Rewards/Incentives": ["541613", "541810", "454111"],
   "Healthcare IT": ["621111", "621610", "541512"],
   "HR/Workforce": ["561311", "541612", "561320"]
 };

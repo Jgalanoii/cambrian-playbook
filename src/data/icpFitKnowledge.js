@@ -37,12 +37,17 @@ export const DUNFORD_POSITIONING = [
 export const DUNFORD_SALES_PITCH = "Insight → Alternatives & shortcomings → Perfect world → Your approach → Proof → Ask";
 
 // ── Moesta: JTBD Four Forces ───────────────────────────────────────────────
+// Operationalized in fit scoring via signals:
+//   Push/Pull → positive signals (funding, hiring, mandate) increase fit
+//   Anxiety/Habit → negative signals (union, regulatory, incumbent lock-in) decrease fit
+// High-friction industries have structurally high Anxiety + Habit.
 export const FOUR_FORCES = {
   push: "What about current state makes them uncomfortable (pain with status quo)",
   pull: "What about the new solution attracts them (promise of future)",
   anxiety: "Fears about switching (uncertainty, implementation risk, career risk)",
   habit: "Inertia keeping them where they are (sunk cost, comfort, relationships)",
   rule: "Purchase happens only when Push + Pull exceeds Anxiety + Habit. Most ICP definitions ignore Anxiety and Habit.",
+  scoring: "In fit scoring: positive signals map to Push/Pull forces; negative signals and high-friction industry reasons map to Anxiety/Habit forces. The framework is implicit in how signals affect the score.",
 };
 
 // ── WbD: SPICED discovery framework ────────────────────────────────────────

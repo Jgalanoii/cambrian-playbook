@@ -52,9 +52,9 @@ export const DISCOVERY_SCORECARD = {
     5: "Exceptional — textbook example, could be used for training",
   },
   thresholds: {
-    certification: 80,
-    coaching: 60,
-    remediation: "below 60",
+    certification: 80,  // >= 80: rep is certified, ready for independent selling
+    coaching: 60,       // 60-79: rep needs coaching, pair with senior on next calls
+    remediation: 0,     // < 60: remediation required, review fundamentals before next call
   },
 };
 

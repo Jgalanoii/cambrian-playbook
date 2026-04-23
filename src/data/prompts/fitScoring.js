@@ -100,6 +100,14 @@ export const FIT_SCORING_RULES = {
     negative: [
       ">200K employees and seller is Seed/Series A = procurement barrier (caps score at ~30% regardless of other factors)",
       ">50% union/hourly workforce = change resistance barrier (caps score at ~25%)",
+      "Heavily regulated + no compliance kit = hard disqualifier (regulatory fit blocks deal regardless of ICP match)",
     ],
   },
+  // Four Forces framework (Moesta): purchase happens only when
+  // Push (current pain) + Pull (desired outcome) exceeds
+  // Anxiety (fear of new solution) + Habit (comfort with status quo).
+  // Applied in fit scoring: high-friction industries have high Anxiety + Habit.
+  // Signals that increase Push/Pull improve fit; signals that increase
+  // Anxiety/Habit (regulatory, union, incumbent lock-in) decrease fit.
+  fourForcesNote: "Implicit in scoring — Push/Pull signals are positive signals above; Anxiety/Habit are negative signals and high-friction industry reasons.",
 };

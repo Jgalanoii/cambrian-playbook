@@ -1,7 +1,7 @@
 // src/data/negotiationFrameworks.js
 // Negotiation and influence frameworks applied to B2B sales
 // Stage mapping and injection strings: src/data/prompts/negotiationInjections.js
-// Last updated: April 15, 2026
+// Last updated: April 22, 2026
 
 export const FRAMEWORK_STAGE_MAP = {
   S3_Accounts:      ["artOfWar", "intelligentInvestor"],
@@ -164,12 +164,12 @@ export const CRUCIAL_CONVERSATIONS = {
 export const JOLT_EFFECT = {
   name: "JOLT Effect — Dixon & McKenna",
   stage: "S6 Hypothesis",
-  description: "Indecision kills 40-60% of B2B deals. FOMU (Fear of Messing Up) beats FOMO.",
+  description: "Indecision kills 40-60% of B2B deals. FOMU (Fear of Messing Up) beats FOMO. The enemy is not 'no' — it's 'not yet.'",
   steps: [
-    { letter: "J", action: "Judge the indecision", description: "Name the FOMU explicitly — 'It sounds like the risk of getting this wrong is scarier than not solving it'" },
-    { letter: "O", action: "Offer your recommendation", description: "Give ONE clear POV — not options. Options create indecision." },
-    { letter: "L", action: "Limit the exploration", description: "Narrow scope to make decision smaller — 'Let's start with just X'" },
-    { letter: "T", action: "Take risk off the table", description: "Pilot, SLA, phased rollout, reference customer, money-back" }
+    { letter: "J", action: "Judge the indecision", description: "Name the FOMU explicitly — 'It sounds like the risk of getting this wrong is scarier than not solving it.' Diagnose whether indecision is driven by valuation (don't see value), lack of info, or outcome uncertainty." },
+    { letter: "O", action: "Offer your recommendation", description: "Give ONE clear POV — not options. Options create indecision. 'Based on what I've seen with similar companies, here's what I'd do.'" },
+    { letter: "L", action: "Limit the exploration", description: "Narrow scope to make decision smaller — 'Let's start with just X.' Reduce the number of variables the buyer is evaluating." },
+    { letter: "T", action: "Take risk off the table", description: "Directly addresses FOMU. Pilot, SLA, phased rollout, reference customer, money-back guarantee. Make it safe to say yes." }
   ]
 };
 

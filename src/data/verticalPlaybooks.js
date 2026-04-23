@@ -16,7 +16,7 @@ export const VERTICAL_PLAYBOOKS = {
     disqualifiers: ["No data readiness (inaccessible, unclean)", "No AI governance posture", "Strong internal build bias", "No pilot appetite with success criteria"],
     compliance: ["SOC 2 Type II", "ISO 27001", "ISO 42001 (AI management)", "EU AI Act", "NIST AI RMF", "Training data provenance / IP exposure", "Sector-specific: HIPAA, SR 11-7, FDA SaMD, FERPA"],
     usps: ["Data moat (proprietary data)", "Workflow integration (embedded in existing tools)", "Evaluation rigor (published evals)", "Privacy/deployment model (VPC, on-prem)", "Model-agnostic architecture", "Vertical/domain specificity", "Deployment speed"],
-    heuristics: ["AI maturity spectrum: AI-native vs AI-curious vs AI-averse", "Data posture is a hard filter", "Governance posture predicts deal stalls", "Build/buy bias axis", "Fear + FOMO co-existence (which dominates = messaging strategy)", "Vertical-specific > horizontal 'AI for everything'"],
+    heuristics: ["AI maturity spectrum: AI-native vs AI-curious vs AI-averse", "Data posture is a hard filter", "Governance posture predicts deal stalls", "Build/buy bias axis", "Fear + FOMO co-existence: if buyer is regulated (finance, health, gov) → Fear dominates, lead with risk mitigation and compliance; if buyer is tech/startup → FOMO dominates, lead with competitive advantage and speed", "Vertical-specific > horizontal 'AI for everything'"],
   },
   cybersecurity: {
     name: "Cybersecurity",
@@ -113,6 +113,8 @@ export const VERTICAL_PLAYBOOKS = {
 // ── VERTICAL MATCHER ────────────────────────────────────────────────────────
 // Given a seller's market category or description, find the best-matching
 // vertical playbook(s). Returns array of {key, name, score}.
+// Minimum score threshold: 10 (at least one keyword match required).
+// Scores below 10 are noise from partial name matches alone.
 export function matchVerticals(text) {
   if (!text) return [];
   const low = text.toLowerCase();
@@ -122,11 +124,11 @@ export function matchVerticals(text) {
       for (const kw of v.keywords) {
         if (low.includes(kw)) score += 10;
       }
-      // Partial name match
+      // Partial name match (bonus, not sufficient alone)
       if (low.includes(v.name.toLowerCase().split(" ")[0])) score += 5;
       return { key, name: v.name, score };
     })
-    .filter(m => m.score > 0)
+    .filter(m => m.score >= 10) // Require at least one keyword match
     .sort((a, b) => b.score - a.score);
 }
 
