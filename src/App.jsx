@@ -7253,7 +7253,18 @@ ${isOpen
             .slice()
             .sort((a,b)=>(fitScores[b.company]?.score??50)-(fitScores[a.company]?.score??50));
           const sa = selectedAccount;
-          const fs = sa ? fitScores[sa.company] : null;
+          const fsRaw = sa ? fitScores[sa.company] : null;
+          const intelAdj = sa ? intelAdjustments[sa.company] : null;
+          const fs = fsRaw && intelAdj ? {
+            ...fsRaw,
+            score: Math.max(0, Math.min(100, fsRaw.score + intelAdj.modifier)),
+            label: (()=>{const s=Math.max(0,Math.min(100,fsRaw.score+intelAdj.modifier));return s>=75?"Strong Fit":s>=55?"Potential Fit":"Poor Fit";})(),
+            color: (()=>{const s=Math.max(0,Math.min(100,fsRaw.score+intelAdj.modifier));return s>=75?"var(--green)":s>=55?"var(--amber)":"var(--red)";})(),
+            bg: (()=>{const s=Math.max(0,Math.min(100,fsRaw.score+intelAdj.modifier));return s>=75?"var(--green-bg)":s>=55?"var(--amber-bg)":"var(--red-bg)";})(),
+            _rawScore: fsRaw.score,
+            _intelModifier: intelAdj.modifier,
+            _intelReason: intelAdj.reason,
+          } : fsRaw;
           return (
           <div className="page" style={{maxWidth:1200}}>
             {/* Title + prev/next + print */}
@@ -7284,6 +7295,10 @@ ${isOpen
               {accounts.map((m,i)=>{
                 const isSel = sa?.company===m.company;
                 const sc = fitScores[m.company];
+                const ia = intelAdjustments[m.company];
+                const adjScore = sc && ia ? Math.max(0, Math.min(100, sc.score + ia.modifier)) : sc?.score;
+                const adjColor = adjScore>=75?"var(--green)":adjScore>=55?"var(--amber)":"var(--red)";
+                const adjBg = adjScore>=75?"var(--green-bg)":adjScore>=55?"var(--amber-bg)":"var(--red-bg)";
                 return (
                   <button key={i} className={`account-chip ${isSel?"active":""}`}
                     onClick={()=>{setSelectedAccount(m);setSelectedOutcomes([]);}}>
@@ -7291,8 +7306,8 @@ ${isOpen
                     <span>{m.company}</span>
                     {sc && (
                       <span style={{fontSize:11,fontWeight:700,padding:"1px 8px",borderRadius:"var(--r-pill)",
-                        background:sc.bg,color:sc.color,border:"1px solid "+sc.color+"44"}}>
-                        {sc.score}%
+                        background:ia?adjBg:sc.bg,color:ia?adjColor:sc.color,border:"1px solid "+(ia?adjColor:sc.color)+"44"}}>
+                        {ia?adjScore:sc.score}%
                       </span>
                     )}
                   </button>
@@ -7319,10 +7334,15 @@ ${isOpen
                 {fs && (
                   <div style={{fontSize:13,fontWeight:700,padding:"5px 12px",borderRadius:"var(--r-pill)",
                     background:fs.bg,color:fs.color,border:"1px solid "+fs.color+"44",whiteSpace:"nowrap"}}>
-                    {fs.score}% · {fs.label}
+                    {fs.score}%{fs._intelModifier ? ` (${fs._intelModifier>0?"+":""}${fs._intelModifier})` : ""} · {fs.label}
                   </div>
                 )}
               </div>
+              {fs?._intelReason && (
+                <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B22",borderRadius:8,padding:"8px 12px",marginBottom:8,fontSize:12,color:"var(--navy)"}}>
+                  <strong>Intel:</strong> {fs._intelReason} ({fs._intelModifier>0?"+":""}{fs._intelModifier} adjustment)
+                </div>
+              )}
               {fs?.reason && (
                 <div className="card" style={{padding:"12px 16px",marginBottom:12}}>
                   <div style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Fit rationale</div>
