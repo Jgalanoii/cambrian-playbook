@@ -229,6 +229,43 @@ export const ARCHETYPE_BATTLE_CARDS = [
   },
 ];
 
+// ── POST-SALE EXPANSION PLAYBOOK ────────────────────────────────────────
+export const POST_SALE_EXPANSION = {
+  principle: "The deal close is the midpoint, not the end. Murphy's RWAS: will they succeed AND expand? If you can't answer yes to both, the deal shouldn't close.",
+  customerSuccessQualification: {
+    description: "Before marking a deal closed-won, validate that the customer can actually succeed",
+    criteria: [
+      { signal: "Named success owner on customer side", weight: "Critical", note: "If no one owns the outcome internally, the project will stall after implementation" },
+      { signal: "Executive sponsor confirmed post-sale", weight: "Critical", note: "The economic buyer must remain engaged through go-live, not just through signature" },
+      { signal: "Success metrics agreed in writing", weight: "High", note: "What does 'working' look like in 30/60/90 days? If you can't define it, you can't prove it" },
+      { signal: "Implementation timeline is realistic", weight: "High", note: "Aggressive timelines set up for failure. 'Live in 2 weeks' when typical is 6 weeks = churn risk" },
+      { signal: "End-user adoption plan exists", weight: "Medium", note: "Training, change management, internal comms. Without it, license utilization will be <30%" },
+    ],
+  },
+  expansionTriggers: [
+    { trigger: "Usage crosses 80% of licensed capacity", timing: "Real-time monitoring", action: "Proactive expansion conversation before they hit limits — position as growth signal, not upsell" },
+    { trigger: "New department/team asks for access", timing: "Within 48 hours of request", action: "Land-and-expand: offer a scoped pilot for the new team with its own success metrics" },
+    { trigger: "Customer achieves stated success metrics", timing: "At 90-day review", action: "Document the win, build a case study together, then discuss what's next: 'Now that [metric], what's the next problem?'" },
+    { trigger: "Executive sponsor changes role/company", timing: "Within 1 week", action: "Two moves: (1) connect with their successor, (2) follow them to new company as warm lead" },
+    { trigger: "Customer's company raises funding or acquires", timing: "Within 2 weeks", action: "Growth event = expanded budget and new use cases. Reach out with congratulations + 'as you scale, here's how we can help'" },
+    { trigger: "Annual renewal 90 days out", timing: "90 days before", action: "Never let renewal be the first conversation in months. QBR at -90, success review at -60, renewal at -30" },
+  ],
+  churnRiskIndicators: [
+    { signal: "Login frequency drops >50% over 30 days", severity: "High", response: "Immediate outreach from CSM — not email, phone call. 'I noticed your team's usage has shifted — what changed?'" },
+    { signal: "Champion leaves the company", severity: "Critical", response: "Emergency: find the new owner within 1 week or the account goes dark. Ask champion for intro before they leave" },
+    { signal: "Support ticket volume spikes", severity: "Medium", response: "Proactive review: are they hitting product limitations, or is it an adoption/training gap?" },
+    { signal: "Customer stops attending QBRs", severity: "High", response: "They've mentally checked out. Escalate to exec sponsor with a concrete value narrative" },
+    { signal: "Competitor mentioned in support or meeting notes", severity: "High", response: "Don't panic. Ask directly: 'What are you evaluating and why?' Address the gap, don't sell against the name" },
+  ],
+  renewalFramework: {
+    minus90: "Quarterly Business Review: present ROI, usage trends, roadmap preview. Plant expansion seed.",
+    minus60: "Success Review: document achieved metrics vs original goals. Identify gaps and new opportunities.",
+    minus30: "Renewal Discussion: present renewal terms alongside expansion proposal. Lead with value, not contract.",
+    minus0: "Close: multi-year discount if committed, or annual with expansion clause.",
+    rule: "If you're surprised by a churn at renewal, you failed at -90. Every churn should be visible 90 days out.",
+  },
+};
+
 // ── COMBINED PROMPT INJECTIONS ────────────────────────────────────────────
 
 export const COMPETITIVE_INJECTION = `

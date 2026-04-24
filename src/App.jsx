@@ -210,6 +210,10 @@ function buildCohorts(rows,mapping){
     makeCohort("Other", rest, MAX_COHORTS - 1),
   ];
 }
+// ── DEAL HEALTH SCORING ──────────────────────────────────────────────────
+// Rolls up RIVER gate answers + discovery capture into a numeric deal
+// health score (0-100) with per-stage breakdown. Fed into post-call
+// routing and forecast accuracy.
 function calcConfidence(gateAnswers,riverData){
   const positive={
     r1_urgency:["Executive mandate / top-down pressure","Recent failure or incident","Budget cycle opening up"],
@@ -225,6 +229,42 @@ function calcConfidence(gateAnswers,riverData){
   const filled=RIVER_STAGES.flatMap(s=>s.discovery).filter(p=>riverData[p.id]?.trim().length>10).length;
   score+=filled*4;return Math.min(score,100);
 }
+
+// Per-stage deal health breakdown for RIVER scorecard
+function calcDealHealth(gateAnswers,riverData){
+  const stages = RIVER_STAGES.map(s => {
+    let stageScore = 0, maxScore = 0;
+    // Gates: 10pts each for positive, 3 for any answer
+    const positiveMap = {
+      r1_urgency:["Executive mandate / top-down pressure","Recent failure or incident","Budget cycle opening up"],
+      r1_mustHave:["Must-have — they'd be very disappointed without a solution"],
+      i_cost:["Yes — hard numbers","Partial — sense of it but not exact"],
+      v_outcome:["Yes — specific and measurable","Somewhat — directional not specific"],
+      v_champion:["Yes — identified and motivated","Potential — needs equipping"],
+      e_buyer:["Yes — met or confirmed","Probable — know the role"],
+      e_process:["Clear — defined steps and timeline","Informal — champion can move it"],
+      e_committee:["3-5 = ideal range"],
+      r2_fit:["Strong fit — ready to advance","Good fit — a few gaps"],
+    };
+    s.gates.forEach(g => {
+      maxScore += 10;
+      const pos = positiveMap[g.id];
+      if (pos && pos.includes(gateAnswers[g.id])) stageScore += 10;
+      else if (gateAnswers[g.id]) stageScore += 3;
+    });
+    // Discovery: 5pts each for filled fields
+    s.discovery.forEach(p => {
+      maxScore += 5;
+      if (riverData[p.id]?.trim().length > 10) stageScore += 5;
+    });
+    const pct = maxScore > 0 ? Math.round(stageScore / maxScore * 100) : 0;
+    const label = pct >= 75 ? "Strong" : pct >= 40 ? "Partial" : pct > 0 ? "Weak" : "Missing";
+    return { stage: s.label, letter: s.letter, score: pct, label, stageScore, maxScore };
+  });
+  const overall = Math.round(stages.reduce((sum, s) => sum + s.score, 0) / stages.length);
+  return { overall, stages };
+}
+
 function confColor(s){return s>=75?"var(--green)":s>=50?"var(--amber)":"var(--red)";}
 
 // NOTE: No browser-side Anthropic client. All Claude calls route through
@@ -473,113 +513,71 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
   } catch { return null; }
 }
 
+// callAI: JSON-specific wrapper around claudeFetch. Delegates all HTTP/retry
+// logic to claudeFetch, then extracts + repairs JSON from the response.
 async function callAI(prompt, { maxTokens = 5500 } = {}){
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  for(let attempt=0; attempt<3; attempt++){
-    try{
-      const r = await fetch("/api/claude",{
-        method:"POST",
-        headers:authHeaders(),
-        body:JSON.stringify({
-          model:activeModel(),
-          max_tokens:maxTokens,
-          temperature:0,
-          system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
-          messages:[
-            {role:"user",content:prompt},
-            {role:"assistant",content:"{"},
-          ],
-        }),
-      });
-      const d = await r.json();
-      if(d.error){
-        if(d.error.type==="rate_limit_error" || r.status===429){
-          console.warn("[callAI] rate limit, waiting 15s... attempt", attempt+1);
-          await sleep(15000);
-          continue;
-        }
-        if(d.error.type==="overloaded_error" || r.status===529){
-          // Anthropic capacity overload — typically recovers in seconds.
-          // Exp backoff: 2s, 5s, 10s.
-          const wait = [2000, 5000, 10000][attempt] || 10000;
-          console.warn(`[callAI] overloaded, retrying in ${wait/1000}s... attempt`, attempt+1);
-          await sleep(wait);
-          continue;
-        }
-        console.error("callAI error:",d.error);
-        return null;
-      }
-      const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/<\/?cite[^>]*>/g,"").trim();
-      if(!raw) return null;
-      // If model already included the opening {, don't double up
-      const text = raw.startsWith("{") ? raw : "{" + raw;
-      console.log("callAI response chars:", text.length, "preview:", text.slice(0,80));
-
-      const last = text.lastIndexOf("}");
-      if(last<=0) return null;
-
-      const candidate = text.slice(0, last+1);
-
-      // Try 1: direct parse
-      try{return JSON.parse(candidate);}catch{}
-
-      // Try 2: unicode-only sanitize + trailing comma removal
-      const sanitized = candidate
-        .replace(/[\u2018\u2019]/g,"'")
-        .replace(/[\u201C\u201D]/g,'"')
-        .replace(/[\u2013\u2014]/g,"-")
-        .replace(/[\u2026]/g,"...")
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
-        .replace(/,\s*([}\]])/g,"$1"); // strip trailing commas
-      try{return JSON.parse(sanitized);}catch{}
-
-      // Try 3: full character-by-character JSON repair
-      // - Escapes unescaped double quotes INSIDE string values
-      // - Escapes raw newlines only inside strings (structural newlines left as-is)
-      // - Correct peek-ahead that skips escape sequences
-      const repairJSON = s => {
-        let out="", inStr=false, esc=false;
-        for(let i=0;i<s.length;i++){
-          const ch=s[i];
-          if(esc){out+=ch;esc=false;continue;}
-          if(ch==="\\"){out+=ch;esc=true;continue;}
-          if(inStr){
-            if(ch==="\n"){out+="\\n";continue;} // raw newline inside string → escape
-            if(ch==="\r"){out+="\\r";continue;}
-            if(ch==="\t"){out+="\\t";continue;}
-            if(ch==='"'){
-              // Peek ahead past whitespace+escape-seqs to classify this quote
-              let j=i+1;
-              while(j<s.length){
-                if(s[j]==="\n"||s[j]==="\r"||s[j]===" "||s[j]==="\t"){j++;continue;}
-                if(s[j]==="\\"){j+=2;continue;} // skip escape sequence
-                break;
-              }
-              const nxt=j<s.length?s[j]:"";
-              if(nxt===","||nxt==="}"||nxt==="]"||nxt===":"||nxt===""){
-                inStr=false;out+=ch; // legitimate closing quote
-              }else{
-                out+='\\"'; // interior quote — escape it
-              }
-              continue;
-            }
-            out+=ch;
-          }else{
-            if(ch==='"'){inStr=true;out+=ch;continue;}
-            out+=ch;
-          }
-        }
-        return out;
-      };
-      try{return JSON.parse(repairJSON(sanitized));}catch(e){
-        console.error("JSON repair failed:",e.message,"pos:",e.message.match(/\d+/)?.[0]);
-        console.log("Sample:",sanitized.slice(Math.max(0,parseInt(e.message.match(/\d+/)?.[0]||0)-80),parseInt(e.message.match(/\d+/)?.[0]||0)+80));
-      }
-
-      return null;
-    }catch(e){console.error("callAI fetch error:",e);return null;}
+  const d = await claudeFetch({
+    model:activeModel(),
+    max_tokens:maxTokens,
+    system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
+    messages:[
+      {role:"user",content:prompt},
+      {role:"assistant",content:"{"},
+    ],
+  });
+  if(d?.error) return null;
+  const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/<\/?cite[^>]*>/g,"").trim();
+  if(!raw) return null;
+  const text = raw.startsWith("{") ? raw : "{" + raw;
+  const last = text.lastIndexOf("}");
+  if(last<=0) return null;
+  const candidate = text.slice(0, last+1);
+  // Try 1: direct parse
+  try{return JSON.parse(candidate);}catch{}
+  // Try 2: unicode sanitize + trailing comma removal
+  const sanitized = candidate
+    .replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"')
+    .replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...")
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
+    .replace(/,\s*([}\]])/g,"$1");
+  try{return JSON.parse(sanitized);}catch{}
+  // Try 3: character-by-character JSON repair
+  try{return JSON.parse(repairJSON(sanitized));}catch(e){
+    console.error("JSON repair failed:",e.message);
   }
   return null;
+}
+
+// JSON repair: escapes unescaped quotes and raw newlines inside strings
+function repairJSON(s) {
+  let out="", inStr=false, esc=false;
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    if(esc){out+=ch;esc=false;continue;}
+    if(ch==="\\"){out+=ch;esc=true;continue;}
+    if(inStr){
+      if(ch==="\n"){out+="\\n";continue;}
+      if(ch==="\r"){out+="\\r";continue;}
+      if(ch==="\t"){out+="\\t";continue;}
+      if(ch==='"'){
+        let j=i+1;
+        while(j<s.length){
+          if(s[j]==="\n"||s[j]==="\r"||s[j]===" "||s[j]==="\t"){j++;continue;}
+          if(s[j]==="\\"){j+=2;continue;}
+          break;
+        }
+        const nxt=j<s.length?s[j]:"";
+        if(nxt===","||nxt==="}"||nxt==="]"||nxt===":"||nxt===""){inStr=false;out+=ch;}
+        else{out+='\\"';}
+        continue;
+      }
+      out+=ch;
+    }else{
+      if(ch==='"'){inStr=true;out+=ch;continue;}
+      out+=ch;
+    }
+  }
+  return out;
 }
 
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
@@ -8429,6 +8427,28 @@ ${isOpen
                   <div className="route-desc">{postCall.dealRouteReason}</div>
                   {postCall.dealRisk&&<div style={{marginTop:7,fontSize:11,color:"#555"}}>⚠ Top risk: {postCall.dealRisk}</div>}
                 </div>
+
+                {/* Deal Health by RIVER Stage */}
+                {(()=>{
+                  const health = calcDealHealth(gateAnswers, riverData);
+                  return (
+                    <div style={{background:"var(--bg-1)",borderRadius:12,padding:"14px 16px",marginBottom:16}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px"}}>Deal Health by Stage</div>
+                        <div style={{fontSize:13,fontWeight:700,color:confColor(health.overall)}}>{health.overall}% overall</div>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        {health.stages.map((s,i)=>(
+                          <div key={i} style={{flex:1,textAlign:"center"}}>
+                            <div style={{fontSize:18,fontWeight:700,color:s.score>=75?"var(--green)":s.score>=40?"var(--amber)":"var(--red)",fontFamily:"Lora,serif"}}>{s.score}%</div>
+                            <div style={{fontSize:9,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase"}}>{s.letter}</div>
+                            <div style={{fontSize:8,color:s.score>=75?"var(--green)":s.score>=40?"var(--amber)":"var(--red)",fontWeight:600}}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="card">
                   <div className="card-title">RIVER Scorecard</div>
                   {postCall.riverScorecard&&RIVER_STAGES.map((stage,i)=>(
