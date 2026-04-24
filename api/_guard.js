@@ -116,34 +116,37 @@ export function getGuestRemaining(ip) {
 }
 
 function verifyJwt(req) {
-  // Guest mode — allowed everywhere but limited to 2 uses
+  // Try JWT auth first — authenticated users are never treated as guests
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    if (token) {
+      if (!verifyJwtSignature(token)) return false;
+      const payload = decodeJwtPayload(token);
+      if (!payload) return false;
+
+      // Check expiry
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp < now) return false;
+
+      // Check issuer matches our Supabase project (require ref to be configured)
+      if (!SUPABASE_REF) return false;
+      if (payload.iss !== SUPABASE_ISS && !payload.iss?.includes(SUPABASE_REF)) return false;
+
+      // Authenticated user — NOT a guest
+      req._isGuest = false;
+      return true;
+    }
+  }
+
+  // No valid JWT token — fall back to guest mode if enabled
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
   if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") {
-    // Mark as guest so the handler can enforce limits
     req._isGuest = true;
     return true;
   }
 
-  const authHeader = req.headers.authorization || "";
-  if (!authHeader.startsWith("Bearer ")) return false;
-  const token = authHeader.slice(7);
-  if (!token) return false;
-
-  // Cryptographic signature verification — fails closed in production
-  if (!verifyJwtSignature(token)) return false;
-
-  const payload = decodeJwtPayload(token);
-  if (!payload) return false;
-
-  // Check expiry
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < now) return false;
-
-  // Check issuer matches our Supabase project (require ref to be configured)
-  if (!SUPABASE_REF) return false;
-  if (payload.iss !== SUPABASE_ISS && !payload.iss?.includes(SUPABASE_REF)) return false;
-
-  return true;
+  return false;
 }
 
 // Export rate limiter for use by other endpoints
