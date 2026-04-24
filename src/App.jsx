@@ -797,6 +797,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         max_tokens:3000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:baseLight+
+          (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
           `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n`+
           `ACCURACY RULES:\n`+
           `- For well-known public companies (Fortune 500, major brands), you KNOW these executives from training data. Search to confirm and get the latest.\n`+
@@ -867,12 +868,23 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`+
     `For each solution: (1) which seller PRODUCT (use exact name from catalog above), (2) what job-to-be-done it performs for ${co}, (3) what differentiator from the proof pack justifies "why us", (4) what NAMED CUSTOMER from the proof pack is similar evidence (or "[no analogue customer in our list — verify with seller]" if none fit), (5) what measurable outcome we'd target.\n`+
     `{"solutionMapping":[`+
-    `{"product":"EXACT product name from seller catalog","fit":"Job-to-be-done → specific pain it relieves → gain for ${co}, in 2 sentences. Cite ONE differentiator by name from the proof pack to justify why us.","provenWith":"Named customer from the proof pack who's similar to ${co}, or '[no analogue — verify]'","measurableOutcome":"Specific outcome we'd target (e.g. 'Cut HR ticket volume 30% in 90 days') — quantified when possible, framed in the customer's language, NOT a feature list."},`+
-    `{"product":"","fit":"","provenWith":"","measurableOutcome":""},`+
-    `{"product":"","fit":"","provenWith":"","measurableOutcome":""}],`+
+    `{"product":"EXACT product name from seller catalog",`+
+    `"imperativeServed":"Which universal imperative: grow revenue | reduce cost | stay compliant | reduce fraud/risk | satisfy investors | retain customers",`+
+    `"buyerRole":"The specific persona who owns this problem (e.g. 'VP Operations' or 'CISO')",`+
+    `"jobToBeDone":"The core job this product does for ${co} — one sentence in the buyer's language",`+
+    `"painRelieved":"The specific pain this removes — concrete and measurable, not abstract",`+
+    `"gainCreated":"What ${co} gains — quantified when possible",`+
+    `"challengerInsight":"One assumption ${co}'s industry holds about this area that the seller can disprove with data or a case study — this is the teaching moment",`+
+    `"joltRiskRemover":"How to take risk off the table for this solution — pilot scope, SLA, phased rollout, or reference customer",`+
+    `"fit":"2 sentences: why this product fits ${co}. Cite ONE differentiator from the proof pack.",`+
+    `"provenWith":"Named customer from the proof pack similar to ${co}, or '[no analogue — verify]'",`+
+    `"measurableOutcome":"Specific outcome (e.g. 'Cut HR ticket volume 30% in 90 days')"},`+
+    `{"product":"","imperativeServed":"","buyerRole":"","jobToBeDone":"","painRelieved":"","gainCreated":"","challengerInsight":"","joltRiskRemover":"","fit":"","provenWith":"","measurableOutcome":""},`+
+    `{"product":"","imperativeServed":"","buyerRole":"","jobToBeDone":"","painRelieved":"","gainCreated":"","challengerInsight":"","joltRiskRemover":"","fit":"","provenWith":"","measurableOutcome":""}],`+
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
     `"keyContacts":[{"name":"Real name if known from web search (leave EMPTY STRING if not verified — do NOT guess names)","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this","initials":"XX if name known, empty string if not","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
     `"techStack":{"crm":"e.g. Salesforce — or empty string if unknown","erp":"e.g. SAP — or empty string","hris":"e.g. Workday — or empty string","marketing":"e.g. HubSpot — or empty string","payments":"e.g. Stripe — or empty string","analytics":"e.g. Tableau — or empty string","infrastructure":"e.g. AWS — or empty string","other":[]},`+
+    `"mobilizer":{"description":"Who is the likely Mobilizer at ${co}? The person who asks 'how do we make this happen?' — specific title, function, and what motivates them to champion this deal internally.","identifyingBehavior":"How will the seller know they've found this person in a meeting? What do they say or ask that a Talker or Blocker wouldn't?","teachingAngle":"The specific insight to teach THROUGH this Mobilizer to the broader buying group — one surprising fact or case study that reframes their assumptions."},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
     (partial) => {
       if (!onStream || partial.length < 100) return;
@@ -884,7 +896,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
         }
       } catch { /* partial — wait for more */ }
-    }, 2600
+    }, 3500
   );
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
@@ -7696,6 +7708,34 @@ ${isOpen
                   </div>
                 )}
 
+                {/* Growth Signals + Recent Signals */}
+                {((brief.growthSignals||[]).filter(Boolean).length>0||(brief.recentSignals||[]).filter(Boolean).length>0)&&(
+                  <div className="bb">
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:10}}>📈</div>
+                      <div><div className="bb-title">Buying Signals</div><div className="bb-sub">Growth indicators and recent triggers</div></div>
+                    </div>
+                    <div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      {(brief.growthSignals||[]).filter(Boolean).length>0&&(
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Growth Signals</div>
+                          {(brief.growthSignals||[]).filter(Boolean).map((s,i)=>(
+                            <div key={i} style={{fontSize:12,color:"#333",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>📈 {s}</div>
+                          ))}
+                        </div>
+                      )}
+                      {(brief.recentSignals||[]).filter(Boolean).length>0&&(
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Recent Triggers</div>
+                          {(brief.recentSignals||[]).filter(Boolean).map((s,i)=>(
+                            <div key={i} style={{fontSize:12,color:"#333",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>⚡ {s}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Open Positions — only render when we have actual data (summary or titled roles) */}
                 {brief.openRoles&&(brief.openRoles.summary||(brief.openRoles.roles||[]).some(r=>r?.title))&&(
                   <div className="bb">
@@ -7958,9 +7998,9 @@ ${isOpen
                             <div style={{flex:1}}>
                               <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",marginBottom:2}}>{cs.title}</div>
                               {cs.customer&&<div style={{fontSize:12,color:"var(--tan-0)",fontWeight:600,marginBottom:3}}>{cs.customer}</div>}
-                              {cs.result&&(
+                              {(cs.quantifiedOutcome||cs.result)&&(
                                 <div style={{fontSize:12,fontWeight:700,color:"var(--green)",background:"var(--green-bg)",borderRadius:10,padding:"2px 8px",display:"inline-block",marginBottom:4}}>
-                                  📊 {cs.result}
+                                  📊 {(cs.quantifiedOutcome||cs.result)}
                                 </div>
                               )}
                               <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{cs.relevance}</div>
