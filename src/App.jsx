@@ -2222,7 +2222,7 @@ export default function App(){
     const hArr = Array.isArray(icpTargeting.headcount) ? icpTargeting.headcount : (icpTargeting.headcount ? [icpTargeting.headcount] : []);
     const rArr = Array.isArray(icpTargeting.revenue) ? icpTargeting.revenue : (icpTargeting.revenue ? [icpTargeting.revenue] : []);
     if (hArr.length && targetHeadcount.length === 0) {
-      const hMap = {"1-49":"1-49 employees","50-499":"50-99 employees","500-4,999":"500-999 employees","5,000-49,999":"5,000-9,999 employees","50,000+":"50,000+ employees"};
+      const hMap = {"1-49":"1-49 employees","50-499":"50-499 employees","500-4,999":"500-4,999 employees","5,000-49,999":"5,000-9,999 employees","50,000+":"50,000+ employees"};
       setTargetHeadcount(hArr.slice(0,2).map(h => hMap[h] || h + " employees"));
     }
     if (rArr.length && targetRevenue.length === 0) {
