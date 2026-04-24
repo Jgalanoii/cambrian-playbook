@@ -1277,7 +1277,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
     <div className="chat-panel">
       <div className="chat-header">
         <div>
-          <div className="chat-header-title">💬 Milton <svg width="16" height="12" viewBox="0 0 16 12" style={{marginLeft:3,verticalAlign:"middle"}}><rect x="1" y="3" width="14" height="5" rx="1.5" fill="#cc2222"/><rect x="3" y="1" width="10" height="3" rx="1" fill="#dd4444"/><rect x="0" y="7" width="16" height="2" rx="1" fill="#991111"/></svg></div>
+          <div className="chat-header-title">💬 Milton <svg width="20" height="14" viewBox="0 0 20 14" style={{marginLeft:3,verticalAlign:"middle"}}>{/* Red Swingline stapler */}<path d="M2 9h16v2.5c0 .8-.7 1.5-1.5 1.5h-13C2.7 13 2 12.3 2 11.5V9z" fill="#8B1A1A"/><rect x="1" y="6" width="17" height="3.5" rx="1" fill="#cc2222"/><path d="M4 3.5C4 2.7 4.7 2 5.5 2h8c.8 0 1.5.7 1.5 1.5V6H4V3.5z" fill="#dd3333"/><rect x="6" y="0.5" width="2" height="3" rx="0.5" fill="#999"/><circle cx="18" cy="7.5" r="1" fill="#991111"/></svg></div>
           {contextLabel && <div className="chat-context-badge">{contextLabel}</div>}
         </div>
         <button className="chat-header-close" onClick={onClose} title="Close">✕</button>
