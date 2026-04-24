@@ -7060,6 +7060,7 @@ ${isOpen
                       <th>Org Size</th>
                       <th>Ownership</th>
                       <th>Fit Check</th>
+                      <th>Intel</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -7113,12 +7114,16 @@ ${isOpen
                                     : `${fitScores[m.company].score}% · ${fitScores[m.company].label}${fitScores[m.company].score < 65 ? " · Stretch" : ""}`;
                                 })()}
                               </div>
-                              <button onClick={e=>{e.stopPropagation();setIntelModalTarget(m.company);}}
-                                style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"var(--ink-3)",padding:"2px 4px",marginLeft:4}}
-                                title="Add intel adjustment">
-                                {intelAdjustments[m.company] ? "✏" : "+"}
-                              </button>
                             </>):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
+                          </td>
+                          <td onClick={e=>e.stopPropagation()}>
+                            <button onClick={e=>{e.stopPropagation();setIntelModalTarget(m.company);}}
+                              style={{fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:6,cursor:"pointer",
+                                background:intelAdjustments[m.company]?(intelAdjustments[m.company].modifier>0?"var(--green-bg)":"var(--red-bg)"):"var(--bg-0)",
+                                color:intelAdjustments[m.company]?(intelAdjustments[m.company].modifier>0?"var(--green)":"var(--red)"):"var(--ink-3)",
+                                border:"1px solid "+(intelAdjustments[m.company]?(intelAdjustments[m.company].modifier>0?"var(--green)":"var(--red)")+"44":"var(--line-0)")}}>
+                              {intelAdjustments[m.company] ? `${intelAdjustments[m.company].modifier>0?"+":""}${intelAdjustments[m.company].modifier}` : "Add Intel"}
+                            </button>
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <div style={{display:"flex",gap:4,alignItems:"center"}}>
