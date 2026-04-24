@@ -1916,7 +1916,7 @@ function toCSV(data, filename) {
 
 // ── EXPORT MENU ──────────────────────────────────────────────────────────────
 // Dropdown button with PDF + CSV options. Used on every page.
-function ExportMenu({ onPDF, onCSV, label = "Export", style = {} }) {
+function ExportMenu({ onPDF, onCSV, label = "Export", style = {}, locked = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -1928,11 +1928,16 @@ function ExportMenu({ onPDF, onCSV, label = "Export", style = {} }) {
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
       <button onClick={() => setOpen(!open)}
-        style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, border: "1.5px solid var(--line-0)", borderRadius: 8, background: "#fff", color: "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-        {label} <span style={{ fontSize: 9 }}>▼</span>
+        style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, border: "1.5px solid var(--line-0)", borderRadius: 8, background: locked ? "var(--bg-1)" : "#fff", color: locked ? "var(--ink-3)" : "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+        {locked ? "🔒 " : ""}{label} <span style={{ fontSize: 9 }}>▼</span>
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#fff", border: "1.5px solid var(--line-0)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 150, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#fff", border: "1.5px solid var(--line-0)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 180, overflow: "hidden" }}>
+          {locked ? (
+            <div style={{ padding: "12px 14px", fontSize: 12, color: "var(--ink-2)", lineHeight: 1.5 }}>
+              Export is available on paid plans. <strong style={{ color: "var(--ink-0)" }}>Upgrade to export</strong> your briefs, ICP, and account data.
+            </div>
+          ) : (<>
           <button onClick={() => { onPDF(); setOpen(false); }}
             style={{ display: "block", width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer", textAlign: "left", color: "#333" }}
             onMouseEnter={e => e.target.style.background = "var(--bg-0)"}
@@ -1945,6 +1950,7 @@ function ExportMenu({ onPDF, onCSV, label = "Export", style = {} }) {
             onMouseLeave={e => e.target.style.background = "none"}>
             📊 Export to CSV
           </button>
+          </>)}
         </div>
       )}
     </div>
@@ -2056,6 +2062,7 @@ export default function App(){
   const[icpDeltaLoading,setIcpDeltaLoading]=useState(false);
   const[orgCtx,setOrgCtx]=useState(null); // {id, name, run_count, run_limit, plan, userRole, ...}
   const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
+  const exportLocked = !sbUser || orgCtx?.plan === "trial"; // guests + trial users can't export
   const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
   const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
   // Track input signatures for each stage to detect "no change" on regenerate.
@@ -3460,9 +3467,10 @@ ${isOpen
         saveSession();
         return;
       }
-      // Cmd-P — print / PDF
+      // Cmd-P — print / PDF (blocked for guest/trial)
       if ((e.metaKey || e.ctrlKey) && e.key === "p") {
         e.preventDefault();
+        if (exportLocked) { setUpgradeOpen(true); return; }
         doExport();
         return;
       }
@@ -4721,7 +4729,7 @@ ${isOpen
     { id:"nav-sa",      icon:"🏗", label:"Go to Solution Fit", section:"Navigate", action:()=>setStep(9) },
     // Actions
     { id:"act-save",    icon:"💾", label:"Save session",        section:"Actions", hint:"⌘S", action:saveSession },
-    { id:"act-print",   icon:"🖨", label:"Print / Save as PDF", section:"Actions", hint:"⌘P", action:doExport },
+    { id:"act-print",   icon:"🖨", label: exportLocked ? "🔒 Export (paid plans)" : "Print / Save as PDF", section:"Actions", hint:"⌘P", action: exportLocked ? ()=>setUpgradeOpen(true) : doExport },
     ...(sellerICP?.icp ? [
       { id:"act-regen-icp", icon:"↻", label:"Regenerate ICP",   section:"Actions", action:()=>{if(!checkNoChange("icp",getIcpSig))buildSellerICP(sellerUrl,{forceRefresh:true});} },
       { id:"act-rfp",       icon:"📡", label:"Refresh RFP Intel",section:"Actions", action:()=>fetchRFPIntel({forceRefresh:true}) },
@@ -4846,7 +4854,7 @@ ${isOpen
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Sales Brief — {selectedAccount?.company}</div>
                       <div style={{display:"flex",gap:6}}>
-                        <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
+                        <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                       </div>
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Company overview, executives, strategy, solutions, sentiment</div>
@@ -4858,7 +4866,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>RIVER Hypothesis</div>
-                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
+                      <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Reality, Impact, Vision, Entry, Route + indecision plan + talk tracks</div>
                   </div>
@@ -4869,7 +4877,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Discovery Questions</div>
-                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Discovery", discoveryQs)} />
+                      <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Discovery", discoveryQs)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Sales + Architecture tracks per RIVER stage</div>
                   </div>
@@ -4880,7 +4888,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Post-Call Route</div>
-                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
+                      <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Deal route: {postCall.dealRoute} · CRM note · follow-up email</div>
                   </div>
@@ -4891,7 +4899,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Solution Fit Review</div>
-                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Solution-Fit", solutionFit)} />
+                      <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Solution-Fit", solutionFit)} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>Product-market fit assessment, maturity stage, architecture gaps</div>
                   </div>
@@ -4902,7 +4910,7 @@ ${isOpen
                   <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                       <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Ideal Customer Profile</div>
-                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("ICP", getICPCSVData())} />
+                      <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("ICP", getICPCSVData())} />
                     </div>
                     <div style={{fontSize:11,color:"var(--ink-2)"}}>{sellerICP.sellerName} · {sellerICP.marketCategory}</div>
                   </div>
@@ -5721,7 +5729,7 @@ ${isOpen
               </div>
               {sellerICP?.icp&&(
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-                  <ExportMenu onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
+                  <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
                   <button
                     onClick={()=>{if(!icpLoading&&!checkNoChange("icp",getIcpSig))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     disabled={icpLoading}
@@ -6891,7 +6899,7 @@ ${isOpen
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
-              <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Accounts", getAccountsCSVData())} />
+              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Accounts", getAccountsCSVData())} />
               <button className="btn btn-primary btn-lg" onClick={()=>{if(selectedCohort){setSelectedOutcomes([]);setSelectedAccount(null);setStep(4);}}} disabled={!selectedCohort}>
                 Select Account → {selectedCohort?`(${selectedCohort.name})`:""}
               </button>
@@ -6924,7 +6932,7 @@ ${isOpen
                     Next →
                   </button>
                 </>)}
-                {sa && <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Account-Review", {company:sa.company,industry:sa.ind,...fitScores[sa.company]})} />}
+                {sa && <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Account-Review", {company:sa.company,industry:sa.ind,...fitScores[sa.company]})} />}
               </div>
             </div>
             <div className="page-sub" style={{marginBottom:14}}>
@@ -7183,7 +7191,7 @@ ${isOpen
                       <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}/>
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
-                      <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
+                      <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                       <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                       <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                     </div>
@@ -7864,7 +7872,7 @@ ${isOpen
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
                   <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
-                  <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
+                  <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                 </div>
               </>
@@ -8053,7 +8061,7 @@ ${isOpen
               <button className="btn btn-secondary" onClick={()=>{if(!checkNoChange("hypo",getHypoSig))buildRiverHypo(brief,selectedAccount);}} disabled={riverHypoLoading}>
                 {riverHypoLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
               </button>
-              <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
+              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
               <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(7);}}>
                 Start In-Call →
               </button>
@@ -8075,7 +8083,7 @@ ${isOpen
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
                 <div style={{fontSize:12,color:"#aaa"}}>confidence</div>
                 <button className="btn btn-secondary btn-sm" onClick={()=>setStep(5)}>← Hypothesis</button>
-                <ExportMenu onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
+                <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
                 <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
                   {postLoading?"Routing...":"End Call →"}
                 </button>
@@ -8419,7 +8427,7 @@ ${isOpen
                 </div>
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Back to Call</button>
-                  <ExportMenu onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
+                  <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
