@@ -471,6 +471,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
       body: JSON.stringify({
         model: activeModel(),
         max_tokens: maxTok,
+        temperature: 0,
         messages: [
           { role: 'user', content: prompt },
           { role: 'assistant', content: '{' }
@@ -519,6 +520,7 @@ async function callAI(prompt, { maxTokens = 5500 } = {}){
   const d = await claudeFetch({
     model:activeModel(),
     max_tokens:maxTokens,
+    temperature:0,
     system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
     messages:[
       {role:"user",content:prompt},
@@ -3295,7 +3297,9 @@ ${isOpen
             if(usable){
               try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
             } else {
-              console.warn("ICP built but not cached (contains Unknown/placeholder values) — will retry on next load");
+              // ICP has placeholder values — show warning and auto-retry once
+              parsed._warning = "Some fields contain placeholder values. Click Regenerate to improve accuracy.";
+              console.warn("ICP built but not cached (contains Unknown/placeholder values)");
             }
           }
         }catch(e){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
@@ -4321,6 +4325,8 @@ ${isOpen
       `"dealRoute":"FAST_TRACK or NURTURE or DISQUALIFY","dealRouteReason":"One sentence explaining the routing decision",`+
       `"dealRisk":"Single biggest risk to this deal",`+
       `"nextSteps":["Step 1 with owner and date","Step 2","Step 3"],`+
+      `"sellerNextSteps":["What WE (the seller) will do next — e.g. send proposal, schedule demo, share case study"],`+
+      `"customerNextSteps":["What THEY (the prospect) agreed to do — e.g. schedule follow-up with CFO, share requirements doc"],`+
       `"crmNote":"CRM-ready note — 4-5 sentences covering state, pain, vision, process, next action",`+
       `"emailSubject":"Follow-up email subject line",`+
       `"emailBody":"Full follow-up email — professional, outcome-focused, references specific things discussed, clear CTA"}`;
@@ -4355,8 +4361,9 @@ ${isOpen
     const callSummary = escHtml(postCall?.callSummary||"");
     const nextSteps = postCall?.nextSteps||[];
     // Split next steps: steps with "you" / customer-named action → their side; rest → seller
-    const sellerSteps = nextSteps.filter((_,i)=>i%2===0).slice(0,3);
-    const customerSteps = nextSteps.filter((_,i)=>i%2!==0).slice(0,3);
+    // Use dedicated arrays if available, fall back to even/odd split
+    const sellerSteps = (postCall?.sellerNextSteps?.length ? postCall.sellerNextSteps : nextSteps.filter((_,i)=>i%2===0)).slice(0,3);
+    const customerSteps = (postCall?.customerNextSteps?.length ? postCall.customerNextSteps : nextSteps.filter((_,i)=>i%2!==0)).slice(0,3);
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -5868,6 +5875,11 @@ ${isOpen
                             {sellerICP._confidence==="high"?"High confidence":sellerICP._confidence==="medium"?"Medium confidence":"Low confidence — review carefully"}
                           </span>
                         )}
+                        {sellerICP?._warning && (
+                          <div style={{marginTop:6,fontSize:11,color:"var(--amber)",fontWeight:600}}>
+                            {sellerICP._warning}
+                          </div>
+                        )}
                       </>
                     : <>Live RFP signals matched to your ICP — open opportunities and recent awards.</>}
                 </div>
@@ -6558,7 +6570,8 @@ ${isOpen
                         });
                       return futureEvents.length>0&&(
                       <div style={{marginTop:10}}>
-                        <div className="field-label" style={{marginBottom:6}}>Upcoming Conferences & Events</div>
+                        <div className="field-label" style={{marginBottom:2}}>Upcoming Conferences & Events</div>
+                        <div style={{fontSize:10,color:"var(--amber)",marginBottom:6}}>Verify dates and locations before booking — event details are AI-generated estimates</div>
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {futureEvents.map((ev,i)=>{
                             const isObj = typeof ev === "object";
@@ -8585,7 +8598,7 @@ ${isOpen
                       `ACCURACY: Base EVERY claim on what was actually said in the transcript. NEVER invent quotes, metrics, commitments, or facts that do not appear in the text below. If the transcript is ambiguous, reflect that uncertainty.\n\n`+
                       `SELLER: ${sellerUrl} (${sellerICP?.marketCategory||""})\n`+
                       `PROSPECT: ${selectedAccount?.company||"Unknown"} (${selectedAccount?.ind||""})\n`+
-                      `TRANSCRIPT:\n${cleaned.slice(0,7000)}\n\n`+
+                      `TRANSCRIPT:\n${cleaned.slice(0,12000)}\n\n`+
                       `Return ONLY raw JSON:\n`+
                       `{"callSummary":"3-4 sentence narrative","riverScorecard":{"reality":"what was confirmed","impact":"cost/impact surfaced","vision":"success in their words","entryPoints":"buying process learned","route":"recommended next move"},"dealRoute":"FAST_TRACK or NURTURE or DISQUALIFY","dealRouteReason":"1 sentence","dealRisk":"single biggest risk","nextSteps":["Step 1","Step 2","Step 3"],"crmNote":"4-5 sentence CRM note","emailSubject":"follow-up subject","emailBody":"full follow-up email"}`;
                     const result = await callAI(prompt);
