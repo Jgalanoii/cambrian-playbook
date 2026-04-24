@@ -8971,62 +8971,56 @@ ${isOpen
       )}
 
       {/* Intel adjustment modal */}
-      {intelModalTarget && (()=>{
-        const target = intelModalTarget;
-        const adj = intelAdjustments[target] || {};
-        return (
+      {intelModalTarget && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
-          onClick={()=>setIntelModalTarget(null)}
-          onKeyDown={e=>{if(e.key==="Escape")setIntelModalTarget(null);if(e.key==="Enter"&&e.target.tagName!=="TEXTAREA")e.preventDefault();}}>
+          onClick={()=>setIntelModalTarget(null)}>
           <div style={{background:"#fff",borderRadius:14,padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
             onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Intel Adjustment — {target}</div>
+            <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Intel Adjustment — {intelModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
               Add insider knowledge that affects this company's fit score. This won't change the AI scoring — it's your personal adjustment based on facts you know.
             </div>
             <div style={{marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",marginBottom:4}}>Score modifier</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {[-20,-15,-10,-5,5,10,15,20].map(v=>{
-                  const current = adj.modifier;
-                  const sel = current === v;
-                  return <button key={v} onClick={()=>setIntelAdjustments(prev=>({...prev,[target]:{...(prev[target]||{}),modifier:v}}))}
+                {[-20,-15,-10,-5,5,10,15,20].map(v=>(
+                  <button key={v} onClick={e=>{e.stopPropagation();const t=intelModalTarget;setIntelAdjustments(prev=>({...prev,[t]:{...(prev[t]||{}),modifier:v}}));}}
                     style={{padding:"4px 10px",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",
-                      border:"1.5px solid "+(sel?(v>0?"var(--green)":"var(--red)"):"var(--line-0)"),
-                      background:sel?(v>0?"var(--green-bg)":"var(--red-bg)"):"#fff",
-                      color:sel?(v>0?"var(--green)":"var(--red)"):"var(--ink-2)"}}>
+                      border:"1.5px solid "+((intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green)":"var(--red)"):"var(--line-0)"),
+                      background:(intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green-bg)":"var(--red-bg)"):"#fff",
+                      color:(intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green)":"var(--red)"):"var(--ink-2)"}}>
                     {v>0?"+":""}{v}
-                  </button>;
-                })}
+                  </button>
+                ))}
               </div>
             </div>
             <div style={{marginBottom:16}}>
               <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",marginBottom:4}}>Reason (what do you know?)</div>
               <textarea
-                value={adj.reason||""}
-                onChange={e=>{const val=e.target.value;setIntelAdjustments(prev=>({...prev,[target]:{...(prev[target]||{}),reason:val}}));}}
+                value={intelAdjustments[intelModalTarget]?.reason||""}
+                onChange={e=>{const val=e.target.value;const t=intelModalTarget;setIntelAdjustments(prev=>({...prev,[t]:{...(prev[t]||{}),reason:val}}));}}
                 placeholder="e.g., Warm intro to CTO via board member · Recently lost vendor and actively evaluating · Just signed 3-year deal with competitor..."
                 style={{width:"100%",minHeight:70,padding:10,borderRadius:8,border:"1.5px solid var(--line-0)",fontSize:13,fontFamily:"DM Sans,sans-serif",resize:"vertical",boxSizing:"border-box"}}/>
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              {adj.modifier!=null && (
-                <button onClick={()=>{setIntelAdjustments(prev=>{const next={...prev};delete next[target];return next;});setIntelModalTarget(null);}}
+              {intelAdjustments[intelModalTarget]?.modifier!=null && (
+                <button onClick={e=>{e.stopPropagation();const t=intelModalTarget;setIntelAdjustments(prev=>{const next={...prev};delete next[t];return next;});setIntelModalTarget(null);}}
                   style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--red)",background:"var(--red-bg)",fontSize:12,fontWeight:600,cursor:"pointer",color:"var(--red)"}}>
                   Remove
                 </button>
               )}
-              <button onClick={()=>setIntelModalTarget(null)}
+              <button onClick={e=>{e.stopPropagation();setIntelModalTarget(null);}}
                 style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
                 Cancel
               </button>
-              <button onClick={()=>setIntelModalTarget(null)}
+              <button onClick={e=>{e.stopPropagation();setIntelModalTarget(null);}}
                 style={{padding:"8px 16px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                 Save
               </button>
             </div>
           </div>
         </div>
-        );})()}
+      )}
 
       {/* Confirm modal (replaces browser confirm()) */}
       {confirmModal && (
