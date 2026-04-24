@@ -3,7 +3,7 @@ import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import { sbAuth, sbGetUser, sbSessions, sbStoreTokens, sbRestoreSession, sbRefreshSession, sbClearTokens, sbSetTokenCallback } from "./lib/supabase.js";
-import { fetchOrgContext } from "./lib/org.js";
+import { fetchOrgContext, sbPatch } from "./lib/org.js";
 import OrgPanel from "./components/OrgPanel.jsx";
 import SuperAdmin from "./components/SuperAdmin.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
@@ -3138,8 +3138,9 @@ ${isOpen
   const buildSellerICP = async(rawUrl, {forceRefresh=false}={}) => {
     const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
 
-    // Cache hit — instant, deterministic
+    // Cache hit — instant, deterministic. Check localStorage first, then org-level Supabase cache.
     if(!forceRefresh){
+      // 1. Check localStorage (same browser, fast)
       try{
         const cached = localStorage.getItem(icpCacheKey(url));
         if(cached){
@@ -3147,6 +3148,16 @@ ${isOpen
           if(parsed?.sellerName||parsed?.icp){ setSellerICP(parsed); return; }
         }
       }catch{}
+      // 2. Check org-level Supabase cache (cross-device, cross-session)
+      if(orgCtx?.icp && orgCtx?.seller_url) {
+        const orgUrl = orgCtx.seller_url.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
+        if(orgUrl === url.toLowerCase() && (orgCtx.icp.sellerName || orgCtx.icp.icp)) {
+          setSellerICP(orgCtx.icp);
+          // Backfill localStorage for faster subsequent loads
+          try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(orgCtx.icp)); }catch{}
+          return;
+        }
+      }
     }
 
     // Check usage limit before starting a billable ICP build
@@ -3296,6 +3307,11 @@ ${isOpen
             const usable = hasIndustries && core.every(v => typeof v === "string" && v.length > 0 && !badPattern.test(v));
             if(usable){
               try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
+              // Persist to org-level Supabase cache for cross-device/cross-session consistency
+              if(orgCtx?.id && sbToken) {
+                sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { seller_url: url, icp: parsed }).catch(()=>{});
+                setOrgCtx(prev => prev ? { ...prev, seller_url: url, icp: parsed } : prev);
+              }
             } else {
               // ICP has placeholder values — show warning and auto-retry once
               parsed._warning = "Some fields contain placeholder values. Click Regenerate to improve accuracy.";
