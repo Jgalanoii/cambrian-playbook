@@ -2052,6 +2052,12 @@ export default function App(){
   const[orgCtx,setOrgCtx]=useState(null); // {id, name, run_count, run_limit, plan, userRole, ...}
   const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
   const exportLocked = !sbUser || orgCtx?.plan === "trial"; // guests + trial users can't export
+
+  // Fit scoring weights (user-adjustable, default 40/30/30)
+  const[fitWeights,setFitWeights]=useState({dim1:40,dim2:30,dim3:30});
+  // Per-company intel adjustments: {companyName: {modifier: +/-N, reason: "..."}}
+  const[intelAdjustments,setIntelAdjustments]=useState({});
+  const[intelModalTarget,setIntelModalTarget]=useState(null); // company name for open modal
   const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
   const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
   // Track input signatures for each stage to detect "no change" on regenerate.
@@ -2655,13 +2661,20 @@ ${scaleGuidance}
       const map = {};
       const memberUpdates = {};
       result.scores.forEach(s => {
-        // Compute total from per-dimension scores (deterministic math)
-        const d1 = Math.max(0, Math.min(40, Number(s.dim1) || 0));
-        const d2 = Math.max(0, Math.min(30, Number(s.dim2) || 0));
-        const d3 = Math.max(0, Math.min(30, Number(s.dim3) || 0));
-        const computedScore = Math.round(d1 + d2 + d3);
+        // Compute total from per-dimension scores with user-adjustable weights
+        const rawD1 = Math.max(0, Math.min(40, Number(s.dim1) || 0));
+        const rawD2 = Math.max(0, Math.min(30, Number(s.dim2) || 0));
+        const rawD3 = Math.max(0, Math.min(30, Number(s.dim3) || 0));
+        // Apply weights: normalize raw scores to 0-1, then scale by weight
+        const d1 = (rawD1 / 40) * fitWeights.dim1;
+        const d2 = (rawD2 / 30) * fitWeights.dim2;
+        const d3 = (rawD3 / 30) * fitWeights.dim3;
+        const baseScore = Math.round(d1 + d2 + d3);
+        const computedScore = Math.max(0, Math.min(100, baseScore));
         // Fallback: if model returned old-style "score" field, use it
         s.score = computedScore > 0 ? computedScore : (Number(s.score) || 50);
+        // Store raw dimensions for display
+        s.rawDim1 = rawD1; s.rawDim2 = rawD2; s.rawDim3 = rawD3;
         const color       = s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
         const bg          = s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
         const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
@@ -3331,7 +3344,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -3368,6 +3381,8 @@ ${isOpen
     if(d.icpDelta) setIcpDelta(d.icpDelta);
     if(d.icpEdits?.length) setIcpEdits(d.icpEdits);
     if(d.miltonMsgCount) setMiltonMsgCount(d.miltonMsgCount);
+    if(d.fitWeights) setFitWeights(d.fitWeights);
+    if(d.intelAdjustments) setIntelAdjustments(d.intelAdjustments);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
@@ -4666,6 +4681,8 @@ ${isOpen
       postCall?.callSummary ? `Call summary: ${postCall.callSummary.slice(0,200)}` : "",
       // ICP edits the user made this session
       icpEdits.length > 0 ? `\n═══ CHANGES THE USER MADE THIS SESSION ═══\n${icpEdits.map(e => `  Changed "${e.field}": "${String(e.oldValue).slice(0,80)}" → "${String(e.newValue).slice(0,80)}"`).join("\n")}\nIf the user asks about their changes, reference this list.` : "",
+      // Intel adjustments the user has added
+      Object.keys(intelAdjustments).length > 0 ? `\n═══ USER INTEL ADJUSTMENTS (insider knowledge) ═══\n${Object.entries(intelAdjustments).map(([co,adj])=>`  ${co}: ${adj.modifier>0?"+":""}${adj.modifier} — ${adj.reason||"no reason given"}`).join("\n")}\nThese reflect facts the user knows that aren't public. Reference them when discussing these accounts.` : "",
       buildSellerProofPack({sellerICP, sellerDocs, products, sellerProofPoints, icpEdits}).slice(0, 800),
     ].filter(Boolean).join("\n");
 
@@ -6190,6 +6207,45 @@ ${isOpen
                   </div>
                 </div>
 
+                {/* Fit Scoring Weights */}
+                <div className="bb">
+                  <div className="bb-hdr">
+                    <div className="bb-icon" style={{fontSize:10}}>⚖</div>
+                    <div>
+                      <div className="bb-title">Fit Scoring Weights</div>
+                      <div className="bb-sub">Adjust how much each dimension matters for your business (must total 100)</div>
+                    </div>
+                  </div>
+                  <div className="bb-body">
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+                      {[
+                        {key:"dim1",label:"ICP Alignment",sub:"Industry, size, ownership match",color:"var(--green)"},
+                        {key:"dim2",label:"Customer Similarity",sub:"How similar to existing wins",color:"var(--navy)"},
+                        {key:"dim3",label:"Competitive Landscape",sub:"Incumbent risk, displacement opportunity",color:"var(--amber)"},
+                      ].map(({key,label,sub,color})=>(
+                        <div key={key} style={{textAlign:"center"}}>
+                          <div style={{fontSize:11,fontWeight:700,color,marginBottom:4}}>{label}</div>
+                          <div style={{fontSize:9,color:"var(--ink-3)",marginBottom:6}}>{sub}</div>
+                          <input type="range" min="10" max="60" value={fitWeights[key]}
+                            onChange={e=>{
+                              const val=Number(e.target.value);
+                              const others=Object.keys(fitWeights).filter(k=>k!==key);
+                              const remaining=100-val;
+                              const ratio=fitWeights[others[0]]/(fitWeights[others[0]]+fitWeights[others[1]])||0.5;
+                              setFitWeights({...fitWeights,[key]:val,[others[0]]:Math.round(remaining*ratio),[others[1]]:remaining-Math.round(remaining*ratio)});
+                            }}
+                            style={{width:"100%",accentColor:color}}/>
+                          <div style={{fontSize:18,fontWeight:700,color,fontFamily:"Lora,serif"}}>{fitWeights[key]}%</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{fontSize:10,color:"var(--ink-3)",textAlign:"center",marginTop:8}}>
+                      Weights apply when fit scores are next calculated. Total: {fitWeights.dim1+fitWeights.dim2+fitWeights.dim3}%
+                      {fitWeights.dim1===40&&fitWeights.dim2===30&&fitWeights.dim3===30?" (default)":""}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Buyer Personas */}
                 <div className="bb">
                   <div className="bb-hdr">
@@ -6818,12 +6874,23 @@ ${isOpen
                             })()}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
-                            {fitScores[m.company]?(
+                            {fitScores[m.company]?(<>
                               <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,background:fitScores[m.company].bg,color:fitScores[m.company].color,border:"1px solid "+fitScores[m.company].color+"44",display:"inline-block",whiteSpace:"nowrap"}}
                                 title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk, fitScores[m.company].score < 65 ? "Stretch target — may be viable with additional relationship context or intel" : ""].filter(Boolean).join(" · ")}>
-                                {fitScores[m.company].score}% · {fitScores[m.company].label}{fitScores[m.company].score < 65 ? " · Stretch" : ""}
+                                {(()=>{
+                                  const intel = intelAdjustments[m.company];
+                                  const adjusted = intel ? Math.max(0, Math.min(100, fitScores[m.company].score + intel.modifier)) : fitScores[m.company].score;
+                                  return intel
+                                    ? `${adjusted}% (${intel.modifier>0?"+":""}${intel.modifier}) · ${canonicalLabel(adjusted)}`
+                                    : `${fitScores[m.company].score}% · ${fitScores[m.company].label}${fitScores[m.company].score < 65 ? " · Stretch" : ""}`;
+                                })()}
                               </div>
-                            ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
+                              <button onClick={e=>{e.stopPropagation();setIntelModalTarget(m.company);}}
+                                style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"var(--ink-3)",padding:"2px 4px",marginLeft:4}}
+                                title="Add intel adjustment">
+                                {intelAdjustments[m.company] ? "✏" : "+"}
+                              </button>
+                            </>):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button className="btn btn-primary btn-sm"
@@ -8520,6 +8587,60 @@ ${isOpen
       {/* Superuser analytics */}
       {superAdminOpen && (
         <SuperAdmin sbUser={sbUser} sbToken={sbToken} onClose={()=>setSuperAdminOpen(false)} />
+      )}
+
+      {/* Intel adjustment modal */}
+      {intelModalTarget && (
+        <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
+          onClick={()=>setIntelModalTarget(null)}>
+          <div style={{background:"#fff",borderRadius:14,padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Intel Adjustment — {intelModalTarget}</div>
+            <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
+              Add insider knowledge that affects this company's fit score. This won't change the AI scoring — it's your personal adjustment based on facts you know.
+            </div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",marginBottom:4}}>Score modifier</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {[-20,-15,-10,-5,5,10,15,20].map(v=>{
+                  const current = intelAdjustments[intelModalTarget]?.modifier;
+                  const sel = current === v;
+                  return <button key={v} onClick={()=>setIntelAdjustments(prev=>({...prev,[intelModalTarget]:{...prev[intelModalTarget],modifier:v}}))}
+                    style={{padding:"4px 10px",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",
+                      border:"1.5px solid "+(sel?(v>0?"var(--green)":"var(--red)"):"var(--line-0)"),
+                      background:sel?(v>0?"var(--green-bg)":"var(--red-bg)"):"#fff",
+                      color:sel?(v>0?"var(--green)":"var(--red)"):"var(--ink-2)"}}>
+                    {v>0?"+":""}{v}
+                  </button>;
+                })}
+              </div>
+            </div>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",marginBottom:4}}>Reason (what do you know?)</div>
+              <textarea
+                value={intelAdjustments[intelModalTarget]?.reason||""}
+                onChange={e=>setIntelAdjustments(prev=>({...prev,[intelModalTarget]:{...prev[intelModalTarget],reason:e.target.value}}))}
+                placeholder="e.g., Warm intro to CTO via board member · Recently lost vendor and actively evaluating · Just signed 3-year deal with competitor..."
+                style={{width:"100%",minHeight:70,padding:10,borderRadius:8,border:"1.5px solid var(--line-0)",fontSize:13,fontFamily:"DM Sans,sans-serif",resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              {intelAdjustments[intelModalTarget]?.modifier!=null && (
+                <button onClick={()=>{setIntelAdjustments(prev=>{const next={...prev};delete next[intelModalTarget];return next;});setIntelModalTarget(null);}}
+                  style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--red)",background:"var(--red-bg)",fontSize:12,fontWeight:600,cursor:"pointer",color:"var(--red)"}}>
+                  Remove
+                </button>
+              )}
+              <button onClick={()=>setIntelModalTarget(null)}
+                style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
+                Cancel
+              </button>
+              <button onClick={()=>setIntelModalTarget(null)}
+                style={{padding:"8px 16px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirm modal (replaces browser confirm()) */}
