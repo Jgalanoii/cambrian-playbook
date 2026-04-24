@@ -1286,7 +1286,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
         {messages.length === 0 && (
           <div style={{textAlign:"center",padding:"32px 12px",color:"var(--ink-3)",fontSize:13,lineHeight:1.6}}>
             <div style={{fontSize:28,marginBottom:8}}>💬</div>
-            Hey, I'm Milton. Ask me anything about your accounts, your brief, competitive positioning, or call strategy. I've got your full session context — and I promise not to touch your stapler.
+            Hey, I'm Milton. Ask me anything about your accounts, your brief, competitive positioning, or call strategy. I've got your full session context — as long as you promise not to touch my stapler.
           </div>
         )}
         {messages.map((msg, i) => (
