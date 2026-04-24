@@ -7134,7 +7134,7 @@ ${isOpen
                                   const intel = intelAdjustments[m.company];
                                   const adjusted = intel ? Math.max(0, Math.min(100, fitScores[m.company].score + intel.modifier)) : fitScores[m.company].score;
                                   return intel
-                                    ? `${adjusted}% (${intel.modifier>0?"+":""}${intel.modifier}) · ${canonicalLabel(adjusted)}`
+                                    ? `${adjusted}% (${intel.modifier>0?"+":""}${intel.modifier}) · ${adjusted>=75?"Strong Fit":adjusted>=55?"Potential Fit":"Poor Fit"}`
                                     : `${fitScores[m.company].score}% · ${fitScores[m.company].label}${fitScores[m.company].score < 65 ? " · Stretch" : ""}`;
                                 })()}
                               </div>
