@@ -1966,6 +1966,127 @@ function EF({value,onChange,single=false,placeholder="Click to edit..."}){
   );
 }
 
+// ── PAGE GUIDES & FAQ ────────────────────────────────────────────────────────
+const PAGE_GUIDES = {
+  0: { title: "Getting Started", items: [
+    "Enter your company's website URL to auto-build your Ideal Customer Profile",
+    "Upload sales materials (pitch decks, one-pagers, case studies) to ground all AI output in YOUR proof",
+    "Add proof points (ROI metrics, awards, customer wins) — these are cited in every brief",
+    "Select your funding stage to calibrate fit scoring thresholds",
+  ]},
+  1: { title: "ICP & RFPs", items: [
+    "Your ICP is built automatically from your website — review and edit every field",
+    "Click any field to edit — your corrections override AI-generated content in all downstream output",
+    "Adjust Fit Scoring Weights to prioritize what matters most for your business",
+    "Switch to RFP Intel tab to see matching public procurement opportunities",
+    "Paste your internal ICP in the Delta Analysis section to compare against public positioning",
+  ]},
+  2: { title: "Import Accounts", items: [
+    "Three ways to add accounts: Upload CSV/Excel, Quick Entry (type names), or Build Target Accounts (AI generates 25-30 ICP-matched companies)",
+    "Build Target Accounts uses your ICP to find real companies — select industries, headcount, and revenue to filter",
+    "CSV uploads auto-map columns — company name, industry, URL, employees, and ownership are detected",
+    "All accounts are automatically scored for ICP fit after import",
+  ]},
+  3: { title: "Account Review", items: [
+    "Accounts are scored on three dimensions: ICP Alignment, Customer Similarity, and Competitive Landscape",
+    "Strong Fit (75%+) = high-confidence targets · Potential Fit (55-74%) = worth pursuing · Stretch (<55%) = needs insider knowledge",
+    "Click '+' next to any score to add Intel Adjustments — insider knowledge that modifies the AI score",
+    "Click Review → to set up an account for brief generation",
+  ]},
+  4: { title: "Account Setup", items: [
+    "Select target outcomes — these guide the brief's strategic focus",
+    "Add deal value and contact role for more tailored output",
+    "Click Build Brief to generate a full sales intelligence package (takes 10-20 seconds)",
+  ]},
+  5: { title: "Sales Brief", items: [
+    "Every section is editable — click any text to refine it with your knowledge",
+    "Key Executives are researched via web search — verify names before your call",
+    "Solution Mapping shows your products matched to the account's needs with measurable outcomes",
+    "The Opening Angle gives you a Challenger-style teaching insight to lead your conversation",
+  ]},
+  6: { title: "RIVER Hypothesis", items: [
+    "R-I-V-E-R: Reality → Impact → Vision → Entry Points → Route",
+    "Each stage has a pre-call hypothesis and talk track — review before your call",
+    "The Teaching Insight challenges a common assumption — use it to open the conversation",
+    "The JOLT Indecision Plan gives you tactics for when the deal stalls",
+  ]},
+  7: { title: "In-Call Capture", items: [
+    "Answer gate questions during the call by clicking the options — this builds your deal confidence score",
+    "Capture discovery notes in the prospect's own words — these feed into post-call analysis",
+    "Use Tab in the notes field to insert a timestamp",
+    "Discovery questions (Sales + Architecture tracks) are shown for each RIVER stage",
+    "Ask Milton for real-time coaching — he has your full session context",
+  ]},
+  8: { title: "Post-Call Analysis", items: [
+    "Deal Route (Fast Track / Nurture / Disqualify) is based on your discovery capture",
+    "The RIVER Scorecard compares your pre-call hypothesis to what you actually heard",
+    "CRM Note is ready to paste — copy it directly into Salesforce/HubSpot",
+    "The Follow-Up Email is sendable quality — copy and personalize",
+    "Download the Customer-Facing Call Summary for a professional recap to share with the prospect",
+  ]},
+  9: { title: "Solution Architecture", items: [
+    "The SA Review evaluates product-to-customer fit based on your discovery capture",
+    "Missing Discovery Data warnings tell you exactly what to capture on the next call",
+    "DMAIC Stage assessment shows where the account is in their operational maturity",
+    "Confirmed Solutions include implementation phasing (Phase 1/2/3) and risk assessment",
+  ]},
+};
+
+const FAQ_ITEMS = [
+  { q: "How does fit scoring work?", a: "Each account is scored on three dimensions: ICP Alignment (does this company match your target profile?), Customer Similarity (how similar to your existing wins?), and Competitive Landscape (what vendor do they use today?). Scores are deterministic — same inputs always produce the same score." },
+  { q: "Can I edit the ICP?", a: "Yes — every field on the ICP page is editable. Click any text, pill, or card to modify it. Your edits are tracked and given highest priority in all downstream AI output." },
+  { q: "What is a 'Stretch' target?", a: "Accounts scoring below 65% fit. They may be viable if you have insider knowledge (a warm intro, an upcoming vendor change, a personal relationship). Use Intel Adjustments to factor in what you know." },
+  { q: "How do I adjust fit scoring weights?", a: "On the ICP page, find the Fit Scoring Weights card. Use the sliders to change how much each dimension matters — the three weights always total 100%." },
+  { q: "What does Milton know?", a: "Milton has your full session context: ICP, selected account, brief, hypothesis, discovery capture, deal notes, and any changes you've made. He's a sales coach, not a general AI — he only helps with sales-related questions." },
+  { q: "How do I export my work?", a: "Click the Export button on any page to save as PDF or CSV. Export is available on paid plans." },
+  { q: "What is the RIVER framework?", a: "Reality → Impact → Vision → Entry Points → Route. It's a discovery methodology that builds a testable hypothesis before each call and captures what you learn during the call." },
+  { q: "How do I save my session?", a: "Sessions auto-save every 30 seconds. You can also press Cmd+S or click the Save button. Saved sessions are accessible from the sessions panel." },
+  { q: "What is Cambrian Max?", a: "Premium mode that uses a more powerful AI model (Opus) for deeper, richer intelligence. Available on paid plans." },
+  { q: "How accurate is the executive research?", a: "Executive names are verified via web search. For well-known companies, accuracy is high. Always verify before your call — click any executive card to edit." },
+];
+
+function HelpGuide({ step, style = {} }) {
+  const [open, setOpen] = useState(false);
+  const [showFAQ, setShowFAQ] = useState(false);
+  const guide = PAGE_GUIDES[step];
+  if (!guide) return null;
+  return (
+    <div style={{ ...style }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <button onClick={() => { setOpen(!open); setShowFAQ(false); }}
+          style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: open ? "var(--navy-bg)" : "#fff", color: open ? "var(--navy)" : "var(--ink-3)", cursor: "pointer" }}>
+          {open ? "Hide Guide" : "? Guide"}
+        </button>
+        <button onClick={() => { setShowFAQ(!showFAQ); setOpen(false); }}
+          style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: showFAQ ? "var(--navy-bg)" : "#fff", color: showFAQ ? "var(--navy)" : "var(--ink-3)", cursor: "pointer" }}>
+          {showFAQ ? "Hide FAQ" : "FAQ"}
+        </button>
+      </div>
+      {open && (
+        <div style={{ marginTop: 8, background: "var(--navy-bg)", border: "1px solid #1B3A6B22", borderRadius: 10, padding: "12px 16px" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--navy)", marginBottom: 8 }}>{guide.title}</div>
+          {guide.items.map((item, i) => (
+            <div key={i} style={{ fontSize: 12, color: "#333", lineHeight: 1.6, paddingLeft: 12, position: "relative", marginBottom: 4 }}>
+              <span style={{ position: "absolute", left: 0, color: "var(--navy)" }}>·</span> {item}
+            </div>
+          ))}
+        </div>
+      )}
+      {showFAQ && (
+        <div style={{ marginTop: 8, background: "var(--bg-1)", border: "1px solid var(--line-0)", borderRadius: 10, padding: "12px 16px", maxHeight: 300, overflowY: "auto" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginBottom: 10 }}>Frequently Asked Questions</div>
+          {FAQ_ITEMS.map((item, i) => (
+            <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < FAQ_ITEMS.length - 1 ? "1px solid var(--line-0)" : "none" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginBottom: 3 }}>{item.q}</div>
+              <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{item.a}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 
 // ── ERROR BOUNDARY — catches render errors so blank page never happens ────────
@@ -5191,6 +5312,9 @@ ${isOpen
             </span>
           </div>
         )}
+
+        {/* Page guide + FAQ */}
+        <HelpGuide step={step} style={{padding:"0 20px",maxWidth:1200,margin:"0 auto",marginTop:8}} />
 
         {/* Stage transition wrapper — key change triggers CSS enter animation */}
         <div key={stageKey} className="stage-transition-enter stage-transition-enter-active">
