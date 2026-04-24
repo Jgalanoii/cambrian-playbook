@@ -2085,19 +2085,19 @@ export default function App(){
   const[targetGenNote,setTargetGenNote]=useState(""); // surfaced after generation completes
   const[targetIndustries,setTargetIndustries]=useState([]); // user-selected industries for target gen (up to 3)
   const[targetIndInput,setTargetIndInput]=useState(""); // free-text input for custom industry
-  const[targetHeadcount,setTargetHeadcount]=useState(""); // e.g. "50-499 employees"
-  const[targetRevenue,setTargetRevenue]=useState(""); // e.g. "$10M-$100M"
+  const[targetHeadcount,setTargetHeadcount]=useState([]); // up to 2, e.g. ["50-499 employees","500-999 employees"]
+  const[targetRevenue,setTargetRevenue]=useState([]); // up to 2, e.g. ["$10M-$50M","$50M-$100M"]
   // Auto-populate target generation dropdowns from structured targeting preferences
   React.useEffect(() => {
     const hArr = Array.isArray(icpTargeting.headcount) ? icpTargeting.headcount : (icpTargeting.headcount ? [icpTargeting.headcount] : []);
     const rArr = Array.isArray(icpTargeting.revenue) ? icpTargeting.revenue : (icpTargeting.revenue ? [icpTargeting.revenue] : []);
-    if (hArr.length && !targetHeadcount) {
+    if (hArr.length && targetHeadcount.length === 0) {
       const hMap = {"1-49":"1-49 employees","50-499":"50-99 employees","500-4,999":"500-999 employees","5,000-49,999":"5,000-9,999 employees","50,000+":"50,000+ employees"};
-      setTargetHeadcount(hMap[hArr[0]] || hArr[0] + " employees");
+      setTargetHeadcount(hArr.slice(0,2).map(h => hMap[h] || h + " employees"));
     }
-    if (rArr.length && !targetRevenue) {
+    if (rArr.length && targetRevenue.length === 0) {
       const rMap = {"<$1M":"Under $1M","$1M-$10M":"$1M-$10M","$10M-$100M":"$10M-$50M","$100M-$1B":"$100M-$500M","$1B+":"$1B-$10B"};
-      setTargetRevenue(rMap[rArr[0]] || rArr[0]);
+      setTargetRevenue(rArr.slice(0,2).map(r => rMap[r] || r));
     }
   }, [icpTargeting.headcount, icpTargeting.revenue]);
   const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
@@ -2359,8 +2359,8 @@ export default function App(){
     // Determine the target company scale. icpTargeting fields are now arrays.
     const arrJoin = (v) => Array.isArray(v) ? v.join(" OR ") : (v || "");
     const arrFirst = (v) => Array.isArray(v) ? v[0] : (v || "");
-    const effectiveHeadcount = targetHeadcount || arrJoin(icpTargeting.headcount) || icp.companySize || "";
-    const effectiveRevenue = targetRevenue || arrJoin(icpTargeting.revenue) || icp.revenueRange || "";
+    const effectiveHeadcount = targetHeadcount.length ? targetHeadcount.join(" OR ") : (arrJoin(icpTargeting.headcount) || icp.companySize || "");
+    const effectiveRevenue = targetRevenue.length ? targetRevenue.join(" OR ") : (arrJoin(icpTargeting.revenue) || icp.revenueRange || "");
     const effectiveOwnership = arrJoin(icpTargeting.ownership) || "";
     const effectiveGeo = arrJoin(icpTargeting.geography) || (icp.geographies||[]).join(", ") || "North America";
     const effectiveExcludes = (icpTargeting.excludes||[]).join(", ");
@@ -6558,39 +6558,36 @@ ${isOpen
                         );
                       })()}
 
-                      {/* Company size selectors */}
+                      {/* Company size selectors — up to 2 each */}
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
-                            Headcount
+                            Headcount <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(up to 2)</span>
                           </div>
-                          <select value={targetHeadcount} onChange={e=>setTargetHeadcount(e.target.value)} style={{fontSize:13}}>
-                            <option value="">ICP default{sellerICP?.icp?.companySize ? ` (${sellerICP.icp.companySize})` : ""}</option>
-                            <option value="1-49 employees">1 – 49 employees</option>
-                            <option value="50-99 employees">50 – 99 employees</option>
-                            <option value="100-499 employees">100 – 499 employees</option>
-                            <option value="500-999 employees">500 – 999 employees</option>
-                            <option value="1,000-4,999 employees">1,000 – 4,999 employees</option>
-                            <option value="5,000-9,999 employees">5,000 – 9,999 employees</option>
-                            <option value="10,000-49,999 employees">10,000 – 49,999 employees</option>
-                            <option value="50,000+ employees">50,000+ employees</option>
-                          </select>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                            {["1-49","50-499","500-4,999","5,000-9,999","10,000-49,999","50,000+"].map(h=>{
+                              const val=h+" employees";
+                              const sel=targetHeadcount.includes(val);
+                              return <button key={h} onClick={()=>setTargetHeadcount(prev=>sel?prev.filter(x=>x!==val):prev.length<2?[...prev,val]:prev)}
+                                style={{fontSize:11,padding:"3px 8px",borderRadius:14,border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
+                                  background:sel?"var(--green-bg)":"#fff",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{h}</button>;
+                            })}
+                          </div>
+                          {targetHeadcount.length===0&&<div style={{fontSize:10,color:"var(--ink-3)",marginTop:3}}>Default: {sellerICP?.icp?.companySize||"any"}</div>}
                         </div>
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
-                            Revenue
+                            Revenue <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(up to 2)</span>
                           </div>
-                          <select value={targetRevenue} onChange={e=>setTargetRevenue(e.target.value)} style={{fontSize:13}}>
-                            <option value="">ICP default{sellerICP?.icp?.revenueRange ? ` (${sellerICP.icp.revenueRange})` : ""}</option>
-                            <option value="Under $1M">Under $1M</option>
-                            <option value="$1M-$10M">$1M – $10M</option>
-                            <option value="$10M-$50M">$10M – $50M</option>
-                            <option value="$50M-$100M">$50M – $100M</option>
-                            <option value="$100M-$500M">$100M – $500M</option>
-                            <option value="$500M-$1B">$500M – $1B</option>
-                            <option value="$1B-$10B">$1B – $10B</option>
-                            <option value="$10B+">$10B+</option>
-                          </select>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                            {["Under $1M","$1M-$10M","$10M-$50M","$50M-$100M","$100M-$500M","$500M-$1B","$1B-$10B","$10B+"].map(r=>{
+                              const sel=targetRevenue.includes(r);
+                              return <button key={r} onClick={()=>setTargetRevenue(prev=>sel?prev.filter(x=>x!==r):prev.length<2?[...prev,r]:prev)}
+                                style={{fontSize:11,padding:"3px 8px",borderRadius:14,border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
+                                  background:sel?"var(--green-bg)":"#fff",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{r}</button>;
+                            })}
+                          </div>
+                          {targetRevenue.length===0&&<div style={{fontSize:10,color:"var(--ink-3)",marginTop:3}}>Default: {sellerICP?.icp?.revenueRange||"any"}</div>}
                         </div>
                       </div>
 
