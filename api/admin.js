@@ -233,6 +233,41 @@ export default async function handler(req, res) {
       by_model: Object.entries(costByModel).map(([model, d]) => ({ model, ...d })).sort((a, b) => b.cost - a.cost),
     };
 
+    // ── Session learnings — aggregate user behavior patterns ──
+    const learnings = { icpEdits: {}, dealRoutes: { FAST_TRACK: 0, NURTURE: 0, DISQUALIFY: 0 }, avgConfidence: 0, totalDeals: 0, intelAdjustments: [], topEditedFields: [], avgGateCompletion: 0, sessions_analyzed: 0 };
+    let totalConf = 0, totalGates = 0, totalGatesFilled = 0;
+    (sessions || []).forEach(s => {
+      const d = s.data;
+      if (!d) return;
+      learnings.sessions_analyzed++;
+      // ICP edits — which fields do users correct most?
+      (d.icpEdits || []).forEach(e => {
+        learnings.icpEdits[e.field] = (learnings.icpEdits[e.field] || 0) + 1;
+      });
+      // Deal routes
+      if (d.postCall?.dealRoute) {
+        learnings.dealRoutes[d.postCall.dealRoute] = (learnings.dealRoutes[d.postCall.dealRoute] || 0) + 1;
+        learnings.totalDeals++;
+      }
+      // Intel adjustments — what insider knowledge are users adding?
+      Object.entries(d.intelAdjustments || {}).forEach(([co, adj]) => {
+        learnings.intelAdjustments.push({ company: co, modifier: adj.modifier, reason: adj.reason, user: userMap[s.user_id]?.name || "Unknown" });
+      });
+      // Gate completion
+      if (d.gateAnswers) {
+        const filled = Object.values(d.gateAnswers).filter(Boolean).length;
+        const total = 15; // approximate total gates across RIVER
+        totalGates += total;
+        totalGatesFilled += filled;
+      }
+    });
+    // Top edited ICP fields
+    learnings.topEditedFields = Object.entries(learnings.icpEdits).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([field, count]) => ({ field, count }));
+    learnings.avgGateCompletion = totalGates > 0 ? Math.round(totalGatesFilled / totalGates * 100) : 0;
+    // Fast track rate
+    learnings.fastTrackRate = learnings.totalDeals > 0 ? Math.round(learnings.dealRoutes.FAST_TRACK / learnings.totalDeals * 100) : 0;
+    learnings.disqualifyRate = learnings.totalDeals > 0 ? Math.round(learnings.dealRoutes.DISQUALIFY / learnings.totalDeals * 100) : 0;
+
     res.setHeader("Cache-Control", "private, no-cache");
     res.json({
       summary: {
@@ -257,6 +292,7 @@ export default async function handler(req, res) {
       recent_activity: recentActivity,
       seller_urls: allSellerUrls,
       costs,
+      learnings,
     });
   } catch (e) {
     res.status(500).json({ error: "Failed to fetch analytics" });

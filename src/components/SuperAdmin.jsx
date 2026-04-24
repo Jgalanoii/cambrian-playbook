@@ -57,8 +57,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
   const s = data.summary;
   const c = data.costs?.total || {};
+  const l = data.learnings || {};
   const tabs = [
     { id: "overview", label: "Overview" },
+    { id: "learnings", label: "Learnings" },
     { id: "costs", label: `Costs ($${(c.cost||0).toFixed(2)})` },
     { id: "users", label: `Users (${s.total_users})` },
     { id: "usage", label: "Usage" },
@@ -141,6 +143,79 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ═══ LEARNINGS ═══ */}
+          {tab === "learnings" && (
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+                {[
+                  { label: "Sessions Analyzed", value: l.sessions_analyzed || 0, color: "var(--ink-0)" },
+                  { label: "Fast Track Rate", value: `${l.fastTrackRate || 0}%`, color: "var(--green)" },
+                  { label: "Disqualify Rate", value: `${l.disqualifyRate || 0}%`, color: "var(--red)" },
+                  { label: "Avg Gate Completion", value: `${l.avgGateCompletion || 0}%`, color: "var(--navy)" },
+                ].map(m => (
+                  <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Top edited ICP fields — what the AI gets wrong */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                Most Corrected ICP Fields
+                <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6, color: "var(--ink-3)" }}>Fields users edit most often — signals where AI output needs improvement</span>
+              </div>
+              {(l.topEditedFields || []).length > 0 ? (
+                <div style={{ marginBottom: 20 }}>
+                  {(l.topEditedFields || []).map((f, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--line-0)" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-0)", flex: 1 }}>{f.field}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ height: 6, borderRadius: 3, background: "var(--amber)", width: Math.min(200, f.count * 20) }} />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber)" }}>{f.count}x</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 20 }}>No ICP edits recorded yet.</div>
+              )}
+
+              {/* Deal routing distribution */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Deal Routing Distribution</div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                {[
+                  { label: "Fast Track", count: l.dealRoutes?.FAST_TRACK || 0, color: "var(--green)", bg: "var(--green-bg)" },
+                  { label: "Nurture", count: l.dealRoutes?.NURTURE || 0, color: "var(--amber)", bg: "var(--amber-bg)" },
+                  { label: "Disqualify", count: l.dealRoutes?.DISQUALIFY || 0, color: "var(--red)", bg: "var(--red-bg)" },
+                ].map(r => (
+                  <div key={r.label} style={{ flex: 1, background: r.bg, borderRadius: 10, padding: "12px 14px", textAlign: "center", border: `1px solid ${r.color}33` }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: r.color, fontFamily: "Lora,serif" }}>{r.count}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: r.color }}>{r.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Intel adjustments — what insider knowledge users are adding */}
+              {(l.intelAdjustments || []).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                    Intel Adjustments
+                    <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6, color: "var(--ink-3)" }}>Insider knowledge users are adding to fit scores</span>
+                  </div>
+                  {(l.intelAdjustments || []).slice(0, 20).map((adj, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--line-0)", fontSize: 12 }}>
+                      <span style={{ fontWeight: 600, color: "var(--ink-0)", minWidth: 120 }}>{adj.company}</span>
+                      <span style={{ fontWeight: 700, color: adj.modifier > 0 ? "var(--green)" : "var(--red)", minWidth: 40 }}>{adj.modifier > 0 ? "+" : ""}{adj.modifier}</span>
+                      <span style={{ color: "var(--ink-3)", flex: 1 }}>{adj.reason || "—"}</span>
+                      <span style={{ color: "var(--ink-3)", fontSize: 10 }}>{adj.user}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

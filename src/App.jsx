@@ -2216,6 +2216,7 @@ export default function App(){
   const[targetIndInput,setTargetIndInput]=useState(""); // free-text input for custom industry
   const[targetHeadcount,setTargetHeadcount]=useState([]); // up to 2, e.g. ["50-499 employees","500-999 employees"]
   const[targetRevenue,setTargetRevenue]=useState([]); // up to 2, e.g. ["$10M-$50M","$50M-$100M"]
+  const[targetOwnership,setTargetOwnership]=useState([]); // up to 2, e.g. ["Public","PE-backed"]
   // Auto-populate target generation dropdowns from structured targeting preferences
   React.useEffect(() => {
     const hArr = Array.isArray(icpTargeting.headcount) ? icpTargeting.headcount : (icpTargeting.headcount ? [icpTargeting.headcount] : []);
@@ -2490,7 +2491,7 @@ export default function App(){
     const arrFirst = (v) => Array.isArray(v) ? v[0] : (v || "");
     const effectiveHeadcount = targetHeadcount.length ? targetHeadcount.join(" OR ") : (arrJoin(icpTargeting.headcount) || icp.companySize || "");
     const effectiveRevenue = targetRevenue.length ? targetRevenue.join(" OR ") : (arrJoin(icpTargeting.revenue) || icp.revenueRange || "");
-    const effectiveOwnership = arrJoin(icpTargeting.ownership) || "";
+    const effectiveOwnership = targetOwnership.length ? targetOwnership.join(" OR ") : (arrJoin(icpTargeting.ownership) || "");
     const effectiveGeo = arrJoin(icpTargeting.geography) || (icp.geographies||[]).join(", ") || "North America";
     const effectiveExcludes = (icpTargeting.excludes||[]).join(", ");
     const effectiveSegment = icpTargeting.segment || "";
@@ -6729,10 +6730,10 @@ ${isOpen
                       <div style={{textAlign:"center"}}>
                         <div style={{fontSize:22,marginBottom:6}}>✨</div>
                         <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"var(--ink-0)",marginBottom:4}}>
-                          Don't know who to target?
+                          Build Your Target Account List
                         </div>
-                        <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5,marginBottom:14,maxWidth:440,margin:"0 auto"}}>
-                          Select up to 3 industries to focus the search, or leave blank to use your full ICP.
+                        <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5,marginBottom:14,maxWidth:480,margin:"0 auto"}}>
+                          Tell us exactly who you're looking for. The more specific you are, the more accurate your target list will be.
                         </div>
                       </div>
 
@@ -6746,8 +6747,8 @@ ${isOpen
                         const removeInd = (ind) => setTargetIndustries(prev => prev.filter(i => i !== ind));
                         return (
                           <div style={{marginBottom:14}}>
-                            <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>
-                              Target industries <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"var(--ink-3)"}}>(up to 3{targetIndustries.length>0?` · ${targetIndustries.length}/3 selected`:""})</span>
+                            <div style={{fontSize:11,fontWeight:700,color:targetIndustries.length>0?"var(--green)":"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>
+                              {targetIndustries.length>0?"✓":"*"} Target industries <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"var(--ink-3)"}}>(select 1-3{targetIndustries.length>0?` · ${targetIndustries.length}/3 selected`:" — required"})</span>
                             </div>
                             {/* Selected chips */}
                             {targetIndustries.length > 0 && (
@@ -6796,8 +6797,8 @@ ${isOpen
                       {/* Company size selectors — up to 2 each */}
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
                         <div>
-                          <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
-                            Headcount <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(up to 2)</span>
+                          <div style={{fontSize:11,fontWeight:700,color:targetHeadcount.length>0?"var(--green)":"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
+                            {targetHeadcount.length>0?"✓":"*"} Headcount <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select 1-2{targetHeadcount.length===0?" — required":""})</span>
                           </div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {["1-49","50-499","500-4,999","5,000-9,999","10,000-49,999","50,000+"].map(h=>{
@@ -6811,8 +6812,8 @@ ${isOpen
                           {targetHeadcount.length===0&&<div style={{fontSize:10,color:"var(--ink-3)",marginTop:3}}>Default: {sellerICP?.icp?.companySize||"any"}</div>}
                         </div>
                         <div>
-                          <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
-                            Revenue <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(up to 2)</span>
+                          <div style={{fontSize:11,fontWeight:700,color:targetRevenue.length>0?"var(--green)":"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
+                            {targetRevenue.length>0?"✓":"*"} Revenue <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select 1-2{targetRevenue.length===0?" — required":""})</span>
                           </div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {["Under $1M","$1M-$10M","$10M-$50M","$50M-$100M","$100M-$500M","$500M-$1B","$1B-$10B","$10B+"].map(r=>{
@@ -6826,14 +6827,47 @@ ${isOpen
                         </div>
                       </div>
 
-                      <div style={{textAlign:"center"}}>
-                        <button
-                          className="btn btn-gold btn-lg"
-                          disabled={targetGenLoading}
-                          onClick={generateTargets}>
-                          {targetGenLoading ? "✨ Building your target list…" : "✨ Build my target accounts →"}
-                        </button>
+                      {/* Ownership type selector */}
+                      <div style={{marginBottom:14}}>
+                        <div style={{fontSize:11,fontWeight:700,color:targetOwnership.length>0?"var(--green)":"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
+                          {targetOwnership.length>0?"✓":"*"} Ownership Type <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select 1-2{targetOwnership.length===0?" — required":""})</span>
+                        </div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                          {["Public","Private","PE-backed","VC-backed","Bootstrapped"].map(o=>{
+                            const sel=targetOwnership.includes(o);
+                            return <button key={o} onClick={()=>setTargetOwnership(prev=>sel?prev.filter(x=>x!==o):prev.length<2?[...prev,o]:prev)}
+                              style={{fontSize:11,padding:"3px 10px",borderRadius:14,border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
+                                background:sel?"var(--green-bg)":"#fff",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{o}</button>;
+                          })}
+                        </div>
                       </div>
+
+                      {/* Readiness checklist + build button */}
+                      {(()=>{
+                        const ready = targetIndustries.length > 0 && targetHeadcount.length > 0 && targetRevenue.length > 0 && targetOwnership.length > 0;
+                        const missing = [
+                          targetIndustries.length===0 && "Industries",
+                          targetHeadcount.length===0 && "Headcount",
+                          targetRevenue.length===0 && "Revenue",
+                          targetOwnership.length===0 && "Ownership",
+                        ].filter(Boolean);
+                        return (
+                          <div style={{textAlign:"center"}}>
+                            {!ready && (
+                              <div style={{fontSize:12,color:"var(--amber)",marginBottom:8}}>
+                                Complete all required fields to build: <strong>{missing.join(", ")}</strong>
+                              </div>
+                            )}
+                            <button
+                              className="btn btn-gold btn-lg"
+                              disabled={targetGenLoading || !ready}
+                              style={{opacity: ready ? 1 : 0.5}}
+                              onClick={generateTargets}>
+                              {targetGenLoading ? "✨ Building your target list…" : ready ? "✨ Build my target accounts →" : "Complete required fields above"}
+                            </button>
+                          </div>
+                        );
+                      })()}
                       {targetGenLoading && (
                         <div style={{fontSize:12,color:"var(--ink-2)",marginTop:10,fontStyle:"italic"}}>
                           Searching the web for ICP-matched companies… ~20-30 seconds
