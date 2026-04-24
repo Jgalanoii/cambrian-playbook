@@ -7045,8 +7045,8 @@ ${isOpen
             <div className="card" style={{marginBottom:24}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
                 <div>
-                  <div className="card-title" style={{margin:0}}>All Accounts</div>
-                  <div style={{fontSize:12,color:"#aaa",marginTop:2}}>Click to select · up to 5 accounts · numbered in priority order</div>
+                  <div className="card-title" style={{margin:0}}>All Accounts ({cohorts.flatMap(c=>c.members).length})</div>
+                  <div style={{fontSize:12,color:"#aaa",marginTop:2}}>Click to select · up to 5 accounts · numbered in priority order{rows.length > cohorts.flatMap(c=>c.members).length ? ` · ${rows.length - cohorts.flatMap(c=>c.members).length} accounts not mapped` : ""}</div>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                   {fitScoring&&<div style={{fontSize:12,color:"var(--tan-0)"}}>⏳ Evaluating fit...</div>}
