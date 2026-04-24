@@ -6336,21 +6336,34 @@ ${isOpen
                   <div className="bb-hdr">
                     <div className="bb-icon" style={{fontSize:10}}>⚖</div>
                     <div>
-                      <div className="bb-title">Fit Scoring Weights</div>
-                      <div className="bb-sub">Adjust how much each dimension matters for your business (must total 100)</div>
+                      <div className="bb-title">How Should We Score Your Accounts?</div>
+                      <div className="bb-sub">Tell us what matters most when deciding if a company is a good fit for you</div>
                     </div>
                   </div>
                   <div className="bb-body">
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
                       {[
-                        {key:"dim1",label:"ICP Alignment",sub:"Does this company match YOUR ideal buyer?",detail:"Evaluates industry match (are they in your target vertical?), company size (right employee/revenue bracket?), and ownership type (PE-backed, public, private). High weight = you only want accounts that look exactly like your ICP.",color:"var(--green)"},
-                        {key:"dim2",label:"Customer Similarity",sub:"How similar are they to companies you've already won?",detail:"Compares each account to your named customer list. Same industry + similar size as an existing customer = high score. No close match = low score. High weight = you trust pattern-matching to past wins over theoretical fit.",color:"var(--navy)"},
-                        {key:"dim3",label:"Competitive Landscape",sub:"What's the switching cost if they already use a competitor?",detail:"Checks if the account uses a known competitor (displacement opportunity), has no vendor in your category (greenfield), or is locked into a deep incumbent (hard displacement). High weight = competitive positioning matters more than ICP match.",color:"var(--amber)"},
-                      ].map(({key,label,sub,detail,color})=>(
-                        <div key={key} style={{textAlign:"center"}}>
-                          <div style={{fontSize:12,fontWeight:700,color,marginBottom:2}}>{label}</div>
-                          <div style={{fontSize:11,color:"var(--ink-1)",marginBottom:4,lineHeight:1.4}}>{sub}</div>
-                          <div style={{fontSize:10,color:"var(--ink-3)",marginBottom:8,lineHeight:1.4,textAlign:"left",padding:"0 4px"}}>{detail}</div>
+                        {key:"dim1",label:"Right Profile",emoji:"🎯",
+                          question:"How important is it that they match your ideal buyer profile?",
+                          plain:"Are they in the right industry? Right company size? Right type of business? This is the 'on paper' match — do they look like the kind of company that typically buys what you sell.",
+                          high:"Increase this if you have a narrow, well-defined target market and shouldn't waste time on outliers.",
+                          color:"var(--green)"},
+                        {key:"dim2",label:"Looks Like Past Wins",emoji:"🏆",
+                          question:"How much should we favor companies that remind you of deals you've already won?",
+                          plain:"We compare each account to the customers you've listed. If they're in the same industry and similar size as a company you've already closed — that's a strong signal.",
+                          high:"Increase this if your sales cycle is proven and you want more of what's already working.",
+                          color:"var(--navy)"},
+                        {key:"dim3",label:"Easy to Get In",emoji:"🚪",
+                          question:"How much does it matter whether the door is open or locked?",
+                          plain:"Some companies have no vendor in your space (wide open). Others use a competitor you can displace (opportunity). Others are locked into a long-term contract (hard to break in).",
+                          high:"Increase this if competitive displacement is your biggest challenge.",
+                          color:"var(--amber)"},
+                      ].map(({key,label,emoji,question,plain,high,color})=>(
+                        <div key={key} style={{background:"var(--bg-1)",borderRadius:10,padding:"14px 16px"}}>
+                          <div style={{fontSize:18,marginBottom:4}}>{emoji}</div>
+                          <div style={{fontSize:13,fontWeight:700,color,marginBottom:6}}>{label}</div>
+                          <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)",marginBottom:6,lineHeight:1.4}}>{question}</div>
+                          <div style={{fontSize:11,color:"var(--ink-2)",marginBottom:8,lineHeight:1.5}}>{plain}</div>
                           <input type="range" min="10" max="60" value={fitWeights[key]}
                             onChange={e=>{
                               const val=Number(e.target.value);
@@ -6360,12 +6373,24 @@ ${isOpen
                               setFitWeights({...fitWeights,[key]:val,[others[0]]:Math.round(remaining*ratio),[others[1]]:remaining-Math.round(remaining*ratio)});
                             }}
                             style={{width:"100%",accentColor:color}}/>
-                          <div style={{fontSize:18,fontWeight:700,color,fontFamily:"Lora,serif"}}>{fitWeights[key]}%</div>
+                          <div style={{fontSize:22,fontWeight:700,color,fontFamily:"Lora,serif",textAlign:"center"}}>{fitWeights[key]}%</div>
+                          <div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,fontStyle:"italic",marginTop:4}}>{high}</div>
                         </div>
                       ))}
                     </div>
+
+                    {/* Why these defaults */}
+                    <div style={{marginTop:14,background:"var(--bg-0)",borderRadius:8,padding:"10px 14px",border:"1px solid var(--line-0)"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",marginBottom:4}}>Why is the default 40 / 30 / 30?</div>
+                      <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6}}>
+                        <strong>Right Profile (40%)</strong> gets the most weight because the #1 predictor of a successful deal is whether the company actually matches your target market — wrong industry or wrong size rarely converts regardless of other factors.{" "}
+                        <strong>Past Wins (30%)</strong> is next because the best predictor of a future win is similarity to a past win — same playbook, same objections, same buyer.{" "}
+                        <strong>Easy to Get In (30%)</strong> matters because even a perfect-fit company is a hard sell if they just signed a 3-year deal with your competitor.
+                      </div>
+                    </div>
+
                     <div style={{fontSize:10,color:"var(--ink-3)",textAlign:"center",marginTop:8}}>
-                      Weights apply when fit scores are next calculated. Total: {fitWeights.dim1+fitWeights.dim2+fitWeights.dim3}%
+                      Changes apply when fit scores are next calculated. Total: {fitWeights.dim1+fitWeights.dim2+fitWeights.dim3}%
                       {fitWeights.dim1===40&&fitWeights.dim2===30&&fitWeights.dim3===30?" (default)":""}
                     </div>
                   </div>
