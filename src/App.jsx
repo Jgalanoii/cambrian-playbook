@@ -6372,6 +6372,30 @@ ${isOpen
                       <div className="field-label" style={{marginBottom:4}}>Sales Cycle</div>
                       <EF value={sellerICP.icp.salesCycle||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,salesCycle:v}}))} placeholder="e.g. 3–6 months" single/>
                     </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Ownership Types</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {(sellerICP.icp.ownershipTypes||[]).filter(Boolean).map((o,i)=>(
+                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                            {o}
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,ownershipTypes:p.icp.ownershipTypes.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                          </span>
+                        ))}
+                        {!(sellerICP.icp.ownershipTypes||[]).length&&<span style={{fontSize:12,color:"#aaa"}}>—</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Geographies</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {(sellerICP.icp.geographies||[]).filter(Boolean).map((g,i)=>(
+                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                            {g}
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,geographies:p.icp.geographies.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                          </span>
+                        ))}
+                        {!(sellerICP.icp.geographies||[]).length&&<span style={{fontSize:12,color:"#aaa"}}>—</span>}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -8111,6 +8135,27 @@ ${isOpen
                   </div></div>
                 )}
 
+                {/* Strategic Theme + Why You Why Now */}
+                {(brief.strategicTheme||brief.sellerOpportunity)&&(
+                  <div className="bb">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div><div className="bb-title">Strategic Analysis</div><div className="bb-sub">What's driving this account and why you're positioned to win</div></div></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
+                      {brief.strategicTheme&&(
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Strategic Theme</div>
+                          <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;})} placeholder="What's driving this company's priorities right now..."/>
+                        </div>
+                      )}
+                      {brief.sellerOpportunity&&(
+                        <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"10px 14px"}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Why You · Why Now</div>
+                          <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;})} placeholder="Why the seller is positioned to win this account right now..."/>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Opening Angle */}
                 <div className="bb">
                   <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div></div>
@@ -8786,7 +8831,27 @@ ${isOpen
                     </div>
                   ))}
                 </div>
-                <div className="post-sec"><div className="post-lbl">Next Steps</div><div className="post-content">{postCall.nextSteps?.map((s,i)=>(i+1)+". "+s).join("\n")}</div></div>
+                <div className="post-sec">
+                  <div className="post-lbl">Next Steps</div>
+                  <div className="post-content">
+                    {(postCall.sellerNextSteps?.length || postCall.customerNextSteps?.length) ? (
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--ink-0)",textTransform:"uppercase",marginBottom:4}}>We Will</div>
+                          {(postCall.sellerNextSteps||postCall.nextSteps?.filter((_,i)=>i%2===0)||[]).map((s,i)=>(
+                            <div key={i} style={{fontSize:13,marginBottom:4}}>{i+1}. {s}</div>
+                          ))}
+                        </div>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",marginBottom:4}}>They Will</div>
+                          {(postCall.customerNextSteps||postCall.nextSteps?.filter((_,i)=>i%2!==0)||[]).map((s,i)=>(
+                            <div key={i} style={{fontSize:13,marginBottom:4}}>{i+1}. {s}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : postCall.nextSteps?.map((s,i)=>(i+1)+". "+s).join("\n")}
+                  </div>
+                </div>
                 <div className="post-sec"><div className="post-lbl">CRM Note <button className="copy-btn" onClick={()=>copyText(postCall.crmNote,"crm")}>{copied==="crm"?"Copied ✓":"Copy"}</button></div><div className="post-content">{postCall.crmNote}</div></div>
                 <div className="post-sec"><div className="post-lbl">Call Summary <button className="copy-btn" onClick={()=>copyText(postCall.callSummary,"summary")}>{copied==="summary"?"Copied ✓":"Copy"}</button></div><div className="post-content">{postCall.callSummary}</div></div>
                 <div className="post-sec">
