@@ -2217,6 +2217,8 @@ export default function App(){
   const[targetHeadcount,setTargetHeadcount]=useState([]); // up to 2, e.g. ["50-499 employees","500-999 employees"]
   const[targetRevenue,setTargetRevenue]=useState([]); // up to 2, e.g. ["$10M-$50M","$50M-$100M"]
   const[targetOwnership,setTargetOwnership]=useState([]); // up to 2, e.g. ["Public","PE-backed"]
+  const[disqualified,setDisqualified]=useState({}); // {companyName: "reason"}
+  const[dqModalTarget,setDqModalTarget]=useState(null); // company name for disqualify modal
   // Auto-populate target generation dropdowns from structured targeting preferences
   React.useEffect(() => {
     const hArr = Array.isArray(icpTargeting.headcount) ? icpTargeting.headcount : (icpTargeting.headcount ? [icpTargeting.headcount] : []);
@@ -3486,7 +3488,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -3525,6 +3527,7 @@ ${isOpen
     if(d.miltonMsgCount) setMiltonMsgCount(d.miltonMsgCount);
     if(d.fitWeights) setFitWeights(d.fitWeights);
     if(d.intelAdjustments) setIntelAdjustments(d.intelAdjustments);
+    if(d.disqualified) setDisqualified(d.disqualified);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
@@ -7057,7 +7060,7 @@ ${isOpen
                       const inQueue=accountQueue.some(q=>q.company===m.company);
                       const qPos=accountQueue.findIndex(q=>q.company===m.company);
                       return(
-                        <tr key={i} style={{cursor:"pointer",background:inQueue?"var(--bg-1)":"",transition:"background 0.1s"}}
+                        <tr key={i} style={{cursor:"pointer",background:disqualified[m.company]?"#fef2f2":inQueue?"var(--bg-1)":"",transition:"background 0.1s",opacity:disqualified[m.company]?0.5:1}}
                           onClick={()=>setAccountQueue(prev=>{
                             if(prev.some(q=>q.company===m.company)) return prev.filter(q=>q.company!==m.company);
                             if(prev.length>=5) return prev;
@@ -7106,10 +7109,25 @@ ${isOpen
                             </>):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
-                            <button className="btn btn-primary btn-sm"
-                              onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);setSelectedAccount(m);setSelectedOutcomes([]);setStep(4);}}>
-                              Review →
-                            </button>
+                            <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                              {disqualified[m.company] ? (
+                                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                                  <span style={{fontSize:10,color:"var(--red)",fontWeight:600}}>DQ: {disqualified[m.company]}</span>
+                                  <button onClick={e=>{e.stopPropagation();setDisqualified(prev=>{const next={...prev};delete next[m.company];return next;});}}
+                                    style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"var(--ink-3)"}}>undo</button>
+                                </div>
+                              ) : (<>
+                                <button className="btn btn-primary btn-sm"
+                                  onClick={e=>{e.stopPropagation();setSelectedCohort(m._cohort);setSelectedAccount(m);setSelectedOutcomes([]);setStep(4);}}>
+                                  Review →
+                                </button>
+                                <button className="btn btn-sm"
+                                  onClick={e=>{e.stopPropagation();setDqModalTarget(m.company);}}
+                                  style={{background:"var(--red-bg)",color:"var(--red)",border:"1px solid var(--red)44",fontSize:10,padding:"3px 8px",borderRadius:6,cursor:"pointer",fontWeight:600}}>
+                                  DQ
+                                </button>
+                              </>)}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -8800,6 +8818,46 @@ ${isOpen
       {/* Superuser analytics */}
       {superAdminOpen && (
         <SuperAdmin sbUser={sbUser} sbToken={sbToken} onClose={()=>setSuperAdminOpen(false)} />
+      )}
+
+      {/* Disqualify modal */}
+      {dqModalTarget && (
+        <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
+          onClick={()=>setDqModalTarget(null)}>
+          <div style={{background:"#fff",borderRadius:14,padding:"24px 28px",maxWidth:400,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Disqualify — {dqModalTarget}</div>
+            <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
+              Why is this company not a fit? This helps us learn and improve future target lists.
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {[
+                "Wrong industry",
+                "Wrong company size",
+                "Direct competitor",
+                "Already a customer",
+                "Wrong geography",
+                "No budget / wrong timing",
+                "Wrong use case",
+                "Bad past experience",
+                "Company no longer exists",
+                "Other",
+              ].map(reason => (
+                <button key={reason}
+                  onClick={()=>{setDisqualified(prev=>({...prev,[dqModalTarget]:reason}));setDqModalTarget(null);}}
+                  style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:500,cursor:"pointer",textAlign:"left",color:"var(--ink-1)"}}
+                  onMouseEnter={e=>{e.target.style.background="var(--red-bg)";e.target.style.borderColor="var(--red)";e.target.style.color="var(--red)";}}
+                  onMouseLeave={e=>{e.target.style.background="#fff";e.target.style.borderColor="var(--line-0)";e.target.style.color="var(--ink-1)";}}>
+                  {reason}
+                </button>
+              ))}
+            </div>
+            <button onClick={()=>setDqModalTarget(null)}
+              style={{marginTop:12,width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Intel adjustment modal */}
