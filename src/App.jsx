@@ -6343,13 +6343,14 @@ ${isOpen
                   <div className="bb-body">
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
                       {[
-                        {key:"dim1",label:"ICP Alignment",sub:"Industry, size, ownership match",color:"var(--green)"},
-                        {key:"dim2",label:"Customer Similarity",sub:"How similar to existing wins",color:"var(--navy)"},
-                        {key:"dim3",label:"Competitive Landscape",sub:"Incumbent risk, displacement opportunity",color:"var(--amber)"},
-                      ].map(({key,label,sub,color})=>(
+                        {key:"dim1",label:"ICP Alignment",sub:"Does this company match YOUR ideal buyer?",detail:"Evaluates industry match (are they in your target vertical?), company size (right employee/revenue bracket?), and ownership type (PE-backed, public, private). High weight = you only want accounts that look exactly like your ICP.",color:"var(--green)"},
+                        {key:"dim2",label:"Customer Similarity",sub:"How similar are they to companies you've already won?",detail:"Compares each account to your named customer list. Same industry + similar size as an existing customer = high score. No close match = low score. High weight = you trust pattern-matching to past wins over theoretical fit.",color:"var(--navy)"},
+                        {key:"dim3",label:"Competitive Landscape",sub:"What's the switching cost if they already use a competitor?",detail:"Checks if the account uses a known competitor (displacement opportunity), has no vendor in your category (greenfield), or is locked into a deep incumbent (hard displacement). High weight = competitive positioning matters more than ICP match.",color:"var(--amber)"},
+                      ].map(({key,label,sub,detail,color})=>(
                         <div key={key} style={{textAlign:"center"}}>
-                          <div style={{fontSize:11,fontWeight:700,color,marginBottom:4}}>{label}</div>
-                          <div style={{fontSize:9,color:"var(--ink-3)",marginBottom:6}}>{sub}</div>
+                          <div style={{fontSize:12,fontWeight:700,color,marginBottom:2}}>{label}</div>
+                          <div style={{fontSize:11,color:"var(--ink-1)",marginBottom:4,lineHeight:1.4}}>{sub}</div>
+                          <div style={{fontSize:10,color:"var(--ink-3)",marginBottom:8,lineHeight:1.4,textAlign:"left",padding:"0 4px"}}>{detail}</div>
                           <input type="range" min="10" max="60" value={fitWeights[key]}
                             onChange={e=>{
                               const val=Number(e.target.value);
