@@ -111,7 +111,7 @@ export default async function handler(req, res) {
   if (invResult?.code || invResult?.message) {
     // Handle duplicate constraint
     if (invResult.code === "23505") return res.status(400).json({ error: "This email already has a pending invitation" });
-    return res.status(400).json({ error: invResult.message || "Failed to create invitation" });
+    return res.status(400).json({ error: "Failed to create invitation. Please try again." });
   }
 
   const token = invResult?.[0]?.token;

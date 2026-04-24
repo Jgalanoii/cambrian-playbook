@@ -30,7 +30,9 @@ const SUPABASE_REF = process.env.VITE_SUPABASE_URL
 
 function verifyJwt(req) {
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
-  if (!IS_PRODUCTION && (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes")) return true;
+  // Guest mode allowed everywhere — guests get 2 API calls, knowledge layer
+  // is needed for the app to function. Rate limiting protects against abuse.
+  if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") return true;
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return false;
   const token = authHeader.slice(7);
