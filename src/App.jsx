@@ -1277,7 +1277,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
     <div className="chat-panel">
       <div className="chat-header">
         <div>
-          <div className="chat-header-title">💬 Milton <svg width="20" height="14" viewBox="0 0 20 14" style={{marginLeft:3,verticalAlign:"middle"}}>{/* Red Swingline stapler */}<path d="M2 9h16v2.5c0 .8-.7 1.5-1.5 1.5h-13C2.7 13 2 12.3 2 11.5V9z" fill="#8B1A1A"/><rect x="1" y="6" width="17" height="3.5" rx="1" fill="#cc2222"/><path d="M4 3.5C4 2.7 4.7 2 5.5 2h8c.8 0 1.5.7 1.5 1.5V6H4V3.5z" fill="#dd3333"/><rect x="6" y="0.5" width="2" height="3" rx="0.5" fill="#999"/><circle cx="18" cy="7.5" r="1" fill="#991111"/></svg></div>
+          <div className="chat-header-title">💬 Milton <svg width="22" height="12" viewBox="0 0 22 12" style={{marginLeft:3,verticalAlign:"middle"}}>{/* Red Swingline — side profile */}<path d="M1 8.5h18l1.5-1v-1H1z" fill="#8B1A1A"/>{/* base */}<path d="M2 4c0-1 .8-1.8 1.8-1.8H16c1 0 1.8.8 1.8 1.8v2.7H2V4z" fill="#cc2222"/>{/* top jaw */}<path d="M1 6.5h19.5v2H1z" fill="#dd2222"/>{/* bottom jaw */}<rect x="17.5" y="5" width="1.5" height="3.5" rx=".5" fill="#991111"/>{/* hinge */}<path d="M20.5 7.5l1 .5v.5l-1 .5z" fill="#777"/>{/* staple exit */}</svg></div>
           {contextLabel && <div className="chat-context-badge">{contextLabel}</div>}
         </div>
         <button className="chat-header-close" onClick={onClose} title="Close">✕</button>
