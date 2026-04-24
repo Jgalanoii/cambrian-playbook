@@ -879,7 +879,6 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"fit":"2 sentences: why this product fits ${co}. Cite ONE differentiator from the proof pack.",`+
     `"provenWith":"Named customer from the proof pack similar to ${co}, or '[no analogue — verify]'",`+
     `"measurableOutcome":"Specific outcome (e.g. 'Cut HR ticket volume 30% in 90 days')"},`+
-    `{"product":"","imperativeServed":"","buyerRole":"","jobToBeDone":"","painRelieved":"","gainCreated":"","challengerInsight":"","joltRiskRemover":"","fit":"","provenWith":"","measurableOutcome":""},`+
     `{"product":"","imperativeServed":"","buyerRole":"","jobToBeDone":"","painRelieved":"","gainCreated":"","challengerInsight":"","joltRiskRemover":"","fit":"","provenWith":"","measurableOutcome":""}],`+
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
     `"keyContacts":[{"name":"Real name if known from web search (leave EMPTY STRING if not verified — do NOT guess names)","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this","initials":"XX if name known, empty string if not","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
@@ -896,7 +895,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
         }
       } catch { /* partial — wait for more */ }
-    }, 3500
+    }, 4500
   );
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
@@ -1000,6 +999,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r4?.caseStudies?.some(c=>c?.title)) next.caseStudies = r4.caseStudies;
     if (r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts = r4.keyContacts;
     if (r4?.techStack) next.techStack = r4.techStack;
+    if (r4?.mobilizer?.description) next.mobilizer = r4.mobilizer;
     if (r4?.processMaturity?.dmiacStage) next.processMaturity = r4.processMaturity;
     return next;
   };
