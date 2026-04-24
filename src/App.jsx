@@ -223,7 +223,7 @@ function calcConfidence(gateAnswers,riverData){
   let score=20;
   Object.entries(positive).forEach(([gid,pos])=>{if(pos.includes(gateAnswers[gid]))score+=10;else if(gateAnswers[gid])score+=3;});
   const filled=RIVER_STAGES.flatMap(s=>s.discovery).filter(p=>riverData[p.id]?.trim().length>10).length;
-  score+=filled*4;return Math.min(score,98);
+  score+=filled*4;return Math.min(score,100);
 }
 function confColor(s){return s>=75?"var(--green)":s>=50?"var(--amber)":"var(--red)";}
 
@@ -1159,22 +1159,13 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
       ["",""],["STRATEGIC THEME",""],["",brief?.strategicTheme||""],
       ["",""],["WHY YOU · WHY NOW (Seller Opportunity)",""],["",brief?.sellerOpportunity||""],
       ["",""],["FUNDING PROFILE",""],["",brief?.fundingProfile||""],
-      ["",""],["INVESTORS & CAP TABLE",""],
-      ...(brief?.investorProfile||[]).filter(Boolean).map((inv,i)=>[`Investor ${i+1}`,inv]),
-      ["",""],["LEADERSHIP TEAM","","",""],
-      ["Name","Title","Background","Engagement Angle"],
-      ...(brief?.leadershipTeam||[]).filter(l=>l?.name).map(l=>[l.name||"",l.title||"",l.background||"",l.angle||""]),
+      ["",""],["KEY EXECUTIVES","","",""],
+      ["Name","Title","Background","Executive Perspective"],
+      ...(brief?.keyExecutives||[]).filter(e=>e?.name).map(e=>[e.name||"",e.title||"",e.background||"",e.angle||""]),
       ["",""],["RECENT HEADLINES",""],
-      ...(brief?.recentHeadlines||[]).filter(Boolean).map((h,i)=>[`Headline ${i+1}`,h]),
-      ["",""],["M&A & STRATEGIC ACTIVITY",""],["",brief?.maActivity||""],
-      ["",""],["NEW PRODUCTS & LAUNCHES",""],
-      ...(brief?.productLaunches||[]).filter(Boolean).map((p,i)=>[`Launch ${i+1}`,p]),
-      ["",""],["CUSTOMER WINS & GROWTH",""],
-      ...(brief?.customerWins||[]).filter(Boolean).map((w,i)=>[`Win ${i+1}`,w]),
+      ...(brief?.recentHeadlines||[]).filter(Boolean).map((h,i)=>[`Headline ${i+1}`,typeof h==="object"?h.headline:h]),
       ["",""],["GROWTH SIGNALS",""],
       ...(brief?.growthSignals||[]).filter(Boolean).map((g,i)=>[`Signal ${i+1}`,g]),
-      ["",""],["HIRING SIGNALS",""],
-      ...(brief?.hiringSignals||[]).filter(Boolean).map((h,i)=>[`Signal ${i+1}`,h]),
       ["",""],["TOP BUYING SIGNALS",""],
       ...(brief?.recentSignals||[]).filter(Boolean).map((s,i)=>[`Signal ${i+1}`,s]),
     ]},
@@ -2072,10 +2063,13 @@ export default function App(){
   const getBriefSig = () => JSON.stringify([selectedAccount?.company, sellerICP?.marketCategory, icpEdits.length, contactRole]);
   const getHypoSig = () => JSON.stringify([brief?.companySnapshot?.slice(0,50), brief?.strategicTheme?.slice(0,50), selectedAccount?.company]);
   const getPostCallSig = () => JSON.stringify([gateAnswers, riverData, notes, selectedAccount?.company]);
-  const checkNoChange = (stage, getSig) => {
+  const [confirmModal, setConfirmModal] = useState(null); // {message, onConfirm, onCancel}
+  const showConfirm = (message, onConfirm) => setConfirmModal({ message, onConfirm: () => { setConfirmModal(null); onConfirm(); }, onCancel: () => setConfirmModal(null) });
+  const checkNoChange = (stage, getSig, onProceed) => {
     const sig = getSig();
     if (lastGenSig.current[stage] && lastGenSig.current[stage] === sig) {
-      return !confirm("No inputs have changed since the last generation — results are unlikely to differ. Regenerate anyway?");
+      showConfirm("No inputs have changed since the last generation — results are unlikely to differ. Regenerate anyway?", () => { lastGenSig.current[stage] = ""; onProceed(); });
+      return true; // blocked — will proceed via modal callback
     }
     lastGenSig.current[stage] = sig;
     return false;
@@ -3147,6 +3141,10 @@ ${isOpen
         try{
           const parsed = JSON.parse(m[0]);
           if(parsed.sellerName||parsed.icp){
+            // ICP confidence based on research depth
+            const confidence = researchCtx.length > 1000 ? "high" : researchCtx.length > 300 ? "medium" : "low";
+            parsed._confidence = confidence;
+            parsed._researchChars = researchCtx.length;
             setSellerICP(parsed);
             lastGenSig.current.icp = getIcpSig();
             // Optimistically increment local usage counter (server increments authoritatively)
@@ -4731,12 +4729,12 @@ ${isOpen
     { id:"act-save",    icon:"💾", label:"Save session",        section:"Actions", hint:"⌘S", action:saveSession },
     { id:"act-print",   icon:"🖨", label: exportLocked ? "🔒 Export (paid plans)" : "Print / Save as PDF", section:"Actions", hint:"⌘P", action: exportLocked ? ()=>setUpgradeOpen(true) : doExport },
     ...(sellerICP?.icp ? [
-      { id:"act-regen-icp", icon:"↻", label:"Regenerate ICP",   section:"Actions", action:()=>{if(!checkNoChange("icp",getIcpSig))buildSellerICP(sellerUrl,{forceRefresh:true});} },
+      { id:"act-regen-icp", icon:"↻", label:"Regenerate ICP",   section:"Actions", action:()=>{if(!checkNoChange("icp",getIcpSig,()=>buildSellerICP(sellerUrl,{forceRefresh:true})))buildSellerICP(sellerUrl,{forceRefresh:true});} },
       { id:"act-rfp",       icon:"📡", label:"Refresh RFP Intel",section:"Actions", action:()=>fetchRFPIntel({forceRefresh:true}) },
       { id:"act-resources", icon:"📁", label:"Open Resources",    section:"Actions", action:()=>setResourcesOpen(true) },
     ] : []),
     ...(brief ? [
-      { id:"act-regen-brief", icon:"↻", label:"Regenerate Brief", section:"Actions", action:()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);} },
+      { id:"act-regen-brief", icon:"↻", label:"Regenerate Brief", section:"Actions", action:()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);} },
     ] : []),
     // Accounts (searchable by company name)
     ...(cohorts.flatMap(c => c.members.map(m => ({
@@ -5723,7 +5721,15 @@ ${isOpen
                 </div>
                 <div className="page-sub" style={{marginBottom:0}}>
                   {icpTab==="icp"
-                    ? <>Built from <strong>{sellerUrl}</strong> — review and edit before scoring accounts.</>
+                    ? <>Built from <strong>{sellerUrl}</strong> — review and edit before scoring accounts.
+                        {sellerICP?._confidence && (
+                          <span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,
+                            background:sellerICP._confidence==="high"?"var(--green-bg)":sellerICP._confidence==="medium"?"var(--amber-bg)":"var(--red-bg)",
+                            color:sellerICP._confidence==="high"?"var(--green)":sellerICP._confidence==="medium"?"var(--amber)":"var(--red)"}}>
+                            {sellerICP._confidence==="high"?"High confidence":sellerICP._confidence==="medium"?"Medium confidence":"Low confidence — review carefully"}
+                          </span>
+                        )}
+                      </>
                     : <>Live RFP signals matched to your ICP — open opportunities and recent awards.</>}
                 </div>
               </div>
@@ -5731,7 +5737,7 @@ ${isOpen
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
                   <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
                   <button
-                    onClick={()=>{if(!icpLoading&&!checkNoChange("icp",getIcpSig))buildSellerICP(sellerUrl,{forceRefresh:true});}}
+                    onClick={()=>{if(!icpLoading&&!checkNoChange("icp",getIcpSig,()=>buildSellerICP(sellerUrl,{forceRefresh:true})))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     disabled={icpLoading}
                     title="Force rebuild ICP (clears cache)"
                     style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:icpLoading?"var(--bg-1)":"#fff",color:icpLoading?"var(--ink-3)":"#555",cursor:icpLoading?"wait":"pointer"}}>
@@ -7192,7 +7198,7 @@ ${isOpen
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
                       <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
-                      <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                      <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                       <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                     </div>
                   </div>
@@ -7618,6 +7624,23 @@ ${isOpen
                             </div>
                           </div>
                         )}
+                        {/* Measurable outcome + proven with */}
+                        {(item.measurableOutcome||item.provenWith)&&(
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
+                            {item.measurableOutcome&&(
+                              <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Target Outcome</div>
+                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.measurableOutcome}</div>
+                              </div>
+                            )}
+                            {item.provenWith&&(
+                              <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
+                                <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Proven With</div>
+                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.provenWith}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
 
@@ -7871,7 +7894,7 @@ ${isOpen
 
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
-                  <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                  <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
                 </div>
@@ -8058,7 +8081,7 @@ ${isOpen
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(5)}>← Back to Brief</button>
-              <button className="btn btn-secondary" onClick={()=>{if(!checkNoChange("hypo",getHypoSig))buildRiverHypo(brief,selectedAccount);}} disabled={riverHypoLoading}>
+              <button className="btn btn-secondary" onClick={()=>{if(!checkNoChange("hypo",getHypoSig,()=>buildRiverHypo(brief,selectedAccount)))buildRiverHypo(brief,selectedAccount);}} disabled={riverHypoLoading}>
                 {riverHypoLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
               </button>
               <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
@@ -8431,7 +8454,7 @@ ${isOpen
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
-                  <button className="btn btn-gold" disabled={postLoading} onClick={()=>{if(!checkNoChange("postCall",getPostCallSig)){setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);}}}>{postLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                  <button className="btn btn-gold" disabled={postLoading} onClick={()=>{const go=()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);};if(!checkNoChange("postCall",getPostCallSig,go))go();}}>{postLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(9);}}>
                     Solution Fit Review →
                   </button>
@@ -8492,6 +8515,21 @@ ${isOpen
       {/* Superuser analytics */}
       {superAdminOpen && (
         <SuperAdmin sbUser={sbUser} sbToken={sbToken} onClose={()=>setSuperAdminOpen(false)} />
+      )}
+
+      {/* Confirm modal (replaces browser confirm()) */}
+      {confirmModal && (
+        <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
+          onClick={confirmModal.onCancel}>
+          <div style={{background:"#fff",borderRadius:14,padding:"28px 32px",maxWidth:420,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:16,lineHeight:1.5}}>{confirmModal.message}</div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={confirmModal.onCancel} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",color:"#555"}}>Cancel</button>
+              <button onClick={confirmModal.onConfirm} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Regenerate Anyway</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Upgrade prompt modal */}
