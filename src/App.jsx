@@ -7408,20 +7408,8 @@ ${isOpen
                     <div className="bb-body">
                       {brief.openRoles.summary&&(
                         <div style={{background:"var(--bg-1)",borderLeft:"4px solid var(--tan-0)",borderRadius:"0 10px 10px 0",padding:"14px 16px",marginBottom:14}}>
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,flexWrap:"wrap",gap:6}}>
+                          <div style={{marginBottom:6}}>
                             <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px"}}>Strategic Interpretation</div>
-                            {(()=>{
-                              const txt=(brief.openRoles.summary+" "+(brief.openRoles.roles||[]).map(r=>r.title+" "+r.signal).join(" ")).toLowerCase();
-                              const sig=txt.includes("digital transform")||txt.includes("innovation")||txt.includes("r&d")||txt.includes("emerging")?"🔵 Early Adopter":
-                                txt.includes("process")||txt.includes("efficiency")||txt.includes("optimization")||txt.includes("cost reduction")?"⚪ Late Majority":
-                                txt.includes("growth")||txt.includes("scale")||txt.includes("platform")||txt.includes("moderniz")?"🟢 Early Majority":null;
-                              return sig?(
-                                <div style={{display:"flex",alignItems:"center",gap:4,background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
-                                  <span style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.3px"}}>LinkedIn Graph</span>
-                                  <span style={{fontSize:11,fontWeight:700,color:"var(--navy)"}}>{sig}</span>
-                                </div>
-                              ):null;
-                            })()}
                           </div>
                           <EF value={brief.openRoles.summary||""} onChange={v=>patchBrief(b=>{if(!b.openRoles)b.openRoles={};b.openRoles.summary=v;})}/>
                         </div>
