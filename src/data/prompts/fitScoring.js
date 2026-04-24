@@ -101,6 +101,8 @@ export const FIT_SCORING_RULES = {
       ">200K employees and seller is Seed/Series A = procurement barrier (caps score at ~30% regardless of other factors)",
       ">50% union/hourly workforce = change resistance barrier (caps score at ~25%)",
       "Heavily regulated + no compliance kit = hard disqualifier (regulatory fit blocks deal regardless of ICP match)",
+      "Seller operates in single geography, target HQ in non-overlapping region = geographic mismatch (-10 on dim1)",
+      "Single-threaded deal (1 contact, no champion backup) = high churn risk signal",
     ],
   },
   // Four Forces framework (Moesta): purchase happens only when

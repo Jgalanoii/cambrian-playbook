@@ -17,7 +17,7 @@ import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "../src/data/negotiationFramew
 import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "../src/data/rfpSources.js";
 import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FOUR_FORCES, SPICED, WBD_SCORECARD, DUNFORD_POSITIONING, DISQUALIFICATION, FINTECH_ICP, ICP_FAILURE_MODES } from "../src/data/icpFitKnowledge.js";
 import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../src/data/verticalPlaybooks.js";
-import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS } from "../src/data/advancedKnowledge.js";
+import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS, PRICING_NEGOTIATION, ARCHETYPE_BATTLE_CARDS } from "../src/data/advancedKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit } from "./_guard.js";
@@ -30,7 +30,7 @@ const SUPABASE_REF = process.env.VITE_SUPABASE_URL
 
 function verifyJwt(req) {
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
-  // Guest mode allowed everywhere — guests get 2 API calls, knowledge layer
+  // Guest mode allowed everywhere — guests get 3 free runs, knowledge layer
   // is needed for the app to function. Rate limiting protects against abuse.
   if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") return true;
   const authHeader = req.headers.authorization || "";
@@ -122,6 +122,8 @@ export default function handler(req, res) {
     offerFitFramework: OFFER_FIT_FRAMEWORK,
     repOnboarding: REP_ONBOARDING,
     qbrFramework: QBR_FRAMEWORK,
+    pricingNegotiation: PRICING_NEGOTIATION,
+    archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
     solutionFitCards: SOLUTION_FIT_CARDS,
   });
 }

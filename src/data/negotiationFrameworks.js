@@ -208,8 +208,27 @@ export const CHALLENGER_FRAMEWORK = {
     notMobilizers: ["Talkers — share info but can't move deals", "Blockers — actively oppose change"],
     talkerTactics: "Talkers are friendly but lack authority. Use them for intel gathering, NOT as champions. Ask: 'Who else needs to be convinced?' to identify the real Mobilizer.",
     blockerTactics: "Blockers fear change or loss of control. Don't fight them — reframe your solution as protecting their domain: 'This actually strengthens your team's position by...'",
+    stakeholderTypes: [
+      { type: "Go-Getter", trait: "Wants to improve the organization", approach: "Give them data and a business case they can champion internally" },
+      { type: "Skeptic", trait: "Questions everything, wants proof", approach: "Lead with evidence and third-party validation, earn credibility before pitching" },
+      { type: "Friend", trait: "Accessible and responsive", approach: "Leverage for introductions and intel, but don't confuse friendliness with authority" },
+      { type: "Climber", trait: "Personally ambitious", approach: "Frame your solution as a career accelerator — something that makes them look good" },
+      { type: "Blocker", trait: "Resistant to change", approach: "Understand what they're protecting, reframe your solution as strengthening their position" },
+    ],
   },
-  teachingAngle: "Challenge a widely-held assumption about their industry using data or a case study they haven't seen"
+  teachingAngle: "Challenge a widely-held assumption about their industry using data or a case study they haven't seen",
+  commercialTeaching: {
+    description: "6-step methodology for delivering a teaching pitch that leads to your solution",
+    steps: [
+      { step: 1, name: "The Warmer", action: "Identify a problem the customer recognizes but hasn't fully quantified. Start with empathy, not your product." },
+      { step: 2, name: "The Reframe", action: "Challenge their current thinking with a surprising data point or insight they haven't considered. This is the 'aha' moment." },
+      { step: 3, name: "Rational Drowning", action: "Quantify the cost of the problem using their own data or industry benchmarks. Make the status quo feel expensive." },
+      { step: 4, name: "Emotional Impact", action: "Connect the problem to a personal stake — career risk, team morale, customer complaints they feel personally." },
+      { step: 5, name: "A New Way", action: "Present a different approach to solving the problem — NOT your product yet. Establish the criteria for a solution." },
+      { step: 6, name: "Your Solution", action: "Only now show how your product uniquely delivers the new way. The pitch lands because the criteria were set in step 5." },
+    ],
+  },
+  takingControl: "In pricing and negotiation, the Challenger maintains tension rather than relieving it prematurely. Don't cave on price to keep the relationship comfortable — the prospect respects conviction more than accommodation.",
 };
 
 export const ALL_FRAMEWORKS = {

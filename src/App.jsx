@@ -2291,11 +2291,26 @@ export default function App(){
     }
   };
 
+  // CSV parser that handles quoted fields with embedded commas/newlines
+  const splitCSVLine = (line) => {
+    const result = []; let current = ""; let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i+1] === '"') { current += '"'; i++; } // escaped quote
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current.trim()); current = "";
+      } else { current += ch; }
+    }
+    result.push(current.trim());
+    return result;
+  };
   const parseCSV=text=>{
     const lines=text.trim().split(/\r?\n/);
-    const hdrs=lines[0].split(",").map(h=>h.trim().replace(/^"|"$/g,""));
+    const hdrs=splitCSVLine(lines[0]).map(h=>h.replace(/^"|"$/g,""));
     const data=lines.slice(1).map(line=>{
-      const vals=line.split(",").map(v=>v.trim().replace(/^"|"$/g,""));
+      const vals=splitCSVLine(line).map(v=>v.replace(/^"|"$/g,""));
       const obj={};hdrs.forEach((h,i)=>obj[h]=vals[i]||"");return obj;
     }).filter(r=>Object.values(r).some(v=>v));
     setHeaders(hdrs);setRows(data);
@@ -2601,7 +2616,7 @@ ${scaleGuidance}
         `- 'customerSimilarity' is 1-2 sentences: name the MOST similar existing seller customer and explain the parallel in business terms. If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
         `- 'incumbentRisk' is 1-2 sentences: name the incumbent vendor ONLY if certain, and assess switching cost in business terms.\n`+
         `- Do NOT use "tier", "wall", "band", "bucket", "dimension", "score", "points", "bracket" in any customer-facing field.\n\n`+
-        `SELLER: ${sellerCtx.slice(0,300)}\n${icpContext}\n\n`+
+        `SELLER: ${sellerCtx.slice(0,500)}\n${icpContext}\n\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
         `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations).","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
@@ -4230,7 +4245,7 @@ ${isOpen
   .section-body { font-size: 14px; line-height: 1.7; color: #333; }
 
   /* Summary box */
-  .summary-box { background: #F8F6F1; border-left: 3px solid var(--tan-0); border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14px; line-height: 1.7; color: #333; }
+  .summary-box { background: #F8F6F1; border-left: 3px solid #8B6F47; border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14px; line-height: 1.7; color: #333; }
 
   /* Solutions */
   .solutions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -4249,7 +4264,7 @@ ${isOpen
   .step-text { font-size: 13px; color: #333; line-height: 1.5; }
 
   /* Footer */
-  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line-0); display: flex; justify-content: space-between; align-items: center; }
+  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #E8E6DF; display: flex; justify-content: space-between; align-items: center; }
   .footer-left { font-size: 11px; color: #aaa; }
   .footer-right { font-size: 11px; color: #aaa; }
   .footer-brand { font-family: 'Lora', serif; font-weight: 700; color: #1a1a18; font-size: 12px; }
@@ -5144,7 +5159,7 @@ ${isOpen
                 </span>
               )}
               <label style={{fontSize:10,color:"var(--tan-0)",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-                <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
+                <input type="file" accept=".docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
               {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
@@ -5356,7 +5371,7 @@ ${isOpen
                     <div className="doc-upload-hint" style={{marginTop:3}}>PDF, DOCX, XLSX, CSV, TXT, MD — up to 6 files</div>
                   </div>
                   <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();docRef.current.click();}}>Add Files</button>
-                  <input ref={docRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}}
+                  <input ref={docRef} type="file" accept=".docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}}
                     onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 </div>
 
@@ -5535,7 +5550,7 @@ ${isOpen
                     <div className="doc-upload-hint">Upload a product overview, solution brief, or pricing sheet — Cambrian extracts each product automatically</div>
                   </div>
                   <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();prodDocRef.current.click();}}>Upload</button>
-                  <input ref={prodDocRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.csv" multiple style={{display:"none"}}
+                  <input ref={prodDocRef} type="file" accept=".docx,.doc,.txt,.md,.csv" multiple style={{display:"none"}}
                     onChange={e=>{Array.from(e.target.files).forEach(parseProductDoc);e.target.value="";}}/>
                 </div>
 

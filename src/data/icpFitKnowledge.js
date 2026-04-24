@@ -56,8 +56,9 @@ export const SPICED = {
   P: "Pain — what's the explicit problem?",
   I: "Impact — what's the measurable cost of the pain?",
   C: "Critical Event — what forces action by when?",
-  E: "Decision — who decides, how, and on what criteria?",
-  rule: "If a 'perfect ICP' account has no Critical Event, it's not buying this cycle.",
+  E: "Emotion — how does this problem make the buyer FEEL? (frustrated, embarrassed, anxious, exposed)",
+  D: "Decision — who decides, how, and on what criteria?",
+  rule: "If a 'perfect ICP' account has no Critical Event, it's not buying this cycle. If there's no Emotion, there's no urgency.",
 };
 
 // ── WbD: ICP Scorecard dimensions ──────────────────────────────────────────
@@ -193,6 +194,6 @@ SIGNAL QUALITY (Fitzpatrick):
 - If the meeting ends in "let's keep in touch" — it failed.
 
 DISQUALIFICATION (Murphy):
-- Track disqualification rate. Below 20% = ICP not doing work. Above 70% = market too broad.
+- Track disqualification rate. Below 20% = ICP not doing work. Above 60% = ICP too narrow or lead generation too broad.
 - Bad-fit customers consume 2-3x rep time and 5-10x CS time, then churn.
 `;

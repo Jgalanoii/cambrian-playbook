@@ -10,7 +10,7 @@
 export const VERTICAL_PLAYBOOKS = {
   ai: {
     name: "AI / ML",
-    keywords: ["artificial intelligence", "machine learning", "ai", "ml", "llm", "genai", "data science", "deep learning"],
+    keywords: ["artificial intelligence", "machine learning", "ai/ml", "ai platform", "ai-powered", "llm", "genai", "data science", "deep learning"],
     personas: ["Chief AI Officer", "CDO", "CTO", "CIO", "Head of Data Science", "ML Lead", "AI Ethics Board"],
     triggers: ["Competitor AI launch", "New CAO/CDO hire (first 6 months)", "Efficiency mandate / layoffs", "Board AI mandate with deadline", "EU AI Act / regulatory trigger", "Failed POC from another vendor", "Data readiness milestone"],
     disqualifiers: ["No data readiness (inaccessible, unclean)", "No AI governance posture", "Strong internal build bias", "No pilot appetite with success criteria"],
@@ -100,13 +100,33 @@ export const VERTICAL_PLAYBOOKS = {
   },
   saas: {
     name: "SaaS (Horizontal B2B)",
-    keywords: ["saas", "software as a service", "b2b software", "cloud software", "plg", "product-led", "technology", "tech", "software", "telecom", "media", "entertainment", "education", "edtech"],
+    keywords: ["saas", "software as a service", "b2b software", "cloud software", "plg", "product-led", "horizontal software", "devtools", "developer tools"],
     personas: ["VP/Director of function", "CFO", "CTO", "Champion (Senior IC/Manager)", "IT/Security", "RevOps", "Procurement", "Legal"],
     triggers: ["New executive hire (first 6 months)", "Funding round", "Incumbent renewal window (60-90 days out)", "Stack consolidation (CFO-led)", "Compliance finding", "Security incident", "Product/market launch", "Key-person dependency failure"],
     disqualifiers: ["Defining ICP as market segment", "Ignoring motion-ICP fit (PLG vs enterprise)", "Over-indexing on deal size without success validation", "Static ICP (annual review too slow)", "No disqualifiers list", "Ignoring 18-month retention cohorts"],
     compliance: ["SOC 2 Type II", "ISO 27001", "GDPR/CCPA", "HIPAA (if PHI)", "FedRAMP (federal)"],
     usps: ["Workflow-native vs bolt-on", "Time-to-value", "Category creation vs displacement", "Integration depth", "AI-native", "Data architecture (real-time vs batch)", "Usage-based pricing as wedge"],
     heuristics: ["Bad-fit customer = 2-3 years churn/NPS drag", "Zero marginal cost = premature ICP expansion (most common failure)", "Motion-ICP coupling (PLG/sales-led/partner = different ICPs)", "Four-layer ICP: firmographic + technographic + operational maturity + buying posture", "TAL test: 500-5,000 accounts (>25k = not operational)", "End users have veto power through adoption", "Without SOC 2, addressable market capped at SMB"],
+  },
+  government: {
+    name: "Government / Public Sector",
+    keywords: ["government", "federal", "state government", "local government", "public sector", "govtech", "civic tech", "defense", "dod", "fedramp", "fisma", "municipality"],
+    personas: ["CIO/CTO", "Program Manager", "Contracting Officer (CO/COR)", "Agency Head", "IT Director", "CISO", "Chief Data Officer", "Budget Analyst"],
+    triggers: ["New administration/leadership (first 12 months)", "Budget cycle alignment (Q4 federal = Sept, state varies)", "Audit finding (IG report, GAO)", "Mandate/legislation (executive order, congressional directive)", "Modernization initiative (cloud-first, zero trust)", "Contract recompete window (incumbent expires)", "Cybersecurity incident", "Citizen complaint volume spike"],
+    disqualifiers: ["No FedRAMP/StateRAMP authorization path", "No past performance in government", "Unable to meet FAR/DFAR requirements", "Product requires internet access in classified environments", "No ability to work through channel/integrator partners"],
+    compliance: ["FedRAMP (federal cloud)", "StateRAMP (state/local cloud)", "FISMA", "CMMC (DoD supply chain)", "FAR/DFAR", "Section 508 (accessibility)", "FIPS 140-2/3 (cryptography)", "FedRAMP High (DoD/IC)", "ITAR (defense)", "CJIS (law enforcement)", "IRS Pub 1075 (tax data)"],
+    usps: ["FedRAMP authorized (or in process with sponsor)", "Past performance (similar agency, similar scope)", "Existing contract vehicle (GSA Schedule, SEWP, BPA)", "ATO timeline and support", "Security documentation package ready (SSP, SAR, POA&M)", "Channel partner ecosystem (systems integrators)", "Proven scalability at government data volumes"],
+    heuristics: ["Government buys on contract vehicles, not features — if you're not on a vehicle, you need a partner who is", "Budget is use-it-or-lose-it by fiscal year end — September (federal) is the real buying season", "Past performance is the #1 evaluation criterion — without it, you need a subcontractor relationship", "Decision-making is consensus-driven across CO, program manager, end user, and security — plan for 6-18 month cycles", "Pilots are called 'OTAs' or 'evaluation agreements' — frame accordingly", "Year-of-execution budget means the money for your deal may have been allocated 18 months ago — or not at all"],
+  },
+  education: {
+    name: "Education / EdTech",
+    keywords: ["education", "edtech", "k-12", "higher education", "university", "school district", "lms", "student", "campus", "academic"],
+    personas: ["Superintendent", "CTO/CIO", "Director of Technology", "Principal", "Dean", "Provost", "VP Academic Affairs", "Director of IT", "Procurement Officer"],
+    triggers: ["New superintendent/CTO hire (first 12 months)", "ESSER/federal funding deadline", "Accreditation review", "Enrollment decline", "Student outcome audit", "Technology refresh cycle (3-5 years)", "State mandate (data privacy, accessibility)", "Security incident"],
+    disqualifiers: ["No FERPA compliance", "No accessibility (WCAG 2.1 / Section 508)", "Pricing not structured for per-student/per-seat education models", "No integration with major LMS (Canvas, Blackboard, Google Classroom)", "No references from similar-sized districts"],
+    compliance: ["FERPA", "COPPA (K-12, under 13)", "CIPA", "Section 508 / WCAG 2.1", "State student data privacy laws (varies by state)", "HECVAT (higher ed vendor assessment)", "SOC 2 Type II"],
+    usps: ["FERPA + COPPA compliant with BAA ready", "LMS integrations (Canvas, Blackboard, Google Classroom)", "Education-specific pricing (per-student, annual, grant-aligned)", "Implementation support for academic calendar", "Student outcome data and efficacy studies", "Accessibility certified"],
+    heuristics: ["Education buying follows the academic calendar — decisions in spring (March-May), implementation over summer, go-live in fall", "Federal funding (ESSER, Title I, E-Rate) drives large purchases but has complex compliance requirements", "Superintendents and principals make strategic decisions; IT implements; procurement gates", "Reference calls from similar-sized districts are more important than feature demos", "Free/freemium tiers for individual teachers can create bottom-up adoption that drives district-wide purchase"],
   },
 };
 

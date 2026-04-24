@@ -64,8 +64,11 @@ export const BUYING_SIGNALS = {
     "Hiring 'Digital Transformation' = Early Majority",
     "Hiring 'Innovation/R&D' = Early Adopter",
   ],
+  contextual: [
+    "Glassdoor <3.5 = operational pain present — POSITIVE for workforce/ops solutions, NEGATIVE for luxury/discretionary purchases",
+  ],
   negative: [
-    "Glassdoor <3.5 = operational pain present",
+    "Single-threaded deal (1 contact only) = high churn risk, no internal champion backup",
     ">50% union workforce = procurement friction",
     "Seed/Series A vs >50K employee target = 23-33% fit ceiling",
   ],

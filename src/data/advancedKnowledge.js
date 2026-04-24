@@ -133,6 +133,102 @@ export const SOLUTION_FIT_CARDS = {
   ],
 };
 
+// ── PRICING NEGOTIATION PLAYBOOK ─────────────────────────────────────────
+export const PRICING_NEGOTIATION = {
+  principle: "Never negotiate price before establishing value. Price pressure is a signal, not a verdict.",
+  scenarios: [
+    {
+      trigger: "They ask for a discount",
+      response: "Before adjusting price, understand what's driving the request. 'Help me understand — is this a budget ceiling, a competitive benchmark, or a risk concern? I want to solve the right problem.'",
+      tactics: ["Scope adjustment (fewer seats, phased rollout) before price reduction", "Success-based pricing: 'What if we tied a portion to measurable outcomes?'", "Annual prepay discount (improves cash flow for both sides)", "Never give a discount without getting something: longer term, case study rights, referral commitment"],
+    },
+    {
+      trigger: "They say the competitor is cheaper",
+      response: "'That's good to know. Can you share what's included at that price? I want to make sure we're comparing scope-for-scope, not headline to headline.'",
+      tactics: ["Compare total cost of ownership, not just license", "Highlight switching costs they'll face later", "Ask what's NOT included in the competitor price (implementation, support, integrations)"],
+    },
+    {
+      trigger: "Procurement requires 3 bids",
+      response: "'Completely understand — I've worked with procurement teams before. Let me help you build a comparison framework that evaluates what actually matters for your use case, so the bids are apples-to-apples.'",
+      tactics: ["Offer to help define evaluation criteria (naturally favoring your strengths)", "Provide a comparison template", "Reference similar procurement processes you've navigated"],
+    },
+    {
+      trigger: "Budget is X but price is 2X",
+      response: "'I appreciate you sharing that. Let's talk about what we can do within X that still moves the needle — and what the path looks like to expand when you see results.'",
+      tactics: ["Phase 1 within budget, Phase 2 on success", "Start with one team/department at X, expand later", "ROI model showing payback within budget cycle"],
+    },
+    {
+      trigger: "They go silent after receiving proposal",
+      response: "Wait 3 business days, then: 'I wanted to check in — I know pricing conversations involve multiple stakeholders. Is there anything I can provide to help make the internal case?'",
+      tactics: ["Offer an internal champion deck", "Ask if there's a specific objection from finance/procurement", "Provide ROI calculator they can share internally"],
+    },
+  ],
+};
+
+// ── ARCHETYPE BATTLE CARDS ──────────────────────────────────────────────
+export const ARCHETYPE_BATTLE_CARDS = [
+  {
+    archetype: "vs. Entrenched Incumbent",
+    when: "Target uses a well-known platform (Salesforce, SAP, Oracle, Workday) with deep integration",
+    strategy: "Land adjacent, don't displace. Find the gap the incumbent doesn't serve well and own it.",
+    tactics: [
+      "Ask: 'What's the one thing you wish [incumbent] did better?' — that's your beachhead",
+      "Frame as 'complement, not replace' — reduces perceived risk to zero",
+      "Start with a team/department the incumbent underserves",
+      "Quantify the cost of the workaround they've built around the incumbent's gap",
+    ],
+    avoid: ["Direct feature-by-feature comparison", "Criticizing the incumbent (buyer chose it, you're criticizing their judgment)", "Promising a full rip-and-replace"],
+  },
+  {
+    archetype: "vs. Status Quo / Do Nothing",
+    when: "No competing vendor — the prospect is considering staying with manual processes, spreadsheets, or 'good enough'",
+    strategy: "Make the cost of inaction vivid and personal. Status quo feels safe but compounds risk over time.",
+    tactics: [
+      "Quantify the hidden cost: 'Your team spends X hours/week on this manually — that's $Y/year in salary doing work software should handle'",
+      "Paint the competitive risk: 'Your competitors are solving this with automation. Every quarter you wait, the gap widens.'",
+      "Use a 'burning platform' trigger: regulatory deadline, board mandate, customer complaint trend",
+      "Small pilot eliminates the 'big decision' barrier: 'Let's test with one team for 30 days'",
+    ],
+    avoid: ["Telling them their current process is bad (they built it, they'll defend it)", "Overwhelming with features", "Ignoring the emotional comfort of the status quo"],
+  },
+  {
+    archetype: "vs. Build Internally",
+    when: "Target has engineering capacity and is considering building a custom solution",
+    strategy: "Reframe the build vs. buy as a resource allocation question, not a capability question.",
+    tactics: [
+      "'Your engineers could build this. The question is: should they? What's the opportunity cost of 6 months of engineering time on a solved problem?'",
+      "Highlight ongoing maintenance: 'Building is sprint 1. Maintaining, patching, scaling — that's sprints 2 through infinity.'",
+      "Reference a customer who tried to build, failed, then bought: 'Company X spent 18 months and $2M before switching to us'",
+      "Position your product's domain expertise: 'We've invested [X] person-years into this problem. Your team would be starting from scratch.'",
+    ],
+    avoid: ["Implying their engineers aren't good enough", "Ignoring that build-bias is often cultural, not rational", "Competing on features (they can always add features to a custom build)"],
+  },
+  {
+    archetype: "vs. Cheaper Alternative",
+    when: "A lower-priced competitor is in the evaluation",
+    strategy: "Shift evaluation from price to total value and risk. Cheap solutions have hidden costs.",
+    tactics: [
+      "'At that price point, what's included? Let's map scope-for-scope.'",
+      "Quantify the cost of failure: 'If the cheaper solution doesn't work, what's the cost of re-implementing in 12 months?'",
+      "Reference customers who switched FROM the cheaper alternative: 'We see a lot of companies graduate from [cheaper] when they hit [scale/complexity threshold]'",
+      "Use the 'insurance' frame: 'The difference in price is $X/year. That's the cost of knowing it works.'",
+    ],
+    avoid: ["Dismissing the cheaper option", "Competing on price (you'll lose and set a precedent)", "Feature-dumping to justify the premium"],
+  },
+  {
+    archetype: "vs. Well-Funded Direct Competitor",
+    when: "A similar-stage or larger competitor with significant funding is in the evaluation",
+    strategy: "Compete on focus, speed, and customer intimacy. Big funding ≠ better product for their specific use case.",
+    tactics: [
+      "Ask what they've seen in the competitor's demo: 'What stood out? What felt missing?' — then address the gaps",
+      "Emphasize your specialization: 'They serve 15 verticals. We go deep in yours.'",
+      "Speed and responsiveness: 'Try reaching their CEO with a feature request. You can reach ours.'",
+      "Reference calls are your weapon: 'Talk to our customers in your industry — then talk to theirs.'",
+    ],
+    avoid: ["Matching their marketing claims dollar-for-dollar", "FUD (fear, uncertainty, doubt) about their funding burning out", "Pretending you're the same size"],
+  },
+];
+
 // ── COMBINED PROMPT INJECTIONS ────────────────────────────────────────────
 
 export const COMPETITIVE_INJECTION = `
