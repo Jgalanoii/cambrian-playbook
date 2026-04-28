@@ -3610,19 +3610,8 @@ ${isOpen
 
   React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
 
-  // Auto-populate seller URL from org defaults ONLY on first login
-  // (when user has never entered a URL in this browser session).
-  // Do NOT re-populate after clearSession — the user intentionally started fresh.
-  const hasEverSetUrl = useRef(false);
-  useEffect(() => {
-    if (sellerUrl || sellerInput) hasEverSetUrl.current = true;
-  }, [sellerUrl, sellerInput]);
-  useEffect(() => {
-    if (orgCtx?.seller_url && !sellerUrl && !currentSessionId && !sellerInput && !hasEverSetUrl.current) {
-      setSellerInput(orgCtx.seller_url);
-      hasEverSetUrl.current = true;
-    }
-  }, [orgCtx?.seller_url]);
+  // Org-level seller_url auto-populate REMOVED — was caching prior session
+  // URL into new sessions. Users restore prior work via the Sessions panel.
 
   // ── AUTO-SAVE ─────────────────────────────────────────────────────────────
   // Debounced auto-save: writes to Supabase 30s after the last meaningful
@@ -5332,6 +5321,12 @@ ${isOpen
                   <div style={{fontSize:11,color:"#aaa"}}>{sbUser.email}</div>
                 </div>
                 <button onClick={()=>setShowSessions(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa"}}>✕</button>
+              </div>
+              <div style={{padding:"8px 10px 0"}}>
+                <button onClick={()=>{clearSession();setShowSessions(false);}}
+                  style={{width:"100%",padding:"10px",borderRadius:8,background:"#fff",border:"1.5px solid var(--green)",color:"var(--green)",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                  + New Session
+                </button>
               </div>
               <div style={{flex:1,overflowY:"auto",padding:10}}>
                 {savedSessions.length===0&&<div style={{textAlign:"center",color:"#aaa",fontSize:13,padding:"32px 0"}}>No saved sessions yet.</div>}
