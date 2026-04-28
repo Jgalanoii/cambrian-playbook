@@ -3610,10 +3610,17 @@ ${isOpen
 
   React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
 
-  // Auto-populate seller URL from org defaults for new sessions
+  // Auto-populate seller URL from org defaults ONLY on first login
+  // (when user has never entered a URL in this browser session).
+  // Do NOT re-populate after clearSession — the user intentionally started fresh.
+  const hasEverSetUrl = useRef(false);
   useEffect(() => {
-    if (orgCtx?.seller_url && !sellerUrl && !currentSessionId && !sellerInput) {
+    if (sellerUrl || sellerInput) hasEverSetUrl.current = true;
+  }, [sellerUrl, sellerInput]);
+  useEffect(() => {
+    if (orgCtx?.seller_url && !sellerUrl && !currentSessionId && !sellerInput && !hasEverSetUrl.current) {
       setSellerInput(orgCtx.seller_url);
+      hasEverSetUrl.current = true;
     }
   }, [orgCtx?.seller_url]);
 
