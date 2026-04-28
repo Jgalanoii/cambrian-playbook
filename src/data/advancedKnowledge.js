@@ -297,3 +297,69 @@ OFFER-FIT MAPPING — match prospect situation to engagement shape:
 - "Our team needs to learn this" → Training/Enablement (1-8 weeks)
 DISQUALIFICATION SIGNALS: no named pain owner, no budget process, no timeline, committee without champion, scope creep in discovery.
 `;
+
+// ── SALES METHODOLOGY FRAMEWORKS ────────────────────────────────────────
+// Source: offer-fit-mapping.md — framework definitions for prompt injection.
+// Each framework captured as principle + key concepts for prompt enrichment.
+export const SALES_METHODOLOGY_FRAMEWORKS = [
+  {
+    name: "Gap Selling",
+    author: "Jim Keenan",
+    principle: "The customer buys a change, not a product. Every purchase is movement from Current State to Future State. The Gap — its size, urgency, and business impact — determines whether and how they buy.",
+    keyConcepts: ["Current State — honest, quantified picture of where prospect is today", "Future State — quantified picture of where they need to be", "The Gap — measurable distance between CS and FS in business terms", "Problem Identification Chart — technical problem → business problem → impact → root cause", "Discovery is investigation, not interrogation"],
+  },
+  {
+    name: "SPIN Selling",
+    author: "Neil Rackham",
+    principle: "What makes reps successful in small sales actively harms them in large, complex sales. Question sequencing that causes buyers to articulate their own pain is the differentiator.",
+    keyConcepts: ["Situation questions — factual context (ask fewer than you think)", "Problem questions — surface implied needs", "Implication questions — expand consequences to explicit needs", "Need-payoff questions — buyer articulates value themselves", "Closing techniques hurt in large sales; objection handling = symptom of poor discovery"],
+  },
+  {
+    name: "Solution Selling",
+    author: "Bosworth & Eades",
+    principle: "Selling is helping a buyer create a vision of a solution to pain they didn't fully understand. Guide from latent pain → admitted pain → vision → purchase.",
+    keyConcepts: ["Pain Chain — pain cascades through organization; speak each stakeholder's language", "Buyer Readiness Levels — latent, admitted, vision, evaluating, purchase", "Vision Creation vs Reengineering — first vendor shapes vision; followers must reengineer it", "Reference Stories — '[Company X] had [pain], adopted [solution], achieved [outcome]'", "Sponsor vs Power Sponsor — convert or get referred up"],
+  },
+  {
+    name: "Command of the Message",
+    author: "Force Management",
+    principle: "Sell to business issues, not features. Every conversation grounds in prospect business problem, required capabilities, and quantified outcomes.",
+    keyConcepts: ["Why Change? — pain-driven urgency", "Why Now? — compelling event or cost of inaction", "Why Us? — differentiated capabilities others can't match", "Positive Business Outcomes — quantified results buyer achieves", "Required vs Differentiated capabilities — table stakes vs unique value"],
+  },
+  {
+    name: "Mastering Technical Sales",
+    author: "Care & Bohlig",
+    principle: "A demo is a targeted response to discovered pain, not a feature tour. Most demos fail because they answer questions the buyer didn't ask.",
+    keyConcepts: ["Death by Demo — generic comprehensive demo exhausts buyer, produces no commitment", "Discovery before Demo — complete pre-demo brief before any demo", "POV vs POC — Proof of Value (business test) vs Proof of Concept (technical test)", "Technical Win ≠ Business Win — product can work but deal still lost without business case"],
+  },
+  {
+    name: "The Challenger Customer",
+    author: "Adamson, Dixon, Spenner & Toman",
+    principle: "Enterprise buying is decided by groups that are structurally bad at reaching good decisions. Committee dynamics produce worse deals than individual decisions would.",
+    keyConcepts: ["Mobilizers (Go-Getters, Teachers, Skeptics) drive decisions; Talkers (Guides, Friends, Climbers, Blockers) don't", "Commercial Insight — reframe buyer's problem in way favorable to your solution", "Don't aggregate stakeholder yes's — help Mobilizer drive through committee", "Champion enablement — arm with deck, business case, references, specific stories", "Identify Mobilizers early, invest disproportionately"],
+  },
+  {
+    name: "JOLT Effect",
+    author: "Dixon & McKenna",
+    principle: "40-60% of qualified B2B pipeline ends in no-decision, not loss to competitor. Buyer indecision — not status quo bias — is the dominant failure mode.",
+    keyConcepts: ["Valuation problem — buyer can't determine best option among too many", "Lack of information — feels insufficient data (often dodge for uncertainty)", "Outcome uncertainty — fears being wrong and blamed", "J-O-L-T — Judge indecision type, Offer specific recommendation, Limit options, Take risk off the table", "Being directive correlates with winning; more options hurt close rates"],
+  },
+  {
+    name: "The Effortless Experience",
+    author: "Dixon, Toman & DeLisi",
+    principle: "Delight doesn't drive loyalty; effort does. Optimize effort downward, not delight upward. Customer Effort Score predicts loyalty better than NPS.",
+    keyConcepts: ["Effort reduction > delight — minimize buyer friction throughout process", "Anticipate next issues — answer question and pre-empt three related ones", "Don't bounce buyers — minimize hand-offs; warm introductions", "Make next step obvious — every interaction ends with action, owner, date"],
+  },
+  {
+    name: "$100M Offers",
+    author: "Alex Hormozi",
+    principle: "The offer IS the product. A mediocre product with a brilliant offer beats a brilliant product with a mediocre offer.",
+    keyConcepts: ["Value Equation: (Dream Outcome × Perceived Likelihood) / (Time Delay × Effort & Sacrifice)", "Dream outcome — what buyer wants in their language (maximize)", "Perceived likelihood — proof, guarantees, case data (maximize)", "Time delay — how long until value delivery (minimize)", "Naming: Magnetic Reason + Avatar + Result + Container"],
+  },
+  {
+    name: "Win Without Pitching",
+    author: "Blair Enns",
+    principle: "Experts don't pitch; they're consulted. Pitching posture signals commodity. Experts engage as advisors with authority to question, set terms, and qualify.",
+    keyConcepts: ["Specialize — vertical × horizontal positioning intersection", "Diagnose before prescribe — not qualified to recommend until diagnosed", "Replace presentations with conversations — expert posture through dialogue", "Address money early — pricing discussed in first call, not hidden until proposal", "Be selective — willingness to disqualify signals expertise, not desperation"],
+  },
+];

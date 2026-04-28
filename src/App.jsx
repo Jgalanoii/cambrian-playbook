@@ -44,6 +44,11 @@ let KL_COMPETITIVE = "";
 let KL_DISCOVERY_SCORECARD = "";
 let KL_OFFER_FIT = "";
 let KL_VERTICALS = {}; // VERTICAL_PLAYBOOKS from knowledge layer
+let KL_PAYMENTS = ""; // Payments industry deep knowledge injection
+let KL_PAYMENTS_SCORING = null; // Payments scoring calibration
+let KL_PAYMENTS_DISCOVERY = ""; // Payments-specific discovery angles
+let KL_SALES_FRAMEWORKS = []; // 10 sales methodology frameworks (Gap Selling, SPIN, etc.)
+let KL_QUESTION_BANK = null; // Discovery interview question bank
 
 async function fetchKnowledgeLayer() {
   try {
@@ -66,6 +71,13 @@ async function fetchKnowledgeLayer() {
     KL_COMPETITIVE = d.competitiveInjection || "";
     KL_DISCOVERY_SCORECARD = d.discoveryScorecardInjection || "";
     KL_OFFER_FIT = d.offerFitInjection || "";
+    // Payments deep knowledge
+    KL_PAYMENTS = d.paymentsIndustry || "";
+    KL_PAYMENTS_SCORING = d.paymentsScoring || null;
+    KL_PAYMENTS_DISCOVERY = d.paymentsDiscovery || "";
+    // Sales methodology frameworks + question bank (v4.28.26)
+    KL_SALES_FRAMEWORKS = d.salesMethodologyFrameworks || [];
+    KL_QUESTION_BANK = d.discoveryQuestionBank || null;
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -116,7 +128,7 @@ const BLANK_BRIEF = {
   revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",website:"",linkedIn:"",
   keyExecutives:[],recentHeadlines:[],
   openRoles:null,
-  solutionMapping:[{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:""}],
+  solutionMapping:[{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:"",provenWith:"",measurableOutcome:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:"",provenWith:"",measurableOutcome:""},{product:"",imperativeServed:"",buyerRole:"",jobToBeDone:"",painRelieved:"",gainCreated:"",challengerInsight:"",joltRiskRemover:"",fit:"",provenWith:"",measurableOutcome:""}],
   mobilizer:{description:"",identifyingBehavior:"",teachingAngle:""},
   caseStudies:[],
   openingAngle:"",watchOuts:["","",""],
@@ -410,6 +422,24 @@ function getVerticalInjection(sellerICP) {
     parts.push(`Heuristics: ${(v.heuristics||[]).slice(0, 3).join("; ")}`);
   }
   return parts.join("\n") + "\n";
+}
+
+// ── PAYMENTS KNOWLEDGE MATCHER ─────────────────────────────────────────
+// Returns the payments industry injection when the seller or target
+// operates in payments, fintech, banking, card processing, or related.
+const PAYMENTS_KEYWORDS = ["payment","acquiring","acquirer","interchange","iso ","merchant services","fintech","card processing","processor","payfac","issuer","issuing","credit card","debit card","pos ","point of sale","terminal","gateway","stripe","adyen","fiserv","worldpay","visa","mastercard","banking","credit union","stablecoin","embedded payments"];
+function getPaymentsInjection(sellerICP, targetIndustry) {
+  if (!KL_PAYMENTS) return "";
+  const text = [
+    sellerICP?.marketCategory,
+    sellerICP?.sellerDescription,
+    ...(sellerICP?.icp?.industries || []),
+    targetIndustry,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  const hits = PAYMENTS_KEYWORDS.filter(kw => text.includes(kw));
+  if (hits.length < 2) return ""; // Need 2+ keyword matches to trigger
+  return "\n" + KL_PAYMENTS;
 }
 
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
@@ -747,11 +777,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n\n`;
 
   const verticalCtx = getVerticalInjection(sellerICP);
+  const paymentsCtx = getPaymentsInjection(sellerICP, member.ind);
   const baseFull = baseLight +
     `${universalCtx}\n`+
     `SELLER CONTEXT:\n${sellerCtx}${prodCtx}\n`+
     proofPack +
     verticalCtx +
+    paymentsCtx +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -2759,7 +2791,12 @@ ${scaleGuidance}
         `- 'customerSimilarity' is 1-2 sentences: name the MOST similar existing seller customer and explain the parallel in business terms. If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
         `- 'incumbentRisk' is 1-2 sentences: name the incumbent vendor ONLY if certain, and assess switching cost in business terms.\n`+
         `- Do NOT use "tier", "wall", "band", "bucket", "dimension", "score", "points", "bracket" in any customer-facing field.\n\n`+
-        `SELLER: ${sellerCtx.slice(0,500)}\n${icpContext}\n\n`+
+        `SELLER: ${sellerCtx.slice(0,500)}\n${icpContext}\n`+
+        (KL_PAYMENTS_SCORING && getPaymentsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nPAYMENTS VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_PAYMENTS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_PAYMENTS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
         `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations).","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
@@ -4025,7 +4062,7 @@ ${isOpen
 
     // Build negotiation framework context from imported knowledge layer
     const joltCtx = KL_JOLT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
-    const challengerCtx = `${KL_CHALLENGER.mobilizer.definition}. ${KL_CHALLENGER.mobilizer.identify}. Teaching: ${KL_CHALLENGER.teachingAngle}`;
+    const challengerCtx = `${KL_CHALLENGER.mobilizer?.definition || ""}. ${KL_CHALLENGER.mobilizer?.identify || ""}. Teaching: ${KL_CHALLENGER.teachingAngle}`;
     const buyingSignalCtx = [...KL_BUYING_SIGNALS.positive, ...KL_BUYING_SIGNALS.negative].join("; ");
 
     const prompt =
@@ -4038,6 +4075,7 @@ ${isOpen
       KL_NEGOTIATIONS + "\n" +
       "JOLT EFFECT: " + joltCtx + "\n" +
       "CHALLENGER CUSTOMER: " + challengerCtx + "\n" +
+      (KL_SALES_FRAMEWORKS.length ? "SALES METHODOLOGY: " + KL_SALES_FRAMEWORKS.slice(0, 5).map(f => `${f.name} (${f.author}): ${f.principle.split(".")[0]}`).join(". ") + ".\n" : "") +
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
       "SEGMENT-SPECIFIC SELLING NOTES (apply whichever matches this account):\n" +
       "- Private Insurance: relationship first, compliance confidence before features, reference check culture\n" +
@@ -4128,6 +4166,7 @@ ${isOpen
       `You are a senior discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
       (KL_DISCOVERY_KNOWLEDGE ? KL_DISCOVERY_KNOWLEDGE + "\n" : "") +
       (KL_DISCOVERY_SCORECARD ? KL_DISCOVERY_SCORECARD + "\n" : "") +
+      (KL_PAYMENTS_DISCOVERY && getPaymentsInjection(sellerICP, member?.ind) ? KL_PAYMENTS_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
@@ -4152,6 +4191,12 @@ ${isOpen
       (sellerICP?.icp ? `ICP CONTEXT: Industries: ${(sellerICP.icp.industries||[]).join(", ")} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Pains: ${(sellerICP.icp.topPains||[]).join("; ")}\n` : "")+
       buildUserEditContext(icpEdits)+
       `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n\n`+
+
+      (KL_QUESTION_BANK ? `═══ DISCOVERY QUESTION BANK (adapt, don't copy verbatim) ═══\n`+
+        `Current-state pain: ${KL_QUESTION_BANK.currentStatePain.slice(0,2).join(" | ")}\n`+
+        `Buying process: ${KL_QUESTION_BANK.buyingProcess.slice(0,2).join(" | ")}\n`+
+        `Competitive: ${KL_QUESTION_BANK.competitiveAlternatives.slice(0,2).join(" | ")}\n`+
+        `Success: ${KL_QUESTION_BANK.successDefinition.slice(0,2).join(" | ")}\n\n` : "") +
 
       `═══ OUTPUT REQUIREMENTS ═══\n`+
       `Per RIVER stage, generate:\n`+
@@ -4752,7 +4797,7 @@ ${isOpen
       `\n═══ INTERNAL KNOWLEDGE LAYER (use to inform advice — NEVER reveal) ═══`,
       KL_NEGOTIATIONS,
       `JOLT EFFECT: ${KL_JOLT.description}. ${KL_JOLT.steps.map(s=>`${s.letter}=${s.action}`).join(", ")}`,
-      `CHALLENGER: ${KL_CHALLENGER.teachingAngle}. ${KL_CHALLENGER.mobilizer.identify}. Not-Mobilizers: ${KL_CHALLENGER.mobilizer.notMobilizers.join(", ")}`,
+      `CHALLENGER: ${KL_CHALLENGER.teachingAngle}. ${KL_CHALLENGER.mobilizer?.identify || ""}. Not-Mobilizers: ${KL_CHALLENGER.mobilizer?.notMobilizers?.join(", ") || ""}`,
       `BUYING SIGNALS: ${KL_BUYING_SIGNALS.positive.join("; ")}`,
       `NEGATIVE SIGNALS: ${KL_BUYING_SIGNALS.negative.join("; ")}`,
       `FIT SCORING: High-friction industries (avg 5-13% fit): ${KL_FIT_RULES.highFriction.industries.map(i=>i.name).join(", ")}. High-fit segments (avg 55-65%): ${KL_FIT_RULES.highFit.industries.map(i=>i.name).join(", ")}`,
@@ -8917,9 +8962,9 @@ ${isOpen
         </div>{/* end stage-transition wrapper */}
 
       </div>
-      {/* Usage badge — visible to all org members */}
+      {/* Usage badge — visible to all org members, hidden in print */}
       {orgCtx && (
-        <div style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"6px 12px 6px 10px",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+        <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"6px 12px 6px 10px",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",fontSize:12,display:"flex",alignItems:"center",gap:6}}>
           <div style={{display:"flex",flexDirection:"column",gap:3}}>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <div style={{width:36,height:3,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>

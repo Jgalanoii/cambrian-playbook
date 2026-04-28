@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   const body = guard(req, res, { stream: false });
   if (!body) return;
 
-  // Guest usage limit — 2 calls total
+  // Guest usage limit — 3 calls total
   if (req._isGuest) {
     const xff = req.headers["x-forwarded-for"];
     const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
 
   const data = await response.json();
   if (usedFallback) {
-    data._fallbackModel = MODEL_FALLBACK[body.model];
+    data._fallbackModel = res.getHeader("x-fallback-model");
   }
 
   // Log token usage for cost tracking

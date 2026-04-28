@@ -197,3 +197,95 @@ DISQUALIFICATION (Murphy):
 - Track disqualification rate. Below 20% = ICP not doing work. Above 60% = ICP too narrow or lead generation too broad.
 - Bad-fit customers consume 2-3x rep time and 5-10x CS time, then churn.
 `;
+
+// ── Fitzpatrick: The Mom Test ────────────────────────────────────────────
+export const FITZPATRICK_MOM_TEST = {
+  principle: "Talk about their life, not your idea. Ask about specifics in the past, not generics or opinions about the future. Talk less, listen more (70%+ from interviewee).",
+  badSignals: ["Compliments ('Great idea!')", "Fluff ('I would definitely use that')", "Generics ('People usually...')", "Opinions about future ('I'd pay $X')"],
+  goodSignals: ["Specific stories about past behavior", "Facts and numbers about current workflow/cost/time", "Emotion about actual lived pain", "Commitments (time, money, reputation, introduction)", "Scheduled next steps (concrete follow-up action)"],
+  commitmentTest: "Every meeting ends in either a Commitment (they give something of value) or an Advancement (scheduled next step increasing commitment). If it ends in 'let's keep in touch' — it failed.",
+};
+
+// ── Moore: Crossing the Chasm ────────────────────────────────────────────
+export const MOORE_CHASM = {
+  principle: "A chasm exists between Early Adopters (visionaries) and Early Majority (pragmatists). Pragmatists buy on references from other pragmatists in their own industry — they don't trust Early Adopter case studies.",
+  beachheadStrategy: "Pick one narrow vertical or use case to dominate completely. Win 100% of a small segment rather than 5% of a large one. Use that beachhead to generate references, integrations, and ecosystem for expansion.",
+  adoptionLifecycle: ["Innovators", "Early Adopters", "CHASM", "Early Majority", "Late Majority", "Laggards"],
+  implication: "Most modern ICP frameworks assume the beachhead has been chosen. Moore reminds you the choice of beachhead IS the strategic decision.",
+};
+
+// ── 6sense / Conant: Account-Based Revenue ───────────────────────────────
+export const SIXSENSE_ABM = {
+  principle: "~70% of B2B buying journey happens before buyer identifies themselves (the 'dark funnel'). Waiting for leads to self-identify = losing 70% of the market.",
+  sixStageJourney: [
+    { stage: "Target", description: "Fits ICP, no activity" },
+    { stage: "Awareness", description: "Early signals — site visits, topic searches" },
+    { stage: "Consideration", description: "Deeper research, multiple people involved" },
+    { stage: "Decision", description: "Evaluation behavior, competitive comparison" },
+    { stage: "Purchase", description: "In active deal" },
+    { stage: "Post-Purchase", description: "Expansion, advocacy" },
+  ],
+  keyInsights: [
+    "Uncovered demand > generated demand — find where demand exists, don't try to create it",
+    "Account, not lead — buying is done by accounts, not individuals; score at account level",
+    "Orchestration over sequence — run coordinated plays across channels timed to in-market signals",
+  ],
+  applicability: "Requires $50K+ ACV, identifiable target accounts, and martech stack for intent data. Overkill for PLG or transactional products.",
+};
+
+// ── Laja / CXL: Research Rigor ──────────────────────────────────────────
+export const LAJA_CXL = {
+  principle: "Apply CRO research discipline to GTM questions. Quantitative methodology complements qualitative frameworks.",
+  researchXL: ["Heuristic analysis", "Web analytics (behavioral data)", "Qualitative user testing", "Session recordings", "Surveys (structured quantitative)", "Voice of Customer (quotes, tickets, reviews, calls)", "Technical analysis"],
+  highLeverageSurveyQuestions: [
+    "What almost stopped you from buying?",
+    "What other options did you consider?",
+    "Segment responses by outcome (churned vs retained, expanded vs flat) to find ICP signal",
+  ],
+  voc: "The language your best customers use to describe the problem IS your messaging copy, and it's free.",
+};
+
+// ── Discovery Interview Question Bank ───────────────────────────────────
+// Blended from Mom Test (Fitzpatrick), JTBD (Moesta), SPICED (WbD), and
+// Dunford positioning. Adapt to 8-12 questions per interview.
+export const DISCOVERY_QUESTION_BANK = {
+  opening: [
+    "Can you walk me through your role and what your team is accountable for?",
+    "What are the top 2-3 outcomes you're personally measured on this year?",
+    "Tell me about a typical week — what's the mix of things you're doing?",
+  ],
+  switchingMoment: [
+    "Tell me about the day you first realized you needed to solve [problem X]. What happened?",
+    "Between that first thought and actually deciding to look for a solution, what changed?",
+    "When you started evaluating options, what were you looking at? In what order?",
+    "Who else was involved in the decision? What was each person's role?",
+    "What almost caused you to not buy? What were you worried about?",
+  ],
+  currentStatePain: [
+    "The last time [problem X] happened, what did you do?",
+    "How often does that happen in a typical month? How long does it take each time?",
+    "What's the cost — time, money, team morale — of that problem over a quarter?",
+    "What have you tried before to fix it? What happened?",
+  ],
+  buyingProcess: [
+    "If you decided to solve this, who would need to approve a purchase?",
+    "What would cause this to become a must-do-now priority rather than a nice-to-have?",
+    "What's on your team's roadmap for the next 2 quarters that might force action?",
+    "Is there a budget line item for this, or would it need to be carved out?",
+  ],
+  competitiveAlternatives: [
+    "If you had to solve this today without any new vendor, how would you do it?",
+    "What vendors or approaches have you heard about in this space?",
+    "What would be the 'boring' default choice if you had to pick one tomorrow?",
+  ],
+  successDefinition: [
+    "Imagine it's a year from now and this is working perfectly. What's different?",
+    "How would you know it was working? What would you measure?",
+    "What would have to be true about the vendor for you to be successful?",
+  ],
+  commitmentTest: [
+    "Who else should I be talking to about this?",
+    "Would you be willing to introduce me to [specific person]?",
+    "If a product existed that did [capability], would you want to see it? What's a good next step?",
+  ],
+};

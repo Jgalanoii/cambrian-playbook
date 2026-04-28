@@ -16,8 +16,8 @@
 //
 // Output language: score is an integer 0-100. label is EXACTLY one of:
 //   "Strong Fit"     (score 75-100)
-//   "Potential Fit"  (score 50-74)
-//   "Poor Fit"       (score  0-49)
+//   "Potential Fit"  (score 55-74)
+//   "Poor Fit"       (score  0-54)
 // No "tier", "wall", "band", or "bucket" vocabulary in user-facing text.
 
 export const buildFitScoringPrompt = (sellerCtx, icpContext, companies) => {
@@ -25,8 +25,8 @@ export const buildFitScoringPrompt = (sellerCtx, icpContext, companies) => {
 
 SCORE BAND → LABEL (score MUST match label):
 - 75-100 → "Strong Fit"     — clear ICP match, buyer accessible, reasonable cycle
-- 50-74  → "Potential Fit"  — partial match, needs specific angle
-- 0-49   → "Poor Fit"       — structural barrier (wrong size, industry, incumbent lock)
+- 55-74  → "Potential Fit"  — partial match, needs specific angle
+- 0-54   → "Poor Fit"       — structural barrier (wrong size, industry, incumbent lock)
 
 INTERNAL SIGNALS (inform the score — do NOT echo these phrases in 'reason'):
 - High-friction industries (score 5-25): heavy manufacturing, aerospace/defense prime,
