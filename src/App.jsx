@@ -50,6 +50,7 @@ let KL_PAYMENTS_SCORING = null; // Payments scoring calibration
 let KL_PAYMENTS_DISCOVERY = ""; // Payments-specific discovery angles
 let KL_SALES_FRAMEWORKS = []; // 10 sales methodology frameworks (Gap Selling, SPIN, etc.)
 let KL_QUESTION_BANK = null; // Discovery interview question bank
+let KL_COMPLIANCE = null; // Compliance frameworks data (13 frameworks × 4 verticals)
 
 async function fetchKnowledgeLayer() {
   try {
@@ -79,6 +80,8 @@ async function fetchKnowledgeLayer() {
     // Sales methodology frameworks + question bank (v4.28.26)
     KL_SALES_FRAMEWORKS = d.salesMethodologyFrameworks || [];
     KL_QUESTION_BANK = d.discoveryQuestionBank || null;
+    // Compliance awareness layer
+    KL_COMPLIANCE = d.complianceFrameworks ? { frameworks: d.complianceFrameworks, verticalMap: d.complianceVerticalMap, handoff: d.complianceHandoff } : null;
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -470,6 +473,73 @@ function getPaymentsInjection(sellerICP, targetIndustry) {
   return "\n" + KL_PAYMENTS;
 }
 
+// ── COMPLIANCE AWARENESS INJECTION ──────────────────────────────────────
+// Injects relevant compliance frameworks into prompts when the seller or
+// target operates in a regulated vertical. Uses KL_COMPLIANCE data.
+const COMPLIANCE_VERTICAL_KW = {
+  fintech_payments: ["fintech", "payment", "banking", "financial", "lending", "neobank", "processor", "acquiring", "interchange", "payfac"],
+  digital_rewards_incentives: ["incentive", "reward", "gift card", "recognition", "promo", "loyalty", "stored-value"],
+  health_wellness_b2b: ["health", "wellness", "clinical", "hipaa", "healthcare", "medical", "patient", "pharma", "telehealth"],
+  market_research: ["research", "survey", "panel", "respondent", "insights"],
+};
+function getComplianceInjection(sellerICP, targetIndustry) {
+  if (!KL_COMPLIANCE?.frameworks?.length) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  // Match verticals
+  const matchedVerts = [];
+  for (const [vId, kws] of Object.entries(COMPLIANCE_VERTICAL_KW)) {
+    if (kws.some(kw => text.includes(kw))) matchedVerts.push(vId);
+  }
+  if (!matchedVerts.length) return "";
+  // Collect primary frameworks from matched verticals
+  const vMap = KL_COMPLIANCE.verticalMap || {};
+  const seen = new Set();
+  const frameworks = [];
+  for (const vId of matchedVerts) {
+    for (const fId of (vMap[vId]?.primary_frameworks || [])) {
+      if (!seen.has(fId)) {
+        seen.add(fId);
+        const f = KL_COMPLIANCE.frameworks.find(x => x.id === fId);
+        if (f) frameworks.push(f);
+      }
+    }
+  }
+  if (!frameworks.length) return "";
+  const parts = ["\nCOMPLIANCE AWARENESS (sales enablement — not legal advice):"];
+  for (const f of frameworks.slice(0, 5)) {
+    const summary = f.talking_points?.what_reps_should_know || f.summary || "";
+    parts.push(`- ${f.name}: ${summary.split(".").slice(0, 2).join(".")}.`);
+  }
+  parts.push("RULE: Position compliance awareness confidently but escalate to SME for program design, audit scope, or legal interpretation.");
+  return parts.join("\n") + "\n";
+}
+
+function getComplianceDiscovery(sellerICP, targetIndustry) {
+  if (!KL_COMPLIANCE?.frameworks?.length) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  const matchedVerts = [];
+  for (const [vId, kws] of Object.entries(COMPLIANCE_VERTICAL_KW)) {
+    if (kws.some(kw => text.includes(kw))) matchedVerts.push(vId);
+  }
+  if (!matchedVerts.length) return "";
+  const vMap = KL_COMPLIANCE.verticalMap || {};
+  const seen = new Set();
+  const qs = [];
+  for (const vId of matchedVerts) {
+    for (const fId of (vMap[vId]?.primary_frameworks || [])) {
+      if (!seen.has(fId)) {
+        seen.add(fId);
+        const f = KL_COMPLIANCE.frameworks.find(x => x.id === fId);
+        if (f?.discovery_questions?.length) qs.push(`${f.name}: ${f.discovery_questions[0]}`);
+      }
+    }
+  }
+  if (!qs.length) return "";
+  return `\nCOMPLIANCE DISCOVERY (ask when relevant):\n${qs.slice(0, 4).map(q => `- ${q}`).join("\n")}\n`;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -837,6 +907,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     proofPack +
     verticalCtx +
     paymentsCtx +
+    getComplianceInjection(sellerICP, member.ind) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -4274,6 +4345,7 @@ ${isOpen
       (KL_SALES_FRAMEWORKS.length ? "SALES METHODOLOGY: " + KL_SALES_FRAMEWORKS.slice(0, 5).map(f => `${f.name} (${f.author}): ${f.principle.split(".")[0]}`).join(". ") + ".\n" : "") +
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
       getVerticalInjection(sellerICP, member.ind) +
+      getComplianceInjection(sellerICP, member.ind) +
       "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
       "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
@@ -4360,6 +4432,7 @@ ${isOpen
       (KL_DISCOVERY_SCORECARD ? KL_DISCOVERY_SCORECARD + "\n" : "") +
       (KL_PAYMENTS_DISCOVERY && getPaymentsInjection(sellerICP, member?.ind) ? KL_PAYMENTS_DISCOVERY + "\n" : "") +
       getVerticalInjection(sellerICP, member?.ind) +
+      getComplianceDiscovery(sellerICP, member?.ind) +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

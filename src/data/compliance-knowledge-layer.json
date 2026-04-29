@@ -1,0 +1,650 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-04-29",
+  "disclaimer": "This knowledge layer is for sales enablement and prospect awareness. It is not legal advice. Cambrian Catalyst representatives must escalate substantive compliance questions per the handoff_threshold field on each framework entry.",
+  "tiers": {
+    "primary": "Frameworks that should be surfaced proactively in Diagnostic phase based on vertical/signals",
+    "secondary": "Frameworks to surface conditionally when triggered by specific prospect signals",
+    "adjacent": "Frameworks reps should recognize but rarely lead with"
+  },
+  "frameworks": [
+    {
+      "id": "soc2-type-ii",
+      "name": "SOC 2 Type II",
+      "tier": "primary",
+      "category": "data_security_attestation",
+      "issuing_body": "AICPA (American Institute of CPAs)",
+      "summary": "An independent attestation that a service organization has designed AND consistently operated controls across one or more Trust Services Criteria (Security is mandatory; Availability, Confidentiality, Processing Integrity, and Privacy are optional). Type II covers a period (typically 6–12 months) of actual operation, not just a point-in-time design review.",
+      "applies_when": {
+        "data_types": ["customer_data", "employee_data", "financial_data", "any_sensitive_data"],
+        "buyer_signals": ["enterprise_buyer", "regulated_industry_buyer", "vendor_security_review", "procurement_questionnaire"],
+        "verticals": ["fintech_payments", "digital_rewards_incentives", "health_wellness_b2b", "market_research"],
+        "deal_size_threshold": "Typically required for mid-market and enterprise deals (>$50K ACV)"
+      },
+      "trigger_phrases": [
+        "send us your SOC 2",
+        "we need your latest attestation",
+        "vendor security questionnaire",
+        "InfoSec review",
+        "we can't move forward without",
+        "what's your security posture"
+      ],
+      "discovery_questions": [
+        "Who at your organization owns vendor security review?",
+        "Is SOC 2 a procurement requirement, or used informally as a screen?",
+        "Which Trust Services Criteria matter most for this use case — Security, Availability, Confidentiality?",
+        "Have past vendors been disqualified for not having SOC 2?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "SOC 2 Type II is the de facto enterprise SaaS security baseline in North America. It is not a certification — it is an auditor's attestation. There is no 'pass/fail'; the report contains exceptions and the buyer's job is to evaluate them.",
+        "what_reps_should_say": "We understand SOC 2 is foundational for enterprise buyers. Let's talk about how we structure the GTM motion so your security posture is positioned as a deal accelerator, not just a checkbox.",
+        "what_reps_should_not_say": "Do not claim a client is 'SOC 2 certified' (the term is wrong). Do not opine on whether observed exceptions are material — that's the auditor's and buyer's call.",
+        "cc_internal_posture": "Cambrian Catalyst is a GTM consultancy and does not currently hold a SOC 2 attestation. We follow security hygiene appropriate to a small consultancy: encrypted storage, access controls, NDAs, and data minimization. We do not store client production data or end-customer PII. [VERIFY WITH JOE BEFORE FINALIZING]"
+      },
+      "common_objections": [
+        {
+          "concern": "We can't engage a vendor without SOC 2 Type II.",
+          "response": "Understood. For Cambrian Catalyst's scope, we don't store production data or PII — our work is GTM strategy and account research. Let's walk through our data handling so you can confirm whether your security policy applies to consulting engagements at this scope, or if a tailored DPA covers it."
+        },
+        {
+          "concern": "Our customers are asking us about SOC 2 — can you help us position around gaps?",
+          "response": "Yes. Part of the Architecture phase is aligning your sales narrative with your actual security posture so reps stop overpromising or stumbling on InfoSec questions. We can build that into the playbook."
+        }
+      ],
+      "handoff_threshold": "Escalate to client's CISO/security lead or a qualified compliance advisor whenever the conversation moves beyond positioning into specific control design, audit scope decisions, or remediation planning.",
+      "external_references": [
+        {"name": "AICPA SOC 2 overview", "url": "https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2"}
+      ]
+    },
+    {
+      "id": "pci-dss",
+      "name": "PCI DSS (Payment Card Industry Data Security Standard)",
+      "tier": "primary",
+      "category": "payment_data_security",
+      "issuing_body": "PCI Security Standards Council",
+      "summary": "Mandatory security standard for any entity that stores, processes, or transmits cardholder data. Compliance level (1–4) is determined by transaction volume. Current version is PCI DSS v4.0 (with v4.0.1 errata); v3.2.1 was retired March 31, 2024. Common scope-reduction strategies include tokenization, hosted payment fields, and using a compliant processor.",
+      "applies_when": {
+        "data_types": ["cardholder_data", "PAN", "CVV", "track_data"],
+        "buyer_signals": ["accepts_credit_cards", "embedded_payments", "marketplace_platform", "subscription_billing", "card_present_pos"],
+        "verticals": ["fintech_payments", "digital_rewards_incentives"],
+        "deal_size_threshold": "Applies regardless of deal size — any card data touch triggers it"
+      },
+      "trigger_phrases": [
+        "cardholder data",
+        "card on file",
+        "stored payment method",
+        "we tokenize",
+        "we use Stripe/Adyen/Braintree",
+        "PAN",
+        "primary account number",
+        "card vault",
+        "PCI scope"
+      ],
+      "discovery_questions": [
+        "Does your platform ever touch raw card data, or do you rely on a tokenization provider?",
+        "What's your current PCI level (1, 2, 3, or 4)?",
+        "Who handles your annual ROC or SAQ?",
+        "Are you using hosted fields / iframe / direct post to keep your environment out of scope?",
+        "If your buyers are merchants, does your sales motion need to address their PCI scope reduction?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "Most fintech clients aim to minimize PCI scope, not expand it. The marketing hook 'we reduce your PCI burden' resonates strongly with merchants. Level 1 (>6M transactions/year) requires an annual on-site audit by a QSA; lower levels self-attest via SAQ.",
+        "what_reps_should_say": "PCI scope is a powerful sales narrative for your buyers. We can build messaging that frames your offering as scope-reducing — that often outperforms generic 'secure payments' positioning.",
+        "what_reps_should_not_say": "Do not claim a client is 'PCI compliant' without confirming their attestation status and level. Do not advise on tokenization architecture — that's an SME conversation.",
+        "cc_internal_posture": "Cambrian Catalyst does not handle cardholder data and is out of PCI scope. Our engagement scope explicitly excludes any access to client production payment systems."
+      },
+      "common_objections": [
+        {
+          "concern": "We can't share customer data with you because of PCI.",
+          "response": "Got it. Our engagement doesn't need cardholder data — we work with aggregate transaction patterns, merchant attributes, and ICP signals. Let's scope a data-sharing approach that keeps you fully out of PCI scope."
+        }
+      ],
+      "handoff_threshold": "Escalate to the client's QSA, payments compliance lead, or a fintech-specialized attorney for any conversation involving scope determination, compensating controls, or P2PE/tokenization architecture decisions.",
+      "external_references": [
+        {"name": "PCI Security Standards Council", "url": "https://www.pcisecuritystandards.org/"}
+      ]
+    },
+    {
+      "id": "hipaa",
+      "name": "HIPAA (Health Insurance Portability and Accountability Act)",
+      "tier": "primary",
+      "category": "health_data_privacy",
+      "issuing_body": "U.S. Department of Health and Human Services (HHS) / Office for Civil Rights (OCR)",
+      "summary": "U.S. federal law governing the use and disclosure of Protected Health Information (PHI). Applies to Covered Entities (healthcare providers, health plans, clearinghouses) and Business Associates (vendors handling PHI on their behalf). HITECH Act (2009) expanded enforcement and breach notification. Note common misspelling: HIPAA, not HIPPA.",
+      "applies_when": {
+        "data_types": ["PHI", "ePHI", "patient_records", "claims_data", "biometric_health_data"],
+        "buyer_signals": ["covered_entity", "business_associate", "telehealth", "wellness_platform_with_clinical_data", "wearables_with_diagnostic_intent"],
+        "verticals": ["health_wellness_b2b"],
+        "deal_size_threshold": "Applies regardless of deal size when PHI is in scope"
+      },
+      "trigger_phrases": [
+        "PHI",
+        "protected health information",
+        "we need a BAA",
+        "Business Associate Agreement",
+        "covered entity",
+        "patient data",
+        "OCR audit",
+        "breach notification"
+      ],
+      "discovery_questions": [
+        "Are you a Covered Entity, a Business Associate, or do you sit outside HIPAA scope (consumer wellness)?",
+        "Do you require BAAs from your vendors? Who drafts them?",
+        "What categories of PHI does your platform handle — demographic, clinical, claims, biometric?",
+        "Have you been through an OCR audit or had a reportable breach?",
+        "Is your buyer asking you for a BAA, and is that the right fit for your scope?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "Wellness data is a gray zone. Step counts and sleep data from a consumer device are typically NOT PHI. The same data ingested by a clinical platform tied to a treatment plan likely IS. The distinction matters for sales positioning. Also: 'HIPAA compliant' is not a meaningful claim on its own — entities are either in scope or out, and either compliant with applicable rules or not.",
+        "what_reps_should_say": "Your buyers in healthcare will ask about HIPAA early. Let's make sure your sales narrative draws a clear line between what's in scope, what's out, and what BAAs you'll sign — that prevents stalled deals at procurement.",
+        "what_reps_should_not_say": "Do not casually claim a wellness app is or isn't HIPAA-covered without understanding the data flow. Do not draft or negotiate BAA language — that's legal counsel's job.",
+        "cc_internal_posture": "Cambrian Catalyst does not handle PHI. We work with our health & wellness clients on aggregate market, account, and ICP data — not patient-level information. We will sign a BAA only if a client demonstrates a specific scoped need, after legal review."
+      },
+      "common_objections": [
+        {
+          "concern": "We need a BAA before we can engage you.",
+          "response": "Help me understand the scope — if our work doesn't involve PHI, a BAA may not be the right instrument. We typically work in aggregated and de-identified data zones. Let's walk through the data we'd actually touch and confirm whether a BAA, a DPA, or neither is appropriate."
+        },
+        {
+          "concern": "Our prospects keep asking if we're HIPAA compliant.",
+          "response": "That's a positioning gap. Part of the Architecture phase is building a clean answer: are you a Business Associate, what BAAs you'll sign, and how you handle PHI flows. Reps need a one-paragraph answer they can deliver confidently."
+        }
+      ],
+      "handoff_threshold": "Escalate to a healthcare-specialized attorney or the client's HIPAA Privacy Officer for any BAA negotiation, breach response, OCR inquiry, or scope determination question.",
+      "external_references": [
+        {"name": "HHS HIPAA for Professionals", "url": "https://www.hhs.gov/hipaa/for-professionals/index.html"}
+      ]
+    },
+    {
+      "id": "iso-27001",
+      "name": "ISO/IEC 27001",
+      "tier": "primary",
+      "category": "data_security_certification",
+      "issuing_body": "International Organization for Standardization",
+      "summary": "International standard specifying requirements for an Information Security Management System (ISMS). Unlike SOC 2 (an auditor's attestation), ISO 27001 is a certification issued by an accredited certification body. Current version is ISO/IEC 27001:2022. Particularly important for international deals (EU, UK, APAC) where SOC 2 carries less weight.",
+      "applies_when": {
+        "data_types": ["any_information_assets"],
+        "buyer_signals": ["international_buyer", "european_buyer", "global_enterprise", "government_adjacent_buyer"],
+        "verticals": ["fintech_payments", "digital_rewards_incentives", "market_research"],
+        "deal_size_threshold": "Frequently required at enterprise level, especially in EU/UK/APAC"
+      },
+      "trigger_phrases": [
+        "ISO 27001",
+        "ISO certified",
+        "ISMS",
+        "Statement of Applicability",
+        "we're a global company",
+        "European procurement",
+        "international compliance"
+      ],
+      "discovery_questions": [
+        "Are you targeting international buyers where ISO 27001 carries more weight than SOC 2?",
+        "Have you considered pursuing ISO 27001 alongside or instead of SOC 2?",
+        "What's your buyer mix — primarily NA enterprise, or global?",
+        "Have you lost deals in EMEA or APAC over the lack of ISO certification?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "SOC 2 and ISO 27001 overlap significantly in controls, but they're not interchangeable. EU and UK buyers often require ISO 27001 specifically. Many fintech clients pursuing international expansion run a 'unified compliance' program covering both.",
+        "what_reps_should_say": "If your growth plan includes EMEA or APAC, ISO 27001 is worth thinking about now, not after you lose a deal over it. We can factor that into the Architecture phase and align your GTM messaging.",
+        "what_reps_should_not_say": "Do not claim ISO 27001 is 'just like SOC 2' — informed buyers will catch that and lose confidence.",
+        "cc_internal_posture": "Cambrian Catalyst is not ISO 27001 certified. We follow security hygiene appropriate to our scope as a small consultancy. [VERIFY WITH JOE]"
+      },
+      "common_objections": [
+        {
+          "concern": "We have SOC 2, isn't that enough?",
+          "response": "Domestically, often yes. For European procurement and many APAC enterprises, ISO 27001 is the expected baseline. If your pipeline includes those geographies, it's worth scoping the gap analysis early."
+        }
+      ],
+      "handoff_threshold": "Escalate to a qualified ISMS consultant or certification body for scope, control selection, and audit-readiness conversations.",
+      "external_references": [
+        {"name": "ISO 27001 official", "url": "https://www.iso.org/standard/27001"}
+      ]
+    },
+    {
+      "id": "bsa-aml",
+      "name": "BSA/AML (Bank Secrecy Act / Anti-Money Laundering)",
+      "tier": "primary",
+      "category": "financial_crimes",
+      "issuing_body": "FinCEN (Financial Crimes Enforcement Network), U.S. Treasury",
+      "summary": "Federal framework requiring financial institutions and certain non-bank financial entities (including many fintechs and money services businesses) to implement programs detecting and reporting suspicious activity. Core obligations: Customer Identification Program (CIP), Customer Due Diligence (CDD), Suspicious Activity Reports (SARs), and Currency Transaction Reports (CTRs).",
+      "applies_when": {
+        "data_types": ["customer_identity", "transaction_records", "beneficial_ownership"],
+        "buyer_signals": ["money_services_business", "fintech_with_funds_movement", "crypto_exchange", "neobank", "payments_processor", "MSB_registration"],
+        "verticals": ["fintech_payments"],
+        "deal_size_threshold": "Applies based on activity, not deal size"
+      },
+      "trigger_phrases": [
+        "MSB",
+        "money services business",
+        "AML program",
+        "BSA officer",
+        "KYC",
+        "CIP",
+        "SAR",
+        "CTR",
+        "FinCEN registration",
+        "money transmitter"
+      ],
+      "discovery_questions": [
+        "Are you registered as an MSB with FinCEN? At what state level?",
+        "Who is your designated BSA/AML compliance officer?",
+        "How do your sales reps currently navigate KYC/AML questions from prospects?",
+        "Is your KYC vendor (Alloy, Persona, etc.) a sales-relevant proof point?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "BSA/AML obligations vary dramatically by entity type. A neobank's program is far more rigorous than a closed-loop gift card platform's. State money transmitter licensing layers on top of federal requirements. KYC vendor partnerships are increasingly used as sales credibility signals.",
+        "what_reps_should_say": "Your AML program is likely a sales asset, not just a compliance burden. Sophisticated buyers in your space want to know how robust your CIP and monitoring are. Let's bake that into the messaging.",
+        "what_reps_should_not_say": "Never advise on whether a SAR should or shouldn't be filed — that's a regulated decision. Do not opine on whether a client's program is 'sufficient' — that's a regulator's call.",
+        "cc_internal_posture": "Cambrian Catalyst is not subject to BSA/AML obligations as a GTM consultancy. We do not move funds or onboard customers."
+      },
+      "common_objections": [
+        {
+          "concern": "We can't share KYC data with vendors.",
+          "response": "Understood — our work doesn't require any individual KYC records. We work with aggregate program metrics, false-positive rates if you're willing to share, and ICP-level segmentation. None of that touches BSA-regulated data."
+        }
+      ],
+      "handoff_threshold": "Escalate to the client's BSA Officer or external AML counsel for any conversation involving program design, regulatory examinations, or specific filing decisions.",
+      "external_references": [
+        {"name": "FinCEN BSA resources", "url": "https://www.fincen.gov/resources/statutes-regulations/bank-secrecy-act"}
+      ]
+    },
+    {
+      "id": "fincen-regulations",
+      "name": "FinCEN Regulations (broader)",
+      "tier": "primary",
+      "category": "financial_crimes",
+      "issuing_body": "FinCEN, U.S. Treasury",
+      "summary": "Beyond core BSA/AML, FinCEN administers a growing portfolio: Beneficial Ownership Information (BOI) reporting under the Corporate Transparency Act (status of which has been subject to ongoing litigation and rulemaking — verify current state before sales conversations), money services business registration, geographic targeting orders (GTOs), and proposed rules for investment advisers and real estate.",
+      "applies_when": {
+        "data_types": ["beneficial_ownership_data", "transaction_data", "customer_identity"],
+        "buyer_signals": ["fintech", "real_estate_adjacent", "investment_adviser", "crypto"],
+        "verticals": ["fintech_payments"],
+        "deal_size_threshold": "Activity-based"
+      },
+      "trigger_phrases": [
+        "FinCEN",
+        "beneficial ownership",
+        "BOI",
+        "Corporate Transparency Act",
+        "CTA reporting",
+        "geographic targeting order"
+      ],
+      "discovery_questions": [
+        "Has the recent FinCEN rulemaking environment affected your roadmap or sales narrative?",
+        "Are you adjacent to any sectors (real estate, investment advice) where new FinCEN obligations are emerging?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "The CTA/BOI rule has had a turbulent rollout including litigation and partial enforcement pauses. Always confirm current status before making claims. New FinCEN rules for investment advisers and residential real estate transfers are also in motion.",
+        "what_reps_should_say": "The regulatory ground is shifting. Let's make sure your sales messaging is current and doesn't make claims that may be inaccurate by next quarter.",
+        "what_reps_should_not_say": "Do not state CTA filing requirements with confidence without checking current FinCEN guidance — the rule status has changed multiple times.",
+        "cc_internal_posture": "Cambrian Catalyst LLC, as a Washington State single-member LLC, is itself subject to BOI considerations. Joe should monitor current filing requirements directly."
+      },
+      "common_objections": [],
+      "handoff_threshold": "Escalate to financial regulatory counsel for any specific filing or interpretation question.",
+      "external_references": [
+        {"name": "FinCEN.gov", "url": "https://www.fincen.gov/"}
+      ]
+    },
+    {
+      "id": "ofac-sanctions",
+      "name": "OFAC Sanctions",
+      "tier": "primary",
+      "category": "sanctions_export_control",
+      "issuing_body": "Office of Foreign Assets Control, U.S. Treasury",
+      "summary": "Enforces economic and trade sanctions against targeted countries, regimes, individuals, and entities. The Specially Designated Nationals (SDN) list is the most commonly screened. Sanctions are strict liability — you can violate them without intent or knowledge. Applies to all U.S. persons and any non-U.S. activity with U.S. nexus.",
+      "applies_when": {
+        "data_types": ["customer_identity", "counterparty_data", "wire_data"],
+        "buyer_signals": ["any_financial_services", "international_payments", "cross_border", "marketplace_with_global_users"],
+        "verticals": ["fintech_payments", "digital_rewards_incentives", "market_research"],
+        "deal_size_threshold": "Strict liability — applies regardless of size"
+      },
+      "trigger_phrases": [
+        "OFAC",
+        "SDN list",
+        "sanctions screening",
+        "denied parties",
+        "specially designated nationals",
+        "sanctioned country"
+      ],
+      "discovery_questions": [
+        "What's your sanctions screening stack? Real-time, batch, or both?",
+        "Do you screen at onboarding, transaction, or ongoing?",
+        "How do you handle false positives and how does that affect customer experience?",
+        "Are your reps confidently positioning your sanctions program to enterprise buyers?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "OFAC compliance is strict liability — even unknowing violations can carry massive penalties. Most fintechs use a vendor (LexisNexis, ComplyAdvantage, Sayari, Refinitiv) and screen at multiple points. The SDN list is updated frequently.",
+        "what_reps_should_say": "Sanctions compliance is increasingly a conversation in B2B fintech sales. Buyers want to know your screening cadence, false-positive handling, and remediation flow — not just that you 'screen.'",
+        "what_reps_should_not_say": "Never suggest a workaround to a sanctions hit. Never opine on whether a specific transaction or counterparty is sanctioned — that's a compliance officer or counsel's call.",
+        "cc_internal_posture": "Cambrian Catalyst, as a U.S. consultancy, is subject to OFAC sanctions and screens new clients against the SDN list before engagement."
+      },
+      "common_objections": [
+        {
+          "concern": "Our sanctions program is confidential.",
+          "response": "Completely fair — we don't need program details. We work at the level of how you talk about it. The narrative your reps deliver should be confident without disclosing specifics."
+        }
+      ],
+      "handoff_threshold": "Escalate to OFAC counsel immediately for any conversation involving a potential hit, license application, or program design decision.",
+      "external_references": [
+        {"name": "OFAC official site", "url": "https://ofac.treasury.gov/"}
+      ]
+    },
+    {
+      "id": "gdpr-ccpa",
+      "name": "GDPR / CCPA / CPRA (Data Privacy)",
+      "tier": "secondary",
+      "category": "consumer_privacy",
+      "issuing_body": "EU (GDPR), California (CCPA/CPRA), various U.S. state regulators",
+      "summary": "Cross-cutting consumer privacy frameworks. GDPR governs EU/EEA personal data with strict consent, data subject rights, and cross-border transfer rules. CCPA/CPRA establishes similar (lighter-weight) rights for California residents. A growing number of U.S. states (Colorado, Virginia, Connecticut, Utah, Texas, Oregon, others) have enacted comprehensive privacy laws as of 2025–2026.",
+      "applies_when": {
+        "data_types": ["personal_data", "PII", "behavioral_data", "marketing_data"],
+        "buyer_signals": ["b2c_business", "EU_users", "California_users", "marketing_data_use", "ad_tech"],
+        "verticals": ["fintech_payments", "digital_rewards_incentives", "health_wellness_b2b", "market_research"],
+        "deal_size_threshold": "Applies based on data scope"
+      },
+      "trigger_phrases": [
+        "GDPR",
+        "DPA",
+        "Data Processing Agreement",
+        "data subject rights",
+        "right to deletion",
+        "CCPA",
+        "CPRA",
+        "data privacy",
+        "Schrems II",
+        "SCCs",
+        "Standard Contractual Clauses"
+      ],
+      "discovery_questions": [
+        "What's your DPA template? Do you have separate flows for EU and U.S. state laws?",
+        "How do you handle data subject access and deletion requests in your sales/marketing systems?",
+        "Where does your sales/marketing data live, and how does that intersect with cross-border transfer rules?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "Sales and marketing data — exactly what Cambrian Catalyst's ABM playbooks touch — is squarely in privacy scope. Cold outreach to EU contacts requires a lawful basis (typically legitimate interest, with caveats). Most ICP work in the U.S. is doable; EU outreach needs a more careful approach.",
+        "what_reps_should_say": "Privacy isn't a blocker to ABM — it just shapes the architecture. We can design outreach motions that respect the rules without killing volume.",
+        "what_reps_should_not_say": "Do not promise GDPR or CCPA compliance for a client's outreach without reviewing their actual data flows.",
+        "cc_internal_posture": "Cambrian Catalyst handles client and prospect data with data minimization principles. We sign DPAs as needed and use SCCs for any EU-origin data."
+      },
+      "common_objections": [
+        {
+          "concern": "We can't use prospect data for outreach because of GDPR.",
+          "response": "GDPR doesn't ban B2B outreach — it shapes how you do it. Legitimate interest is a viable basis if the use is proportionate and you respect opt-outs. Let's design the motion accordingly."
+        }
+      ],
+      "handoff_threshold": "Escalate to privacy counsel for DPIA, cross-border transfer mechanism design, or specific data subject request handling.",
+      "external_references": [
+        {"name": "GDPR full text", "url": "https://gdpr-info.eu/"},
+        {"name": "California Privacy Protection Agency", "url": "https://cppa.ca.gov/"}
+      ]
+    },
+    {
+      "id": "glba",
+      "name": "GLBA (Gramm-Leach-Bliley Act)",
+      "tier": "secondary",
+      "category": "financial_privacy",
+      "issuing_body": "FTC, federal banking regulators, CFPB",
+      "summary": "U.S. federal law governing financial institutions' handling of nonpublic personal information (NPI). Includes the Financial Privacy Rule and the Safeguards Rule (which the FTC strengthened in 2023). Applies to a broader set of entities than people often realize, including many fintechs.",
+      "applies_when": {
+        "data_types": ["NPI", "financial_account_data"],
+        "buyer_signals": ["bank", "credit_union", "lender", "fintech", "tax_preparer", "investment_adviser"],
+        "verticals": ["fintech_payments"],
+        "deal_size_threshold": "Activity-based"
+      },
+      "trigger_phrases": [
+        "GLBA",
+        "Safeguards Rule",
+        "NPI",
+        "nonpublic personal information",
+        "financial privacy notice"
+      ],
+      "discovery_questions": [
+        "Are you covered by GLBA, and do you provide annual privacy notices?",
+        "Have you updated your Safeguards Rule program since the 2023 FTC amendments?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "The 2023 FTC Safeguards Rule amendments expanded what fintechs and other 'financial institutions' must implement, including a written security program, designated qualified individual, and incident reporting.",
+        "what_reps_should_say": "If you're GLBA-covered, the Safeguards Rule changes are a sales narrative opportunity — buyers want to know you're current.",
+        "what_reps_should_not_say": "Do not assume coverage status — many fintechs are unsure whether they're GLBA-covered, and casual claims can backfire."
+      },
+      "common_objections": [],
+      "handoff_threshold": "Escalate to financial regulatory counsel for coverage determination and program design.",
+      "external_references": [
+        {"name": "FTC GLBA", "url": "https://www.ftc.gov/legal-library/browse/statutes/gramm-leach-bliley-act"}
+      ]
+    },
+    {
+      "id": "nacha-rules",
+      "name": "NACHA Operating Rules (ACH)",
+      "tier": "secondary",
+      "category": "payments_network_rules",
+      "issuing_body": "Nacha (formerly the National Automated Clearing House Association)",
+      "summary": "Private-sector rules governing the ACH network. Not a federal regulation, but binding on all participants. Includes return code obligations, WEB Debit Account Validation Rule, Same Day ACH operating windows, and ongoing fraud-mitigation requirements.",
+      "applies_when": {
+        "data_types": ["ACH_transaction_data", "bank_account_data"],
+        "buyer_signals": ["ACH_origination", "bill_pay", "payroll", "B2B_payments", "subscription_billing"],
+        "verticals": ["fintech_payments"],
+        "deal_size_threshold": "Applies to all ACH participants"
+      },
+      "trigger_phrases": [
+        "NACHA",
+        "ACH return",
+        "R01",
+        "R02",
+        "R09",
+        "WEB debit",
+        "account validation",
+        "same day ACH",
+        "ODFI",
+        "RDFI",
+        "originator"
+      ],
+      "discovery_questions": [
+        "What's your return rate, and how does that affect your originator standing with your ODFI?",
+        "Are you handling WEB debit account validation in-house or via a vendor?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "ACH return codes and Nacha thresholds are deal-relevant for any client moving funds via ACH. R01 (insufficient funds), R02 (account closed), R09 (uncollected funds) are the most common. Nacha return rate thresholds matter because exceeding them triggers ODFI scrutiny.",
+        "what_reps_should_say": "Your ACH return profile is part of your story to enterprise buyers — low returns and clean originator standing is a credibility signal.",
+        "what_reps_should_not_say": "Do not advise on specific return code dispute handling — that's an operations call."
+      },
+      "common_objections": [],
+      "handoff_threshold": "Escalate to the client's ODFI or Nacha-specialized counsel for rules interpretation.",
+      "external_references": [
+        {"name": "Nacha", "url": "https://www.nacha.org/"}
+      ]
+    },
+    {
+      "id": "state-money-transmitter",
+      "name": "State Money Transmitter Licensing",
+      "tier": "secondary",
+      "category": "financial_licensing",
+      "issuing_body": "State financial regulators (varies by state)",
+      "summary": "Most U.S. states require licensing for money transmission, with definitions and exemptions varying significantly. The MTRA (Money Transmission Modernization Act) is being progressively adopted by states to standardize. Failing to obtain required licenses is a meaningful enforcement risk for fintechs.",
+      "applies_when": {
+        "data_types": ["funds_transfer_data"],
+        "buyer_signals": ["funds_movement", "payment_facilitator", "marketplace_payouts", "wallet"],
+        "verticals": ["fintech_payments"],
+        "deal_size_threshold": "Activity-based"
+      },
+      "trigger_phrases": [
+        "money transmitter license",
+        "MTL",
+        "MSB license",
+        "MTRA",
+        "agent of payee",
+        "payment facilitator"
+      ],
+      "discovery_questions": [
+        "What's your licensing footprint — are you nationwide, partial, or sponsor-bank-covered?",
+        "Are you using an agent-of-payee structure or a sponsor bank to avoid direct licensing?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "Licensing strategy is a major fintech business decision and often shapes the GTM motion (which states can you sell into, which buyer types). Sponsor bank arrangements and agent-of-payee structures are common workarounds.",
+        "what_reps_should_say": "Licensing footprint shapes which states and buyers are reachable — that's a real input to ICP work."
+      },
+      "common_objections": [],
+      "handoff_threshold": "Escalate to fintech regulatory counsel for licensing strategy.",
+      "external_references": [
+        {"name": "CSBS Money Services Business", "url": "https://www.csbs.org/"}
+      ]
+    },
+    {
+      "id": "reg-e",
+      "name": "Regulation E (Electronic Fund Transfers)",
+      "tier": "adjacent",
+      "category": "consumer_protection",
+      "issuing_body": "CFPB",
+      "summary": "Implements the Electronic Fund Transfer Act. Governs consumer rights in electronic transactions including error resolution, unauthorized transaction liability, and disclosure obligations. CFPB has been active in expanding interpretation, particularly around P2P fraud.",
+      "applies_when": {
+        "data_types": ["consumer_transaction_data"],
+        "buyer_signals": ["consumer_facing_payments", "P2P", "neobank", "wallet"],
+        "verticals": ["fintech_payments"],
+        "deal_size_threshold": "Activity-based"
+      },
+      "trigger_phrases": [
+        "Reg E",
+        "Regulation E",
+        "EFTA",
+        "unauthorized transaction",
+        "error resolution"
+      ],
+      "discovery_questions": [
+        "How does Reg E error resolution affect your customer experience and ops costs?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "Reg E is increasingly central to consumer fintech disputes. CFPB's stance on P2P fraud reimbursement has been evolving and is politically contested.",
+        "what_reps_should_say": "Reg E posture affects your unit economics and your messaging to consumer-facing buyers."
+      },
+      "common_objections": [],
+      "handoff_threshold": "Escalate to consumer financial services counsel.",
+      "external_references": [
+        {"name": "CFPB Regulation E", "url": "https://www.consumerfinance.gov/rules-policy/regulations/1005/"}
+      ]
+    },
+    {
+      "id": "tcpa-can-spam",
+      "name": "TCPA / CAN-SPAM (Outreach Regulation)",
+      "tier": "secondary",
+      "category": "marketing_compliance",
+      "issuing_body": "FCC (TCPA), FTC (CAN-SPAM)",
+      "summary": "TCPA governs phone and SMS outreach with strict consent requirements, especially for autodialed/prerecorded calls and SMS. CAN-SPAM governs commercial email with opt-out and identification requirements. Directly relevant to ABM and outreach workflows.",
+      "applies_when": {
+        "data_types": ["phone_numbers", "email_addresses"],
+        "buyer_signals": ["sms_outreach", "calling_campaigns", "email_marketing"],
+        "verticals": ["fintech_payments", "digital_rewards_incentives", "health_wellness_b2b", "market_research"],
+        "deal_size_threshold": "Applies to all outreach"
+      },
+      "trigger_phrases": [
+        "TCPA",
+        "CAN-SPAM",
+        "consent",
+        "opt-in",
+        "DNC",
+        "do not call",
+        "express written consent"
+      ],
+      "discovery_questions": [
+        "What channels are in scope for outreach — email only, or SMS and phone too?",
+        "Do you have an existing consent capture flow we should design around?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "TCPA carries statutory damages of $500–$1,500 per violation, making it plaintiff's-bar-friendly. SMS outreach without express written consent is a known risk. CAN-SPAM is more permissive but has clear opt-out and identification rules. Directly relevant to Cambrian Catalyst's ABM playbooks.",
+        "what_reps_should_say": "Outreach design has to bake in TCPA and CAN-SPAM from day one. We'll architect motions that respect them without sacrificing volume."
+      },
+      "common_objections": [],
+      "handoff_threshold": "Escalate to marketing/advertising counsel for SMS-heavy programs and consent flow design.",
+      "external_references": [
+        {"name": "FCC TCPA", "url": "https://www.fcc.gov/general/telemarketing-and-robocalls"},
+        {"name": "FTC CAN-SPAM", "url": "https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business"}
+      ]
+    },
+    {
+      "id": "fcra",
+      "name": "FCRA (Fair Credit Reporting Act)",
+      "tier": "adjacent",
+      "category": "consumer_data",
+      "issuing_body": "CFPB, FTC",
+      "summary": "Governs consumer reporting agencies and users of consumer reports. Increasingly relevant to fintech use cases involving alternative data and underwriting decisions.",
+      "applies_when": {
+        "data_types": ["consumer_credit_data", "alternative_data_for_underwriting"],
+        "buyer_signals": ["lending", "underwriting", "tenant_screening", "background_check"],
+        "verticals": ["fintech_payments"],
+        "deal_size_threshold": "Activity-based"
+      },
+      "trigger_phrases": [
+        "FCRA",
+        "consumer report",
+        "permissible purpose",
+        "adverse action notice",
+        "CRA"
+      ],
+      "discovery_questions": [
+        "Does your use case involve a permissible purpose under FCRA?"
+      ],
+      "talking_points": {
+        "what_reps_should_know": "Even non-traditional data uses can trigger FCRA when used for credit, employment, insurance, or housing decisions. CFPB has signaled aggressive interpretation.",
+        "what_reps_should_say": "Underwriting messaging needs to reflect FCRA realities — we can shape it accordingly."
+      },
+      "common_objections": [],
+      "handoff_threshold": "Escalate to consumer financial counsel.",
+      "external_references": [
+        {"name": "CFPB FCRA", "url": "https://www.consumerfinance.gov/rules-policy/regulations/1022/"}
+      ]
+    }
+  ],
+  "vertical_map": {
+    "fintech_payments": {
+      "label": "Fintech & Payments",
+      "primary_frameworks": ["pci-dss", "bsa-aml", "fincen-regulations", "ofac-sanctions", "soc2-type-ii"],
+      "secondary_frameworks": ["iso-27001", "glba", "nacha-rules", "state-money-transmitter", "tcpa-can-spam", "gdpr-ccpa"],
+      "adjacent_frameworks": ["reg-e", "fcra"],
+      "vertical_notes": "Highest compliance density of all four verticals. Reps must be fluent in payments-specific frameworks (PCI, NACHA, BSA/AML, OFAC) AND general data security (SOC 2, ISO 27001). Many deals stall at procurement over compliance positioning, so Diagnostic phase should always surface compliance posture early."
+    },
+    "digital_rewards_incentives": {
+      "label": "Digital Rewards & Incentives",
+      "primary_frameworks": ["pci-dss", "soc2-type-ii", "ofac-sanctions", "tcpa-can-spam"],
+      "secondary_frameworks": ["iso-27001", "gdpr-ccpa", "bsa-aml"],
+      "adjacent_frameworks": ["state-money-transmitter"],
+      "vertical_notes": "Closed-loop gift cards typically have lighter regulatory scope than open-loop. Open-loop or cross-border payouts can pull in BSA/AML and money transmitter considerations quickly. Promotional outreach is in TCPA/CAN-SPAM territory."
+    },
+    "health_wellness_b2b": {
+      "label": "Health & Wellness B2B",
+      "primary_frameworks": ["hipaa", "soc2-type-ii"],
+      "secondary_frameworks": ["iso-27001", "gdpr-ccpa", "tcpa-can-spam"],
+      "adjacent_frameworks": [],
+      "vertical_notes": "HIPAA scope determination is the central question. Reps must distinguish consumer wellness (typically out of HIPAA) from clinical/Covered Entity-adjacent platforms (in scope). Diagnostic phase should always confirm BAA expectations early."
+    },
+    "market_research": {
+      "label": "Market Research",
+      "primary_frameworks": ["soc2-type-ii", "gdpr-ccpa"],
+      "secondary_frameworks": ["iso-27001", "tcpa-can-spam"],
+      "adjacent_frameworks": ["hipaa"],
+      "vertical_notes": "Lower density of industry-specific regulation, but heavy data privacy exposure given panel/respondent data. International respondent panels pull GDPR into central focus. HIPAA appears only when clinical research panels are involved."
+    }
+  },
+  "handoff_protocol": {
+    "always_escalate_when": [
+      "Prospect asks for a specific legal interpretation",
+      "Conversation moves into program design or remediation",
+      "A specific regulatory examination, audit, or filing is referenced",
+      "A breach, incident, or potential violation is discussed",
+      "Contract language (BAA, DPA, SCC) is being drafted or negotiated",
+      "Sanctions hits or near-hits are being discussed"
+    ],
+    "rep_can_speak_to": [
+      "What a framework is at a high level",
+      "How it generally affects sales positioning",
+      "How to discover prospect needs around it",
+      "How to integrate compliance posture into messaging",
+      "When to bring in an SME"
+    ],
+    "rep_cannot_speak_to": [
+      "Whether a specific control, policy, or program is sufficient",
+      "Whether a specific transaction, party, or use case is regulated or compliant",
+      "Specific dollar liability exposure",
+      "Audit findings or remediation paths",
+      "Filing or notification decisions"
+    ]
+  }
+}

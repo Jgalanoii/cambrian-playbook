@@ -19,6 +19,7 @@ import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FO
 import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../src/data/verticalPlaybooks.js";
 import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS, PRICING_NEGOTIATION, ARCHETYPE_BATTLE_CARDS, POST_SALE_EXPANSION, SALES_METHODOLOGY_FRAMEWORKS } from "../src/data/advancedKnowledge.js";
 import { PAYMENTS_INDUSTRY_INJECTION, PAYMENTS_SCORING_CONTEXT, PAYMENTS_DISCOVERY_INJECTION } from "../src/data/paymentsKnowledge.js";
+import { COMPLIANCE_FRAMEWORKS, COMPLIANCE_VERTICAL_MAP, COMPLIANCE_DISCLAIMER, HANDOFF_PROTOCOL } from "../src/data/complianceKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -194,5 +195,10 @@ export default function handler(req, res) {
     lajaCxl: LAJA_CXL,
     discoveryQuestionBank: DISCOVERY_QUESTION_BANK,
     salesMethodologyFrameworks: SALES_METHODOLOGY_FRAMEWORKS,
+    // Compliance awareness layer (13 frameworks × 4 verticals)
+    complianceFrameworks: COMPLIANCE_FRAMEWORKS,
+    complianceVerticalMap: COMPLIANCE_VERTICAL_MAP,
+    complianceDisclaimer: COMPLIANCE_DISCLAIMER,
+    complianceHandoff: HANDOFF_PROTOCOL,
   });
 }
