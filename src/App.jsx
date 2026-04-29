@@ -6,6 +6,7 @@ import { sbAuth, sbGetUser, sbSessions, sbStoreTokens, sbRestoreSession, sbRefre
 import { fetchOrgContext, sbPatch } from "./lib/org.js";
 import OrgPanel from "./components/OrgPanel.jsx";
 import SuperAdmin from "./components/SuperAdmin.jsx";
+import ReportPanel from "./components/ReportPanel.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
 
 // ── PRODUCTION CONSOLE GUARD ─────────────────────────────────────────────
@@ -2227,6 +2228,7 @@ export default function App(){
   const[intelModalTarget,setIntelModalTarget]=useState(null); // company name for open modal
   const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
   const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
+  const[reportPanelOpen,setReportPanelOpen]=useState(false); // org-level reports
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
   const lastGenSig = useRef({ icp: "", brief: "", hypo: "", postCall: "" });
@@ -5265,6 +5267,10 @@ ${isOpen
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               ✉ Contact
             </button>
+            {sbUser&&orgCtx&&<button onClick={()=>{loadSessions();setReportPanelOpen(true);}}
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
+              📊 Reports
+            </button>}
             {orgCtx&&<button onClick={()=>setOrgPanelOpen(true)}
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               👥 {orgCtx.userRole==="admin"?"Org":"Team"}
@@ -9080,6 +9086,11 @@ ${isOpen
       )}
 
       {/* Superuser analytics */}
+      {/* Org-level reports */}
+      {reportPanelOpen && orgCtx && (
+        <ReportPanel orgCtx={orgCtx} savedSessions={savedSessions} sbUser={sbUser} onClose={()=>setReportPanelOpen(false)} />
+      )}
+
       {superAdminOpen && (
         <SuperAdmin sbUser={sbUser} sbToken={sbToken} onClose={()=>setSuperAdminOpen(false)} />
       )}
