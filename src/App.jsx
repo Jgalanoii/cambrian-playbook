@@ -5069,18 +5069,18 @@ ${isOpen
       notes ? `Rep notes: ${notes.slice(0,200)}` : "",
       dealValue ? `Deal value: ${dealValue}` : "",
       dealClassification ? `Deal classification: ${dealClassification}` : "",
-      contactRole ? `Contact role: ${contactRole}` : "",
+      contactRole ? `Contact role: ${sanitizeForPrompt(contactRole)}` : "",
       // User's gate answers (discovery capture)
-      Object.keys(gateAnswers).length > 0 ? `\nDiscovery answers captured:\n${Object.entries(gateAnswers).filter(([,v])=>v).map(([k,v])=>`  ${k}: ${v}`).join("\n")}` : "",
+      Object.keys(gateAnswers).length > 0 ? `\nDiscovery answers captured:\n${Object.entries(gateAnswers).filter(([,v])=>v).map(([k,v])=>`  ${k}: ${sanitizeForPrompt(String(v))}`).join("\n")}` : "",
       // User's RIVER notes
-      Object.keys(riverData).length > 0 ? `\nRIVER notes captured:\n${Object.entries(riverData).filter(([,v])=>v).map(([k,v])=>`  ${k}: ${String(v).slice(0,100)}`).join("\n")}` : "",
+      Object.keys(riverData).length > 0 ? `\nRIVER notes captured:\n${Object.entries(riverData).filter(([,v])=>v).map(([k,v])=>`  ${k}: ${sanitizeForPrompt(String(v).slice(0,100))}`).join("\n")}` : "",
       // Post-call results
       postCall?.dealRoute ? `Deal route: ${postCall.dealRoute}` : "",
       postCall?.callSummary ? `Call summary: ${postCall.callSummary.slice(0,200)}` : "",
       // ICP edits the user made this session
       icpEdits.length > 0 ? `\n═══ CHANGES THE USER MADE THIS SESSION ═══\n${icpEdits.map(e => `  Changed "${e.field}": "${String(e.oldValue).slice(0,80)}" → "${String(e.newValue).slice(0,80)}"`).join("\n")}\nIf the user asks about their changes, reference this list.` : "",
       // Intel adjustments the user has added
-      Object.keys(intelAdjustments).length > 0 ? `\n═══ USER INTEL ADJUSTMENTS (insider knowledge) ═══\n${Object.entries(intelAdjustments).map(([co,adj])=>`  ${co}: ${adj.modifier>0?"+":""}${adj.modifier} — ${adj.reason||"no reason given"}`).join("\n")}\nThese reflect facts the user knows that aren't public. Reference them when discussing these accounts.` : "",
+      Object.keys(intelAdjustments).length > 0 ? `\n═══ USER INTEL ADJUSTMENTS (insider knowledge) ═══\n${Object.entries(intelAdjustments).map(([co,adj])=>`  ${co}: ${adj.modifier>0?"+":""}${adj.modifier} — ${sanitizeForPrompt(adj.reason||"no reason given")}`).join("\n")}\nThese reflect facts the user knows that aren't public. Reference them when discussing these accounts.` : "",
       buildSellerProofPack({sellerICP, sellerDocs, products, sellerProofPoints, icpEdits}).slice(0, 800),
     ].filter(Boolean).join("\n");
 

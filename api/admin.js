@@ -4,7 +4,7 @@
 // users, orgs, and sessions. Locked to SUPERUSER_EMAIL only.
 
 import { createHmac, timingSafeEqual } from "crypto";
-import { checkRateLimit } from "./_guard.js";
+import { checkRateLimit, isAllowedOrigin } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -59,6 +59,10 @@ async function sbFetch(path) {
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
   if (!SB_KEY) return res.status(500).json({ error: "Not configured" });
+
+  // Origin check
+  const origin = req.headers.origin || req.headers.referer || "";
+  if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "origin not allowed" });
 
   // Rate limiting
   const xff = req.headers["x-forwarded-for"];

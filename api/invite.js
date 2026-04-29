@@ -4,7 +4,7 @@
 // sends Supabase invite email with acceptance link.
 
 import { createHmac, timingSafeEqual } from "crypto";
-import { checkRateLimit } from "./_guard.js";
+import { checkRateLimit, isAllowedOrigin } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -71,6 +71,10 @@ async function sbFetch(path, method = "GET", body = null, token = SB_KEY) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   if (!SB_KEY) return res.status(500).json({ error: "Server not configured for invitations" });
+
+  // Origin check
+  const origin = req.headers.origin || req.headers.referer || "";
+  if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "origin not allowed" });
 
   // Rate limiting — strict for invite endpoint (email bombing prevention)
   const xff = req.headers["x-forwarded-for"];
