@@ -1702,7 +1702,7 @@ function PasswordGate({ onAuth }) {
         </div>
         <div className="page-sub">
           {mode==="signup"
-            ? "Start building account briefs, RIVER hypotheses, and post-call routing in minutes. Free during the private beta."
+            ? "Build sales briefs that make prospects feel understood from the first conversation. Live research, leadership intel, and tailored talk tracks — in minutes, not hours. Free during the private beta."
             : "Sign in to continue your sales intelligence work."}
         </div>
 
@@ -2103,22 +2103,22 @@ const PAGE_GUIDES = {
     "Solution Mapping shows your products matched to the account's needs with measurable outcomes",
     "The Opening Angle gives you a Challenger-style teaching insight to lead your conversation",
   ]},
-  6: { title: "RIVER Hypothesis", items: [
-    "R-I-V-E-R: Reality → Impact → Vision → Entry Points → Route",
+  6: { title: "Pre-Call Hypothesis", items: [
+    "Five stages: Reality → Impact → Vision → Entry Points → Route",
     "Each stage has a pre-call hypothesis and talk track — review before your call",
     "The Teaching Insight challenges a common assumption — use it to open the conversation",
-    "The JOLT Indecision Plan gives you tactics for when the deal stalls",
+    "The Indecision Plan gives you tactics for when the deal stalls",
   ]},
   7: { title: "In-Call Capture", items: [
     "Answer gate questions during the call by clicking the options — this builds your deal confidence score",
     "Capture discovery notes in the prospect's own words — these feed into post-call analysis",
     "Use Tab in the notes field to insert a timestamp",
-    "Discovery questions (Sales + Architecture tracks) are shown for each RIVER stage",
+    "Discovery questions (Sales + Architecture tracks) are shown for each stage",
     "Ask Milton for real-time coaching — he has your full session context",
   ]},
   8: { title: "Post-Call Analysis", items: [
     "Deal Route (Fast Track / Nurture / Disqualify) is based on your discovery capture",
-    "The RIVER Scorecard compares your pre-call hypothesis to what you actually heard",
+    "The Scorecard compares your pre-call hypothesis to what you actually heard",
     "CRM Note is ready to paste — copy it directly into Salesforce/HubSpot",
     "The Follow-Up Email is sendable quality — copy and personalize",
     "Download the Customer-Facing Call Summary for a professional recap to share with the prospect",
@@ -2138,7 +2138,7 @@ const FAQ_ITEMS = [
   { q: "How do I adjust fit scoring weights?", a: "On the ICP page, find the Fit Scoring Weights card. Use the sliders to change how much each dimension matters — the three weights always total 100%." },
   { q: "What does Milton know?", a: "Milton has your full session context: ICP, selected account, brief, hypothesis, discovery capture, deal notes, and any changes you've made. He's a sales coach, not a general AI — he only helps with sales-related questions." },
   { q: "How do I export my work?", a: "Click the Export button on any page to save as PDF or CSV. Export is available on paid plans." },
-  { q: "What is the RIVER framework?", a: "Reality → Impact → Vision → Entry Points → Route. It's a discovery methodology that builds a testable hypothesis before each call and captures what you learn during the call." },
+  { q: "What is the pre-call hypothesis?", a: "A structured framework (Reality → Impact → Vision → Entry Points → Route) that builds a testable hypothesis before each call. You go in with a point of view, then update it based on what you learn — so every conversation builds on the last." },
   { q: "How do I save my session?", a: "Sessions auto-save every 30 seconds. You can also press Cmd+S or click the Save button. Saved sessions are accessible from the sessions panel." },
   { q: "What is Cambrian Max?", a: "Premium mode that uses a more powerful AI model (Opus) for deeper, richer intelligence. Available on paid plans." },
   { q: "How accurate is the executive research?", a: "Executive names are verified via web search. For well-known companies, accuracy is high. Always verify before your call — click any executive card to edit." },
@@ -5504,16 +5504,16 @@ ${isOpen
           <div className="page" style={{maxWidth:1200,paddingTop:40}}>
             <div className="setup-card" style={{maxWidth:800,margin:"0 auto"}}>
               <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
-              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Revenue Playbook Engine · RIVER Framework</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Sales Intelligence Platform</div>
               <div style={{textAlign:"center",marginBottom:10}}>
                 <span style={{display:"inline-block",background:"var(--green)",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
               <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
-                <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most informed seller in the room.</div>
-                <div style={{fontSize:14,color:"#666",lineHeight:1.7}}>Walk into every call knowing exactly what keeps your prospect up at night — their strategy, gaps, hiring signals, and the precise angle that opens doors. Built on live research and proven sales intelligence.</div>
+                <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most prepared person in every conversation.</div>
+                <div style={{fontSize:14,color:"#666",lineHeight:1.7}}>Your prospects will notice. Walk into every meeting with deep research on their strategy, leadership, pain points, and the exact angle that earns their trust. When you know more than anyone else in the room, deals move.</div>
               </div>
               <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
-                {[["⚡","Brief in seconds"],["🎯","5 sales frameworks"],["🔍","Live web research"],["📋","RIVER hypothesis"]].map(([icon,label])=>(
+                {[["⚡","Sales brief in seconds"],["🎯","15+ sales frameworks"],["🔍","Live web research"],["📋","Pre-call hypothesis"]].map(([icon,label])=>(
                   <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#777"}}>
                     <span style={{fontSize:15}}>{icon}</span><span>{label}</span>
                   </div>
