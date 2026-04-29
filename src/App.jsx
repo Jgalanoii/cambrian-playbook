@@ -3734,10 +3734,9 @@ ${isOpen
       // Arrow keys — stage navigation (only on main workflow pages)
       if (e.key === "ArrowRight" && step < 9) { setStep(s => Math.min(s + 1, 9)); return; }
       if (e.key === "ArrowLeft"  && step > 0) { setStep(s => Math.max(s - 1, 0)); return; }
-      // Number keys 1-9 — jump to stage (1=Session/step0, 2=ICP/step1, etc.)
+      // Number keys 0-9 — jump directly to that stage
       const num = parseInt(e.key, 10);
-      if (num >= 1 && num <= 9) { setStep(num - 1); return; }
-      if (e.key === "0") { setStep(9); return; } // 0 = last stage
+      if (!isNaN(num) && num >= 0 && num <= 9) { setStep(num); return; }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
