@@ -2291,6 +2291,10 @@ export default function App(){
   const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
   const[sellerICP,setSellerICP]=useState(null); // built from seller URL
   const[icpEdits,setIcpEdits]=useState([]); // [{field, oldValue, newValue, timestamp}]
+  const[icpLastEditTime,setIcpLastEditTime]=useState(0); // timestamp of last ICP edit
+  const[lastScoreTime,setLastScoreTime]=useState(0); // timestamp of last fit scoring run
+  const[lastBriefTime,setLastBriefTime]=useState(0); // timestamp of last brief generation
+  const[icpEditToast,setIcpEditToast]=useState(""); // toast message for ICP edit confirmation
   const[icpLoading,setIcpLoading]=useState(false);
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
   const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
@@ -2788,6 +2792,7 @@ ${scaleGuidance}
     if(!members?.length) { console.warn("[scoreFit] No members, skipping"); return; }
     console.log(`[scoreFit] Starting for ${members.length} members, sellerCtx: "${(sellerCtx||"").slice(0,60)}..."`);
     setFitScoring(true);
+    setLastScoreTime(Date.now());
     // Lighter than the brief/hypothesis proof pack — scoreFit runs
     // per-batch of 20 accounts and we want it fast. Inject the most
     // decision-relevant intel: industries/size/personas/disqualifiers
@@ -3505,6 +3510,11 @@ ${isOpen
     if (newEdits.length) {
       console.log("[icp-edit]", newEdits.map(e => `${e.field}: "${e.oldValue}" → "${e.newValue}"`).join(", "));
       setIcpEdits(prev => [...prev, ...newEdits]);
+      setIcpLastEditTime(Date.now());
+      // Show toast with field names
+      const fieldNames = newEdits.map(e => e.field.replace("icp.", "").replace(/([A-Z])/g, " $1").trim()).join(", ");
+      setIcpEditToast(`Updated: ${fieldNames}`);
+      setTimeout(() => setIcpEditToast(""), 4000);
     }
     prevICPRef.current = JSON.parse(JSON.stringify(sellerICP));
   }, [sellerICP, icpLoading]);
@@ -3932,6 +3942,7 @@ ${isOpen
     }
     setSelectedAccount(member);
     setBriefLoading(true);
+    setLastBriefTime(Date.now());
     setBriefError("");
     setBriefStatus("Researching " + member.company + "...");
     setBrief(null);
@@ -6121,6 +6132,17 @@ ${isOpen
                       </>
                     : <>Live RFP signals matched to your ICP — open opportunities and recent awards.</>}
                 </div>
+                {/* ICP edit tracking badge */}
+                {icpTab==="icp" && icpEdits.length > 0 && (
+                  <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:10,background:"var(--green-bg)",color:"var(--green)",border:"1px solid #2E6B2E33"}}>
+                      {icpEdits.length} edit{icpEdits.length>1?"s":""} tracked
+                    </span>
+                    <span style={{fontSize:11,color:"var(--ink-3)"}}>
+                      Your changes flow into all scoring, briefs, and discovery. {(lastScoreTime > 0 && icpLastEditTime > lastScoreTime) ? "Re-score accounts to apply." : ""}
+                    </span>
+                  </div>
+                )}
               </div>
               {sellerICP?.icp&&(
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
@@ -7247,6 +7269,20 @@ ${isOpen
             <div className="page-title">Target Account Review</div>
             <div className="page-sub">All {rows.length} accounts ranked by fit. Click any account to start research — or scroll down for cohort analysis.</div>
 
+            {/* ICP changed since last scoring — suggest re-score */}
+            {icpLastEditTime > 0 && lastScoreTime > 0 && icpLastEditTime > lastScoreTime && Object.keys(fitScores).length > 0 && (
+              <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+                <div style={{fontSize:12,color:"#7A5010"}}>
+                  <strong>ICP updated</strong> — {icpEdits.filter(e => e.timestamp > lastScoreTime).length} change{icpEdits.filter(e => e.timestamp > lastScoreTime).length !== 1 ? "s" : ""} since last scoring.
+                  Re-score to apply your edits.
+                </div>
+                <button className="btn btn-sm" style={{background:"var(--amber)",color:"#fff",border:"none",fontWeight:700,fontSize:11,padding:"5px 14px",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}
+                  onClick={()=>{const all=cohorts.flatMap(c=>c.members);if(all.length)scoreFit(all,sellerUrl);}}>
+                  Re-score All
+                </button>
+              </div>
+            )}
+
             {/* ── ALL ACCOUNTS TABLE with Fit Check ── */}
             <div className="card" style={{marginBottom:24}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
@@ -7730,6 +7766,16 @@ ${isOpen
             <div className="page-sub">
               {briefLoading?"Hang tight — live research in progress.":"All fields are editable — click any text to refine before your call."}
             </div>
+
+            {/* ICP changed since brief was built */}
+            {!briefLoading && brief && icpLastEditTime > 0 && lastBriefTime > 0 && icpLastEditTime > lastBriefTime && (
+              <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+                <div style={{fontSize:12,color:"#7A5010"}}>
+                  <strong>ICP updated since this brief was built</strong> — {icpEdits.filter(e => e.timestamp > lastBriefTime).length} change{icpEdits.filter(e => e.timestamp > lastBriefTime).length !== 1 ? "s" : ""}.
+                  Regenerate to incorporate your latest ICP edits.
+                </div>
+              </div>
+            )}
 
             {/* Loading — research progress */}
             {briefLoading&&<BriefLoader company={selectedAccount?.company} status={briefStatus}/>}
@@ -9123,6 +9169,15 @@ ${isOpen
         </div>{/* end stage-transition wrapper */}
 
       </div>
+      {/* ICP edit toast — flashes when user modifies an ICP field */}
+      {icpEditToast && (
+        <div className="no-print" style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:9999,
+          background:"var(--green)",color:"#fff",padding:"8px 20px",borderRadius:10,fontSize:12,fontWeight:600,
+          boxShadow:"0 4px 16px rgba(0,0,0,0.15)",animation:"fadeInUp 0.3s ease",whiteSpace:"nowrap"}}>
+          ✓ {icpEditToast}
+        </div>
+      )}
+
       {/* Token usage badge — visible to all org members, hidden in print */}
       {orgCtx && (
         <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:12,padding:"8px 14px",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",fontSize:12,cursor:"pointer"}}
