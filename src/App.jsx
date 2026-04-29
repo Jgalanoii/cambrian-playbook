@@ -390,37 +390,64 @@ function setCambrianMaxMode(on) { _maxMode = !!on; }
 function activeModel() { return _maxMode ? OPUS : HAIKU; }
 
 // ── VERTICAL PLAYBOOK MATCHER ────────────────────────────────────────────
-// Given seller ICP data, find matching vertical playbook(s) and build
-// a prompt injection with personas, triggers, disqualifiers, heuristics.
-function getVerticalInjection(sellerICP) {
-  if (!KL_VERTICALS || !Object.keys(KL_VERTICALS).length) return "";
-  const text = [
-    sellerICP?.marketCategory,
-    sellerICP?.sellerDescription,
-    ...(sellerICP?.icp?.industries || []),
-  ].filter(Boolean).join(" ").toLowerCase();
-  if (!text) return "";
-  // Match keywords
-  const matches = Object.entries(KL_VERTICALS)
+// Matches vertical playbooks for BOTH the seller and the target prospect.
+// Seller verticals tell you HOW to sell (your methodology, compliance, USPs).
+// Target verticals tell you WHO you're selling to (their buyers, triggers, heuristics).
+// Cross-vertical selling (e.g., cybersecurity → healthcare) injects both.
+function _matchVerticals(text) {
+  if (!text || !KL_VERTICALS || !Object.keys(KL_VERTICALS).length) return [];
+  const low = text.toLowerCase();
+  return Object.entries(KL_VERTICALS)
     .map(([key, v]) => {
       let score = 0;
-      for (const kw of (v.keywords || [])) { if (text.includes(kw)) score += 10; }
-      if (text.includes(v.name?.toLowerCase()?.split(" ")[0])) score += 5;
+      for (const kw of (v.keywords || [])) { if (low.includes(kw)) score += 10; }
+      if (low.includes(v.name?.toLowerCase()?.split(" ")[0])) score += 5;
       return { key, v, score };
     })
     .filter(m => m.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
-  if (!matches.length) return "";
-  const parts = ["\nVERTICAL-SPECIFIC ICP INTELLIGENCE:"];
-  for (const { v } of matches) {
-    parts.push(`\n--- ${v.name.toUpperCase()} ---`);
-    parts.push(`Key buyers: ${(v.personas||[]).slice(0, 5).join(", ")}`);
-    parts.push(`Top triggers: ${(v.triggers||[]).slice(0, 5).join("; ")}`);
-    parts.push(`Disqualifiers: ${(v.disqualifiers||[]).slice(0, 4).join("; ")}`);
-    parts.push(`Compliance gates: ${(v.compliance||[]).slice(0, 5).join(", ")}`);
-    parts.push(`What matters: ${(v.usps||[]).slice(0, 4).join("; ")}`);
-    parts.push(`Heuristics: ${(v.heuristics||[]).slice(0, 3).join("; ")}`);
+    .sort((a, b) => b.score - a.score);
+}
+
+function _formatVertical(v, label) {
+  return [
+    `\n--- ${v.name.toUpperCase()} (${label}) ---`,
+    `Key buyers: ${(v.personas||[]).slice(0, 5).join(", ")}`,
+    `Top triggers: ${(v.triggers||[]).slice(0, 5).join("; ")}`,
+    `Disqualifiers: ${(v.disqualifiers||[]).slice(0, 4).join("; ")}`,
+    `Compliance gates: ${(v.compliance||[]).slice(0, 5).join(", ")}`,
+    `What matters: ${(v.usps||[]).slice(0, 4).join("; ")}`,
+    `Heuristics: ${(v.heuristics||[]).slice(0, 3).join("; ")}`,
+  ].join("\n");
+}
+
+function getVerticalInjection(sellerICP, targetIndustry) {
+  if (!KL_VERTICALS || !Object.keys(KL_VERTICALS).length) return "";
+
+  // Match seller verticals (how you sell)
+  const sellerText = [
+    sellerICP?.marketCategory,
+    sellerICP?.sellerDescription,
+    ...(sellerICP?.icp?.industries || []),
+  ].filter(Boolean).join(" ");
+  const sellerMatches = _matchVerticals(sellerText).slice(0, 2);
+
+  // Match target verticals (who you're selling to)
+  const targetMatches = targetIndustry
+    ? _matchVerticals(targetIndustry).slice(0, 1)
+    : [];
+
+  // Deduplicate — if seller and target match the same vertical, show it once as "seller"
+  const sellerKeys = new Set(sellerMatches.map(m => m.key));
+  const uniqueTargetMatches = targetMatches.filter(m => !sellerKeys.has(m.key));
+
+  if (!sellerMatches.length && !uniqueTargetMatches.length) return "";
+
+  const parts = ["\nVERTICAL-SPECIFIC INTELLIGENCE:"];
+  for (const { v } of sellerMatches) {
+    parts.push(_formatVertical(v, "your vertical"));
+  }
+  for (const { v } of uniqueTargetMatches) {
+    parts.push(_formatVertical(v, "prospect's vertical"));
   }
   return parts.join("\n") + "\n";
 }
@@ -777,7 +804,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n\n`;
 
-  const verticalCtx = getVerticalInjection(sellerICP);
+  const verticalCtx = getVerticalInjection(sellerICP, member.ind);
   const paymentsCtx = getPaymentsInjection(sellerICP, member.ind);
   const baseFull = baseLight +
     `${universalCtx}\n`+
@@ -4131,12 +4158,8 @@ ${isOpen
       "CHALLENGER CUSTOMER: " + challengerCtx + "\n" +
       (KL_SALES_FRAMEWORKS.length ? "SALES METHODOLOGY: " + KL_SALES_FRAMEWORKS.slice(0, 5).map(f => `${f.name} (${f.author}): ${f.principle.split(".")[0]}`).join(". ") + ".\n" : "") +
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
-      "SEGMENT-SPECIFIC SELLING NOTES (apply whichever matches this account):\n" +
-      "- Private Insurance: relationship first, compliance confidence before features, reference check culture\n" +
-      "- Regional Banks: regulatory fluency required (BSA/AML/OCC), pilot-friendly, IT+InfoSec are hidden veto players\n" +
-      "- Private Professional Services: they know selling — be precise, partner-level buy-in needed\n" +
-      "- Large Private Tech: technical depth expected, security posture upfront, fast decisions if champion is right level\n" +
-      "PE SELLER SMB DYNAMICS: Vertical SaaS PE + matched SMB vertical = 95% fit. Healthcare practices and Insurance agencies are top PE SMB verticals. MSP channel preferred for high-EBITDA PE targeting <250-employee accounts.\n\n" +
+      getVerticalInjection(sellerICP, member.ind) +
+      "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
       "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
       "SELLER (" + sellerUrl + ") CONTEXT:\n" + sellerCtx + "\n" +
@@ -4221,6 +4244,7 @@ ${isOpen
       (KL_DISCOVERY_KNOWLEDGE ? KL_DISCOVERY_KNOWLEDGE + "\n" : "") +
       (KL_DISCOVERY_SCORECARD ? KL_DISCOVERY_SCORECARD + "\n" : "") +
       (KL_PAYMENTS_DISCOVERY && getPaymentsInjection(sellerICP, member?.ind) ? KL_PAYMENTS_DISCOVERY + "\n" : "") +
+      getVerticalInjection(sellerICP, member?.ind) +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
