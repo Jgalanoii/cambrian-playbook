@@ -1,6 +1,8 @@
 // src/data/complianceKnowledge.js
 //
-// Compliance awareness layer for sales enablement. NOT legal advice.
+// Compliance LANDSCAPE awareness for sales enablement. NOT legal advice.
+// Cambrian Catalyst does NOT provide compliance services — we help sellers
+// understand the regulatory landscape their buyers operate in.
 // 13 frameworks across 4 verticals with discovery questions, talking
 // points, objection handling, trigger phrases, and handoff protocols.
 //
@@ -92,11 +94,11 @@ export function buildComplianceInjection(sellerICP, targetIndustry) {
   if (!frameworks.length) return "";
 
   // Build compact injection (keep under ~500 tokens for prompt efficiency)
-  const parts = ["\nCOMPLIANCE AWARENESS (sales enablement — not legal advice):"];
+  const parts = ["\nCOMPLIANCE LANDSCAPE AWARENESS (Cambrian Catalyst does NOT provide compliance services — we help sellers understand the regulatory landscape their buyers operate in):"];
   for (const f of frameworks.slice(0, 5)) {
     parts.push(`- ${f.name}: ${f.talking_points.what_reps_should_know.split(".").slice(0, 2).join(".")}.`);
   }
-  parts.push("RULE: If compliance comes up in prospect conversation, position awareness confidently but escalate to SME for program design, audit scope, or legal interpretation.");
+  parts.push("IMPORTANT: Cambrian Catalyst is a GTM consultancy, not a compliance provider. We help sellers understand and navigate compliance topics in sales conversations — not implement, audit, or certify compliance programs. Always escalate to the prospect's compliance team or qualified counsel.");
   return parts.join("\n") + "\n";
 }
 
