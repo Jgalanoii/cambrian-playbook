@@ -3045,8 +3045,14 @@ ${scaleGuidance}
         const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
         const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"#555":"#555";
         // Match against original member names — API may return slightly different casing/suffix
+        // Strip common suffixes for better fuzzy matching (Inc, Corp, LLC, Technologies, etc.)
+        const normalize = (n) => (n||"").toLowerCase().replace(/[,.]?\s*(inc|corp|llc|ltd|co|technologies|technology|group|holdings|solutions|services|platform|software)\s*\.?$/i, "").trim();
         const exactMatch = batch.find(m => m.company === s.company);
-        const fuzzyMatch = !exactMatch && batch.find(m => m.company.toLowerCase() === s.company?.toLowerCase() || s.company?.toLowerCase().includes(m.company.toLowerCase()) || m.company.toLowerCase().includes(s.company?.toLowerCase()));
+        const fuzzyMatch = !exactMatch && batch.find(m =>
+          m.company.toLowerCase() === s.company?.toLowerCase() ||
+          normalize(m.company) === normalize(s.company) ||
+          s.company?.toLowerCase().includes(m.company.toLowerCase()) ||
+          m.company.toLowerCase().includes(s.company?.toLowerCase()));
         const matchedName = exactMatch?.company || fuzzyMatch?.company || s.company;
         map[matchedName]             = {
           ...s,
@@ -3075,6 +3081,21 @@ ${scaleGuidance}
 
     try {
       await Promise.all(batches.map(scoreBatch));
+
+      // Retry any companies that didn't get scored (model returned fewer than expected)
+      setFitScores(currentScores => {
+        const missing = members.filter(m => !currentScores[m.company]);
+        if (missing.length > 0 && missing.length < members.length) {
+          console.log(`[scoreFit] Retrying ${missing.length} missing companies:`, missing.map(m => m.company));
+          // Fire retry in background — don't block
+          Promise.resolve().then(() => {
+            const retryBatches = [];
+            for (let i = 0; i < missing.length; i += BATCH) retryBatches.push(missing.slice(i, i + BATCH));
+            Promise.all(retryBatches.map(scoreBatch)).catch(() => {});
+          });
+        }
+        return currentScores;
+      });
     } catch (e) {
       console.error("[scoreFit] Batch scoring failed:", e.message);
     } finally {
@@ -7455,7 +7476,7 @@ ${isOpen
                   Re-score to apply your edits.
                 </div>
                 <button className="btn btn-sm" style={{background:"var(--amber)",color:"#fff",border:"none",fontWeight:700,fontSize:11,padding:"5px 14px",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}
-                  onClick={()=>{const all=cohorts.flatMap(c=>c.members);if(all.length)scoreFit(all,sellerUrl);}}>
+                  onClick={()=>{const all=cohorts.flatMap(c=>c.members);if(all.length)scoreFit(all,buildSellerCtx());}}>
                   Re-score All
                 </button>
               </div>
