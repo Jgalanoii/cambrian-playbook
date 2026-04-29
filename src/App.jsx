@@ -3734,9 +3734,11 @@ ${isOpen
       // Arrow keys — stage navigation (only on main workflow pages)
       if (e.key === "ArrowRight" && step < 9) { setStep(s => Math.min(s + 1, 9)); return; }
       if (e.key === "ArrowLeft"  && step > 0) { setStep(s => Math.max(s - 1, 0)); return; }
-      // Number keys 0-9 — jump directly to that stage
+      // Number keys 1-9, 0 — jump to stage (user-facing 1-10, internal 0-9)
+      // 1=Session, 2=ICP, 3=Import, ..., 9=Post-Call, 0=Solution Fit
+      if (e.key === "0") { setStep(9); return; }
       const num = parseInt(e.key, 10);
-      if (!isNaN(num) && num >= 0 && num <= 9) { setStep(num); return; }
+      if (num >= 1 && num <= 9) { setStep(num - 1); return; }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
