@@ -1543,7 +1543,7 @@ function AuthShell({ children }) {
         </div>
       </header>
       {children}
-      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA</footer>
+      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a></footer>
     </div>
   );
 }
@@ -2294,6 +2294,7 @@ export default function App(){
   const[chatLoading,setChatLoading]=useState(false);
   const[miltonMsgCount,setMiltonMsgCount]=useState(0); // total Milton messages this session
   const[resourcesOpen,setResourcesOpen]=useState(false);
+  const[contactOpen,setContactOpen]=useState(false);
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
   const[collapsedBB,setCollapsedBB]=useState(new Set()); // Phase 2b: collapsed brief sections
@@ -5260,6 +5261,10 @@ ${isOpen
                 {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":(saveStatus==="saved"||saveStatus==="auto-saved")?"✓":"💾"} {saveStatus==="auto-saved"?"Auto-saved":saveStatus==="saved"?"Saved":"Save"}
               </button>
             )}
+            <button onClick={()=>setContactOpen(true)}
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
+              ✉ Contact
+            </button>
             {orgCtx&&<button onClick={()=>setOrgPanelOpen(true)}
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               👥 {orgCtx.userRole==="admin"?"Org":"Team"}
@@ -8987,6 +8992,47 @@ ${isOpen
         </div>
       )}
 
+      {/* Contact Us panel */}
+      {contactOpen && (
+        <>
+          <div onClick={()=>setContactOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
+          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"#fff",borderRadius:16,padding:"32px 36px",maxWidth:420,width:"90%",zIndex:9999,boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+              <div>
+                <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,color:"var(--ink-0)"}}>Contact Us</div>
+                <div style={{fontSize:12,color:"var(--ink-3)",marginTop:2}}>Cambrian Catalyst LLC · Seattle, WA</div>
+              </div>
+              <button onClick={()=>setContactOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa"}}>✕</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              <a href="mailto:info@cambriancatalyst.com" style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:10,border:"1.5px solid var(--line-0)",textDecoration:"none",color:"var(--ink-0)",transition:"all 0.15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--green)";e.currentTarget.style.background="var(--green-bg)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--line-0)";e.currentTarget.style.background="transparent";}}>
+                <span style={{fontSize:20}}>💼</span>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700}}>General Inquiries & Sales</div>
+                  <div style={{fontSize:12,color:"var(--ink-3)"}}>info@cambriancatalyst.com</div>
+                  <div style={{fontSize:11,color:"#aaa",marginTop:2}}>Pricing, partnerships, demos, and general questions</div>
+                </div>
+              </a>
+              <a href="mailto:support@cambriancatalyst.com" style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:10,border:"1.5px solid var(--line-0)",textDecoration:"none",color:"var(--ink-0)",transition:"all 0.15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--amber)";e.currentTarget.style.background="var(--amber-bg)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--line-0)";e.currentTarget.style.background="transparent";}}>
+                <span style={{fontSize:20}}>🛠</span>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700}}>Support & Troubleshooting</div>
+                  <div style={{fontSize:12,color:"var(--ink-3)"}}>support@cambriancatalyst.com</div>
+                  <div style={{fontSize:11,color:"#aaa",marginTop:2}}>Technical issues, bug reports, and account help</div>
+                </div>
+              </a>
+            </div>
+            <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--line-0)",textAlign:"center"}}>
+              <div style={{fontSize:11,color:"#aaa"}}>We typically respond within 1 business day.</div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Org settings / team panel */}
       {orgPanelOpen && orgCtx && (
         <OrgPanel orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} onClose={()=>setOrgPanelOpen(false)} />
@@ -9126,7 +9172,7 @@ ${isOpen
                 ✓ Priority support
               </div>
             </div>
-            <a href="mailto:joe@cambriancatalyst.com?subject=Upgrade%20Cambrian%20Playbook&body=Hi%20Joe%2C%0A%0AI'd%20like%20to%20upgrade%20my%20Cambrian%20Playbook%20account.%0A%0AOrg%3A%20"
+            <a href="mailto:info@cambriancatalyst.com?subject=Upgrade%20Cambrian%20Playbook&body=Hi%2C%0A%0AI'd%20like%20to%20upgrade%20my%20Cambrian%20Playbook%20account.%0A%0AOrg%3A%20"
               style={{display:"inline-block",padding:"12px 28px",borderRadius:10,background:"var(--ink-0)",color:"#fff",fontSize:15,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",marginBottom:12}}>
               Contact Us to Upgrade
             </a>
@@ -9140,7 +9186,7 @@ ${isOpen
       )}
 
       <footer className="footer">
-        © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved
+        © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a>
       </footer>
 
       {/* Print-only footer — appears on every printed page */}
