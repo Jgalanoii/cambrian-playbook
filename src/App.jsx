@@ -3511,10 +3511,11 @@ ${isOpen
     if (t.length < 3) return true; // too short to judge
     // Check for frivolous patterns
     const frivolousPatterns = [
-      /\b(suck|stink|smell|ugly|dumb|stupid|hate|lame|boring|trash|garbage|worst|terrible|horrible|awful|gross|ew+|lol|lmao|haha|wtf|omg|idk|whatever|blah|meh|nah|nope|yolo|bruh)\b/i,
-      /^(no|yes|maybe|ok|sure|fine|good|bad|great|nice|cool|test|asdf|qwer|xxx|abc|123)+$/i,
+      /\b(suck|stink|smell|fart|poop|butt|ugly|dumb|stupid|idiot|hate|lame|boring|trash|garbage|worst|terrible|horrible|awful|gross|nasty|crap|crappy|sucky|loser|jerk|moron|ew+|lol|lmao|rofl|haha|hehe|wtf|wth|omg|idk|whatever|blah|meh|nah|nope|yolo|bruh|deez|ligma|sus)\b/i,
+      /^(no|yes|maybe|ok|sure|fine|good|bad|great|nice|cool|test|asdf|qwer|xxx|abc|123|hi|bye|hey|yo|sup)+$/i,
       /(.)\1{4,}/, // repeated chars (aaaaa, !!!!!!)
       /^[^a-zA-Z]*$/, // no letters at all (just numbers/symbols)
+      /\b(we like to|i like to|they like to|i want to|we want to)\b.*\b(smell|fart|poop|eat|die|cry|sleep|party|drink|fight)\b/i, // "we like to [verb]" nonsense
     ];
     for (const p of frivolousPatterns) {
       if (p.test(t)) {
@@ -3585,6 +3586,14 @@ ${isOpen
     if (oldPersonas !== newPersonas) newEdits.push({ field: "icp.buyerPersonas", oldValue: (prev.icp.buyerPersonas||[]).map(p => typeof p === "object" ? p.title : p).join("; "), newValue: (sellerICP.icp.buyerPersonas||[]).map(p => typeof p === "object" ? p.title : p).join("; "), timestamp: Date.now() });
 
     if (newEdits.length) {
+      // Validate all new values — reject and revert if any is frivolous
+      const frivolous = newEdits.find(e => e.newValue && !validateInput(e.newValue, e.field));
+      if (frivolous) {
+        // Revert to previous ICP state
+        setSellerICP(JSON.parse(JSON.stringify(prev)));
+        prevICPRef.current = JSON.parse(JSON.stringify(prev));
+        return;
+      }
       console.log("[icp-edit]", newEdits.map(e => `${e.field}: "${e.oldValue}" → "${e.newValue}"`).join(", "));
       setIcpEdits(prev => [...prev, ...newEdits]);
       setIcpLastEditTime(Date.now());
@@ -6508,12 +6517,13 @@ ${isOpen
                   <textarea
                     value={sellerICPInput}
                     onChange={e=>setSellerICPInput(e.target.value)}
+                    onBlur={e=>{if(e.target.value.trim().length > 10) validateInput(e.target.value, "internal ICP");}}
                     placeholder={"Describe your ideal customer in your own words. Examples:\n• \"We sell to SMB restaurants with 1-5 locations, owner-operators, $500K-$5M revenue\"\n• \"Our ICP is mid-market financial services, 500-5000 employees, VP of Ops or CFO\"\n• Or paste from your sales playbook, battlecard, or CRM notes"}
                     style={{width:"100%",minHeight:80,padding:"10px 12px",fontSize:13,border:"1.5px solid var(--line-0)",borderRadius:8,resize:"vertical",fontFamily:"inherit",lineHeight:1.6,background:"var(--bg-0)"}}
                   />
                   {sellerICPInput.trim().length > 20 && (
                     <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
-                      <button className="btn btn-primary btn-sm" onClick={analyzeICPDelta} disabled={icpDeltaLoading}>
+                      <button className="btn btn-primary btn-sm" onClick={()=>{if(!validateInput(sellerICPInput,"internal ICP")){return;}analyzeICPDelta();}} disabled={icpDeltaLoading}>
                         {icpDeltaLoading ? "Analyzing..." : "Compare Against Public ICP"}
                       </button>
                       {icpDelta && <span style={{fontSize:11,color:"var(--green)"}}>Analysis ready</span>}
