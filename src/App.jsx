@@ -128,6 +128,7 @@ const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#C8753
 
 
 const BLANK_BRIEF = {
+  elevatorPitch:"",
   companySnapshot:"",sellerSnapshot:"",
   revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",website:"",linkedIn:"",
   keyExecutives:[],recentHeadlines:[],
@@ -1040,7 +1041,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `SOCIAL PROOF: Name a SPECIFIC similar company as proof. Lead with a precise stat or insight.\n`+
     `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
-    `{"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
+    `{"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
+    `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
@@ -1054,11 +1056,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
+      const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
       const themeMatch = partial.match(/"strategicTheme"\s*:\s*"((?:[^"\\]|\\.)*)"/);
       const angleMatch = partial.match(/"openingAngle"\s*:\s*"((?:[^"\\]|\\.)*)"/);
       const oppMatch = partial.match(/"sellerOpportunity"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      if (themeMatch || angleMatch || oppMatch) {
+      if (pitchMatch || themeMatch || angleMatch || oppMatch) {
         const data = {};
+        if (pitchMatch) data.elevatorPitch = pitchMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         if (themeMatch) data.strategicTheme = themeMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         if (angleMatch) data.openingAngle = angleMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
@@ -1184,6 +1188,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeStrategy = (r3) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), strategy:false}};
+    if (r3?.elevatorPitch) next.elevatorPitch = r3.elevatorPitch;
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
     if (r3?.openingAngle) next.openingAngle = r3.openingAngle;
@@ -8055,6 +8060,50 @@ ${isOpen
                     </div>
                   );
                 })()}
+
+                {/* Elevator Pitch — 45-second spoken pitch */}
+                {(brief.elevatorPitch || brief._loadingSections?.strategy) && (
+                  <div style={{
+                    background:"linear-gradient(135deg, #1a1a18 0%, #2a2520 100%)",
+                    borderRadius:14, padding:"20px 24px", marginBottom:16,
+                    border:"1px solid #8B6F4733",
+                  }}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                      <span style={{fontSize:20}}>🎤</span>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:700,color:"#fff",fontFamily:"Lora,serif"}}>Your Elevator Pitch</div>
+                        <div style={{fontSize:11,color:"#8B6F47"}}>~45 seconds · Say this when you bump into them at a conference, on a cold call, or in an actual elevator</div>
+                      </div>
+                    </div>
+                    {brief._loadingSections?.strategy && !brief.elevatorPitch ? (
+                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                        <div className="skeleton" style={{width:"95%",height:14,background:"#333",borderRadius:4}}/>
+                        <div className="skeleton" style={{width:"85%",height:14,background:"#333",borderRadius:4}}/>
+                        <div className="skeleton" style={{width:"90%",height:14,background:"#333",borderRadius:4}}/>
+                      </div>
+                    ) : (
+                      <div
+                        contentEditable suppressContentEditableWarning
+                        onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==brief.elevatorPitch)patchBrief(b=>{b.elevatorPitch=v;},"elevatorPitch");}}
+                        style={{
+                          fontSize:15, lineHeight:1.7, color:"#e8e0d4",
+                          fontFamily:"Lora,serif", fontStyle:"italic",
+                          letterSpacing:"0.2px", outline:"none", cursor:"text",
+                        }}>
+                        {brief.elevatorPitch ? `"${brief.elevatorPitch}"` : ""}
+                      </div>
+                    )}
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginTop:12,paddingTop:10,borderTop:"1px solid #8B6F4733"}}>
+                      <div style={{fontSize:10,color:"#8B6F47",display:"flex",alignItems:"center",gap:6}}>
+                        <span>💡</span> Pro tip: Practice this out loud twice before your call. It should feel natural, not rehearsed.
+                      </div>
+                      <button onClick={()=>{if(brief.elevatorPitch) navigator.clipboard?.writeText(brief.elevatorPitch);}}
+                        style={{marginLeft:"auto",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid #8B6F4755",background:"transparent",color:"#8B6F47",cursor:"pointer",whiteSpace:"nowrap"}}>
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Company Snapshot */}
                 <div className="bb">
