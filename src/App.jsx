@@ -824,39 +824,91 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ? (execCache instanceof Promise ? execCache : Promise.resolve(execCache))
     : (async()=>{
     // No pre-cache — fire inline. Mark as billable run (1 per brief).
-    try {
-      const d = await claudeFetch({
-        model:activeModel(),
-        max_tokens:3000,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
-        messages:[{role:"user",content:baseLight+
-          (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
-          `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n`+
-          `ACCURACY RULES:\n`+
-          `- For well-known public companies (Fortune 500, major brands), you KNOW these executives from training data. Search to confirm and get the latest.\n`+
-          `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit that role entirely.\n`+
-          `- If a specific role is genuinely unknown after searching, skip it. Do NOT invent names. 4 verified executives is better than 6 with guesses.\n`+
-          `- Include: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders most relevant to what ${sellerUrl} sells.\n\n`+
-          `For each executive provide:\n`+
-          `- name: their full real name (NEVER a placeholder)\n`+
-          `- title: their exact current title\n`+
-          `- initials: first letter of first + last name\n`+
-          `- background: 1 sentence — prior company, prior role, board seats, or notable career move\n`+
-          `- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What strategic priority do they own? What keeps them up at night? How should a seller at ${sellerUrl} approach them? 2-3 specific sentences grounded in ${co}'s current situation and recent moves.\n\n`+
-          `Return ONLY raw JSON:\n`+
-          `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role at Prior Company","angle":"Their mandate at ${co}. 2-3 sentences."}],`+
-          `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
-        }],
-      }, { extraHeaders: _maxMode ? { "x-billable-max": "1" } : { "x-billable-run": "1" } });
+    const execPrompt = baseLight+
+      (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
+      `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n`+
+      `ACCURACY RULES:\n`+
+      `- For well-known public companies (Fortune 500, major brands), you KNOW these executives from training data. Search to confirm and get the latest.\n`+
+      `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit that role entirely.\n`+
+      `- If a specific role is genuinely unknown after searching, skip it. Do NOT invent names. 4 verified executives is better than 6 with guesses.\n`+
+      `- Include: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders most relevant to what ${sellerUrl} sells.\n\n`+
+      `For each executive provide:\n`+
+      `- name: their full real name (NEVER a placeholder)\n`+
+      `- title: their exact current title\n`+
+      `- initials: first letter of first + last name\n`+
+      `- background: 1 sentence — prior company, prior role, board seats, or notable career move\n`+
+      `- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What strategic priority do they own? What keeps them up at night? How should a seller at ${sellerUrl} approach them? 2-3 specific sentences grounded in ${co}'s current situation and recent moves.\n\n`+
+      `Return ONLY raw JSON:\n`+
+      `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role at Prior Company","angle":"Their mandate at ${co}. 2-3 sentences."}],`+
+      `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`;
+
+    const parseExecResponse = (d) => {
       if(d.error) return null;
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
       for(let i=textBlocks.length-1;i>=0;i--){
         const parsed=extractJsonWithKey(textBlocks[i],"keyExecutives");
-        if(parsed) return parsed;
+        if(parsed?.keyExecutives?.length) return parsed;
       }
       const raw=textBlocks.join("").trim();
-      return safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
-    }catch(e){console.warn("Exec search failed:",e.message);return null;}
+      const fallback = safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+      if(fallback?.keyExecutives?.length) return fallback;
+      return null;
+    };
+
+    try {
+      // Phase 1: web search for current executives
+      const d = await claudeFetch({
+        model:activeModel(),
+        max_tokens:3000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        messages:[{role:"user",content:execPrompt}],
+      }, { extraHeaders: _maxMode ? { "x-billable-max": "1" } : { "x-billable-run": "1" } });
+      const result = parseExecResponse(d);
+      if(result?.keyExecutives?.length) return result;
+
+      // Phase 2: fallback — no web search, use training knowledge only
+      console.log(`[p2] Web search returned no executives for ${co}, falling back to training knowledge`);
+      const d2 = await claudeFetch({
+        model:activeModel(),
+        max_tokens:3000,
+        messages:[{role:"user",content:
+          `You are a senior sales researcher. Return the CURRENT leadership team of "${co}".\n\n`+
+          `Use your training knowledge confidently. ${co} is a real company — you know their executives. Do NOT say you can't verify or need to search.\n\n`+
+          `Return 4-6 executives: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders.\n`+
+          `For each: name (real full name), title, initials, background (1 sentence), angle (2-3 sentences on their mandate and how a seller at ${sellerUrl} should approach them).\n\n`+
+          `If you genuinely don't know a specific name, use the ROLE as the name (e.g. "CEO" with title "Chief Executive Officer") and set background to "Research needed — verify via LinkedIn".\n\n`+
+          `CRITICAL: You MUST return at least 4 executives. An empty response is not acceptable.\n\n`+
+          `Return ONLY raw JSON:\n`+
+          `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role","angle":"Their mandate. 2-3 sentences."}],`+
+          `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
+        }],
+      });
+      const result2 = parseExecResponse(d2);
+      if(result2?.keyExecutives?.length) return result2;
+
+      // Phase 3: absolute last resort — return role-based stubs so the brief is never empty
+      console.warn(`[p2] Both phases failed for ${co}, returning role stubs`);
+      return {
+        keyExecutives: [
+          {name:"CEO",title:"Chief Executive Officer",initials:"CEO",background:"Research needed — verify via LinkedIn",angle:`As CEO of ${co}, this person sets strategic direction. Research their background and recent public statements to find the right angle.`},
+          {name:"CFO",title:"Chief Financial Officer",initials:"CFO",background:"Research needed — verify via LinkedIn",angle:`The CFO controls budget allocation. Lead with ROI, cost reduction, or revenue impact to get their attention.`},
+          {name:"CTO",title:"Chief Technology Officer",initials:"CTO",background:"Research needed — verify via LinkedIn",angle:`The CTO evaluates technical fit. Lead with architecture, integration, and security posture.`},
+          {name:"COO",title:"Chief Operating Officer",initials:"COO",background:"Research needed — verify via LinkedIn",angle:`The COO owns operational efficiency. Lead with process improvement, time savings, and measurable operational outcomes.`},
+        ],
+        sellerSnapshot: `${sellerUrl} provides solutions relevant to ${co}'s market.`,
+      };
+    }catch(e){
+      console.warn("Exec search failed:",e.message);
+      return {
+        keyExecutives: [
+          {name:"CEO",title:"Chief Executive Officer",initials:"CEO",background:"Research needed — verify via LinkedIn",angle:`As CEO of ${co}, this person sets strategic direction. Research their background to find the right angle.`},
+          {name:"CFO",title:"Chief Financial Officer",initials:"CFO",background:"Research needed — verify via LinkedIn",angle:`The CFO controls budget allocation. Lead with ROI and cost impact.`},
+          {name:"CTO",title:"Chief Technology Officer",initials:"CTO",background:"Research needed — verify via LinkedIn",angle:`The CTO evaluates technical fit. Lead with architecture and integration.`},
+          {name:"COO",title:"Chief Operating Officer",initials:"COO",background:"Research needed — verify via LinkedIn",angle:`The COO owns operational efficiency. Lead with process improvement and measurable outcomes.`},
+        ],
+        sellerSnapshot: `${sellerUrl} provides solutions relevant to ${co}'s market.`,
+      };
+    }
   })();
 
   // MICRO 3: Strategy + opening angle — needs seller context for "why you" (streamed)
