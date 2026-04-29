@@ -669,7 +669,7 @@ function sanitizeForPrompt(str) {
 // CRITICAL: includes explicit instructions telling Haiku to GROUND every
 // claim in this proof — cite named customers, name differentiators, flag
 // unsupported claims rather than asserting them.
-function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], sellerProofPoints = [], icpEdits = [] }) {
+function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], sellerProofPoints = [], icpEdits = [], userEdits = [] }) {
   if (!sellerICP?.icp) return "";
   const icp = sellerICP.icp;
   const out = [];
@@ -737,7 +737,7 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   out.push(`9. NEVER INVENT FACTS ABOUT THE TARGET COMPANY. Do not fabricate revenue, employee counts, executives, products, partnerships, or acquisitions. Use training knowledge confidently for well-known companies. For genuinely unknown facts, use an empty string — do NOT write "[Verify]" or placeholder text. A rep who cites a wrong fact in a sales call loses credibility instantly.`);
 
   // Append user corrections — these override any conflicting AI inference
-  const editCtx = buildUserEditContext(icpEdits);
+  const editCtx = buildUserEditContext(icpEdits, userEdits);
   if (editCtx) out.push(editCtx);
 
   return out.join("\n") + "\n\n";
@@ -747,20 +747,45 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
 // Formats user ICP edits into a prompt injection that tells the AI engine
 // to treat user corrections as highest-priority ground truth. User edits
 // represent proprietary knowledge that may not be publicly available.
-function buildUserEditContext(edits) {
-  if (!edits?.length) return "";
+function buildUserEditContext(edits, userEdits) {
+  const hasIcpEdits = edits?.length > 0;
+  const hasUserEdits = userEdits?.length > 0;
+  if (!hasIcpEdits && !hasUserEdits) return "";
   const out = ["\n═══ USER CORRECTIONS (HIGHEST PRIORITY — override all other signals) ═══"];
-  out.push("The seller has manually edited the following ICP fields. These corrections");
+  out.push("The seller has manually edited data in this session. These corrections");
   out.push("reflect proprietary knowledge and MUST take precedence over web research,");
   out.push("training data, or any other inference. Treat these as ground truth.\n");
-  // Dedupe to most recent edit per field
-  const latest = {};
-  edits.forEach(e => { latest[e.field] = e; });
-  Object.values(latest).forEach(e => {
-    out.push(`  CORRECTED: ${e.field}`);
-    if (e.oldValue) out.push(`    Was: ${String(e.oldValue).slice(0, 200)}`);
-    out.push(`    Now: ${String(e.newValue).slice(0, 200)}`);
-  });
+  // ICP edits — dedupe to most recent per field
+  if (hasIcpEdits) {
+    out.push("ICP EDITS:");
+    const latest = {};
+    edits.forEach(e => { latest[e.field] = e; });
+    Object.values(latest).forEach(e => {
+      out.push(`  CORRECTED: ${e.field}`);
+      if (e.oldValue) out.push(`    Was: ${String(e.oldValue).slice(0, 200)}`);
+      out.push(`    Now: ${String(e.newValue).slice(0, 200)}`);
+    });
+  }
+  // General user edits (brief, intel, hypothesis) — dedupe per source+field+company
+  if (hasUserEdits) {
+    const bySource = {};
+    userEdits.forEach(e => {
+      const key = `${e.source}:${e.field}:${e.company}`;
+      bySource[key] = e; // keep latest
+    });
+    const grouped = {};
+    Object.values(bySource).forEach(e => {
+      if (!grouped[e.source]) grouped[e.source] = [];
+      grouped[e.source].push(e);
+    });
+    Object.entries(grouped).forEach(([source, items]) => {
+      const label = source === "brief" ? "BRIEF EDITS" : source === "intel" ? "INTEL ADJUSTMENTS" : source.toUpperCase() + " EDITS";
+      out.push(`\n${label}:`);
+      items.slice(-10).forEach(e => {
+        out.push(`  ${e.company ? e.company + " · " : ""}${e.field}: ${e.newValue}`);
+      });
+    });
+  }
   out.push("\nWhen any AI-generated content conflicts with these corrections, ALWAYS");
   out.push("use the corrected values. The user knows their business better than any model.\n");
   return out.join("\n");
@@ -2291,10 +2316,12 @@ export default function App(){
   const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
   const[sellerICP,setSellerICP]=useState(null); // built from seller URL
   const[icpEdits,setIcpEdits]=useState([]); // [{field, oldValue, newValue, timestamp}]
+  const[userEdits,setUserEdits]=useState([]); // [{source, field, oldValue, newValue, company, timestamp}]
   const[icpLastEditTime,setIcpLastEditTime]=useState(0); // timestamp of last ICP edit
   const[lastScoreTime,setLastScoreTime]=useState(0); // timestamp of last fit scoring run
   const[lastBriefTime,setLastBriefTime]=useState(0); // timestamp of last brief generation
-  const[icpEditToast,setIcpEditToast]=useState(""); // toast message for ICP edit confirmation
+  const[editToast,setEditToast]=useState(""); // toast message for any edit confirmation
+  const[miltonNudge,setMiltonNudge]=useState(""); // cheeky Milton message for bad inputs
   const[icpLoading,setIcpLoading]=useState(false);
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
   const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
@@ -2427,14 +2454,18 @@ export default function App(){
   const confidence=calcConfidence(gateAnswers,riverData);
 
   // ── Deep-clone updater for brief ──
-  // Uses explicit field keys to avoid dot-path bugs entirely
-  const patchBrief=(updater)=>{
+  // Uses explicit field keys to avoid dot-path bugs entirely.
+  // Tracks user edits for downstream prompt injection.
+  const patchBrief=(updater, fieldName)=>{
     setBrief(prev=>{
       if(!prev)return prev;
       const next=JSON.parse(JSON.stringify(prev));
       updater(next);
       return next;
     });
+    if (fieldName) {
+      trackUserEdit("brief", fieldName, "", "[edited]", selectedAccount?.company);
+    }
   };
 
   // ── Seller doc ingestion ──
@@ -2802,7 +2833,7 @@ ${scaleGuidance}
       ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
         + (sellerICP.icp.customerExamples?.length ? `\nKNOWN CUSTOMER ANALOGUES (companies similar to these should score higher; do NOT score these themselves — they're already customers): ${sellerICP.icp.customerExamples.join(", ")}` : "")
         + (sellerICP.icp.uniqueDifferentiators?.length ? `\nSELLER DIFFERENTIATORS (use to break ties — companies that would benefit MOST from these score higher): ${sellerICP.icp.uniqueDifferentiators.join(" · ")}` : "")
-        + buildUserEditContext(icpEdits)
+        + buildUserEditContext(icpEdits, userEdits)
       : "";
 
     // Batches run in PARALLEL via Promise.all, each updating state as it
@@ -3464,6 +3495,52 @@ ${isOpen
     setIcpLoading(false);
   };
 
+  // ── INPUT QUALITY VALIDATOR ─────────────────────────────────────────────
+  // Checks user input for quality. Returns true if valid, false if frivolous.
+  // Shows Milton-style cheeky nudge for low-quality inputs.
+  const MILTON_NUDGES = [
+    "Looks like you're having some fun with your inputs. I appreciate the creativity, but let's keep it specific and actionable — your future self on a sales call will thank you.",
+    "Milton here. That input reads more like a Yelp review than sales intelligence. Try something specific — what do you actually know about this account?",
+    "Hey, even Willy Loman took better notes than that. Give me something I can work with — a real fact, a name, a number.",
+    "I'm going to pretend I didn't see that. Want to try again with something your manager would be proud of?",
+    "That's... colorful. But I need intel I can put in a brief, not a text you'd send to your group chat. What do you actually know?",
+  ];
+  const validateInput = (text, fieldName) => {
+    if (!text || typeof text !== "string") return true; // empty is fine (user clearing a field)
+    const t = text.trim().toLowerCase();
+    if (t.length < 3) return true; // too short to judge
+    // Check for frivolous patterns
+    const frivolousPatterns = [
+      /\b(suck|stink|smell|ugly|dumb|stupid|hate|lame|boring|trash|garbage|worst|terrible|horrible|awful|gross|ew+|lol|lmao|haha|wtf|omg|idk|whatever|blah|meh|nah|nope|yolo|bruh)\b/i,
+      /^(no|yes|maybe|ok|sure|fine|good|bad|great|nice|cool|test|asdf|qwer|xxx|abc|123)+$/i,
+      /(.)\1{4,}/, // repeated chars (aaaaa, !!!!!!)
+      /^[^a-zA-Z]*$/, // no letters at all (just numbers/symbols)
+    ];
+    for (const p of frivolousPatterns) {
+      if (p.test(t)) {
+        setMiltonNudge(MILTON_NUDGES[Math.floor(Math.random() * MILTON_NUDGES.length)]);
+        setTimeout(() => setMiltonNudge(""), 8000);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // ── UNIVERSAL EDIT TRACKER ────────────────────────────────────────────
+  // Logs any user edit across the app. Source identifies where the edit
+  // happened (icp, brief, intel, hypothesis, discovery). All edits feed
+  // into downstream prompts via buildUserEditContext.
+  const trackUserEdit = (source, field, oldValue, newValue, company) => {
+    if (oldValue === newValue) return;
+    if (!validateInput(newValue, field)) return; // frivolous input rejected
+    const edit = { source, field, oldValue: String(oldValue||"").slice(0,200), newValue: String(newValue||"").slice(0,200), company: company||"", timestamp: Date.now() };
+    setUserEdits(prev => [...prev, edit]);
+    // Show toast
+    const label = field.replace(/([A-Z])/g, " $1").replace(/^./, s=>s.toUpperCase()).trim();
+    setEditToast(`${source === "brief" ? "Brief" : source === "intel" ? "Intel" : source === "hypothesis" ? "Hypothesis" : ""}${company ? ` · ${company}` : ""}: ${label} updated`);
+    setTimeout(() => setEditToast(""), 4000);
+  };
+
   // ── ICP EDIT TRACKING ──────────────────────────────────────────────────────
   // Detects when user edits ICP fields (vs. AI generation) and logs the
   // changes. Skips the initial AI-generated set (when icpLoading transitions
@@ -3513,8 +3590,8 @@ ${isOpen
       setIcpLastEditTime(Date.now());
       // Show toast with field names
       const fieldNames = newEdits.map(e => e.field.replace("icp.", "").replace(/([A-Z])/g, " $1").trim()).join(", ");
-      setIcpEditToast(`Updated: ${fieldNames}`);
-      setTimeout(() => setIcpEditToast(""), 4000);
+      setEditToast(`Updated: ${fieldNames}`);
+      setTimeout(() => setEditToast(""), 4000);
     }
     prevICPRef.current = JSON.parse(JSON.stringify(sellerICP));
   }, [sellerICP, icpLoading]);
@@ -3630,7 +3707,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -3666,6 +3743,7 @@ ${isOpen
     if(d.sellerICPInput) setSellerICPInput(d.sellerICPInput);
     if(d.icpDelta) setIcpDelta(d.icpDelta);
     if(d.icpEdits?.length) setIcpEdits(d.icpEdits);
+    if(d.userEdits?.length) setUserEdits(d.userEdits);
     if(d.miltonMsgCount) setMiltonMsgCount(d.miltonMsgCount);
     if(d.fitWeights) setFitWeights(d.fitWeights);
     if(d.intelAdjustments) setIntelAdjustments(d.intelAdjustments);
@@ -4150,7 +4228,7 @@ ${isOpen
     // "why buy from us" thread through hypothesis talk tracks, JOLT plan,
     // challenger insight, and route recommendation. Talk tracks should
     // cite NAMED customers from the proof pack, not invent generic claims.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
 
     // Build negotiation framework context from imported knowledge layer
     const joltCtx = KL_JOLT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
@@ -4278,7 +4356,7 @@ ${isOpen
       `═══ INPUTS ═══\n`+
       `SELLER: ${seller} | PRODUCTS: ${products_ctx}\n`+
       (sellerICP?.icp ? `ICP CONTEXT: Industries: ${(sellerICP.icp.industries||[]).join(", ")} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Pains: ${(sellerICP.icp.topPains||[]).join("; ")}\n` : "")+
-      buildUserEditContext(icpEdits)+
+      buildUserEditContext(icpEdits, userEdits)+
       `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n\n`+
 
       (KL_QUESTION_BANK ? `═══ DISCOVERY QUESTION BANK (adapt, don't copy verbatim) ═══\n`+
@@ -4368,7 +4446,7 @@ ${isOpen
     // ground its "confirmedSolutions" + "saRecommendation" in the
     // seller's actual differentiators and named customer wins, not
     // generic SA-school theory.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits });
+    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
 
     const prompt =
       proofPack +
@@ -4457,7 +4535,7 @@ ${isOpen
     }).join("\n");
 
     // Inject seller proof pack so deal routing is grounded in real capabilities
-    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits });
+    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
 
     const postCallPrompt =
       postCallProof +
@@ -7873,7 +7951,7 @@ ${isOpen
                         </div>
                       </div>
                     )}
-                    <EF value={brief.companySnapshot||""} onChange={v=>patchBrief(b=>{b.companySnapshot=v;})}/>
+                    <EF value={brief.companySnapshot||""} onChange={v=>patchBrief(b=>{b.companySnapshot=v;},"companySnapshot")}/>
 
                     {/* Key facts 2x2 grid */}
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}}>
@@ -8415,13 +8493,13 @@ ${isOpen
                       {brief.strategicTheme&&(
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Strategic Theme</div>
-                          <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;})} placeholder="What's driving this company's priorities right now..."/>
+                          <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;},"strategicTheme")} placeholder="What's driving this company's priorities right now..."/>
                         </div>
                       )}
                       {brief.sellerOpportunity&&(
                         <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"10px 14px"}}>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Why You · Why Now</div>
-                          <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;})} placeholder="Why the seller is positioned to win this account right now..."/>
+                          <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;},"sellerOpportunity")} placeholder="Why the seller is positioned to win this account right now..."/>
                         </div>
                       )}
                     </div>
@@ -8434,7 +8512,7 @@ ${isOpen
                   <div className="bb-body">
                     <div className="talk-box">
                       <div className="talk-lbl">Recommended Opening</div>
-                      <EF value={brief.openingAngle||""} onChange={v=>patchBrief(b=>{b.openingAngle=v;})}/>
+                      <EF value={brief.openingAngle||""} onChange={v=>patchBrief(b=>{b.openingAngle=v;},"openingAngle")}/>
                     </div>
                   </div>
                 </div>
@@ -9169,12 +9247,27 @@ ${isOpen
         </div>{/* end stage-transition wrapper */}
 
       </div>
-      {/* ICP edit toast — flashes when user modifies an ICP field */}
-      {icpEditToast && (
+      {/* Edit toast — flashes when user modifies any field */}
+      {editToast && (
         <div className="no-print" style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:9999,
           background:"var(--green)",color:"#fff",padding:"8px 20px",borderRadius:10,fontSize:12,fontWeight:600,
-          boxShadow:"0 4px 16px rgba(0,0,0,0.15)",animation:"fadeInUp 0.3s ease",whiteSpace:"nowrap"}}>
-          ✓ {icpEditToast}
+          boxShadow:"0 4px 16px rgba(0,0,0,0.15)",animation:"fadeInUp 0.3s ease",maxWidth:400,textAlign:"center"}}>
+          ✓ {editToast}
+        </div>
+      )}
+
+      {/* Milton nudge — cheeky warning for frivolous inputs */}
+      {miltonNudge && (
+        <div className="no-print" style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:10000,
+          background:"#1a1a18",color:"#fff",padding:"14px 22px",borderRadius:14,fontSize:13,fontWeight:500,lineHeight:1.5,
+          boxShadow:"0 8px 32px rgba(0,0,0,0.25)",animation:"fadeInUp 0.3s ease",maxWidth:440,textAlign:"left"}}>
+          <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+            <span style={{fontSize:20,flexShrink:0}}>🤨</span>
+            <div>
+              <div style={{fontWeight:700,fontSize:11,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Milton says</div>
+              {miltonNudge}
+            </div>
+          </div>
         </div>
       )}
 
@@ -9349,7 +9442,13 @@ ${isOpen
                 style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
                 Cancel
               </button>
-              <button onClick={e=>{e.stopPropagation();setIntelModalTarget(null);}}
+              <button onClick={e=>{
+                  e.stopPropagation();
+                  const adj = intelAdjustments[intelModalTarget];
+                  if (adj?.reason && !validateInput(adj.reason, "intel reason")) return;
+                  if (adj?.modifier != null) trackUserEdit("intel", "fit adjustment", "", `${adj.modifier>0?"+":""}${adj.modifier}: ${adj.reason||"no reason"}`, intelModalTarget);
+                  setIntelModalTarget(null);
+                }}
                 style={{padding:"8px 16px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                 Save
               </button>
