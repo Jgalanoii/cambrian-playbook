@@ -231,7 +231,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                   <div style={{ marginTop: 10 }}>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
                       <span style={{ fontSize: 18, fontWeight: 700, color: "#8B5CF6", fontFamily: "Lora,serif" }}>⚡ {orgCtx?.max_run_count || 0}</span>
-                      <span style={{ fontSize: 12, color: "var(--ink-3)" }}>/ {orgCtx?.max_run_limit} Max runs</span>
+                      <span style={{ fontSize: 12, color: "var(--ink-3)" }}>/ {orgCtx?.max_run_limit} Max tokens</span>
                     </div>
                     <div style={{ height: 4, borderRadius: 2, background: "var(--bg-2)", overflow: "hidden" }}>
                       <div style={{
