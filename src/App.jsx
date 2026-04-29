@@ -5435,8 +5435,10 @@ ${isOpen
               {/* Seller URL */}
               <div className="field-row">
                 <div className="field-label">Your Organization's Website <span className="req">*</span></div>
-                <div className="setup-url-bar">
-                  <div className="setup-url-label">Seller URL</div>
+                <div className="setup-url-bar" style={{borderColor: sellerICP && sellerInput.trim() ? "var(--green)" : undefined, transition:"border-color 0.2s"}}>
+                  <div className="setup-url-label" style={{color: sellerICP && sellerInput.trim() ? "var(--green)" : undefined}}>
+                    {sellerICP && sellerInput.trim() ? "✓" : "Seller URL"}
+                  </div>
                   <input className="setup-url-input" type="text" placeholder="e.g. yourcompany.com"
                     value={sellerInput} onChange={e=>{setSellerInput(e.target.value);setUrlScanStatus("");setUrlScanConfirmed(false);}}
                     onKeyDown={e=>{if(e.key==="Enter"&&sellerInput.trim()&&!sellerDocs.length){setSellerUrl(sellerInput.trim());setStep(1);}}}
@@ -5444,6 +5446,7 @@ ${isOpen
                     if(sellerInput.trim()&&!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(sellerInput.trim());
                     if(sellerInput.trim()&&!sellerICP&&!icpLoading) buildSellerICP(sellerInput.trim());
                   }}
+                  style={{color: sellerICP && sellerInput.trim() ? "var(--green)" : undefined, fontWeight: sellerICP && sellerInput.trim() ? 600 : undefined}}
                 />
                 </div>
 
@@ -5625,8 +5628,9 @@ ${isOpen
                 )}
 
                 {sellerDocs.length>0&&(
-                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5}}>
-                    <span>✓</span> {sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Cambrian will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.
+                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5,background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"8px 12px"}}>
+                    <span style={{fontSize:14}}>✓</span>
+                    <span>{sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Cambrian will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.</span>
                   </div>
                 )}
               </div>
@@ -5667,8 +5671,9 @@ ${isOpen
                   + Add proof point
                 </button>
                 {sellerProofPoints.filter(p=>p.content.trim()).length>0&&(
-                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5}}>
-                    <span>✓</span> {sellerProofPoints.filter(p=>p.content.trim()).length} proof point{sellerProofPoints.filter(p=>p.content.trim()).length>1?"s":""} loaded — these will be cited verbatim in briefs, hypotheses, and talk tracks.
+                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5,background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"8px 12px"}}>
+                    <span style={{fontSize:14}}>✓</span>
+                    <span>{sellerProofPoints.filter(p=>p.content.trim()).length} proof point{sellerProofPoints.filter(p=>p.content.trim()).length>1?"s":""} loaded — these will be cited verbatim in briefs, hypotheses, and talk tracks.</span>
                   </div>
                 )}
               </div>
@@ -5715,16 +5720,33 @@ ${isOpen
                   </div>
                 )}
 
-                {/* Manual URL list — shown when confirmed or manually editing */}
-                {(urlScanStatus===""||urlScanStatus==="none"||urlScanConfirmed)&&(
+                {/* Confirmed URLs — green locked state with edit option */}
+                {urlScanConfirmed&&(
+                  <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--green)",display:"flex",alignItems:"center",gap:5}}>
+                        <span>✓</span> {productUrls.filter(u=>u.url).length} product page{productUrls.filter(u=>u.url).length!==1?"s":""} confirmed
+                      </div>
+                      <button onClick={()=>setUrlScanConfirmed(false)}
+                        style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--green)",background:"#fff",color:"var(--green)",cursor:"pointer"}}>
+                        Edit
+                      </button>
+                    </div>
+                    {productUrls.filter(u=>u.url).map((u,i)=>(
+                      <div key={i} style={{fontSize:12,color:"#333",display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                        <span style={{color:"var(--green)",fontSize:12}}>✓</span>
+                        <span style={{fontWeight:600,color:"var(--green)"}}>{u.label||"Page "+(i+1)}</span>
+                        <span style={{color:"#777",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Manual URL list — shown when not confirmed or editing */}
+                {(urlScanStatus===""||urlScanStatus==="none"||!urlScanConfirmed)&&!urlScanConfirmed&&(
                   <>
                     {urlScanStatus==="none"&&(
                       <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>No product pages found automatically — add them below.</div>
-                    )}
-                    {urlScanConfirmed&&(
-                      <div style={{fontSize:12,color:"var(--green)",marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
-                        ✓ Product pages confirmed — you can edit or add more below.
-                      </div>
                     )}
                     {!urlScanConfirmed&&urlScanStatus===""&&(
                       <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>Add a URL for each product or service line. Cambrian will reference these for solution mapping.</div>
@@ -5809,12 +5831,12 @@ ${isOpen
                 </button>
 
                 {products.filter(p=>p.name.trim()).length>0&&(
-                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
-                    <span>✓</span>
+                  <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"8px 12px"}}>
+                    <span style={{fontSize:14}}>✓</span>
                     {products.filter(p=>p.name.trim()).map((p,i)=>(
                       <span key={i} className="prod-chip"><span className="prod-chip-dot"/>{p.name}</span>
                     ))}
-                    <span style={{color:"#aaa"}}>— Cambrian will match these to each prospect</span>
+                    <span style={{color:"#888"}}>— Cambrian will match these to each prospect</span>
                   </div>
                 )}
               </div>
@@ -5826,8 +5848,8 @@ ${isOpen
                 </div>
               )}
               {sellerICP&&!icpLoading&&(
-                <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"var(--green)",padding:"6px 0",marginTop:8}}>
-                  <span>✓</span> ICP ready — you'll review it on the next step
+                <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"var(--green)",padding:"8px 12px",marginTop:8,background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8}}>
+                  <span style={{fontSize:14}}>✓</span> <strong>ICP ready</strong> — you'll review and edit it on the next step
                 </div>
               )}
               {false&&(
@@ -5934,6 +5956,25 @@ ${isOpen
               )}
 
               <div style={{height:1,background:"var(--line-0)",margin:"20px 0"}}/>
+
+              {/* Session readiness summary */}
+              {sellerInput.trim()&&(
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16,justifyContent:"center"}}>
+                  {[
+                    { label: "Website", done: !!sellerInput.trim() },
+                    { label: "Products scanned", done: urlScanConfirmed || productUrls.some(u=>u.url.trim()) },
+                    { label: "ICP built", done: !!sellerICP },
+                    { label: "Docs uploaded", done: sellerDocs.length > 0 },
+                    { label: "Proof points", done: sellerProofPoints.some(p=>p.content.trim()) },
+                  ].map(item=>(
+                    <div key={item.label} style={{fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4,
+                      color:item.done?"var(--green)":"#ccc",transition:"color 0.3s"}}>
+                      <span style={{fontSize:13}}>{item.done?"✓":"○"}</span> {item.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
                 onClick={()=>{if(sellerInput.trim()){setSellerUrl(sellerInput.trim());setStep(1);}}}
                 disabled={!sellerInput.trim()}>Start Session →</button>
