@@ -95,7 +95,7 @@ function verifyJwtSignature(token) {
 }
 
 // ── GUEST USAGE TRACKING ──────────────────────────────────────────────────
-// Per-IP counter for unauthenticated guest usage. Guests get 3 free runs
+// Per-IP counter for unauthenticated guest usage. Guests get 3 free tokens
 // (not per minute — lifetime of the server instance). This is a
 // lightweight barrier; determined users can bypass by changing IP, but it
 // prevents casual abuse and encourages signup.

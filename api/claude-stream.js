@@ -29,7 +29,7 @@ export default async function handler(req, res) {
              || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
     if (!checkGuestLimit(ip)) {
       return res.status(402).json({
-        error: { type: "guest_limit_exceeded", message: "You've used your 3 free runs. Create a free account to continue." },
+        error: { type: "guest_limit_exceeded", message: "You've used your 3 free tokens. Create a free account to continue." },
         guest_remaining: 0,
       });
     }
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       const usage = await checkOrgUsage(userId, { isMax: isBillableMax });
       if (!usage.allowed) {
         return res.status(402).json({
-          error: { type: usage.reason || "usage_limit_exceeded", message: usage.message || "Plan limit reached" },
+          error: { type: usage.reason || "usage_limit_exceeded", message: usage.message || "Monthly token limit reached" },
           run_count: usage.run_count, run_limit: usage.run_limit,
           max_run_count: usage.max_run_count, max_run_limit: usage.max_run_limit,
         });

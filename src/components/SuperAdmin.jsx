@@ -115,8 +115,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
                 {[
-                  { label: "Playbook Runs", value: s.total_runs, color: "var(--ink-0)" },
-                  { label: "Max (Opus) Runs", value: s.total_max_runs, color: "#8B5CF6" },
+                  { label: "Tokens Used", value: s.total_runs, color: "var(--ink-0)" },
+                  { label: "Max Tokens", value: s.total_max_runs, color: "#8B5CF6" },
                   { label: "Organizations", value: s.total_orgs, color: "var(--navy)" },
                   { label: "Unique Sellers", value: s.unique_seller_urls, color: "var(--green)" },
                   { label: "Milton Messages", value: s.total_milton_messages || 0, color: "#cc2222" },
@@ -388,8 +388,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Org</th>
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Plan</th>
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Members</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Runs</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Max Runs</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Tokens</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Max Tokens</th>
                     <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Seller URL</th>
                   </tr>
                 </thead>
@@ -422,8 +422,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
               {/* Totals */}
               <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px 16px", background: "var(--bg-1)", borderRadius: 10 }}>
-                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>total runs</span></div>
-                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "#8B5CF6" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max runs</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>total tokens</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "#8B5CF6" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max tokens</span></div>
                 <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_orgs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>orgs</span></div>
               </div>
             </div>

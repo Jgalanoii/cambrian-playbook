@@ -216,7 +216,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
                   <span style={{ fontSize: 28, fontWeight: 700, color: "var(--ink-0)", fontFamily: "Lora,serif" }}>{orgCtx?.run_count || 0}</span>
-                  <span style={{ fontSize: 14, color: "var(--ink-3)" }}>/ {orgCtx?.run_limit || 5} playbook runs</span>
+                  <span style={{ fontSize: 14, color: "var(--ink-3)" }}>/ {orgCtx?.run_limit || 5} tokens this month</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: "var(--bg-2)", overflow: "hidden" }}>
                   <div style={{

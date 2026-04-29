@@ -5234,11 +5234,11 @@ ${isOpen
                   setUpgradeOpen(true); return;
                 }
                 if (!cambrianMax && orgCtx && (orgCtx.max_run_count||0) >= (orgCtx.max_run_limit||0)) {
-                  alert(`You've used all ${orgCtx.max_run_limit} Max runs this month. Runs reset monthly, or upgrade for more.`); return;
+                  alert(`You've used all ${orgCtx.max_run_limit} Max tokens this month. Tokens reset monthly, or upgrade for more.`); return;
                 }
                 const next=!cambrianMax;setCambrianMax(next);setCambrianMaxMode(next);
               }}
-              title={cambrianMax?"Switch to Standard":`Cambrian Max — premium intelligence${orgCtx?.max_run_limit?` (${orgCtx.max_run_count||0}/${orgCtx.max_run_limit} used)`:""}`}
+              title={cambrianMax?"Switch to Standard":`Cambrian Max — premium intelligence${orgCtx?.max_run_limit?` (${orgCtx.max_run_count||0}/${orgCtx.max_run_limit} tokens used)`:""}`}
               style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.3px",
                 border:cambrianMax?"2px solid #8B5CF6":"1.5px solid var(--line-0)",
                 background:cambrianMax?"linear-gradient(135deg,#8B5CF6,#6D28D9)":"var(--surface)",
@@ -9016,26 +9016,35 @@ ${isOpen
         </div>{/* end stage-transition wrapper */}
 
       </div>
-      {/* Usage badge — visible to all org members, hidden in print */}
+      {/* Token usage badge — visible to all org members, hidden in print */}
       {orgCtx && (
-        <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"6px 12px 6px 10px",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",fontSize:12,display:"flex",alignItems:"center",gap:6}}>
-          <div style={{display:"flex",flexDirection:"column",gap:3}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{width:36,height:3,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
+        <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:12,padding:"8px 14px",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",fontSize:12,cursor:"pointer"}}
+          onClick={()=>{loadSessions();setReportPanelOpen(true);}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{display:"flex",flexDirection:"column",gap:4,flex:1}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                <span style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Tokens</span>
+                <span style={{fontWeight:700,fontSize:12,color:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--ink-0)"}}>
+                  {orgCtx.run_count}/{orgCtx.run_limit}
+                </span>
+              </div>
+              <div style={{width:80,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
                 <div style={{height:"100%",borderRadius:2,background:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--green)",width:Math.min(100,Math.round(orgCtx.run_count/orgCtx.run_limit*100))+"%",transition:"width 0.3s"}}/>
               </div>
-              <span style={{color:"var(--ink-1)",fontWeight:600,fontSize:11}}>{orgCtx.run_count}/{orgCtx.run_limit}</span>
+              {(orgCtx.max_run_limit||0)>0&&(
+                <>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:2}}>
+                    <span style={{fontSize:10,fontWeight:700,color:"#8B5CF6",textTransform:"uppercase",letterSpacing:"0.3px"}}>Max</span>
+                    <span style={{fontWeight:700,fontSize:12,color:"#8B5CF6"}}>{orgCtx.max_run_count||0}/{orgCtx.max_run_limit}</span>
+                  </div>
+                  <div style={{width:80,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
+                    <div style={{height:"100%",borderRadius:2,background:(orgCtx.max_run_count||0)>=(orgCtx.max_run_limit||0)?"var(--red)":"#8B5CF6",width:Math.min(100,Math.round((orgCtx.max_run_count||0)/(orgCtx.max_run_limit||1)*100))+"%",transition:"width 0.3s"}}/>
+                  </div>
+                </>
+              )}
             </div>
-            {(orgCtx.max_run_limit||0)>0&&(
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:36,height:3,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
-                  <div style={{height:"100%",borderRadius:2,background:(orgCtx.max_run_count||0)>=(orgCtx.max_run_limit||0)?"var(--red)":"#8B5CF6",width:Math.min(100,Math.round((orgCtx.max_run_count||0)/(orgCtx.max_run_limit||1)*100))+"%",transition:"width 0.3s"}}/>
-                </div>
-                <span style={{color:"#8B5CF6",fontWeight:600,fontSize:11}}>⚡{orgCtx.max_run_count||0}/{orgCtx.max_run_limit}</span>
-              </div>
-            )}
+            {orgCtx.plan==="trial"&&<span style={{fontSize:8,color:"var(--amber)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px",writingMode:"vertical-rl",transform:"rotate(180deg)"}}>Trial</span>}
           </div>
-          {orgCtx.plan==="trial"&&<span style={{fontSize:9,color:"var(--amber)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px"}}>Trial</span>}
         </div>
       )}
 
@@ -9208,16 +9217,16 @@ ${isOpen
           <div style={{background:"var(--surface)",borderRadius:16,padding:"32px 36px",maxWidth:440,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
             <div style={{fontSize:40,marginBottom:12}}>🚀</div>
             <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-              You've used all {orgCtx?.run_limit||5} playbook runs
+              You've used all {orgCtx?.run_limit||5} tokens this month
             </div>
             <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:20}}>
-              Your {orgCtx?.plan==="trial"?"trial":"plan"} includes {orgCtx?.run_limit||5} playbook runs.
-              Upgrade to continue building briefs and running sales calls.
+              Your {orgCtx?.plan==="trial"?"trial":"plan"} includes {orgCtx?.run_limit||5} tokens per month. Each full brief build uses 1 token.
+              Upgrade to get more tokens and unlock premium features.
             </div>
             <div style={{background:"var(--bg-1)",borderRadius:10,padding:"14px 16px",marginBottom:20,textAlign:"left"}}>
               <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>What you get with an upgrade:</div>
               <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
-                ✓ Unlimited playbook runs<br/>
+                ✓ More monthly tokens<br/>
                 ✓ Full ICP + brief + hypothesis pipeline<br/>
                 ✓ In-call coaching + post-call analysis<br/>
                 ✓ Team collaboration (invite reps + managers)<br/>
