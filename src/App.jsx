@@ -3499,31 +3499,48 @@ ${isOpen
   // Checks user input for quality. Returns true if valid, false if frivolous.
   // Shows Milton-style cheeky nudge for low-quality inputs.
   const MILTON_NUDGES = [
-    "Looks like you're having some fun with your inputs. I appreciate the creativity, but let's keep it specific and actionable — your future self on a sales call will thank you.",
-    "Milton here. That input reads more like a Yelp review than sales intelligence. Try something specific — what do you actually know about this account?",
-    "Hey, even Willy Loman took better notes than that. Give me something I can work with — a real fact, a name, a number.",
-    "I'm going to pretend I didn't see that. Want to try again with something your manager would be proud of?",
-    "That's... colorful. But I need intel I can put in a brief, not a text you'd send to your group chat. What do you actually know?",
+    "Hey — did you mean to enter that? I'll use whatever you give me, but specifics work better. A company name, a number, a role title — that's what makes the brief sharp.",
+    "Milton here. I'm not judging, but that input won't help your brief much. What do you actually know about this account? Give me a fact I can work with.",
+    "I'll take it, but fair warning — your future self on a sales call might wish you'd been more specific. A name, a number, an insight goes a long way.",
+    "That's... creative. But the more specific you are, the smarter your outputs get. Think: 'their CFO just joined from Stripe' or '500-1500 employees, Series B.'",
+    "I noticed that input doesn't have much for me to work with. No worries — but if you've got real intel (a contact, a number, a pain point), add it and watch the brief improve.",
   ];
   const validateInput = (text, fieldName) => {
-    if (!text || typeof text !== "string") return true; // empty is fine (user clearing a field)
-    const t = text.trim().toLowerCase();
-    if (t.length < 3) return true; // too short to judge
-    // Check for frivolous patterns
-    const frivolousPatterns = [
-      /\b(suck|stink|smell|fart|poop|butt|ugly|dumb|stupid|idiot|hate|lame|boring|trash|garbage|worst|terrible|horrible|awful|gross|nasty|crap|crappy|sucky|loser|jerk|moron|ew+|lol|lmao|rofl|haha|hehe|wtf|wth|omg|idk|whatever|blah|meh|nah|nope|yolo|bruh|deez|ligma|sus)\b/i,
-      /^(no|yes|maybe|ok|sure|fine|good|bad|great|nice|cool|test|asdf|qwer|xxx|abc|123|hi|bye|hey|yo|sup)+$/i,
-      /(.)\1{4,}/, // repeated chars (aaaaa, !!!!!!)
-      /^[^a-zA-Z]*$/, // no letters at all (just numbers/symbols)
-      /\b(we like to|i like to|they like to|i want to|we want to)\b.*\b(smell|fart|poop|eat|die|cry|sleep|party|drink|fight)\b/i, // "we like to [verb]" nonsense
+    if (!text || typeof text !== "string") return true;
+    const t = text.trim();
+    if (t.length < 5) return true; // too short to judge
+    const low = t.toLowerCase();
+
+    // Has business content? Numbers, percentages, dollar signs, company-sounding
+    // words, role titles, industry terms → definitely valid, skip all checks
+    const hasBusinessContent = /\d|%|\$|million|billion|revenue|employee|headcount|ARR|MRR|enterprise|mid-market|smb|series [a-d]|funding|compliance|regulatory|vendor|platform|saas|quota|pipeline|margin|roi|cac|ltv|churn|nps|vertical|segment/i.test(t);
+    if (hasBusinessContent) return true;
+
+    // Only flag inputs that are CLEARLY not business-related:
+    // Pure profanity, keyboard mashing, or joke inputs with zero business context
+    const clearlyFrivolous = [
+      /^[^a-zA-Z]*$/, // no letters at all
+      /(.)\1{5,}/, // 6+ repeated chars (aaaaaa)
+      /^(asdf|qwer|zxcv|test|xxx|abc|lol|haha|lmao|rofl|yolo|bruh|deez|ligma)+$/i, // pure keyboard mash / memes
     ];
-    for (const p of frivolousPatterns) {
-      if (p.test(t)) {
+    for (const p of clearlyFrivolous) {
+      if (p.test(low)) {
         setMiltonNudge(MILTON_NUDGES[Math.floor(Math.random() * MILTON_NUDGES.length)]);
         setTimeout(() => setMiltonNudge(""), 8000);
         return false;
       }
     }
+
+    // Contextual check: if the input has NO business-relevant words AND contains
+    // casual/silly language, Milton questions (doesn't block) — the input still saves
+    const hasCasualOnly = /\b(fart|poop|butt|booger|dookie|twerk|vibes only|just vibes|idk|whatever man|who cares)\b/i.test(low);
+    const hasNoSubstance = !/\b[A-Z][a-z]+\b/.test(t) && t.split(/\s+/).length < 6; // no proper nouns, very short
+    if (hasCasualOnly && hasNoSubstance) {
+      setMiltonNudge(MILTON_NUDGES[Math.floor(Math.random() * MILTON_NUDGES.length)]);
+      setTimeout(() => setMiltonNudge(""), 8000);
+      // Note: returns TRUE — input is accepted but Milton questions it
+    }
+
     return true;
   };
 
