@@ -39,7 +39,7 @@
         "what_reps_should_know": "SOC 2 Type II is the de facto enterprise SaaS security baseline in North America. It is not a certification — it is an auditor's attestation. There is no 'pass/fail'; the report contains exceptions and the buyer's job is to evaluate them.",
         "what_reps_should_say": "We understand SOC 2 is foundational for enterprise buyers. Let's talk about how we structure the GTM motion so your security posture is positioned as a deal accelerator, not just a checkbox.",
         "what_reps_should_not_say": "Do not claim a client is 'SOC 2 certified' (the term is wrong). Do not opine on whether observed exceptions are material — that's the auditor's and buyer's call.",
-        "cc_internal_posture": "Cambrian Catalyst is a GTM consultancy and does not currently hold a SOC 2 attestation. We follow security hygiene appropriate to a small consultancy: encrypted storage, access controls, NDAs, and data minimization. We do not store client production data or end-customer PII. [VERIFY WITH JOE BEFORE FINALIZING]"
+        "cc_internal_posture": "Cambrian Catalyst is a GTM consultancy and does not currently hold a SOC 2 attestation. We follow security hygiene appropriate to a small consultancy: encrypted storage, access controls, NDAs, and data minimization. We do not store client production data or end-customer PII. Finalized April 2026."
       },
       "common_objections": [
         {
@@ -187,7 +187,7 @@
         "what_reps_should_know": "SOC 2 and ISO 27001 overlap significantly in controls, but they're not interchangeable. EU and UK buyers often require ISO 27001 specifically. Many fintech clients pursuing international expansion run a 'unified compliance' program covering both.",
         "what_reps_should_say": "If your growth plan includes EMEA or APAC, ISO 27001 is worth thinking about now, not after you lose a deal over it. We can factor that into the Architecture phase and align your GTM messaging.",
         "what_reps_should_not_say": "Do not claim ISO 27001 is 'just like SOC 2' — informed buyers will catch that and lose confidence.",
-        "cc_internal_posture": "Cambrian Catalyst is not ISO 27001 certified. We follow security hygiene appropriate to our scope as a small consultancy. [VERIFY WITH JOE]"
+        "cc_internal_posture": "Cambrian Catalyst is not ISO 27001 certified. We follow security hygiene appropriate to our scope as a small consultancy. Finalized April 2026."
       },
       "common_objections": [
         {

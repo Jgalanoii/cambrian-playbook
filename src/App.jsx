@@ -1371,6 +1371,8 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
   const sheets=[
     {name:"Account Overview",rows:[
       ["ACCOUNT OVERVIEW",""],["",""],
+      ["Powered by Cambrian Catalyst proprietary sales intelligence and live research. Verify company-specific facts before use.",""],
+      ["",""],
       ["Company",co],["Industry",account?.ind||""],["Deal Size (ACV)",account?.acv>0?"$"+account.acv.toLocaleString():""],
       ["Lead Source",account?.src||""],["Website",account?.company_url||""],
       ["Cohort",cohort?.name||""],["Target Outcomes",outcomes.join(", ")],
@@ -1448,7 +1450,7 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
   const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
-  a.href=url;a.download=`RIVER_${co.replace(/\s+/g,"_")}_${ts}.xls`;
+  a.href=url;a.download=`Cambrian_Brief_${co.replace(/\s+/g,"_")}_${ts}.xls`;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
@@ -4796,7 +4798,7 @@ ${isOpen
   <div class="header">
     <div class="header-left">
       <h1>Discovery Call Summary</h1>
-      <div class="sub">${escHtml(co)} · Confidential</div>
+      <div class="sub">${escHtml(co)} · Confidential · Powered by Cambrian Catalyst</div>
     </div>
     <div class="header-right">
       <div><strong>Date:</strong> ${date}</div>
@@ -7963,7 +7965,7 @@ ${isOpen
               </div>
             </div>
             <div className="page-sub">
-              {briefLoading?"Hang tight — live research in progress.":"All fields are editable — click any text to refine before your call."}
+              {briefLoading?"Hang tight — live research in progress.":"Built from proprietary sales intelligence and live research. All fields are editable — click any text to refine before your call."}
             </div>
 
             {/* ICP changed since brief was built */}
@@ -9634,7 +9636,7 @@ ${isOpen
 
       {/* Print-only footer — appears on every printed page */}
       <div className="print-footer" style={{display:"none"}}>
-        <span className="pf-brand">Cambrian <span>Catalyst</span></span> · © 2026 Cambrian Catalyst LLC · Seattle, WA · Confidential
+        <span className="pf-brand">Cambrian <span>Catalyst</span></span> · © 2026 Cambrian Catalyst LLC · Seattle, WA · Confidential · Powered by proprietary sales intelligence — verify company-specific facts before use
       </div>
     </>
   );
