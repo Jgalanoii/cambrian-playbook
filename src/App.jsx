@@ -4337,6 +4337,8 @@ ${isOpen
     const signals = (briefData.recentSignals||[]).join("; ").slice(0,200);
     const headlines = (briefData.recentHeadlines||[]).map(h=>h?.headline||h||"").filter(Boolean).join("; ").slice(0,200);
     const opportunity = (briefData.sellerOpportunity || "").slice(0,200);
+    const pitch = (briefData.elevatorPitch || "").slice(0,300);
+    const angle = (briefData.openingAngle || "").slice(0,200);
 
     // Seller context — this is what determines what the hypothesis can actually propose
     const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
@@ -4385,10 +4387,13 @@ ${isOpen
       "BUYING SIGNALS: " + signals + "\n" +
       "RECENT NEWS: " + headlines + "\n" +
       "SELLER OPPORTUNITY (pre-built): " + opportunity + "\n" +
+      (pitch ? "ELEVATOR PITCH (pre-built — hypothesis MUST align with this narrative): " + pitch + "\n" : "") +
+      (angle ? "OPENING ANGLE (pre-built): " + angle + "\n" : "") +
       "SOLUTION MAPPING (pre-built):\n" + mappedSolutions + "\n\n" +
       KL_COMPETITIVE +
       "BUILD THE RIVER HYPOTHESIS:\n" +
       "Every field grounded in what " + sellerUrl + " sells. No stray consulting.\n" +
+      "CONSISTENCY RULE: The elevator pitch, opening angle, strategic theme, and solution mapping have already been generated for this brief. Your hypothesis MUST align with the same narrative — same pain points, same value proposition, same proof points. Do NOT introduce new claims or angles that contradict the brief.\n" +
       "DMAIC: Reality=Define+Measure, Impact=Analyze, Vision=Improve, Route=Control.\n" +
       "Return ONLY raw JSON, ASCII punctuation only:\n" +
       JSON.stringify({
@@ -4484,7 +4489,10 @@ ${isOpen
       `SELLER: ${seller} | PRODUCTS: ${products_ctx}\n`+
       (sellerICP?.icp ? `ICP CONTEXT: Industries: ${(sellerICP.icp.industries||[]).join(", ")} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Pains: ${(sellerICP.icp.topPains||[]).join("; ")}\n` : "")+
       buildUserEditContext(icpEdits, userEdits)+
-      `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n\n`+
+      `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n`+
+      (briefData.elevatorPitch ? `ELEVATOR PITCH (questions should validate assumptions in this pitch): ${briefData.elevatorPitch.slice(0,250)}\n` : "") +
+      (briefData.sellerOpportunity ? `SELLER OPPORTUNITY: ${briefData.sellerOpportunity.slice(0,200)}\n` : "") +
+      `\n`+
 
       (KL_QUESTION_BANK ? `═══ DISCOVERY QUESTION BANK (adapt, don't copy verbatim) ═══\n`+
         `Current-state pain: ${KL_QUESTION_BANK.currentStatePain.slice(0,2).join(" | ")}\n`+
@@ -4583,7 +4591,11 @@ ${isOpen
       `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
       `DEAL CONFIDENCE: ${confidence}%\n`+
       `DEAL ROUTE: ${postCall?.dealRoute||"Unknown"}\n\n`+
-      `SELLER SOLUTIONS MAPPED PRE-CALL:\n${solutions}\n\n`+
+      `BRIEF NARRATIVE (hypothesis and solution fit MUST align with these):\n`+
+      (brief.elevatorPitch ? `Elevator Pitch: ${brief.elevatorPitch.slice(0,300)}\n` : "") +
+      (brief.strategicTheme ? `Strategic Theme: ${brief.strategicTheme.slice(0,250)}\n` : "") +
+      (brief.sellerOpportunity ? `Seller Opportunity: ${brief.sellerOpportunity.slice(0,200)}\n` : "") +
+      `\nSELLER SOLUTIONS MAPPED PRE-CALL:\n${solutions}\n\n`+
       `DISCOVERY CAPTURE (what we actually heard):\n${riverCapture}\n\n`+
       `CALL NOTES:\n${notes||"None"}\n\n`+
       `POST-CALL SUMMARY: ${postCall?.callSummary||""}\n\n`+
@@ -4673,7 +4685,11 @@ ${isOpen
       `- ${KL_BUYING_SIGNALS.positive.join("\n- ")}\n`+
       `- ${KL_BUYING_SIGNALS.negative.join("\n- ")}\n\n`+
 
-      `Company: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%\n`+
+      `BRIEF NARRATIVE (post-call analysis must align with pre-call positioning):\n`+
+      (brief?.elevatorPitch ? `Elevator Pitch: ${brief.elevatorPitch.slice(0,200)}\n` : "") +
+      (brief?.strategicTheme ? `Strategic Theme: ${brief.strategicTheme.slice(0,200)}\n` : "") +
+      (brief?.sellerOpportunity ? `Why Us: ${brief.sellerOpportunity.slice(0,200)}\n` : "") +
+      `\nCompany: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%\n`+
       `Cohort: ${selectedCohort?.name} | Outcomes: ${selectedOutcomes.join(", ")}\n`+
       `Solutions: ${(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ")||"Unknown"}\n\n`+
 
