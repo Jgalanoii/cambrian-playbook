@@ -2229,6 +2229,7 @@ export default function App(){
   const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
   const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
   const[reportPanelOpen,setReportPanelOpen]=useState(false); // org-level reports
+  const[moreMenuOpen,setMoreMenuOpen]=useState(false); // header overflow menu
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
   const lastGenSig = useRef({ icp: "", brief: "", hypo: "", postCall: "" });
@@ -5219,20 +5220,11 @@ ${isOpen
             })}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <button onClick={()=>setCmdOpen(true)} title="Search (⌘K)"
-              style={{padding:"4px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:13,color:"var(--ink-3)",display:"flex",alignItems:"center",gap:5}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <span style={{fontSize:11,fontFamily:"monospace",color:"var(--ink-3)"}}>⌘K</span>
-            </button>
-            <button onClick={()=>setDarkMode(d=>!d)} title={darkMode?"Light mode":"Dark mode"}
-              style={{padding:"4px 8px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--line-0)",background:"var(--surface)",cursor:"pointer",fontSize:13,lineHeight:1}}>
-              {darkMode?"☀️":"🌙"}
-            </button>
+            {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
+
+            {/* Max toggle */}
             <button onClick={()=>{
-                // Gate Max behind org limit
-                if (!cambrianMax && orgCtx && (orgCtx.max_run_limit||0) <= 0) {
-                  setUpgradeOpen(true); return;
-                }
+                if (!cambrianMax && orgCtx && (orgCtx.max_run_limit||0) <= 0) { setUpgradeOpen(true); return; }
                 if (!cambrianMax && orgCtx && (orgCtx.max_run_count||0) >= (orgCtx.max_run_limit||0)) {
                   alert(`You've used all ${orgCtx.max_run_limit} Max tokens this month. Tokens reset monthly, or upgrade for more.`); return;
                 }
@@ -5245,15 +5237,8 @@ ${isOpen
                 color:cambrianMax?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
               {cambrianMax?"⚡ MAX":`⚡ Max${orgCtx?.max_run_limit?` ${orgCtx.max_run_count||0}/${orgCtx.max_run_limit}`:""}`}
             </button>
-            <button onClick={()=>setResourcesOpen(r=>!r)}
-              title="Resources — uploads, outputs, tools"
-              style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,
-                border:resourcesOpen?"2px solid var(--tan-0)":"1.5px solid var(--line-0)",
-                background:resourcesOpen?"var(--tan-0)":"var(--surface)",
-                color:resourcesOpen?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
-              📁 Resources
-            </button>
-            {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
+
+            {/* Save */}
             {step>0&&(
               <button onClick={saveSession}
                 style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,cursor:"pointer",
@@ -5263,26 +5248,70 @@ ${isOpen
                 {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":(saveStatus==="saved"||saveStatus==="auto-saved")?"✓":"💾"} {saveStatus==="auto-saved"?"Auto-saved":saveStatus==="saved"?"Saved":"Save"}
               </button>
             )}
-            <button onClick={()=>setContactOpen(true)}
-              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
-              ✉ Contact
-            </button>
-            {sbUser&&orgCtx&&<button onClick={()=>{loadSessions();setReportPanelOpen(true);}}
-              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
-              📊 Reports
-            </button>}
-            {orgCtx&&<button onClick={()=>setOrgPanelOpen(true)}
-              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
-              👥 {orgCtx.userRole==="admin"?"Org":"Team"}
-            </button>}
-            {sbUser?.email==="itsjoegalano@gmail.com"&&<button onClick={()=>setSuperAdminOpen(true)}
-              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid #8B5CF6",background:"#8B5CF622",color:"#8B5CF6",cursor:"pointer"}}>
-              Admin
-            </button>}
+
+            {/* Sessions */}
             {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
             </button>}
+
+            {/* More menu (⋯) — Search, Dark mode, Resources, Reports, Org, Contact, Admin */}
+            <div style={{position:"relative"}}>
+              <button onClick={()=>setMoreMenuOpen(m=>!m)}
+                style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:moreMenuOpen?"var(--bg-1)":"#fff",cursor:"pointer",fontSize:15,color:"var(--ink-2)",lineHeight:1,fontWeight:700}}>
+                ···
+              </button>
+              {moreMenuOpen&&(
+                <>
+                  <div onClick={()=>setMoreMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:999}}/>
+                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"#fff",borderRadius:12,border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:200,zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
+                    <button onClick={()=>{setCmdOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>🔍</span> Search <span style={{marginLeft:"auto",fontSize:10,color:"var(--ink-3)",fontFamily:"monospace"}}>⌘K</span>
+                    </button>
+                    <button onClick={()=>{setResourcesOpen(r=>!r);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>📁</span> Resources
+                    </button>
+                    {sbUser&&orgCtx&&<button onClick={()=>{loadSessions();setReportPanelOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>📊</span> Reports
+                    </button>}
+                    {orgCtx&&<button onClick={()=>{setOrgPanelOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>👥</span> {orgCtx.userRole==="admin"?"Organization":"Team"}
+                    </button>}
+                    <button onClick={()=>{setContactOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>✉</span> Contact Us
+                    </button>
+                    <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
+                    <button onClick={()=>{setDarkMode(d=>!d);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>{darkMode?"☀️":"🌙"}</span> {darkMode?"Light Mode":"Dark Mode"}
+                    </button>
+                    {sbUser?.email==="itsjoegalano@gmail.com"&&(
+                      <>
+                        <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
+                        <button onClick={()=>{setSuperAdminOpen(true);setMoreMenuOpen(false);}}
+                          style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"#8B5CF6",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                          onMouseEnter={e=>e.currentTarget.style.background="#8B5CF611"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                          <span style={{width:20,textAlign:"center"}}>⚙</span> Admin Dashboard
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Sign out */}
             {sbUser&&<button onClick={()=>{sbClearTokens();window.location.reload();}}
               style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#aaa",cursor:"pointer"}}>
               {sbUser.user_metadata?.first_name||sbUser.email?.split('@')[0]} · Sign out
