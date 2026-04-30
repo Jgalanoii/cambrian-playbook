@@ -144,6 +144,10 @@ const BLANK_BRIEF = {
   workforceProfile:{knowledgeWorkerPct:"",unionizedPct:"",remotePolicy:"",avgTenure:""},
   cultureProfile:{coreValues:"",communicationStyle:"",decisionMaking:"",sellerLanguageHint:""},
   incumbentVendors:{hrSystem:"",financeSystem:"",crmSystem:"",cardProvider:""},
+  // Deep intelligence layers (v2.1)
+  financialDeepDive:null, // {revenueTrend, marginTrend, segmentBreakdown, earningsInsight, capitalPriorities, guidanceQuote}
+  competitivePositioning:null, // {marketPosition, primaryCompetitors:[{name,strength,weakness,recentMove}], whereWinning, whereLosing, displacementAngle}
+  boardAndInvestors:null, // {boardMembers:[{name,title,background,significance}], leadInvestors, investmentThesis, boardMandate}
 };
 
 const RKEYS = ["reality","impact","vision","entryPoints","route"];
@@ -1178,7 +1182,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const skeleton = {
     ...BLANK_BRIEF,
     companySnapshot: `Researching ${co}...`,
-    _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true, roles:true},
+    _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true, roles:true, deepIntel:true},
   };
 
   // Per-section merger functions, applied via setBrief(prev => merger(prev))
@@ -1373,10 +1377,109 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     return next;
   };
 
+  // ── DEEP INTELLIGENCE LAYERS (p7, p8, p9) — fire in parallel with p1-p6 ──
+
+  // MICRO 7: Competitive Positioning — who they compete with and where they win/lose
+  const p7 = (async()=>{
+    try {
+      const d = await claudeFetch({
+        model:activeModel(), max_tokens:2000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        messages:[{role:"user",content:
+          `Research the competitive landscape of ${co}.\n\n`+
+          `Search for "${co} competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
+          `Return raw JSON:\n`+
+          `{"competitivePositioning":{`+
+          `"marketPosition":"2-3 sentences: where ${co} sits in the market. Market share if known, category leadership or challenger status, analyst positioning (Gartner MQ, Forrester Wave, G2 Grid if applicable).",`+
+          `"primaryCompetitors":[{"name":"Competitor name","strength":"Their #1 advantage over ${co}","weakness":"Where ${co} beats them","recentMove":"Latest competitive action (launch, acquisition, pivot, loss)"}],`+
+          `"whereWinning":"1-2 sentences: deal types, segments, or use cases where ${co} consistently wins and why",`+
+          `"whereLosing":"1-2 sentences: where they lose deals and to whom — be specific about WHY (price, feature, relationship, incumbent)",`+
+          `"displacementAngle":"1 sentence: if you were competing against ${co}, what's the angle that works? What assumption about them can be challenged?"}}`
+        }],
+      });
+      const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+      for(let i=textBlocks.length-1;i>=0;i--){
+        const parsed=extractJsonWithKey(textBlocks[i],"competitivePositioning");
+        if(parsed?.competitivePositioning) return parsed;
+      }
+      return null;
+    }catch{return null;}
+  })();
+
+  // MICRO 8: Board & Investors — who governs and funds this company
+  const p8 = (async()=>{
+    try {
+      const d = await claudeFetch({
+        model:activeModel(), max_tokens:2000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        messages:[{role:"user",content:
+          `Research the board of directors, investors, and governance of ${co}.\n\n`+
+          `Search for "${co} board of directors" and "${co} investors funding".\n`+
+          `For private/startup companies: search for funding rounds, lead investors, board observers.\n`+
+          `For public companies: search for board composition, activist investors, governance changes.\n`+
+          `For nonprofits: search for board members and major donors/grantors.\n\n`+
+          `Return raw JSON:\n`+
+          `{"boardAndInvestors":{`+
+          `"boardMembers":[{"name":"Full name","title":"Board title or role","background":"1 sentence: where they came from, what expertise they bring","significance":"Why this person matters for understanding ${co}'s strategy"}],`+
+          `"leadInvestors":"Key investors or funding sources — names + amounts if known. For public companies: top institutional holders or activist investors. For nonprofits: major grantors.",`+
+          `"investmentThesis":"1-2 sentences: what bet are the investors making? What outcome are they driving toward?",`+
+          `"boardMandate":"1-2 sentences: what is the board pushing for right now? Growth, profitability, exit, expansion, compliance, turnaround?"}}`
+        }],
+      });
+      const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+      for(let i=textBlocks.length-1;i>=0;i--){
+        const parsed=extractJsonWithKey(textBlocks[i],"boardAndInvestors");
+        if(parsed?.boardAndInvestors) return parsed;
+      }
+      return null;
+    }catch{return null;}
+  })();
+
+  // MICRO 9: Financial Deep Dive — trends, margins, segments, guidance
+  const p9 = (async()=>{
+    try {
+      const d = await claudeFetch({
+        model:activeModel(), max_tokens:2000,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        messages:[{role:"user",content:
+          `Research the financial performance and trajectory of ${co}.\n\n`+
+          `For PUBLIC companies: search for latest earnings, 10-K, revenue trends, margin analysis.\n`+
+          `For PRIVATE/STARTUP companies: search for funding rounds, growth metrics, valuation signals.\n`+
+          `For NONPROFITS: search for annual reports, grant funding, program spending.\n\n`+
+          `Return raw JSON:\n`+
+          `{"financialDeepDive":{`+
+          `"revenueTrend":"2-3 sentences: revenue trajectory over 2-3 years. Growth rate, acceleration/deceleration, key drivers. Cite specific numbers when available.",`+
+          `"marginTrend":"1-2 sentences: gross margin, operating margin, or EBITDA margin direction. What's driving margin expansion or compression?",`+
+          `"segmentBreakdown":"Which business segments or product lines drive the most revenue? Any segment growing faster or shrinking?",`+
+          `"earningsInsight":"1-2 sentences: the most revealing thing from their latest earnings call, annual report, or investor update. A direct quote from the CEO/CFO is ideal.",`+
+          `"capitalPriorities":"Where are they investing? R&D spend, M&A, geographic expansion, headcount, share buybacks? What does capital allocation reveal about strategy?",`+
+          `"guidanceQuote":"A direct quote from leadership about future direction — from earnings call, press release, or interview. Empty if not found."}}`
+        }],
+      });
+      const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+      for(let i=textBlocks.length-1;i>=0;i--){
+        const parsed=extractJsonWithKey(textBlocks[i],"financialDeepDive");
+        if(parsed?.financialDeepDive) return parsed;
+      }
+      return null;
+    }catch{return null;}
+  })();
+
+  // Merge deep intelligence layers
+  const mergeDeepIntel = (r7, r8, r9) => (prev) => {
+    if (!prev) return prev;
+    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), deepIntel:false}};
+    if (r7?.competitivePositioning) next.competitivePositioning = r7.competitivePositioning;
+    if (r8?.boardAndInvestors) next.boardAndInvestors = r8.boardAndInvestors;
+    if (r9?.financialDeepDive) next.financialDeepDive = r9.financialDeepDive;
+    return next;
+  };
+
   // earlyDone resolves when p1+p3+p4 settle (overview, strategy, solutions).
   // Hypothesis only needs these — no reason to wait for slow web_search
   // calls (p2 executives, p5 live search, p6 roles). Shaves 5-10s off hypothesis start.
   const earlyDone = Promise.allSettled([p1, p3, p4]);
+  const deepIntelDone = Promise.allSettled([p7, p8, p9]);
 
   return {
     skeleton,
@@ -1387,9 +1490,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       solutions: p4.then(mergeSolutions).catch(e => mergeSolutions(null)),
       live:      p5.then(mergeLive).catch(e => mergeLive(null)),
       roles:     p6.then(mergeRoles).catch(e => mergeRoles(null)),
+      deepIntel: deepIntelDone.then(([r7,r8,r9]) => mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null)),
     },
     earlyDone,
-    allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6]),
+    allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6,p7,p8,p9]),
   };
 }
 
@@ -8836,6 +8940,169 @@ ${isOpen
                     </div>
                   </div>
                 </div>
+
+                {/* ═══ DEEP INTELLIGENCE LAYERS ═══ */}
+
+                {/* Financial Deep Dive */}
+                {(brief.financialDeepDive || brief._loadingSections?.deepIntel) && (
+                  <div className="bb">
+                    <div className="bb-hdr" onClick={()=>toggleBB("financial")}>
+                      <div className="bb-icon" style={{fontSize:12}}>📊</div>
+                      <div><div className="bb-title">Financial Intelligence</div><div className="bb-sub">Revenue trends, margins, capital priorities, and management guidance</div></div>
+                      {bbChevron("financial")}
+                    </div>
+                    <div className={`bb-body-wrap ${bbIsOpen("financial")?"":"collapsed"}`}><div className="bb-body">
+                      {brief._loadingSections?.deepIntel && !brief.financialDeepDive ? (
+                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                          <div className="skeleton" style={{width:"90%",height:14}}/><div className="skeleton" style={{width:"70%",height:14}}/><div className="skeleton" style={{width:"80%",height:14}}/>
+                        </div>
+                      ) : brief.financialDeepDive ? (
+                        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                          {brief.financialDeepDive.revenueTrend && (
+                            <div><div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Revenue Trend</div>
+                            <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.financialDeepDive.revenueTrend}</div></div>
+                          )}
+                          {brief.financialDeepDive.marginTrend && (
+                            <div><div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Margin Trajectory</div>
+                            <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.financialDeepDive.marginTrend}</div></div>
+                          )}
+                          {brief.financialDeepDive.segmentBreakdown && (
+                            <div><div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Segment Breakdown</div>
+                            <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.financialDeepDive.segmentBreakdown}</div></div>
+                          )}
+                          {brief.financialDeepDive.capitalPriorities && (
+                            <div><div style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Capital Priorities</div>
+                            <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.financialDeepDive.capitalPriorities}</div></div>
+                          )}
+                          {brief.financialDeepDive.earningsInsight && (
+                            <div style={{background:"var(--bg-1)",borderLeft:"3px solid var(--green)",borderRadius:"0 8px 8px 0",padding:"10px 14px"}}>
+                              <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Earnings Insight</div>
+                              <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.financialDeepDive.earningsInsight}</div>
+                            </div>
+                          )}
+                          {brief.financialDeepDive.guidanceQuote && (
+                            <div style={{fontStyle:"italic",fontSize:13,color:"var(--ink-1)",lineHeight:1.6,padding:"8px 14px",background:"var(--bg-0)",borderRadius:8}}>
+                              "{brief.financialDeepDive.guidanceQuote}"
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div></div>
+                  </div>
+                )}
+
+                {/* Competitive Positioning */}
+                {(brief.competitivePositioning || brief._loadingSections?.deepIntel) && (
+                  <div className="bb">
+                    <div className="bb-hdr" onClick={()=>toggleBB("competitive")}>
+                      <div className="bb-icon" style={{fontSize:12}}>⚔</div>
+                      <div><div className="bb-title">Competitive Positioning</div><div className="bb-sub">Where they win, where they lose, and who they're fighting</div></div>
+                      {bbChevron("competitive")}
+                    </div>
+                    <div className={`bb-body-wrap ${bbIsOpen("competitive")?"":"collapsed"}`}><div className="bb-body">
+                      {brief._loadingSections?.deepIntel && !brief.competitivePositioning ? (
+                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                          <div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"70%",height:14}}/>
+                        </div>
+                      ) : brief.competitivePositioning ? (
+                        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                          {brief.competitivePositioning.marketPosition && (
+                            <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.competitivePositioning.marketPosition}</div>
+                          )}
+                          {brief.competitivePositioning.primaryCompetitors?.length > 0 && (
+                            <div>
+                              <div style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Key Competitors</div>
+                              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                                {brief.competitivePositioning.primaryCompetitors.map((c,i) => (
+                                  <div key={i} style={{background:"var(--bg-1)",borderRadius:8,padding:"10px 12px",border:"1px solid var(--line-0)"}}>
+                                    <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>{c.name}</div>
+                                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12,lineHeight:1.5}}>
+                                      <div><span style={{color:"var(--red)",fontWeight:600,fontSize:10}}>THEIR EDGE:</span> {c.strength}</div>
+                                      <div><span style={{color:"var(--green)",fontWeight:600,fontSize:10}}>OUR EDGE:</span> {c.weakness}</div>
+                                    </div>
+                                    {c.recentMove && <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>{c.recentMove}</div>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                            {brief.competitivePositioning.whereWinning && (
+                              <div style={{background:"var(--green-bg)",borderRadius:8,padding:"10px 12px",border:"1px solid #2E6B2E22"}}>
+                                <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Where They Win</div>
+                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{brief.competitivePositioning.whereWinning}</div>
+                              </div>
+                            )}
+                            {brief.competitivePositioning.whereLosing && (
+                              <div style={{background:"var(--red-bg)",borderRadius:8,padding:"10px 12px",border:"1px solid #9B2C2C22"}}>
+                                <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Where They Lose</div>
+                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{brief.competitivePositioning.whereLosing}</div>
+                              </div>
+                            )}
+                          </div>
+                          {brief.competitivePositioning.displacementAngle && (
+                            <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:8,padding:"10px 14px"}}>
+                              <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Displacement Angle</div>
+                              <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6,fontStyle:"italic"}}>{brief.competitivePositioning.displacementAngle}</div>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div></div>
+                  </div>
+                )}
+
+                {/* Board & Investors */}
+                {(brief.boardAndInvestors || brief._loadingSections?.deepIntel) && (
+                  <div className="bb">
+                    <div className="bb-hdr" onClick={()=>toggleBB("board")}>
+                      <div className="bb-icon" style={{fontSize:12}}>🏛</div>
+                      <div><div className="bb-title">Board & Investors</div><div className="bb-sub">Who governs, who funds, and what they're pushing for</div></div>
+                      {bbChevron("board")}
+                    </div>
+                    <div className={`bb-body-wrap ${bbIsOpen("board")?"":"collapsed"}`}><div className="bb-body">
+                      {brief._loadingSections?.deepIntel && !brief.boardAndInvestors ? (
+                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                          <div className="skeleton" style={{width:"80%",height:14}}/><div className="skeleton" style={{width:"65%",height:14}}/>
+                        </div>
+                      ) : brief.boardAndInvestors ? (
+                        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                          {brief.boardAndInvestors.boardMembers?.length > 0 && (
+                            <div>
+                              <div style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Board Members</div>
+                              {brief.boardAndInvestors.boardMembers.map((b,i) => (
+                                <div key={i} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:i<brief.boardAndInvestors.boardMembers.length-1?"1px solid var(--line-0)":"none"}}>
+                                  <div style={{width:32,height:32,borderRadius:"50%",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
+                                    {(b.name||"").split(" ").map(w=>w[0]||"").join("").slice(0,2).toUpperCase()}
+                                  </div>
+                                  <div style={{flex:1}}>
+                                    <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)"}}>{b.name} <span style={{fontWeight:400,color:"var(--ink-3)"}}>· {b.title}</span></div>
+                                    <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>{b.background}</div>
+                                    {b.significance && <div style={{fontSize:11,color:"var(--navy)",marginTop:2,fontStyle:"italic"}}>{b.significance}</div>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {brief.boardAndInvestors.leadInvestors && (
+                            <div><div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Lead Investors</div>
+                            <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.boardAndInvestors.leadInvestors}</div></div>
+                          )}
+                          {brief.boardAndInvestors.investmentThesis && (
+                            <div><div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Investment Thesis</div>
+                            <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.boardAndInvestors.investmentThesis}</div></div>
+                          )}
+                          {brief.boardAndInvestors.boardMandate && (
+                            <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B22",borderRadius:8,padding:"10px 14px"}}>
+                              <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Board Mandate</div>
+                              <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.boardAndInvestors.boardMandate}</div>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div></div>
+                  </div>
+                )}
 
                 {/* DMAIC Process Maturity */}
                 {brief.processMaturity?.dmiacStage&&(
