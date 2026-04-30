@@ -6027,11 +6027,48 @@ ${isOpen
                   </div>
                 ))}
               </div>
-              <div style={{height:1,background:"var(--line-0)",marginBottom:20}}/>
+              {/* Two paths: Full Session or Quick Brief */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+                <div onClick={()=>{document.getElementById("seller-url-input")?.focus();}}
+                  style={{padding:"16px",borderRadius:12,border:"2px solid var(--green)",background:"var(--green-bg)",cursor:"pointer",transition:"all 0.15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(46,107,46,0.15)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+                  <div style={{fontSize:20,marginBottom:6}}>🎯</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--green)",marginBottom:4}}>Full Sales Session</div>
+                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate tailored briefs with solution mapping, and prepare for calls.</div>
+                </div>
+                <div onClick={()=>{document.getElementById("quick-brief-input")?.focus();}}
+                  style={{padding:"16px",borderRadius:12,border:"2px solid var(--line-0)",background:"var(--bg-0)",cursor:"pointer",transition:"all 0.15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--navy)";e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(27,58,107,0.1)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--line-0)";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+                  <div style={{fontSize:20,marginBottom:6}}>🔍</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:4}}>Quick Brief</div>
+                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Deep research on any company — no seller context needed. Executives, strategy, news, hiring signals, and sentiment.</div>
+                </div>
+              </div>
 
-              {/* Seller URL */}
+              {/* Quick Brief input — always visible */}
+              <div style={{background:"var(--bg-0)",borderRadius:10,padding:"14px 16px",marginBottom:16,border:"1.5px solid var(--line-0)"}}>
+                <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>Quick Brief — Research any company</div>
+                <div style={{display:"flex",gap:8}}>
+                  <input id="quick-brief-input" type="text" placeholder="Company name (e.g. Stripe, Caterpillar, HCA Healthcare)"
+                    value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();}}
+                    style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--line-0)",borderRadius:8}}/>
+                  <button className="btn btn-green" onClick={launchQuickBrief}
+                    disabled={!quickBriefInput.trim()}
+                    style={{whiteSpace:"nowrap",padding:"10px 20px"}}>
+                    Build Brief →
+                  </button>
+                </div>
+                <div style={{fontSize:10,color:"var(--ink-3)",marginTop:6}}>Uses 1 token · No seller URL needed · Executives, strategy, news, open roles, sentiment</div>
+              </div>
+
+              <div style={{height:1,background:"var(--line-0)",marginBottom:16}}/>
+
+              {/* Full Session: Seller URL */}
               <div className="field-row">
-                <div className="field-label">Your Organization's Website <span className="req">*</span></div>
+                <div className="field-label">Full Session — Your Organization's Website <span className="req">*</span></div>
                 <div className="setup-url-bar" style={{borderColor: sellerICP && sellerInput.trim() ? "var(--green)" : undefined, transition:"border-color 0.2s"}}>
                   <div className="setup-url-label" style={{color: sellerICP && sellerInput.trim() ? "var(--green)" : undefined}}>
                     {sellerICP && sellerInput.trim() ? "✓" : "Seller URL"}
@@ -6576,24 +6613,6 @@ ${isOpen
                 onClick={()=>{if(sellerInput.trim()){setSellerUrl(sellerInput.trim());setStep(1);}}}
                 disabled={!sellerInput.trim()}>Start Session →</button>
 
-              {/* A la carte Quick Brief — no seller required */}
-              <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--line-0)"}}>
-                <div style={{textAlign:"center",marginBottom:12}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>Or: Build a Quick Brief</div>
-                  <div style={{fontSize:12,color:"var(--ink-3)",marginTop:4}}>Pure research brief — no seller context needed. Deep intelligence on any company.</div>
-                </div>
-                <div style={{display:"flex",gap:8,maxWidth:500,margin:"0 auto"}}>
-                  <input type="text" placeholder="Company name (e.g. Stripe, HCA Healthcare, Caterpillar)"
-                    value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();}}
-                    style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--line-0)",borderRadius:8}}/>
-                  <button className="btn btn-green" onClick={launchQuickBrief}
-                    disabled={!quickBriefInput.trim()}
-                    style={{whiteSpace:"nowrap",padding:"10px 20px"}}>
-                    Build Brief →
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         )}
