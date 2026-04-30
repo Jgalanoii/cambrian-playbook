@@ -4182,14 +4182,14 @@ ${isOpen
   const launchQuickBrief = () => {
     const co = quickBriefInput.trim();
     if (!co) return;
-    // Set minimal seller context so generateBrief works
-    if (!sellerUrl) setSellerUrl("research-only");
-    // Create a synthetic member and run through the full brief pipeline
     const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
-    pickAccount(member);
+    // Set seller URL synchronously before pickAccount reads it
+    if (!sellerUrl) setSellerUrl("research-only");
+    // Pass override URL directly — state update won't be ready this render cycle
+    pickAccount(member, "research-only");
   };
 
-  const pickAccount = async member => {
+  const pickAccount = async (member, overrideSellerUrl) => {
     // Check usage limit before starting a billable brief generation
     if (orgCtx && orgCtx.run_count >= orgCtx.run_limit) {
       setUpgradeOpen(true);
@@ -4237,8 +4237,9 @@ ${isOpen
     // we must still show a brief skeleton so the user isn't stuck on the loader.
     let skeleton, mergers, earlyDone, allDone;
     try {
+      const effectiveSellerUrl = overrideSellerUrl || sellerUrl;
       const result = generateBrief(
-        member, sellerUrl, sellerDocs, products,
+        member, effectiveSellerUrl, sellerDocs, products,
         selectedCohort, selectedOutcomes, productPageUrl,
         (msg) => setBriefStatus(msg),
         productUrls,
