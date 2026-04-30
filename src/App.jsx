@@ -8522,11 +8522,11 @@ ${isOpen
                         )}
                         {/* Challenger insight */}
                         {item.challengerInsight&&(
-                          <div style={{marginTop:8,background:"var(--ink-0)",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}>
-                            <span style={{fontSize:11,color:"var(--tan-0)",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span>
+                          <div style={{marginTop:8,background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}>
+                            <span style={{fontSize:11,color:"var(--green)",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span>
                             <div>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Teaching Insight</div>
-                              <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{item.challengerInsight}</div>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Teaching Insight</div>
+                              <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>{item.challengerInsight}</div>
                             </div>
                           </div>
                         )}
@@ -8574,9 +8574,9 @@ ${isOpen
                             </div>
                           )}
                           {brief.mobilizer.teachingAngle&&(
-                            <div style={{background:"var(--ink-0)",borderRadius:7,padding:"8px 12px"}}>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Teaching Angle</div>
-                              <div style={{fontSize:12,color:"#fff",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.teachingAngle}</div>
+                            <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:7,padding:"8px 12px"}}>
+                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Teaching Angle</div>
+                              <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.teachingAngle}</div>
                             </div>
                           )}
                         </div>
@@ -8952,9 +8952,9 @@ ${isOpen
                       <div><div className="bb-title">Teaching Insight</div><div className="bb-sub">The assumption to challenge — teach this to the organization through your champion</div></div>
                     </div>
                     <div className="bb-body">
-                      <div style={{background:"var(--ink-0)",borderRadius:8,padding:"12px 16px"}}>
-                        <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>The Teaching Insight</div>
-                        <div style={{fontSize:14,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>"{riverHypo.challengerInsight}"</div>
+                      <div style={{background:"var(--green-bg)",border:"2px solid var(--green)",borderRadius:8,padding:"12px 16px"}}>
+                        <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>The Teaching Insight</div>
+                        <div style={{fontSize:14,color:"var(--ink-0)",lineHeight:1.7,fontStyle:"italic"}}>"{riverHypo.challengerInsight}"</div>
                       </div>
                     </div>
                   </div>
@@ -9184,9 +9184,9 @@ ${isOpen
                     </div>
 
                     {/* Talk Track */}
-                    <div style={{background:"var(--ink-0)",borderRadius:12,padding:"16px 18px",marginBottom:14}}>
-                      <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Talk Track</div>
-                      <div style={{fontSize:14,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>{stage.talkTrack}</div>
+                    <div style={{background:"var(--green-bg)",border:"2px solid var(--green)",borderRadius:12,padding:"16px 18px",marginBottom:14}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Talk Track</div>
+                      <div style={{fontSize:14,color:"var(--ink-0)",lineHeight:1.7,fontStyle:"italic"}}>{stage.talkTrack}</div>
                     </div>
 
                     {/* Objection Handling */}
