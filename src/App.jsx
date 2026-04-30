@@ -867,7 +867,7 @@ function buildUserEditContext(edits, userEdits) {
 // right away and merges each micro-result as it resolves — no blocking
 // wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
 function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null, icpEdits=[]){
-  const co  = member.company;
+  const co  = sanitizeForPrompt(member.company);
   const url = member.company_url || co;
 
   const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
@@ -4625,7 +4625,7 @@ ${isOpen
       (brief.sellerOpportunity ? `Seller Opportunity: ${brief.sellerOpportunity.slice(0,200)}\n` : "") +
       `\nSELLER SOLUTIONS MAPPED PRE-CALL:\n${solutions}\n\n`+
       `DISCOVERY CAPTURE (what we actually heard):\n${riverCapture}\n\n`+
-      `CALL NOTES:\n${notes||"None"}\n\n`+
+      `CALL NOTES:\n${sanitizeForPrompt(notes||"None")}\n\n`+
       `POST-CALL SUMMARY: ${postCall?.callSummary||""}\n\n`+
       (missingItems.length ? `═══ MISSING DISCOVERY DATA ═══\nThe following inputs are missing or light. Acknowledge these gaps in your assessment — do NOT fill them with assumptions. For each gap, note what it means for the SA review quality and what the rep should capture on the next call:\n${missingItems.map(m => `- ${m}`).join("\n")}\n\nInclude a "discoveryGaps" array in your output listing what specific information the rep needs to go back and capture.\n\n` : "") +
       `ACCURACY: NEVER invent facts. Every confirmed solution, architecture note, gap, and metric must be grounded in the discovery capture or proof pack above. If something was not discussed or verified, do not assert it — say "[Not confirmed in discovery]". Do not fabricate integration requirements, tech stack details, or implementation timelines that were not surfaced in the call.\n\n`+
@@ -4722,7 +4722,7 @@ ${isOpen
       `Solutions: ${(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ")||"Unknown"}\n\n`+
 
       `RIVER Capture:\n${riverSummary}\n\n`+
-      `Notes: ${notes||"None"}\n`+
+      `Notes: ${sanitizeForPrompt(notes||"None")}\n`+
       `Discovery completeness: ${filledPct}% of fields captured (${gatesFilled}/${allGates.length} gates, ${discFilled}/${allDisc.length} discovery fields).\n`+
       (filledPct < 30 ? `WARNING: Very sparse discovery data. The rep captured almost nothing. In callSummary, note that the deal cannot be properly routed without more discovery — recommend they go back for a follow-up call to fill gaps before advancing.\n` : "") +
       `\n`+
@@ -5211,7 +5211,7 @@ ${isOpen
       brief?.strategicTheme ? `Strategic theme: ${brief.strategicTheme.slice(0,150)}` : "",
       brief?.openingAngle ? `Opening angle: ${brief.openingAngle.slice(0,150)}` : "",
       riverHypo?.reality ? `Hypothesis (Reality): ${riverHypo.reality.slice(0,100)}` : "",
-      notes ? `Rep notes: ${notes.slice(0,200)}` : "",
+      notes ? `Rep notes: ${sanitizeForPrompt(notes.slice(0,200))}` : "",
       dealValue ? `Deal value: ${dealValue}` : "",
       dealClassification ? `Deal classification: ${dealClassification}` : "",
       contactRole ? `Contact role: ${sanitizeForPrompt(contactRole)}` : "",
