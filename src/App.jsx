@@ -8108,41 +8108,41 @@ ${isOpen
                 {/* Elevator Pitch — 45-second spoken pitch */}
                 {(brief.elevatorPitch || brief._loadingSections?.strategy) && (
                   <div style={{
-                    background:"linear-gradient(135deg, #1a1a18 0%, #2a2520 100%)",
+                    background:"var(--green-bg)",
                     borderRadius:14, padding:"20px 24px", marginBottom:16,
-                    border:"1px solid #8B6F4733",
+                    border:"2px solid var(--green)",
                   }}>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
                       <span style={{fontSize:20}}>🎤</span>
                       <div>
-                        <div style={{fontSize:14,fontWeight:700,color:"#fff",fontFamily:"Lora,serif"}}>Your Elevator Pitch</div>
-                        <div style={{fontSize:11,color:"#8B6F47"}}>~45 seconds · Say this when you bump into them at a conference, on a cold call, or in an actual elevator</div>
+                        <div style={{fontSize:14,fontWeight:700,color:"var(--green)",fontFamily:"Lora,serif"}}>Your Elevator Pitch</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)"}}>~45 seconds · Say this when you bump into them at a conference, on a cold call, or in an actual elevator</div>
                       </div>
                     </div>
                     {brief._loadingSections?.strategy && !brief.elevatorPitch ? (
                       <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                        <div className="skeleton" style={{width:"95%",height:14,background:"#333",borderRadius:4}}/>
-                        <div className="skeleton" style={{width:"85%",height:14,background:"#333",borderRadius:4}}/>
-                        <div className="skeleton" style={{width:"90%",height:14,background:"#333",borderRadius:4}}/>
+                        <div className="skeleton" style={{width:"95%",height:14,borderRadius:4}}/>
+                        <div className="skeleton" style={{width:"85%",height:14,borderRadius:4}}/>
+                        <div className="skeleton" style={{width:"90%",height:14,borderRadius:4}}/>
                       </div>
                     ) : (
                       <div
                         contentEditable suppressContentEditableWarning
                         onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==brief.elevatorPitch)patchBrief(b=>{b.elevatorPitch=v;},"elevatorPitch");}}
                         style={{
-                          fontSize:15, lineHeight:1.7, color:"#e8e0d4",
+                          fontSize:15, lineHeight:1.7, color:"var(--ink-0)",
                           fontFamily:"Lora,serif", fontStyle:"italic",
                           letterSpacing:"0.2px", outline:"none", cursor:"text",
                         }}>
                         {brief.elevatorPitch ? `"${brief.elevatorPitch}"` : ""}
                       </div>
                     )}
-                    <div style={{display:"flex",alignItems:"center",gap:12,marginTop:12,paddingTop:10,borderTop:"1px solid #8B6F4733"}}>
-                      <div style={{fontSize:10,color:"#8B6F47",display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginTop:12,paddingTop:10,borderTop:"1px solid #2E6B2E33"}}>
+                      <div style={{fontSize:10,color:"var(--ink-2)",display:"flex",alignItems:"center",gap:6}}>
                         <span>💡</span> Pro tip: Practice this out loud twice before your call. It should feel natural, not rehearsed.
                       </div>
                       <button onClick={()=>{if(brief.elevatorPitch) navigator.clipboard?.writeText(brief.elevatorPitch);}}
-                        style={{marginLeft:"auto",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid #8B6F4755",background:"transparent",color:"#8B6F47",cursor:"pointer",whiteSpace:"nowrap"}}>
+                        style={{marginLeft:"auto",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--green)",background:"#fff",color:"var(--green)",cursor:"pointer",whiteSpace:"nowrap"}}>
                         Copy
                       </button>
                     </div>
@@ -9475,8 +9475,8 @@ ${isOpen
       {/* Milton nudge — cheeky warning for frivolous inputs */}
       {miltonNudge && (
         <div className="no-print" style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:10000,
-          background:"#1a1a18",color:"#fff",padding:"14px 22px",borderRadius:14,fontSize:13,fontWeight:500,lineHeight:1.5,
-          boxShadow:"0 8px 32px rgba(0,0,0,0.25)",animation:"fadeInUp 0.3s ease",maxWidth:440,textAlign:"left"}}>
+          background:"var(--surface)",border:"2px solid var(--amber)",color:"var(--ink-0)",padding:"14px 22px",borderRadius:14,fontSize:13,fontWeight:500,lineHeight:1.5,
+          boxShadow:"0 8px 32px rgba(0,0,0,0.12)",animation:"fadeInUp 0.3s ease",maxWidth:440,textAlign:"left"}}>
           <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
             <span style={{fontSize:20,flexShrink:0}}>🤨</span>
             <div>
