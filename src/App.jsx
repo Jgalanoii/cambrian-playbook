@@ -925,12 +925,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p1 = overviewCache
     ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
     : streamAI(baseLight+
-    `TICKER ACCURACY: If you state a stock ticker symbol, you MUST be certain it is correct. Pathward Financial trades as CASH, not PAWD. Meta trades as META, not FB. If you are not 100% certain of a ticker, write "Public" without the ticker rather than guessing.\n`+
+    `OWNERSHIP ACCURACY — CRITICAL:\n`+
+    `- Many companies have CHANGED ownership status. Do NOT rely on stale data. Common examples: Blackhawk Network went private (acquired 2018), Dell went private then re-IPO'd, Worldpay was acquired by FIS then spun out to Global Payments.\n`+
+    `- If a company was acquired, taken private, or delisted, it is PRIVATE — do NOT show a ticker.\n`+
+    `- The publicPrivate field and fundingProfile field MUST agree. If fundingProfile says "PE-backed" or "Acquired by X", then publicPrivate MUST say "Private" — never "Public" with a ticker.\n`+
+    `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"e.g. Public (NASDAQ: CASH) — only include ticker if you are CERTAIN it is correct, otherwise just say Public or Private","employeeCount":"e.g. ~200,000",`+
+    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"e.g. ~200,000",`+
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
-    `"fundingProfile":"Ownership: PE firm + year, or Series + total raised, or Public exchange+ticker",`+
+    `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
     (partial) => {
@@ -1176,6 +1180,22 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     }
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), overview:false}};
     P1_FIELDS.forEach(f => { if (r1[f] !== undefined) next[f] = r1[f]; });
+
+    // Post-process: fix ownership contradictions
+    // If fundingProfile mentions "acquired", "PE-backed", "private equity", or "went private"
+    // but publicPrivate still shows a ticker — strip the ticker
+    if (next.publicPrivate && next.fundingProfile) {
+      const fp = (next.fundingProfile||"").toLowerCase();
+      const pp = (next.publicPrivate||"").toLowerCase();
+      const isPrivateSignal = /acquir|pe-backed|private equity|went private|taken private|buyout|delisted/.test(fp);
+      const hasTicker = /\((?:nyse|nasdaq|tsx|lse):\s*[a-z]+\)/i.test(next.publicPrivate);
+      if (isPrivateSignal && hasTicker) {
+        // Strip the stale ticker — fundingProfile is more authoritative on ownership changes
+        next.publicPrivate = next.publicPrivate.replace(/\s*\((?:NYSE|NASDAQ|TSX|LSE):\s*[A-Z]+\)/i, "").replace(/public/i, "Private").trim();
+        if (!/private/i.test(next.publicPrivate)) next.publicPrivate = "Private";
+      }
+    }
+
     return next;
   };
   const mergeExecs = (r2) => (prev) => {
@@ -2781,7 +2801,7 @@ ${scaleGuidance}
 - AVOID companies matching the disqualifiers.
 - Distribute across the listed industries — do not cluster in one vertical.
 - Be CONFIDENT. You know tens of thousands of real companies across every US industry from training data. Use that knowledge. Do NOT refuse, apologize, or say you can't verify. Return 20 companies.
-- TICKER ACCURACY: Only include a ticker if 100% certain. Otherwise write "Public" or "Private."
+- OWNERSHIP ACCURACY: If a company was acquired or went private, say "Private" — NEVER include a stale ticker. Only include a ticker if currently publicly traded.
 - QUALITY MIX: Return 15-20 STRONG fits (companies you are confident match the ICP well) followed by 10-15 STRETCH targets (companies that partially match — right industry but wrong size, right size but adjacent industry, or companies where a specific relationship or context could make them viable). This gives the seller both high-confidence targets and exploratory opportunities.
 - CONSISTENCY: For the same seller and ICP inputs, return the same core companies every time. Anchor on the most obvious, well-known companies first, then fill remaining slots. Sort output alphabetically by company name.
 - Return sorted ALPHABETICALLY by company name (for consistency across runs).
@@ -2997,7 +3017,7 @@ ${scaleGuidance}
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations).","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"Public or Private or PE-backed — do NOT include a stock ticker unless you are 100% certain it is correct","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations).","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"CURRENT status only — if company was acquired or went private, say Private (acquired by X). NEVER include a stale ticker for a company that delisted. No ticker unless you are certain it is currently listed.","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt, { maxTokens: 7500 });
@@ -4095,7 +4115,7 @@ ${isOpen
         const result = await callAI(
           `For each company, return the primary industry vertical, estimated employee count, and ownership type.\n` +
           `Use training knowledge confidently. Empty string if truly unknown.\n` +
-          `TICKER ACCURACY: Do NOT include stock tickers unless you are 100% certain. Just say "Public" or "Private" — a wrong ticker is worse than no ticker.\n\n` +
+          `OWNERSHIP ACCURACY: Many companies have changed ownership. If acquired or taken private, say "Private" — NEVER include a stale ticker. Only include a ticker if you are certain the company is CURRENTLY publicly traded. A wrong ticker destroys credibility.\n\n` +
           `Companies (Name|URL):\n${companiesStr}\n\n` +
           `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"Public or Private or PE-backed — no ticker unless certain","url":"verified domain or empty"}]}`
         );
@@ -5026,7 +5046,7 @@ ${isOpen
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
           messages: [{ role: "user", content: light +
             `Search for "${co}" to get current, accurate company data.\n` +
-            `TICKER ACCURACY: Only include a stock ticker if verified by web search. Do not guess tickers from memory.\n\n` +
+            `OWNERSHIP ACCURACY: Many companies have changed ownership status. If a company was acquired or taken private, say "Private" — NEVER include a stale/delisted ticker. Only include a ticker if verified as currently listed.\n\n` +
             `Return ONLY raw JSON:\n` +
             `{"companySnapshot":"3-4 sentences: what they do, market position, recent moves","revenue":"most recent figure","publicPrivate":"e.g. Public (NASDAQ: CASH) — only include ticker if verified","employeeCount":"e.g. ~50,000","headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name","fundingProfile":"Ownership details","competitors":["","",""],"watchOuts":["Procurement risk assessment","Incumbent vendor risk","Seller-stage credibility fit"]}`
           }],
