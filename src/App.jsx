@@ -2923,7 +2923,7 @@ ${scaleGuidance}
     for (let i = 0; i < members.length; i += BATCH) batches.push(members.slice(i, i + BATCH));
 
     const scoreBatch = async (batch) => {
-      const companies = batch.map(m => `${m.company}|${m.ind||"Unknown industry"}|${m.company_url||""}`).join("\n");
+      const companies = batch.map(m => `${m.company}|${m.ind||"Unknown — use training knowledge to identify industry"}|${m.company_url||""}`).join("\n");
       const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
       const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
       // Inject research-backed heuristics from knowledge layer
@@ -2934,7 +2934,8 @@ ${scaleGuidance}
 
       const prompt =
         `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
-        `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n\n`+
+        `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n`+
+        `CRITICAL: You MUST return a score for EVERY company listed below. If industry says "Unknown", use your training knowledge to identify the company's real industry. Every company in the list MUST appear in your output — never skip a company.\n\n`+
         `━━━ DIMENSION 1: ICP ALIGNMENT (40 points max) ━━━\n`+
         `Pick dim1 using this 3-step lookup. Do NOT do arithmetic — just pick the value from each row.\n\n`+
         `STEP A — INDUSTRY: Seller's target industries: [${(sellerICP?.icp?.industries||[]).join(", ")}]\n`+
@@ -4120,11 +4121,18 @@ ${isOpen
       } catch (e) { console.warn("Enrichment failed:", e.message); }
     })();
 
-    // 2. Fit scoring — fires in parallel with enrichment
-    scoreFit(members, buildSellerCtx());
-
-    // Wait for enrichment so the table fills in
+    // Wait for enrichment FIRST so scoring gets industry + employee data
     await enrichPromise;
+
+    // 2. Fit scoring — now fires with enriched data
+    // Re-read members from cohorts state (enrichment may have filled in industry/employees)
+    setCohorts(currentCohorts => {
+      const enrichedMembers = currentCohorts.flatMap(c => c.members);
+      if (enrichedMembers.length) {
+        scoreFit(enrichedMembers, buildSellerCtx());
+      }
+      return currentCohorts; // no-op state update, just reading current value
+    });
   };
   const goToOutcomes=()=>{
     if(selectedCohort){
