@@ -2454,6 +2454,7 @@ export default function App(){
   const[reportPanelOpen,setReportPanelOpen]=useState(false); // org-level reports
   const[moreMenuOpen,setMoreMenuOpen]=useState(false); // header overflow menu
   const[quickBriefInput,setQuickBriefInput]=useState(""); // a la carte brief company name
+  const[sessionMode,setSessionMode]=useState("full"); // "full" | "quick"
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
   const lastGenSig = useRef({ icp: "", brief: "", hypo: "", postCall: "" });
@@ -5857,48 +5858,55 @@ ${isOpen
                   </div>
                 ))}
               </div>
-              {/* Two paths: Full Session or Quick Brief */}
+              {/* Mode toggle: Full Session vs Quick Brief */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-                <div onClick={()=>{document.getElementById("seller-url-input")?.focus();}}
-                  style={{padding:"16px",borderRadius:12,border:"2px solid var(--green)",background:"var(--green-bg)",cursor:"pointer",transition:"all 0.15s"}}
-                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(46,107,46,0.15)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+                <div onClick={()=>setSessionMode("full")}
+                  style={{padding:"16px",borderRadius:12,cursor:"pointer",transition:"all 0.2s",
+                    border:sessionMode==="full"?"2px solid var(--green)":"2px solid var(--line-0)",
+                    background:sessionMode==="full"?"var(--green-bg)":"#fff",
+                    transform:sessionMode==="full"?"translateY(-2px)":"none",
+                    boxShadow:sessionMode==="full"?"0 4px 12px rgba(46,107,46,0.12)":"none"}}>
                   <div style={{fontSize:20,marginBottom:6}}>🎯</div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--green)",marginBottom:4}}>Full Sales Session</div>
+                  <div style={{fontSize:14,fontWeight:700,color:sessionMode==="full"?"var(--green)":"var(--ink-2)",marginBottom:4}}>Full Sales Session</div>
                   <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate tailored briefs with solution mapping, and prepare for calls.</div>
                 </div>
-                <div onClick={()=>{const el=document.getElementById("quick-brief-input");if(el){el.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>el.focus(),300);}}}
-                  style={{padding:"16px",borderRadius:12,border:"2px solid var(--line-0)",background:"var(--bg-0)",cursor:"pointer",transition:"all 0.15s"}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--navy)";e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(27,58,107,0.1)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--line-0)";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
+                <div onClick={()=>setSessionMode("quick")}
+                  style={{padding:"16px",borderRadius:12,cursor:"pointer",transition:"all 0.2s",
+                    border:sessionMode==="quick"?"2px solid var(--navy)":"2px solid var(--line-0)",
+                    background:sessionMode==="quick"?"var(--navy-bg)":"#fff",
+                    transform:sessionMode==="quick"?"translateY(-2px)":"none",
+                    boxShadow:sessionMode==="quick"?"0 4px 12px rgba(27,58,107,0.12)":"none"}}>
                   <div style={{fontSize:20,marginBottom:6}}>🔍</div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--navy)",marginBottom:4}}>Quick Brief</div>
+                  <div style={{fontSize:14,fontWeight:700,color:sessionMode==="quick"?"var(--navy)":"var(--ink-2)",marginBottom:4}}>Quick Brief</div>
                   <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Deep research on any company — no seller context needed. Executives, strategy, news, hiring signals, and sentiment.</div>
                 </div>
               </div>
 
-              {/* Quick Brief input — always visible */}
-              <div style={{background:"var(--bg-0)",borderRadius:10,padding:"14px 16px",marginBottom:16,border:"1.5px solid var(--line-0)"}}>
-                <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>Quick Brief — Research any company</div>
-                <div style={{display:"flex",gap:8}}>
-                  <input id="quick-brief-input" type="text" placeholder="Company name (e.g. Stripe, Caterpillar, HCA Healthcare)"
-                    value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();}}
-                    style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--line-0)",borderRadius:8}}/>
-                  <button className="btn btn-green" onClick={launchQuickBrief}
-                    disabled={!quickBriefInput.trim()}
-                    style={{whiteSpace:"nowrap",padding:"10px 20px"}}>
-                    Build Brief →
-                  </button>
+              {/* Quick Brief mode */}
+              {sessionMode==="quick"&&(
+                <div style={{background:"var(--navy-bg)",borderRadius:10,padding:"16px 18px",marginBottom:16,border:"2px solid var(--navy)"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>Research any company</div>
+                  <div style={{display:"flex",gap:8}}>
+                    <input id="quick-brief-input" type="text" placeholder="Company name (e.g. Stripe, Caterpillar, Charity on Top)"
+                      autoFocus
+                      value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
+                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();}}
+                      style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--navy)",borderRadius:8,background:"#fff"}}/>
+                    <button className="btn" onClick={launchQuickBrief}
+                      disabled={!quickBriefInput.trim()}
+                      style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--navy)",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
+                      Build Brief →
+                    </button>
+                  </div>
+                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 token · Full brief: executives, strategy, sentiment, news, open roles, competitive landscape</div>
                 </div>
-                <div style={{fontSize:10,color:"var(--ink-3)",marginTop:6}}>Uses 1 token · No seller URL needed · Executives, strategy, news, open roles, sentiment</div>
-              </div>
+              )}
 
-              <div style={{height:1,background:"var(--line-0)",marginBottom:16}}/>
-
-              {/* Full Session: Seller URL */}
+              {/* Full Session mode */}
+              {sessionMode==="full"&&(
+              <>
               <div className="field-row">
-                <div className="field-label">Full Session — Your Organization's Website <span className="req">*</span></div>
+                <div className="field-label">Your Organization's Website <span className="req">*</span></div>
                 <div className="setup-url-bar" style={{borderColor: sellerICP && sellerInput.trim() ? "var(--green)" : undefined, transition:"border-color 0.2s"}}>
                   <div className="setup-url-label" style={{color: sellerICP && sellerInput.trim() ? "var(--green)" : undefined}}>
                     {sellerICP && sellerInput.trim() ? "✓" : "Seller URL"}
@@ -6442,6 +6450,8 @@ ${isOpen
               <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
                 onClick={()=>{if(sellerInput.trim()){setSellerUrl(sellerInput.trim());setStep(1);}}}
                 disabled={!sellerInput.trim()}>Start Session →</button>
+              </>
+              )}
 
             </div>
           </div>
