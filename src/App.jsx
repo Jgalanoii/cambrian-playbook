@@ -8150,14 +8150,16 @@ ${isOpen
                 {/* Action bar */}
                 <div className="card">
                   <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-                    <div style={{flex:1,minWidth:200}}>
-                      <div className="field-label" style={{marginBottom:5}}>Primary Contact Role <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional)</span></div>
-                      <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}/>
-                    </div>
-                    <div style={{display:"flex",gap:8,marginTop:20,flexWrap:"wrap"}}>
+                    {sellerUrl!=="research-only"&&(
+                      <div style={{flex:1,minWidth:200}}>
+                        <div className="field-label" style={{marginBottom:5}}>Primary Contact Role <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional)</span></div>
+                        <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}/>
+                      </div>
+                    )}
+                    <div style={{display:"flex",gap:8,marginTop:sellerUrl==="research-only"?0:20,flexWrap:"wrap",flex:sellerUrl==="research-only"?1:undefined,justifyContent:sellerUrl==="research-only"?"flex-end":undefined}}>
                       <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                       <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
-                      <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
+                      {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>}
                     </div>
                   </div>
                 </div>
@@ -8207,8 +8209,8 @@ ${isOpen
                   );
                 })()}
 
-                {/* Elevator Pitch — 45-second spoken pitch */}
-                {(brief.elevatorPitch || brief._loadingSections?.strategy) && (
+                {/* Elevator Pitch — 45-second spoken pitch (hidden for Quick Brief / research-only) */}
+                {sellerUrl && sellerUrl !== "research-only" && (brief.elevatorPitch || brief._loadingSections?.strategy) && (
                   <div style={{
                     background:"var(--green-bg)",
                     borderRadius:14, padding:"20px 24px", marginBottom:16,
@@ -8568,8 +8570,8 @@ ${isOpen
                   </div>
                 )}
 
-                {/* Solution Mapping */}
-                <div className="bb">
+                {/* Solution Mapping — hidden for research-only Quick Briefs */}
+                {sellerUrl!=="research-only"&&<div className="bb">
                   <div className="bb-hdr" onClick={()=>toggleBB("solutions")}>
                     <div className="bb-icon">↑</div>
                     <div>
@@ -8707,7 +8709,7 @@ ${isOpen
                       </div>
                     )}
                   </div></div>{/* /bb-body-wrap solutions */}
-                </div>
+                </div>}
 
                 {/* Tech Stack & Integrations */}
                 {brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(
@@ -8806,7 +8808,7 @@ ${isOpen
                 {/* Strategic Theme + Why You Why Now */}
                 {(brief.strategicTheme||brief.sellerOpportunity)&&(
                   <div className="bb">
-                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div><div className="bb-title">Strategic Analysis</div><div className="bb-sub">What's driving this account and why you're positioned to win</div></div></div>
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div><div className="bb-title">Strategic Analysis</div><div className="bb-sub">{sellerUrl==="research-only"?"What's driving this company right now":"What's driving this account and why you're positioned to win"}</div></div></div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                       {brief.strategicTheme&&(
                         <div>
@@ -8814,7 +8816,7 @@ ${isOpen
                           <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;},"strategicTheme")} placeholder="What's driving this company's priorities right now..."/>
                         </div>
                       )}
-                      {brief.sellerOpportunity&&(
+                      {sellerUrl!=="research-only"&&brief.sellerOpportunity&&(
                         <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"10px 14px"}}>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Why You · Why Now</div>
                           <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;},"sellerOpportunity")} placeholder="Why the seller is positioned to win this account right now..."/>
