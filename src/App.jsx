@@ -963,12 +963,17 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     // No pre-cache — fire inline. Mark as billable run (1 per brief).
     const execPrompt = baseLight+
       (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
-      `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n`+
+      `Search for the CURRENT leadership team of ${co}. Return 4-6 people.\n\n`+
+      `SEARCH STRATEGY — use BOTH searches:\n`+
+      `1. Search "${co} leadership team" OR "${co} founders" OR "${co} about us team"\n`+
+      `2. Search "site:linkedin.com ${co}" to find executives on LinkedIn\n`+
+      `For smaller companies, startups, and nonprofits: the "About", "Our Team", or "Leadership" page on their website is the BEST source. Founders and co-founders count as executives.\n\n`+
       `ACCURACY RULES:\n`+
-      `- For well-known public companies (Fortune 500, major brands), you KNOW these executives from training data. Search to confirm and get the latest.\n`+
-      `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit that role entirely.\n`+
-      `- If a specific role is genuinely unknown after searching, skip it. Do NOT invent names. 4 verified executives is better than 6 with guesses.\n`+
-      `- Include: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders most relevant to what ${sellerUrl} sells.\n\n`+
+      `- For large companies (Fortune 500, major brands), you KNOW these executives. Search to confirm.\n`+
+      `- For smaller companies / startups / nonprofits: the founding team IS the leadership team. Return founders, co-founders, board members, and any named team leads.\n`+
+      `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit entirely.\n`+
+      `- 2 verified founders is better than 0 executives. NEVER return an empty list.\n`+
+      `- Include: CEO/Founder, COO/Co-Founder, CTO, CFO, and any named leaders. For small orgs, board members and advisors count.\n\n`+
       `For each executive provide:\n`+
       `- name: their full real name (NEVER a placeholder)\n`+
       `- title: their exact current title\n`+
@@ -1010,11 +1015,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         max_tokens:3000,
         messages:[{role:"user",content:
           `You are a senior sales researcher. Return the CURRENT leadership team of "${co}".\n\n`+
-          `Use your training knowledge confidently. ${co} is a real company — you know their executives. Do NOT say you can't verify or need to search.\n\n`+
-          `Return 4-6 executives: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders.\n`+
+          `Use your training knowledge confidently. ${co} is a real company.\n`+
+          `For SMALL COMPANIES, STARTUPS, and NONPROFITS: return founders, co-founders, board members, and any named team leads. 2 verified founders is a valid result.\n`+
+          `For LARGE COMPANIES: return CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders.\n\n`+
           `For each: name (real full name), title, initials, background (1 sentence), angle (2-3 sentences on their mandate and how a seller at ${sellerUrl} should approach them).\n\n`+
-          `If you genuinely don't know a specific name, use the ROLE as the name (e.g. "CEO" with title "Chief Executive Officer") and set background to "Research needed — verify via LinkedIn".\n\n`+
-          `CRITICAL: You MUST return at least 4 executives. An empty response is not acceptable.\n\n`+
+          `If you genuinely don't know a specific name, use the ROLE as the name (e.g. "Founder" with title "Co-Founder") and set background to "Research needed — verify via LinkedIn or company website About page".\n\n`+
+          `CRITICAL: You MUST return at least 2 people. An empty response is NEVER acceptable.\n\n`+
           `Return ONLY raw JSON:\n`+
           `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role","angle":"Their mandate. 2-3 sentences."}],`+
           `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
@@ -5861,7 +5867,7 @@ ${isOpen
                   <div style={{fontSize:14,fontWeight:700,color:"var(--green)",marginBottom:4}}>Full Sales Session</div>
                   <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate tailored briefs with solution mapping, and prepare for calls.</div>
                 </div>
-                <div onClick={()=>{document.getElementById("quick-brief-input")?.focus();}}
+                <div onClick={()=>{const el=document.getElementById("quick-brief-input");if(el){el.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>el.focus(),300);}}}
                   style={{padding:"16px",borderRadius:12,border:"2px solid var(--line-0)",background:"var(--bg-0)",cursor:"pointer",transition:"all 0.15s"}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--navy)";e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 12px rgba(27,58,107,0.1)";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--line-0)";e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";}}>
