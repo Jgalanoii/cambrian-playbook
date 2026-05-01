@@ -22,11 +22,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("overview"); // overview | users | activity | urls
-
-  // Only render for superuser
-  if (sbUser?.email !== SUPERUSER_EMAIL) return null;
+  const isSuperuser = sbUser?.email === SUPERUSER_EMAIL;
 
   useEffect(() => {
+    if (!isSuperuser) return;
     setLoading(true);
     fetch("/api/admin", {
       headers: { Authorization: `Bearer ${sbToken}` },
@@ -39,6 +38,9 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
       .catch(() => setError("Failed to load"))
       .finally(() => setLoading(false));
   }, [sbToken]);
+
+  // Superuser check — after all hooks
+  if (!isSuperuser) return null;
 
   if (loading) return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
