@@ -22,6 +22,7 @@ import { PAYMENTS_INDUSTRY_INJECTION, PAYMENTS_SCORING_CONTEXT, PAYMENTS_DISCOVE
 import { COMPLIANCE_FRAMEWORKS, COMPLIANCE_VERTICAL_MAP, COMPLIANCE_DISCLAIMER, HANDOFF_PROTOCOL } from "../src/data/complianceKnowledge.js";
 import { REAL_ESTATE_INDUSTRY_INJECTION, REAL_ESTATE_SCORING_CONTEXT, REAL_ESTATE_DISCOVERY_INJECTION } from "../src/data/realEstateKnowledge.js";
 import { BANKING_INDUSTRY_INJECTION, BANKING_SCORING_CONTEXT, BANKING_DISCOVERY_INJECTION } from "../src/data/bankingKnowledge.js";
+import { ACCOUNTING_FINANCE_INJECTION, ACCOUNTING_FINANCE_SCORING, ACCOUNTING_FINANCE_DISCOVERY } from "../src/data/accountingFinanceKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -210,5 +211,9 @@ export default function handler(req, res) {
     bankingIndustry: BANKING_INDUSTRY_INJECTION,
     bankingScoring: BANKING_SCORING_CONTEXT,
     bankingDiscovery: BANKING_DISCOVERY_INJECTION,
+    // Accounting & financial management (cross-cutting)
+    accountingFinance: ACCOUNTING_FINANCE_INJECTION,
+    accountingFinanceScoring: ACCOUNTING_FINANCE_SCORING,
+    accountingFinanceDiscovery: ACCOUNTING_FINANCE_DISCOVERY,
   });
 }

@@ -57,6 +57,7 @@ let KL_REAL_ESTATE_DISCOVERY = ""; // Real estate-specific discovery angles
 let KL_BANKING = ""; // Banking & capital markets knowledge injection
 let KL_BANKING_SCORING = null; // Banking scoring calibration
 let KL_BANKING_DISCOVERY = ""; // Banking-specific discovery angles
+let KL_ACCOUNTING = ""; // Accounting & financial management (cross-cutting)
 
 async function fetchKnowledgeLayer() {
   try {
@@ -95,6 +96,7 @@ async function fetchKnowledgeLayer() {
     KL_BANKING = d.bankingIndustry || "";
     KL_BANKING_SCORING = d.bankingScoring || null;
     KL_BANKING_DISCOVERY = d.bankingDiscovery || "";
+    KL_ACCOUNTING = d.accountingFinance || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -4609,6 +4611,7 @@ ${isOpen
       getComplianceInjection(sellerICP, member.ind) +
       getRealEstateInjection(sellerICP, member.ind) +
       getBankingInjection(sellerICP, member.ind) +
+      (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
       "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
       "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
