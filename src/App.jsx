@@ -60,6 +60,10 @@ let KL_BANKING_DISCOVERY = ""; // Banking-specific discovery angles
 let KL_ACCOUNTING = ""; // Accounting & financial management (cross-cutting)
 let KL_B2B_SALES = ""; // B2B sales & value creation (cross-cutting)
 let KL_OKR_KPI = ""; // OKRs, KPIs, measurement (cross-cutting)
+let KL_QSR = ""; // QSR / restaurant knowledge
+let KL_QSR_SCORING = null;
+let KL_QSR_DISCOVERY = "";
+let KL_INVESTOR = ""; // Investor intelligence (cross-cutting for PE/VC/FO)
 let KL_HEALTHCARE = ""; // Healthcare SaaS deep knowledge
 let KL_HEALTHCARE_SCORING = null;
 let KL_HEALTHCARE_DISCOVERY = "";
@@ -113,6 +117,10 @@ async function fetchKnowledgeLayer() {
     KL_ACCOUNTING = d.accountingFinance || "";
     KL_B2B_SALES = d.b2bSales || "";
     KL_OKR_KPI = d.okrKpi || "";
+    KL_QSR = d.qsr || "";
+    KL_QSR_SCORING = d.qsrScoring || null;
+    KL_QSR_DISCOVERY = d.qsrDiscovery || "";
+    KL_INVESTOR = d.investorIntelligence || "";
     KL_HEALTHCARE = d.healthcareSaas || "";
     KL_HEALTHCARE_SCORING = d.healthcareSaasScoring || null;
     KL_HEALTHCARE_DISCOVERY = d.healthcareSaasDiscovery || "";
@@ -685,6 +693,26 @@ function getRewardsInjection(sellerICP, targetIndustry) {
   return "\n" + KL_REWARDS;
 }
 
+// ── QSR / RESTAURANT KNOWLEDGE INJECTION ────────────────────────────────
+const QSR_KW = ["qsr", "quick service", "fast food", "fast casual", "restaurant", "food service", "franchise", "casual dining", "ghost kitchen", "drive-thru", "doordash", "toast pos"];
+function getQsrInjection(sellerICP, targetIndustry) {
+  if (!KL_QSR) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (QSR_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_QSR;
+}
+
+// ── INVESTOR INTELLIGENCE INJECTION ─────────────────────────────────────
+const INVESTOR_KW = ["private equity", "venture capital", "pe-backed", "vc-backed", "portfolio company", "portco", "family office", "investor", "due diligence", "value creation", "operating partner", "lp", "fund"];
+function getInvestorInjection(sellerICP, targetIndustry) {
+  if (!KL_INVESTOR) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (INVESTOR_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_INVESTOR;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -1086,6 +1114,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getAiMlInjection(sellerICP, member.ind) +
     getFintechDeepInjection(sellerICP, member.ind) +
     getRewardsInjection(sellerICP, member.ind) +
+    getQsrInjection(sellerICP, member.ind) +
+    getInvestorInjection(sellerICP, member.ind) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -3348,6 +3378,11 @@ ${scaleGuidance}
           ? `\nREWARDS/INCENTIVES VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_REWARDS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_REWARDS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_QSR_SCORING && getQsrInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nQSR/RESTAURANT VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_QSR_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_QSR_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -4760,6 +4795,8 @@ ${isOpen
       getAiMlInjection(sellerICP, member.ind) +
       getFintechDeepInjection(sellerICP, member.ind) +
       getRewardsInjection(sellerICP, member.ind) +
+      getQsrInjection(sellerICP, member.ind) +
+      getInvestorInjection(sellerICP, member.ind) +
       (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
       (KL_B2B_SALES ? "\n" + KL_B2B_SALES : "") +
       (KL_OKR_KPI ? "\n" + KL_OKR_KPI : "") +
@@ -4860,6 +4897,7 @@ ${isOpen
       (KL_AI_ML_DISCOVERY && getAiMlInjection(sellerICP, member?.ind) ? KL_AI_ML_DISCOVERY + "\n" : "") +
       (KL_FINTECH_DEEP_DISCOVERY && getFintechDeepInjection(sellerICP, member?.ind) ? KL_FINTECH_DEEP_DISCOVERY + "\n" : "") +
       (KL_REWARDS_DISCOVERY && getRewardsInjection(sellerICP, member?.ind) ? KL_REWARDS_DISCOVERY + "\n" : "") +
+      (KL_QSR_DISCOVERY && getQsrInjection(sellerICP, member?.ind) ? KL_QSR_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

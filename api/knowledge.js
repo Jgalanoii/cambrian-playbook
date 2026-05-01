@@ -29,6 +29,8 @@ import { FINTECH_DEEP_INJECTION, FINTECH_DEEP_SCORING, FINTECH_DEEP_DISCOVERY } 
 import { REWARDS_INCENTIVES_INJECTION, REWARDS_INCENTIVES_SCORING, REWARDS_INCENTIVES_DISCOVERY } from "../src/data/rewardsIncentivesKnowledge.js";
 import { B2B_SALES_INJECTION, B2B_SALES_DISCOVERY } from "../src/data/b2bSalesKnowledge.js";
 import { OKR_KPI_INJECTION, OKR_KPI_DISCOVERY } from "../src/data/okrKpiKnowledge.js";
+import { QSR_INJECTION, QSR_SCORING, QSR_DISCOVERY } from "../src/data/qsrKnowledge.js";
+import { INVESTOR_INTELLIGENCE_INJECTION, INVESTOR_INTELLIGENCE_DISCOVERY } from "../src/data/investorIntelligenceKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -243,5 +245,12 @@ export default function handler(req, res) {
     // Cross-cutting: OKRs, KPIs, measurement
     okrKpi: OKR_KPI_INJECTION,
     okrKpiDiscovery: OKR_KPI_DISCOVERY,
+    // QSR / restaurants
+    qsr: QSR_INJECTION,
+    qsrScoring: QSR_SCORING,
+    qsrDiscovery: QSR_DISCOVERY,
+    // Investor intelligence (cross-cutting)
+    investorIntelligence: INVESTOR_INTELLIGENCE_INJECTION,
+    investorIntelligenceDiscovery: INVESTOR_INTELLIGENCE_DISCOVERY,
   });
 }
