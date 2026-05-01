@@ -1184,9 +1184,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // MICRO 4: Solution mapping + contacts — shows after strategy (streamed)
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
   // and (when possible) a named customer from the seller's proof pack above.
+  const isResearchOnly = sellerUrl === "research-only";
   const p4 = streamAI(baseFull+
-    `Return ONLY raw JSON (start with {) for solution fit and contacts:\n`+
-    `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`+
+    `Return ONLY raw JSON (start with {) for ${isResearchOnly ? "organizational intelligence" : "solution fit and contacts"}:\n`+
+    (isResearchOnly
+      ? `This is a RESEARCH-ONLY brief. There is no selling organization. Focus on organizational intelligence: who are the key decision-makers, what's their tech stack, what process maturity stage are they in, and who would be the ideal entry point for any vendor approaching ${co}.\n`
+      : `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`)+
     `For each solution: (1) which seller PRODUCT (use exact name from catalog above), (2) what job-to-be-done it performs for ${co}, (3) what differentiator from the proof pack justifies "why us", (4) what NAMED CUSTOMER from the proof pack is similar evidence (or "[no analogue customer in our list — verify with seller]" if none fit), (5) what measurable outcome we'd target.\n`+
     `{"solutionMapping":[`+
     `{"product":"EXACT product name from seller catalog",`+
