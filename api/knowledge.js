@@ -21,6 +21,7 @@ import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTI
 import { PAYMENTS_INDUSTRY_INJECTION, PAYMENTS_SCORING_CONTEXT, PAYMENTS_DISCOVERY_INJECTION } from "../src/data/paymentsKnowledge.js";
 import { COMPLIANCE_FRAMEWORKS, COMPLIANCE_VERTICAL_MAP, COMPLIANCE_DISCLAIMER, HANDOFF_PROTOCOL } from "../src/data/complianceKnowledge.js";
 import { REAL_ESTATE_INDUSTRY_INJECTION, REAL_ESTATE_SCORING_CONTEXT, REAL_ESTATE_DISCOVERY_INJECTION } from "../src/data/realEstateKnowledge.js";
+import { BANKING_INDUSTRY_INJECTION, BANKING_SCORING_CONTEXT, BANKING_DISCOVERY_INJECTION } from "../src/data/bankingKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -205,5 +206,9 @@ export default function handler(req, res) {
     realEstateIndustry: REAL_ESTATE_INDUSTRY_INJECTION,
     realEstateScoring: REAL_ESTATE_SCORING_CONTEXT,
     realEstateDiscovery: REAL_ESTATE_DISCOVERY_INJECTION,
+    // Banking & capital markets knowledge layer
+    bankingIndustry: BANKING_INDUSTRY_INJECTION,
+    bankingScoring: BANKING_SCORING_CONTEXT,
+    bankingDiscovery: BANKING_DISCOVERY_INJECTION,
   });
 }
