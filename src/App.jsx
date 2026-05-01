@@ -995,7 +995,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
-    `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n\n`;
+    `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
+    `STABILITY: For the same company, your output should be stable across runs. Use established facts (revenue, HQ, founding year, executive names) not ephemeral observations. Anchor every claim in verifiable data, not interpretive commentary that could vary between runs. If multiple descriptions are equally valid, prefer the most specific and factual one.\n\n`;
 
   const verticalCtx = getVerticalInjection(sellerICP, member.ind);
   const paymentsCtx = getPaymentsInjection(sellerICP, member.ind);
@@ -1148,7 +1149,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p3 = streamAI(baseFull+
     `TEACHING ANGLE: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption about their industry"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
     `SOCIAL PROOF: Name a SPECIFIC similar company as proof. Lead with a precise stat or insight.\n`+
-    `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n\n`+
+    `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n`+
+    `STABILITY: Anchor your analysis in verifiable, durable facts — not interpretive commentary. Revenue, headcount, HQ, founding year, named initiatives, public statements, and executive names are stable. Avoid subjective framing that could change between runs.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
     `{"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
     `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
@@ -4670,6 +4672,7 @@ ${isOpen
       "BUILD THE RIVER HYPOTHESIS:\n" +
       "Every field grounded in what " + sellerUrl + " sells. No stray consulting.\n" +
       "CONSISTENCY RULE: The elevator pitch, opening angle, strategic theme, and solution mapping have already been generated for this brief. Your hypothesis MUST align with the same narrative — same pain points, same value proposition, same proof points. Do NOT introduce new claims or angles that contradict the brief.\n" +
+      "STABILITY RULE: Anchor every claim in verifiable facts from the brief data above — not new interpretive commentary. The hypothesis should produce the same core narrative for the same company across multiple runs.\n" +
       "DMAIC: Reality=Define+Measure, Impact=Analyze, Vision=Improve, Route=Control.\n" +
       "Return ONLY raw JSON, ASCII punctuation only:\n" +
       JSON.stringify({

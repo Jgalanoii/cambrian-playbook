@@ -230,6 +230,7 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
     model: body.model,
     max_tokens: Math.min(Number(body.max_tokens) || 1024, MAX_TOKENS_CAP),
     temperature: 0,
+    top_k: 1, // Deterministic: always pick the most likely token
     messages: body.messages,
   };
   if (typeof body.system === "string" && body.system.length && body.system.length <= 30_000) {
