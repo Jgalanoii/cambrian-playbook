@@ -31,6 +31,8 @@ import { B2B_SALES_INJECTION, B2B_SALES_DISCOVERY } from "../src/data/b2bSalesKn
 import { OKR_KPI_INJECTION, OKR_KPI_DISCOVERY } from "../src/data/okrKpiKnowledge.js";
 import { QSR_INJECTION, QSR_SCORING, QSR_DISCOVERY } from "../src/data/qsrKnowledge.js";
 import { INVESTOR_INTELLIGENCE_INJECTION, INVESTOR_INTELLIGENCE_DISCOVERY } from "../src/data/investorIntelligenceKnowledge.js";
+import { BAAS_INJECTION, BAAS_SCORING, BAAS_DISCOVERY } from "../src/data/baasKnowledge.js";
+import { CHARITABLE_GIVING_INJECTION, CHARITABLE_GIVING_SCORING, CHARITABLE_GIVING_DISCOVERY } from "../src/data/charitableGivingKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -76,6 +78,8 @@ function verifyJwt(req) {
   }
 
   // Guest mode fallback — gets stripped-down knowledge layer
+  // SAFETY: guest mode is disabled in production unless explicitly opted in
+  if (IS_PRODUCTION && !process.env.ALLOW_GUEST_PRODUCTION) return false;
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
   if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") {
     req._isGuest = true;
@@ -252,5 +256,13 @@ export default function handler(req, res) {
     // Investor intelligence (cross-cutting)
     investorIntelligence: INVESTOR_INTELLIGENCE_INJECTION,
     investorIntelligenceDiscovery: INVESTOR_INTELLIGENCE_DISCOVERY,
+    // BaaS / sponsor banking / embedded banking
+    baas: BAAS_INJECTION,
+    baasScoring: BAAS_SCORING,
+    baasDiscovery: BAAS_DISCOVERY,
+    // Charitable giving / DAFs / charity gift cards
+    charitableGiving: CHARITABLE_GIVING_INJECTION,
+    charitableGivingScoring: CHARITABLE_GIVING_SCORING,
+    charitableGivingDiscovery: CHARITABLE_GIVING_DISCOVERY,
   });
 }

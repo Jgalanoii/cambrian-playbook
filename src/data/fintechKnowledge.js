@@ -14,7 +14,7 @@ MARKET: Post-correction, consolidation-phase. 2021 valuations passed; survivors 
 
 VERTICAL SAAS FINTECH SHIFT: Biggest structural trend — vertical SaaS (Toast, Square, ServiceTitan, Procore) became primary financial services providers. Financial services often 40-60% of total revenue and 60-80% of incremental margin. Competes with horizontal fintechs.
 
-SPONSOR BANKS: Cross River, Coastal, Lead, Pathward, Sutton, NBKC, Evolve provide charter + deposits + regulatory framework. Post-Synapse (April 2024, $85M+ missing): regulatory crackdown, sponsor exits, dramatically raised bars. Direct-to-bank model growing.
+SPONSOR BANKS: Cross River, Coastal, Column, Lead, Choice, Sutton, Pathward provide charter + deposits + regulatory framework. Post-Synapse (April 2024, $95M+ unreconciled): regulatory crackdown, sponsor exits, dramatically raised bars. Direct-to-bank model growing.
 
 BAAS ECONOMICS: Setup + monthly + per-account + transaction + revenue share on interchange (15-50%). Market $35-45B, growing to $75-90B by 2030. Gross margins: 70-85% pure SaaS, 50-70% platforms, 30-50% BaaS.
 
@@ -31,10 +31,10 @@ KEY ECONOMICS KILLERS: Charge-offs, interchange compression, compliance cost exp
 
 export const FINTECH_DEEP_SCORING = {
   highFitSegments: [
-    { segment: "Vertical SaaS adding fintech (payments, lending, banking)", avgFit: "70-85%", reason: "Horizontal scaling playbook + embedded finance monetization strategy" },
-    { segment: "BaaS providers and infrastructure (Unit, Synctera, Lithic)", avgFit: "70-85%", reason: "Multi-bank, compliance-heavy, GTM complexity matches Cambrian's architecture" },
-    { segment: "B2B fintech selling into banks/credit unions", avgFit: "70-85%", reason: "Bank buyer credibility from Cambrian's payments background" },
-    { segment: "Embedded lending in vertical platforms", avgFit: "65-80%", reason: "Toast Capital model; horizontal scaling + partner GTM playbook" },
+    { segment: "Vertical SaaS adding fintech (payments, lending, banking)", avgFit: "75-85%", reason: "Horizontal scaling playbook + embedded finance monetization strategy" },
+    { segment: "BaaS providers and infrastructure (Unit, Synctera, Lithic)", avgFit: "75-85%", reason: "Multi-bank, compliance-heavy, GTM complexity matches Cambrian's architecture" },
+    { segment: "B2B fintech selling into banks/credit unions", avgFit: "75-85%", reason: "Bank buyer credibility from Cambrian's payments background" },
+    { segment: "Embedded lending in vertical platforms", avgFit: "70-80%", reason: "Toast Capital model; horizontal scaling + partner GTM playbook" },
   ],
   highFrictionSegments: [
     { segment: "Pure consumer neobanks (Chime, Cash App competitors)", avgFit: "30-50%", reason: "Commoditized, saturated, CAC inflation — different GTM motion" },

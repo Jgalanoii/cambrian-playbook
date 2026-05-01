@@ -11,7 +11,7 @@ AI/ML MARKET CONTEXT (use when target or seller is in AI, machine learning, or a
 
 MARKET STRUCTURE: Five layers — foundation models (Anthropic, OpenAI, Google, Meta), compute/infrastructure (NVIDIA 80-95% AI chip share), inference APIs, tooling/orchestration, and applied AI. Value concentrates at extremes: frontier labs and top-of-stack applied companies. Middle layers commoditizing.
 
-FOUNDATION MODELS: Anthropic has surpassed OpenAI in enterprise LLM revenue share (~40% vs 27%, early 2026) driven by coding leadership (54% coding share). Model releases compressed from quarterly to monthly. Competitive dimensions: capability-per-dollar, task specialization (coding, reasoning, multimodal have different leaders), infrastructure access. Frontier labs: Anthropic, OpenAI, Google DeepMind, xAI, Meta. International: Mistral, DeepSeek, Zhipu, Alibaba Qwen compete on cost/reasoning.
+FOUNDATION MODELS: Enterprise LLM market consolidating around top 3-4 providers. Anthropic, OpenAI, and Google DeepMind lead enterprise adoption; each has strengths in different task categories (coding, reasoning, multimodal). Model releases compressed from quarterly to monthly. Competitive dimensions: capability-per-dollar, task specialization, infrastructure access, enterprise trust. Frontier labs: Anthropic, OpenAI, Google DeepMind, xAI, Meta. International: Mistral, DeepSeek, Zhipu, Alibaba Qwen compete on cost/reasoning.
 
 INFRASTRUCTURE: Compute is binding constraint, not chips. Hyperscalers committing $300B+ combined capex. Power and grid interconnect are critical. NVIDIA dominates training/inference; AMD gaining; custom silicon (Google TPU, AWS Trainium, Meta MTIA) and neoclouds (CoreWeave, Crusoe, Lambda) create options.
 
@@ -28,13 +28,13 @@ GTM DYNAMICS: Champion-led procurement common (IC discovers tool, expands). Eval
 
 export const AI_ML_SCORING = {
   highFitSegments: [
-    { segment: "Applied AI vertical SaaS (financial services, healthcare, legal)", avgFit: "85-95%", reason: "Domain knowledge moat, enterprise ROI visibility, compliance frameworks, Cambrian's fintech lens applicable" },
-    { segment: "Series B-D AI companies with PMF ($5-100M ARR)", avgFit: "80-92%", reason: "Classic growth-stage sweet spot; scaling sales is constraint, not product; VC-backed growth pressure" },
-    { segment: "AI-enabled fintech & payments", avgFit: "82-94%", reason: "Direct domain overlap from BHN; enterprise buyer understanding; regulatory navigation credibility" },
-    { segment: "PE-backed AI portfolio companies", avgFit: "78-88%", reason: "EBITDA/multiple framing aligns with PE thesis; cross-portfolio leverage; scaling demands" },
+    { segment: "Applied AI vertical SaaS (financial services, healthcare, legal)", avgFit: "80-90%", reason: "Domain knowledge moat, enterprise ROI visibility, compliance frameworks, Cambrian's fintech lens applicable" },
+    { segment: "AI-enabled fintech & payments", avgFit: "80-90%", reason: "Direct domain overlap from BHN; enterprise buyer understanding; regulatory navigation credibility" },
+    { segment: "Series B-D AI companies with PMF ($5-100M ARR)", avgFit: "75-85%", reason: "Classic growth-stage sweet spot; scaling sales is constraint, not product; VC-backed growth pressure" },
+    { segment: "PE-backed AI portfolio companies", avgFit: "75-85%", reason: "EBITDA/multiple framing aligns with PE thesis; cross-portfolio leverage; scaling demands" },
   ],
   highFrictionSegments: [
-    { segment: "Foundation model labs (Anthropic, OpenAI, Google)", avgFit: "15-25%", reason: "Research-driven, not GTM-driven; capital-raise cycles dominate; different operating model" },
+    { segment: "Foundation model labs (Anthropic, OpenAI, Google)", avgFit: "15-25%", reason: "Massive internal GTM teams; unlikely to need boutique consulting; relationship access difficult" },
     { segment: "Pure AI infrastructure / chips", avgFit: "10-20%", reason: "Hyperscaler/government-focused; supply-chain dominated; not traditional sales motion" },
     { segment: "AI safety & alignment / defense", avgFit: "12-22%", reason: "Research-oriented; government/contractor relationships; different GTM logic" },
     { segment: "Pure AI tooling startups (LangChain, eval tools)", avgFit: "20-35%", reason: "Consolidating; commoditization pressure; hyperscalers build competing first-party tooling" },

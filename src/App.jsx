@@ -64,6 +64,7 @@ let KL_QSR = ""; // QSR / restaurant knowledge
 let KL_QSR_SCORING = null;
 let KL_QSR_DISCOVERY = "";
 let KL_INVESTOR = ""; // Investor intelligence (cross-cutting for PE/VC/FO)
+let KL_INVESTOR_DISCOVERY = "";
 let KL_HEALTHCARE = ""; // Healthcare SaaS deep knowledge
 let KL_HEALTHCARE_SCORING = null;
 let KL_HEALTHCARE_DISCOVERY = "";
@@ -76,6 +77,12 @@ let KL_FINTECH_DEEP_DISCOVERY = "";
 let KL_REWARDS = ""; // Rewards & incentives deep knowledge (Cambrian core domain)
 let KL_REWARDS_SCORING = null;
 let KL_REWARDS_DISCOVERY = "";
+let KL_BAAS = ""; // BaaS / sponsor banking / embedded banking
+let KL_BAAS_SCORING = null;
+let KL_BAAS_DISCOVERY = "";
+let KL_CHARITABLE = ""; // Charitable giving / DAFs / charity gift cards
+let KL_CHARITABLE_SCORING = null;
+let KL_CHARITABLE_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -121,6 +128,7 @@ async function fetchKnowledgeLayer() {
     KL_QSR_SCORING = d.qsrScoring || null;
     KL_QSR_DISCOVERY = d.qsrDiscovery || "";
     KL_INVESTOR = d.investorIntelligence || "";
+    KL_INVESTOR_DISCOVERY = d.investorIntelligenceDiscovery || "";
     KL_HEALTHCARE = d.healthcareSaas || "";
     KL_HEALTHCARE_SCORING = d.healthcareSaasScoring || null;
     KL_HEALTHCARE_DISCOVERY = d.healthcareSaasDiscovery || "";
@@ -133,6 +141,12 @@ async function fetchKnowledgeLayer() {
     KL_REWARDS = d.rewardsIncentives || "";
     KL_REWARDS_SCORING = d.rewardsIncentivesScoring || null;
     KL_REWARDS_DISCOVERY = d.rewardsIncentivesDiscovery || "";
+    KL_BAAS = d.baas || "";
+    KL_BAAS_SCORING = d.baasScoring || null;
+    KL_BAAS_DISCOVERY = d.baasDiscovery || "";
+    KL_CHARITABLE = d.charitableGiving || "";
+    KL_CHARITABLE_SCORING = d.charitableGivingScoring || null;
+    KL_CHARITABLE_DISCOVERY = d.charitableGivingDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -561,15 +575,15 @@ function getPaymentsInjection(sellerICP, targetIndustry) {
 // Injects relevant compliance frameworks into prompts when the seller or
 // target operates in a regulated vertical. Uses KL_COMPLIANCE data.
 const COMPLIANCE_VERTICAL_KW = {
-  fintech_payments: ["fintech", "payment", "banking", "financial", "lending", "neobank", "processor", "acquiring", "interchange", "payfac"],
-  digital_rewards_incentives: ["incentive", "reward", "gift card", "recognition", "promo", "loyalty", "stored-value"],
-  health_wellness_b2b: ["health", "wellness", "clinical", "hipaa", "healthcare", "medical", "patient", "pharma", "telehealth"],
-  market_research: ["research", "survey", "panel", "respondent", "insights"],
-  real_estate: ["real estate", "land", "homebuilder", "developer", "property", "wholesaling", "reit", "btr", "build-to-rent"],
-  cybersecurity: ["cybersecurity", "security", "infosec", "soc", "siem", "edr", "xdr", "zero trust", "ransomware", "fedramp"],
-  manufacturing: ["manufacturing", "industrial", "factory", "plant", "oem", "automotive", "aerospace", "pharma", "fda"],
-  government: ["government", "federal", "state government", "public sector", "govtech", "defense", "dod", "fedramp", "fisma"],
-  saas_martech: ["saas", "software as a service", "martech", "marketing technology", "b2b software", "cloud software"],
+  fintech_payments: ["fintech", "payment processing", "banking", "financial services", "lending", "neobank", "processor", "acquiring", "interchange", "payfac"],
+  digital_rewards_incentives: ["incentive program", "reward platform", "gift card", "employee recognition", "loyalty program", "stored-value"],
+  health_wellness_b2b: ["healthcare", "wellness platform", "clinical", "hipaa", "health system", "medical device", "patient engagement", "pharma", "telehealth"],
+  market_research: ["market research", "survey platform", "panel provider", "respondent"],
+  real_estate: ["real estate", "homebuilder", "property developer", "land wholesaling", "reit", "btr", "build-to-rent"],
+  cybersecurity: ["cybersecurity", "infosec", "soc 2", "siem", "edr", "xdr", "zero trust", "ransomware", "fedramp"],
+  manufacturing: ["manufacturing", "factory", "oem", "automotive", "aerospace", "fda regulated"],
+  government: ["government", "federal agency", "state government", "public sector", "govtech", "defense", "dod", "fedramp", "fisma"],
+  saas_martech: ["saas platform", "software as a service", "martech", "marketing technology", "b2b software", "cloud software"],
   education: ["education", "edtech", "k-12", "higher education", "university", "school district", "lms"],
 };
 function getComplianceInjection(sellerICP, targetIndustry) {
@@ -631,7 +645,7 @@ function getComplianceDiscovery(sellerICP, targetIndustry) {
 }
 
 // ── REAL ESTATE KNOWLEDGE INJECTION ─────────────────────────────────────
-const REAL_ESTATE_KW = ["real estate", "land", "homebuilder", "homebuilding", "developer", "property", "commercial real estate", "cre", "residential", "multifamily", "industrial", "btr", "build-to-rent", "wholesaling", "parcel", "reit", "land bank", "entitlement", "zoning", "mortgage", "construction"];
+const REAL_ESTATE_KW = ["real estate", "homebuilder", "homebuilding", "property developer", "land developer", "commercial real estate", "residential real estate", "multifamily", "btr", "build-to-rent", "land wholesaling", "parcel", "reit", "land bank", "entitlement", "zoning", "mortgage", "land acquisition"];
 function getRealEstateInjection(sellerICP, targetIndustry) {
   if (!KL_REAL_ESTATE) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
@@ -643,18 +657,18 @@ function getRealEstateInjection(sellerICP, targetIndustry) {
 }
 
 // ── BANKING KNOWLEDGE INJECTION ─────────────────────────────────────────
-const BANKING_KW = ["banking", "bank", "credit union", "lending", "loan", "deposit", "private equity", "venture capital", "private credit", "hedge fund", "asset management", "wealth management", "family office", "neobank", "baas", "embedded finance", "bnpl", "consumer credit", "digital incentive", "rewards", "prepaid", "gift card", "broker-dealer", "investment bank", "capital markets", "insurance", "stablecoin", "g-sib", "regional bank", "community bank"];
+const BANKING_KW = ["banking", "bank ", "credit union", "lending", "loan origination", "deposit", "private equity", "venture capital", "private credit", "hedge fund", "asset management", "wealth management", "family office", "broker-dealer", "investment bank", "capital markets", "insurance company", "insurer", "stablecoin", "g-sib", "regional bank", "community bank", "bnpl", "consumer credit"];
 function getBankingInjection(sellerICP, targetIndustry) {
   if (!KL_BANKING) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
   if (!text) return "";
   const hits = BANKING_KW.filter(kw => text.includes(kw));
-  if (hits.length < 1) return "";
+  if (hits.length < 2) return ""; // Need 2+ matches like Payments — keyword list is broad
   return "\n" + KL_BANKING;
 }
 
 // ── HEALTHCARE SAAS KNOWLEDGE INJECTION ─────────────────────────────────
-const HEALTHCARE_KW = ["healthcare", "health tech", "healthtech", "clinical", "ehr", "epic", "hipaa", "hospital", "payer", "provider", "pharma", "biotech", "medical", "patient", "telehealth", "rcm", "revenue cycle", "digital health"];
+const HEALTHCARE_KW = ["healthcare", "health tech", "healthtech", "clinical", "ehr", "epic", "hipaa", "hospital", "payer", "pharma", "biotech", "medical device", "patient engagement", "telehealth", "rcm", "revenue cycle", "digital health", "health system"];
 function getHealthcareInjection(sellerICP, targetIndustry) {
   if (!KL_HEALTHCARE) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
@@ -664,7 +678,7 @@ function getHealthcareInjection(sellerICP, targetIndustry) {
 }
 
 // ── AI/ML KNOWLEDGE INJECTION ───────────────────────────────────────────
-const AI_ML_KW = ["artificial intelligence", "machine learning", "ai/ml", "ai platform", "ai-powered", "llm", "genai", "deep learning", "foundation model", "mlops", "applied ai", "inference", "rag", "ai-native", "copilot"];
+const AI_ML_KW = ["artificial intelligence", "machine learning", "ai/ml", "ai platform", "ai-powered", "llm", "genai", "deep learning", "foundation model", "mlops", "applied ai", "ai inference", "ai-native", "ai copilot"];
 function getAiMlInjection(sellerICP, targetIndustry) {
   if (!KL_AI_ML) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
@@ -674,7 +688,7 @@ function getAiMlInjection(sellerICP, targetIndustry) {
 }
 
 // ── FINTECH DEEP KNOWLEDGE INJECTION ────────────────────────────────────
-const FINTECH_DEEP_KW = ["fintech", "financial technology", "neobank", "baas", "embedded finance", "lending platform", "regtech", "wealthtech", "insurtech", "sponsor bank", "card issuing"];
+const FINTECH_DEEP_KW = ["fintech", "financial technology", "neobank", "lending platform", "regtech", "wealthtech", "insurtech", "card issuing", "digital banking", "open banking"];
 function getFintechDeepInjection(sellerICP, targetIndustry) {
   if (!KL_FINTECH_DEEP) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
@@ -694,7 +708,7 @@ function getRewardsInjection(sellerICP, targetIndustry) {
 }
 
 // ── QSR / RESTAURANT KNOWLEDGE INJECTION ────────────────────────────────
-const QSR_KW = ["qsr", "quick service", "fast food", "fast casual", "restaurant", "food service", "franchise", "casual dining", "ghost kitchen", "drive-thru", "doordash", "toast pos"];
+const QSR_KW = ["qsr", "quick service", "fast food", "fast casual", "restaurant", "food service", "restaurant franchise", "casual dining", "ghost kitchen", "drive-thru", "doordash", "toast pos"];
 function getQsrInjection(sellerICP, targetIndustry) {
   if (!KL_QSR) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
@@ -703,8 +717,28 @@ function getQsrInjection(sellerICP, targetIndustry) {
   return "\n" + KL_QSR;
 }
 
+// ── BAAS / SPONSOR BANKING INJECTION ───────────────────────────────────
+const BAAS_KW = ["baas", "banking as a service", "banking-as-a-service", "sponsor bank", "embedded banking", "fintech infrastructure", "issuer processor", "program manager baas", "marqeta", "galileo financial", "treasury prime", "synctera", "cross river", "pathward", "core ledger"];
+function getBaasInjection(sellerICP, targetIndustry) {
+  if (!KL_BAAS) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (BAAS_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_BAAS;
+}
+
+// ── CHARITABLE GIVING / DAF INJECTION ──────────────────────────────────
+const CHARITABLE_KW = ["charitable giving", "donor-advised fund", "donor-advised", "501(c)(3)", "philanthropy", "nonprofit platform", "charity gift card", "charitable infrastructure", "workplace giving", "corporate gifting", "fiscal sponsor", "charity on top", "public charity", "fidelity charitable", "schwab charitable", "daffy giving", "benevity", "charitable foundation", "community foundation"];
+function getCharitableInjection(sellerICP, targetIndustry) {
+  if (!KL_CHARITABLE) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (CHARITABLE_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_CHARITABLE;
+}
+
 // ── INVESTOR INTELLIGENCE INJECTION ─────────────────────────────────────
-const INVESTOR_KW = ["private equity", "venture capital", "pe-backed", "vc-backed", "portfolio company", "portco", "family office", "investor", "due diligence", "value creation", "operating partner", "lp", "fund"];
+const INVESTOR_KW = ["private equity", "venture capital", "pe-backed", "vc-backed", "portfolio company", "portco", "family office", "limited partner", "operating partner", "pe fund", "vc fund", "growth equity", "buyout"];
 function getInvestorInjection(sellerICP, targetIndustry) {
   if (!KL_INVESTOR) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
@@ -1116,6 +1150,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getRewardsInjection(sellerICP, member.ind) +
     getQsrInjection(sellerICP, member.ind) +
     getInvestorInjection(sellerICP, member.ind) +
+    getBaasInjection(sellerICP, member.ind) +
+    getCharitableInjection(sellerICP, member.ind) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -3383,6 +3419,16 @@ ${scaleGuidance}
           ? `\nQSR/RESTAURANT VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_QSR_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_QSR_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_BAAS_SCORING && getBaasInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nBAAS/SPONSOR BANKING VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_BAAS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_BAAS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_CHARITABLE_SCORING && getCharitableInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nCHARITABLE GIVING/DAF VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_CHARITABLE_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_CHARITABLE_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -4788,6 +4834,7 @@ ${isOpen
       (KL_SALES_FRAMEWORKS.length ? "SALES METHODOLOGY: " + KL_SALES_FRAMEWORKS.slice(0, 5).map(f => `${f.name} (${f.author}): ${f.principle.split(".")[0]}`).join(". ") + ".\n" : "") +
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
       getVerticalInjection(sellerICP, member.ind) +
+      getPaymentsInjection(sellerICP, member.ind) +
       getComplianceInjection(sellerICP, member.ind) +
       getRealEstateInjection(sellerICP, member.ind) +
       getBankingInjection(sellerICP, member.ind) +
@@ -4797,6 +4844,8 @@ ${isOpen
       getRewardsInjection(sellerICP, member.ind) +
       getQsrInjection(sellerICP, member.ind) +
       getInvestorInjection(sellerICP, member.ind) +
+      getBaasInjection(sellerICP, member.ind) +
+      getCharitableInjection(sellerICP, member.ind) +
       (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
       (KL_B2B_SALES ? "\n" + KL_B2B_SALES : "") +
       (KL_OKR_KPI ? "\n" + KL_OKR_KPI : "") +
@@ -4898,6 +4947,9 @@ ${isOpen
       (KL_FINTECH_DEEP_DISCOVERY && getFintechDeepInjection(sellerICP, member?.ind) ? KL_FINTECH_DEEP_DISCOVERY + "\n" : "") +
       (KL_REWARDS_DISCOVERY && getRewardsInjection(sellerICP, member?.ind) ? KL_REWARDS_DISCOVERY + "\n" : "") +
       (KL_QSR_DISCOVERY && getQsrInjection(sellerICP, member?.ind) ? KL_QSR_DISCOVERY + "\n" : "") +
+      (KL_BAAS_DISCOVERY && getBaasInjection(sellerICP, member?.ind) ? KL_BAAS_DISCOVERY + "\n" : "") +
+      (KL_CHARITABLE_DISCOVERY && getCharitableInjection(sellerICP, member?.ind) ? KL_CHARITABLE_DISCOVERY + "\n" : "") +
+      (KL_INVESTOR_DISCOVERY && getInvestorInjection(sellerICP, member?.ind) ? KL_INVESTOR_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

@@ -60,10 +60,10 @@ CAPITAL & INVESTMENT:
 
 export const REAL_ESTATE_SCORING_CONTEXT = {
   highFitSegments: [
-    { segment: "Land wholesalers doing $1M+ annual fees with builder relationships", avgFit: "65-75%", reason: "Revenue ops problems at scale — pipeline math, CRM, channel attribution" },
-    { segment: "Regional homebuilders (top 50-200 by closings)", avgFit: "55-65%", reason: "GTM complexity increasing as they compete with nationals for land and buyers" },
-    { segment: "BTR developers with 500+ unit pipeline", avgFit: "60-70%", reason: "New category, building sales/leasing operations from scratch" },
-    { segment: "Commercial developers with multi-market operations", avgFit: "50-60%", reason: "Complex stakeholder selling, capital raises, tenant acquisition" },
+    { segment: "Land wholesalers doing $1M+ annual fees with builder relationships", avgFit: "75-85%", reason: "Revenue ops problems at scale — pipeline math, CRM, channel attribution" },
+    { segment: "BTR developers with 500+ unit pipeline", avgFit: "70-80%", reason: "New category, building sales/leasing operations from scratch" },
+    { segment: "Regional homebuilders (top 50-200 by closings)", avgFit: "65-75%", reason: "GTM complexity increasing as they compete with nationals for land and buyers" },
+    { segment: "Commercial developers with multi-market operations", avgFit: "60-70%", reason: "Complex stakeholder selling, capital raises, tenant acquisition" },
   ],
   highFrictionSegments: [
     { segment: "National homebuilders (D.R. Horton, Lennar, PulteGroup)", avgFit: "10-20%", reason: "Enterprise procurement; internal land teams; 12-18 month sales cycles" },

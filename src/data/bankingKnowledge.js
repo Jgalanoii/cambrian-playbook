@@ -35,16 +35,17 @@ BANKING TIERS:
 
 PRIVATE CAPITAL:
 - PE mega-funds: Blackstone, Apollo, KKR, Ares, Carlyle. Middle-market: Audax, GTCR, Genstar, Vista, Thoma Bravo.
-- VC: a16z ($90B, raised $15B Jan 2026), Sequoia, Tiger, Insight, General Catalyst, Thrive.
+- VC: a16z, Sequoia, Tiger, Insight, General Catalyst, Thrive — top-tier funds increasingly backing fintech and AI infrastructure.
 - Private credit: Blue Owl, Golub, HPS (BlackRock), Antares, Monroe. Asset-based finance (ABF) is fastest-growing sub-segment.
 - Hard money / business purpose lending: Kiavi, RCN Capital, Lima One, Genesis (GS). Rates 9-13%, LTV 65-75%.
 - Family offices: 4,500+ SFOs in US, $5T+ AUM. RIA aggregators (Focus, Mercer, Hightower, Mariner) backed by PE.
 
 FINTECH/BAAS:
 - Neobanks: Chime (~38M users), Cash App (~57M MAU), SoFi (chartered), Mercury, Brex, Ramp, Rho.
-- BaaS providers: Unit, Synctera, Treasury Prime, Stripe Treasury, Galileo (SoFi), Marqeta.
+- BaaS middleware: Unit, Synctera, Treasury Prime, Stripe Treasury, Increase.
+- Issuer processors: Galileo (SoFi), Marqeta, Lithic, Highnote.
 - Post-Synapse regulatory reset: sponsor bank scrutiny dramatically higher. Bar for BaaS programs has risen.
-- Vertical SaaS + embedded finance is the dominant 2024-2026 narrative.
+- Vertical SaaS + embedded finance is the dominant structural trend.
 
 DIGITAL INCENTIVES (Cambrian core competency):
 - Blackhawk Network (BHN/Tango), InComm, Tremendous, Giftbit, Reward Gateway — B2B rewards-as-a-service.
@@ -62,11 +63,11 @@ REGULATORY:
 
 export const BANKING_SCORING_CONTEXT = {
   highFitSegments: [
-    { segment: "BaaS/embedded fintech providers ($5-500M revenue)", avgFit: "65-75%", reason: "Direct domain overlap with Cambrian's payments + incentives expertise" },
-    { segment: "Regional banks building digital/fintech capabilities", avgFit: "55-65%", reason: "Need GTM help translating fintech products for banking buyers" },
-    { segment: "PE-backed fintech portfolio companies", avgFit: "60-70%", reason: "Growth-pressured, typically understaffed on GTM, PE operating partners value consultants" },
-    { segment: "Digital incentives/rewards platforms", avgFit: "70-80%", reason: "Cambrian's BHN background is directly credible — bullseye ICP" },
-    { segment: "Credit unions building member acquisition programs", avgFit: "55-65%", reason: "Rewards/incentives expertise + digital experience gap = real fit" },
+    { segment: "Digital incentives/rewards platforms", avgFit: "80-90%", reason: "Cambrian's BHN background is directly credible — bullseye ICP" },
+    { segment: "BaaS/embedded fintech providers ($5-500M revenue)", avgFit: "75-85%", reason: "Direct domain overlap with Cambrian's payments + incentives expertise" },
+    { segment: "PE-backed fintech portfolio companies", avgFit: "70-80%", reason: "Growth-pressured, typically understaffed on GTM, PE operating partners value consultants" },
+    { segment: "Regional banks building digital/fintech capabilities", avgFit: "65-75%", reason: "Need GTM help translating fintech products for banking buyers" },
+    { segment: "Credit unions building member acquisition programs", avgFit: "60-70%", reason: "Rewards/incentives expertise + digital experience gap = real fit" },
   ],
   highFrictionSegments: [
     { segment: "G-SIB / money center banks (JPM, BAC, C, WFC)", avgFit: "5-15%", reason: "Enterprise procurement fortress; rarely buy from sub-$10M boutiques" },

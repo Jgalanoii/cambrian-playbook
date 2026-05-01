@@ -33,7 +33,7 @@ export const QSR_SCORING = {
     { segment: "AI-driven demand forecasting (mid-market 50-500 units)", avgFit: "65-75%", reason: "Crunchtime dominates enterprise; mid-market underserved" },
   ],
   highFrictionSegments: [
-    { segment: "Voice/AI drive-thru ordering", avgFit: "30-45%", reason: "McDonald's viral failures created vendor skepticism; 5% error rate catastrophic" },
+    { segment: "Voice/AI drive-thru ordering", avgFit: "30-45%", reason: "High error tolerance bar in production; customer-facing AI failures create brand risk; technology maturity varies" },
     { segment: "POS replacement (displacing Toast/MICROS/Aloha)", avgFit: "25-40%", reason: "18-24 month cycles, incumbent integration depth, franchisee resistance" },
     { segment: "Hyper-personalization at scale", avgFit: "35-50%", reason: "Requires first-party data stack maturity most brands lack; multiyear ROI" },
   ],

@@ -51,10 +51,10 @@ STRUCTURAL THESIS: Software is eating payments distribution. ~85% of merchants c
 
 export const PAYMENTS_SCORING_CONTEXT = {
   highFitSegments: [
-    { segment: "Vertical SaaS with embedded payments", avgFit: "65-75%", reason: "Software-led distribution is dominant; payments attach-rate drives valuation" },
-    { segment: "PayFac-as-a-Service providers", avgFit: "60-70%", reason: "Enabling the structural shift; durable demand from ISV/SaaS platforms" },
-    { segment: "Regional banks with ISO/acquiring units", avgFit: "55-65%", reason: "Under pressure to modernize or divest; active M&A targets" },
-    { segment: "Full-liability ISOs with vertical expertise", avgFit: "50-60%", reason: "Valuable portfolios but model under structural pressure; PE roll-up targets" },
+    { segment: "Vertical SaaS with embedded payments", avgFit: "75-85%", reason: "Software-led distribution is dominant; payments attach-rate drives valuation; GTM complexity matches Cambrian" },
+    { segment: "PayFac-as-a-Service providers", avgFit: "70-80%", reason: "Enabling the structural shift; durable demand from ISV/SaaS platforms" },
+    { segment: "Regional banks with ISO/acquiring units", avgFit: "60-70%", reason: "Under pressure to modernize or divest; active M&A targets" },
+    { segment: "Full-liability ISOs with vertical expertise", avgFit: "55-65%", reason: "Valuable portfolios but model under structural pressure; PE roll-up targets" },
   ],
   highFrictionSegments: [
     { segment: "Top-5 U.S. acquirers (Chase, Fiserv, GP/Worldpay)", avgFit: "10-20%", reason: "Procurement fortress; 12-18 month cycles; internal solutions" },

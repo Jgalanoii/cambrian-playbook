@@ -140,6 +140,8 @@ function verifyJwt(req) {
   }
 
   // No valid JWT token — fall back to guest mode if enabled
+  // SAFETY: guest mode is disabled in production unless explicitly opted in
+  if (IS_PRODUCTION && !process.env.ALLOW_GUEST_PRODUCTION) return false;
   const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
   if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") {
     req._isGuest = true;

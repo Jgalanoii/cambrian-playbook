@@ -55,14 +55,14 @@ CAMBRIAN'S EDGE: Joe's BHN background provides operator-level credibility. Every
 export const REWARDS_INCENTIVES_SCORING = {
   highFitSegments: [
     { segment: "B2B rewards platforms (Tango competitors, Tremendous adjacent)", avgFit: "90-95%", reason: "Direct domain overlap — channel attribution, partner GTM, enterprise sales playbook are exact Cambrian deliverables" },
-    { segment: "Vertical SaaS adding embedded rewards (Toast, ServiceTitan tier)", avgFit: "88-93%", reason: "Embedded rewards GTM, vertical SaaS partner channel, product monetization strategy" },
-    { segment: "Recognition platforms (Achievers, Workhuman competitive set)", avgFit: "85-92%", reason: "HRIS partnership architecture, enterprise sales playbook, program ROI measurement" },
-    { segment: "Channel incentive specialists (ITA Group, BI Worldwide, 360insights)", avgFit: "85-90%", reason: "Revenue ops for enterprise programs, channel economics, customer success architecture" },
+    { segment: "Vertical SaaS adding embedded rewards (Toast, ServiceTitan tier)", avgFit: "82-90%", reason: "Embedded rewards GTM, vertical SaaS partner channel, product monetization strategy" },
+    { segment: "Recognition platforms (Achievers, Workhuman competitive set)", avgFit: "80-88%", reason: "HRIS partnership architecture, enterprise sales playbook, program ROI measurement" },
+    { segment: "Channel incentive specialists (ITA Group, BI Worldwide, 360insights)", avgFit: "78-86%", reason: "Revenue ops for enterprise programs, channel economics, customer success architecture" },
   ],
   highFrictionSegments: [
-    { segment: "Loyalty platform vendors (Talon.One, Antavo, Capillary)", avgFit: "55-70%", reason: "Different buyer (CMO vs HR), different metrics (engagement vs recognition)" },
-    { segment: "Pure prepaid/card issuing infrastructure (Pathward, Sutton, Galileo)", avgFit: "45-60%", reason: "Different consulting model; buyer is Treasury/Ops, not revenue ops" },
-    { segment: "Consumer cashback/card-linked apps (Drop, Karat, Fluz)", avgFit: "45-60%", reason: "Consumer acquisition motion, not enterprise revenue ops" },
+    { segment: "Loyalty platform vendors (Talon.One, Antavo, Capillary)", avgFit: "40-55%", reason: "Different buyer (CMO vs HR), different metrics (engagement vs recognition); limited GTM overlap" },
+    { segment: "Pure prepaid/card issuing infrastructure (Pathward, Sutton, Galileo)", avgFit: "35-50%", reason: "Different consulting model; buyer is Treasury/Ops, not revenue ops" },
+    { segment: "Consumer cashback/card-linked apps (Drop, Karat, Fluz)", avgFit: "30-45%", reason: "Consumer acquisition motion, not enterprise revenue ops" },
   ],
 };
 

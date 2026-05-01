@@ -33,7 +33,7 @@ VERTICAL SAAS: modMed (specialty EHR), PointClickCare (LTPAC), WellSky (post-acu
 
 export const HEALTHCARE_SAAS_SCORING = {
   highFitSegments: [
-    { segment: "Revenue Cycle Management / RCM SaaS", avgFit: "75-90%", reason: "Direct ROI, recurring revenue, massive TAM (~$130B), AI coding/prior auth automation accelerating" },
+    { segment: "Revenue Cycle Management / RCM SaaS", avgFit: "78-88%", reason: "Direct ROI, recurring revenue, AI coding/prior auth automation accelerating; GTM complexity high" },
     { segment: "Specialty vertical SaaS (EHR+RCM+practice management)", avgFit: "75-85%", reason: "Workflow specificity, PE roll-up tailwind, embedded payments, specialty billing complexity" },
     { segment: "Ambient clinical documentation & coding AI", avgFit: "70-80%", reason: "Clearest ROI (physician time), rapid adoption, provider margin crisis makes labor-productivity software easier sell" },
     { segment: "Behavioral health B2B2C platforms (employer-channeled)", avgFit: "70-80%", reason: "Proven clinical model, clear employer channel, documented ROI on attrition/productivity" },
