@@ -27,6 +27,8 @@ import { HEALTHCARE_SAAS_INJECTION, HEALTHCARE_SAAS_SCORING, HEALTHCARE_SAAS_DIS
 import { AI_ML_INJECTION, AI_ML_SCORING, AI_ML_DISCOVERY } from "../src/data/aiMlKnowledge.js";
 import { FINTECH_DEEP_INJECTION, FINTECH_DEEP_SCORING, FINTECH_DEEP_DISCOVERY } from "../src/data/fintechKnowledge.js";
 import { REWARDS_INCENTIVES_INJECTION, REWARDS_INCENTIVES_SCORING, REWARDS_INCENTIVES_DISCOVERY } from "../src/data/rewardsIncentivesKnowledge.js";
+import { B2B_SALES_INJECTION, B2B_SALES_DISCOVERY } from "../src/data/b2bSalesKnowledge.js";
+import { OKR_KPI_INJECTION, OKR_KPI_DISCOVERY } from "../src/data/okrKpiKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -235,5 +237,11 @@ export default function handler(req, res) {
     rewardsIncentives: REWARDS_INCENTIVES_INJECTION,
     rewardsIncentivesScoring: REWARDS_INCENTIVES_SCORING,
     rewardsIncentivesDiscovery: REWARDS_INCENTIVES_DISCOVERY,
+    // Cross-cutting: B2B sales + value creation
+    b2bSales: B2B_SALES_INJECTION,
+    b2bSalesDiscovery: B2B_SALES_DISCOVERY,
+    // Cross-cutting: OKRs, KPIs, measurement
+    okrKpi: OKR_KPI_INJECTION,
+    okrKpiDiscovery: OKR_KPI_DISCOVERY,
   });
 }

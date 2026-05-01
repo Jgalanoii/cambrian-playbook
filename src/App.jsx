@@ -58,6 +58,8 @@ let KL_BANKING = ""; // Banking & capital markets knowledge injection
 let KL_BANKING_SCORING = null; // Banking scoring calibration
 let KL_BANKING_DISCOVERY = ""; // Banking-specific discovery angles
 let KL_ACCOUNTING = ""; // Accounting & financial management (cross-cutting)
+let KL_B2B_SALES = ""; // B2B sales & value creation (cross-cutting)
+let KL_OKR_KPI = ""; // OKRs, KPIs, measurement (cross-cutting)
 let KL_HEALTHCARE = ""; // Healthcare SaaS deep knowledge
 let KL_HEALTHCARE_SCORING = null;
 let KL_HEALTHCARE_DISCOVERY = "";
@@ -109,6 +111,8 @@ async function fetchKnowledgeLayer() {
     KL_BANKING_SCORING = d.bankingScoring || null;
     KL_BANKING_DISCOVERY = d.bankingDiscovery || "";
     KL_ACCOUNTING = d.accountingFinance || "";
+    KL_B2B_SALES = d.b2bSales || "";
+    KL_OKR_KPI = d.okrKpi || "";
     KL_HEALTHCARE = d.healthcareSaas || "";
     KL_HEALTHCARE_SCORING = d.healthcareSaasScoring || null;
     KL_HEALTHCARE_DISCOVERY = d.healthcareSaasDiscovery || "";
@@ -1263,7 +1267,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p4 = streamAI(baseFull+
     `Return ONLY raw JSON (start with {) for ${isResearchOnly ? "organizational intelligence" : "solution fit and contacts"}:\n`+
     (isResearchOnly
-      ? `This is a RESEARCH-ONLY brief. There is no selling organization. Focus on organizational intelligence: who are the key decision-makers, what's their tech stack, what process maturity stage are they in, and who would be the ideal entry point for any vendor approaching ${co}.\n`
+      ? `This is a RESEARCH-ONLY brief. There is no selling organization. You MUST still populate ALL fields below:\n`+
+        `- solutionMapping: leave as empty array []\n`+
+        `- keyContacts: identify 2-3 key decision-makers at ${co} by likely title and function — VP level or above. Fill in title, angle (what they care about, how they'd evaluate a vendor), and initials. Use training knowledge.\n`+
+        `- techStack: research or infer ${co}'s technology stack (CRM, ERP, HRIS, marketing, payments, analytics, infrastructure). Use training knowledge confidently.\n`+
+        `- mobilizer: describe who at ${co} would champion a new technology purchase — what title, what motivates them, how to identify them.\n`+
+        `- processMaturity: assess ${co}'s operational maturity (Define/Measure/Analyze/Improve/Control) based on their industry and size.\n`+
+        `CRITICAL: Do NOT return empty objects. Every field except solutionMapping must have substantive content.\n`
       : `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`)+
     `For each solution: (1) which seller PRODUCT (use exact name from catalog above), (2) what job-to-be-done it performs for ${co}, (3) what differentiator from the proof pack justifies "why us", (4) what NAMED CUSTOMER from the proof pack is similar evidence (or "[no analogue customer in our list — verify with seller]" if none fit), (5) what measurable outcome we'd target.\n`+
     `{"solutionMapping":[`+
@@ -4751,6 +4761,8 @@ ${isOpen
       getFintechDeepInjection(sellerICP, member.ind) +
       getRewardsInjection(sellerICP, member.ind) +
       (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
+      (KL_B2B_SALES ? "\n" + KL_B2B_SALES : "") +
+      (KL_OKR_KPI ? "\n" + KL_OKR_KPI : "") +
       "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
       "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
