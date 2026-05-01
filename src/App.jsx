@@ -479,6 +479,34 @@ function getVerticalInjection(sellerICP, targetIndustry) {
 // Returns the payments industry injection when the seller or target
 // operates in payments, fintech, banking, card processing, or related.
 const PAYMENTS_KEYWORDS = ["payment","acquiring","acquirer","interchange","iso ","merchant services","fintech","card processing","processor","payfac","issuer","issuing","credit card","debit card","pos ","point of sale","terminal","gateway","stripe","adyen","fiserv","worldpay","visa","mastercard","banking","credit union","stablecoin","embedded payments"];
+// ── FAVORITES SYSTEM ────────────────────────────────────────────────────
+// Star any section across the app. Persisted in session snapshots.
+function StarButton({ id, type, label, content, company, step, favorites, setFavorites }) {
+  const isFav = favorites.some(f => f.id === id);
+  return (
+    <button
+      onClick={e => {
+        e.stopPropagation();
+        if (isFav) {
+          setFavorites(prev => prev.filter(f => f.id !== id));
+        } else {
+          setFavorites(prev => [...prev, { id, type, label, content: (content||"").slice(0, 300), company: company||"", step: step||0, timestamp: Date.now() }]);
+        }
+      }}
+      title={isFav ? "Remove from favorites" : "Save to favorites"}
+      style={{
+        background: "none", border: "none", cursor: "pointer", padding: "2px 4px",
+        fontSize: 14, color: isFav ? "var(--amber)" : "var(--line-0)",
+        transition: "color 0.15s, transform 0.15s",
+        transform: isFav ? "scale(1.1)" : "scale(1)",
+      }}
+      onMouseEnter={e => { if (!isFav) e.currentTarget.style.color = "var(--amber)"; }}
+      onMouseLeave={e => { if (!isFav) e.currentTarget.style.color = "var(--line-0)"; }}>
+      {isFav ? "★" : "☆"}
+    </button>
+  );
+}
+
 function getPaymentsInjection(sellerICP, targetIndustry) {
   if (!KL_PAYMENTS) return "";
   const text = [
@@ -2617,6 +2645,8 @@ export default function App(){
   const[reportPanelOpen,setReportPanelOpen]=useState(false); // org-level reports
   const[moreMenuOpen,setMoreMenuOpen]=useState(false); // header overflow menu
   const[quickBriefInput,setQuickBriefInput]=useState(""); // a la carte brief company name
+  const[favorites,setFavorites]=useState([]); // [{id, type, label, content, company, step, timestamp}]
+  const[favPanelOpen,setFavPanelOpen]=useState(false);
   const[sessionMode,setSessionMode]=useState("full"); // "full" | "quick"
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
@@ -4043,7 +4073,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
+  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -4080,6 +4110,7 @@ ${isOpen
     if(d.icpDelta) setIcpDelta(d.icpDelta);
     if(d.icpEdits?.length) setIcpEdits(d.icpEdits);
     if(d.userEdits?.length) setUserEdits(d.userEdits);
+    if(d.favorites?.length) setFavorites(d.favorites);
     if(d.miltonMsgCount) setMiltonMsgCount(d.miltonMsgCount);
     if(d.fitWeights) setFitWeights(d.fitWeights);
     if(d.intelAdjustments) setIntelAdjustments(d.intelAdjustments);
@@ -5845,6 +5876,11 @@ ${isOpen
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
                       <span style={{width:20,textAlign:"center"}}>📁</span> Resources
+                    </button>
+                    <button onClick={()=>{setFavPanelOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:favorites.length?"var(--amber)":"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>★</span> Favorites{favorites.length?` (${favorites.length})`:""}
                     </button>
                     {sbUser&&orgCtx&&<button onClick={()=>{loadSessions();setReportPanelOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
@@ -8396,10 +8432,11 @@ ${isOpen
                   }}>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
                       <span style={{fontSize:20}}>🎤</span>
-                      <div>
+                      <div style={{flex:1}}>
                         <div style={{fontSize:14,fontWeight:700,color:"var(--green)",fontFamily:"Lora,serif"}}>Your Elevator Pitch</div>
                         <div style={{fontSize:11,color:"var(--ink-2)"}}>~45 seconds · Say this when you bump into them at a conference, on a cold call, or in an actual elevator</div>
                       </div>
+                      <StarButton id={`pitch-${selectedAccount?.company}`} type="Brief" label="Elevator Pitch" content={brief?.elevatorPitch} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                     </div>
                     {brief._loadingSections?.strategy && !brief.elevatorPitch ? (
                       <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -8435,7 +8472,8 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr" onClick={()=>toggleBB("overview")}>
                     <div className="bb-icon">◎</div>
-                    <div><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to edit</div></div>
+                    <div style={{flex:1}}><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to edit</div></div>
+                    <StarButton id={`overview-${selectedAccount?.company}`} type="Brief" label="Company Overview" content={brief?.companySnapshot} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                     {bbChevron("overview")}
                   </div>
                   <div className={`bb-body-wrap ${bbIsOpen("overview")?"":"collapsed"}`}><div className="bb-body">
@@ -8986,7 +9024,8 @@ ${isOpen
                 {/* Strategic Theme + Why You Why Now */}
                 {(brief.strategicTheme||brief.sellerOpportunity)&&(
                   <div className="bb">
-                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div><div className="bb-title">Strategic Analysis</div><div className="bb-sub">{sellerUrl==="research-only"?"What's driving this company right now":"What's driving this account and why you're positioned to win"}</div></div></div>
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div style={{flex:1}}><div className="bb-title">Strategic Analysis</div><div className="bb-sub">{sellerUrl==="research-only"?"What's driving this company right now":"What's driving this account and why you're positioned to win"}</div></div>
+                    <StarButton id={`strategy-${selectedAccount?.company}`} type="Brief" label="Strategic Analysis" content={brief?.strategicTheme} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/></div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                       {brief.strategicTheme&&(
                         <div>
@@ -9022,7 +9061,8 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr" onClick={()=>toggleBB("financial")}>
                       <div className="bb-icon" style={{fontSize:12}}>📊</div>
-                      <div><div className="bb-title">Financial Intelligence</div><div className="bb-sub">Revenue trends, margins, capital priorities, and management guidance</div></div>
+                      <div style={{flex:1}}><div className="bb-title">Financial Intelligence</div><div className="bb-sub">Revenue trends, margins, capital priorities, and management guidance</div></div>
+                      <StarButton id={`financial-${selectedAccount?.company}`} type="Brief" label="Financial Intelligence" content={brief?.financialDeepDive?.revenueTrend} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                       {bbChevron("financial")}
                     </div>
                     <div className={`bb-body-wrap ${bbIsOpen("financial")?"":"collapsed"}`}><div className="bb-body">
@@ -9070,7 +9110,8 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr" onClick={()=>toggleBB("competitive")}>
                       <div className="bb-icon" style={{fontSize:12}}>⚔</div>
-                      <div><div className="bb-title">Competitive Positioning</div><div className="bb-sub">Where they win, where they lose, and who they're fighting</div></div>
+                      <div style={{flex:1}}><div className="bb-title">Competitive Positioning</div><div className="bb-sub">Where they win, where they lose, and who they're fighting</div></div>
+                      <StarButton id={`competitive-${selectedAccount?.company}`} type="Brief" label="Competitive Positioning" content={brief?.competitivePositioning?.marketPosition} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                       {bbChevron("competitive")}
                     </div>
                     <div className={`bb-body-wrap ${bbIsOpen("competitive")?"":"collapsed"}`}><div className="bb-body">
@@ -9131,7 +9172,8 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr" onClick={()=>toggleBB("board")}>
                       <div className="bb-icon" style={{fontSize:12}}>🏛</div>
-                      <div><div className="bb-title">Board & Investors</div><div className="bb-sub">Who governs, who funds, and what they're pushing for</div></div>
+                      <div style={{flex:1}}><div className="bb-title">Board & Investors</div><div className="bb-sub">Who governs, who funds, and what they're pushing for</div></div>
+                      <StarButton id={`board-${selectedAccount?.company}`} type="Brief" label="Board & Investors" content={brief?.boardAndInvestors?.boardMandate} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                       {bbChevron("board")}
                     </div>
                     <div className={`bb-body-wrap ${bbIsOpen("board")?"":"collapsed"}`}><div className="bb-body">
@@ -10012,6 +10054,56 @@ ${isOpen
 
       {/* Superuser analytics */}
       {/* Org-level reports */}
+      {/* Favorites panel */}
+      {favPanelOpen && (
+        <>
+          <div onClick={()=>setFavPanelOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
+          <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+            <div style={{background:"#fff",borderRadius:16,width:"90%",maxWidth:600,maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden",pointerEvents:"auto",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+              <div style={{padding:"16px 20px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>★ Favorites</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)"}}>{favorites.length} saved item{favorites.length!==1?"s":""}</div>
+                </div>
+                <button onClick={()=>setFavPanelOpen(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--ink-3)"}}>×</button>
+              </div>
+              <div style={{flex:1,overflow:"auto",padding:16}}>
+                {favorites.length===0&&(
+                  <div style={{textAlign:"center",padding:"40px 20px",color:"var(--ink-3)"}}>
+                    <div style={{fontSize:28,marginBottom:8}}>☆</div>
+                    <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>No favorites yet</div>
+                    <div style={{fontSize:12}}>Click the ☆ star on any brief section, hypothesis, or output to save it here for quick reference.</div>
+                  </div>
+                )}
+                {favorites.sort((a,b)=>b.timestamp-a.timestamp).map(f=>(
+                  <div key={f.id} style={{padding:"12px 14px",borderRadius:10,border:"1px solid var(--line-0)",marginBottom:8,cursor:"pointer",transition:"all 0.15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor="var(--amber)"}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor="var(--line-0)"}
+                    onClick={()=>{if(f.step!==undefined){setStep(f.step);setFavPanelOpen(false);}}}>
+                    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                          <span style={{fontSize:12,color:"var(--amber)"}}>★</span>
+                          <span style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>{f.label}</span>
+                          {f.company&&<span style={{fontSize:11,color:"var(--ink-3)"}}>· {f.company}</span>}
+                        </div>
+                        <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{f.content}</div>
+                        <div style={{fontSize:10,color:"var(--ink-3)",marginTop:4}}>
+                          {f.type} · {new Date(f.timestamp).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <button onClick={e=>{e.stopPropagation();setFavorites(prev=>prev.filter(x=>x.id!==f.id));}}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:14,padding:"2px",flexShrink:0}}
+                        title="Remove">✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {reportPanelOpen && orgCtx && (
         <ReportPanel orgCtx={orgCtx} savedSessions={savedSessions} sbUser={sbUser} onClose={()=>setReportPanelOpen(false)} />
       )}
