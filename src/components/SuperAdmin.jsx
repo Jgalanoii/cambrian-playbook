@@ -466,44 +466,161 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ USERS ═══ */}
           {tab === "users" && (
             <div>
-              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>User</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Org</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Plan</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Sessions</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Last Active</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Milton</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Seller URLs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.users.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => (
-                    <tr key={u.id} style={{ borderBottom: "1px solid var(--line-0)" }}>
-                      <td style={{ padding: "8px 6px" }}>
-                        <div style={{ fontWeight: 600, color: "var(--ink-0)" }}>{u.name || "—"}</div>
-                        <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{u.email}</div>
-                      </td>
-                      <td style={{ padding: "8px 6px", color: "var(--ink-1)" }}>{u.org_name || "—"}</td>
-                      <td style={{ padding: "8px 6px" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10,
-                          background: u.org_plan === "paid" ? "var(--green-bg)" : "var(--amber-bg)",
-                          color: u.org_plan === "paid" ? "var(--green)" : "var(--amber)" }}>
-                          {u.org_plan || "trial"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "8px 6px", fontWeight: 600, color: "var(--ink-0)" }}>{u.session_count}</td>
-                      <td style={{ padding: "8px 6px", color: "var(--ink-3)" }}>{timeAgo(u.last_active)}</td>
-                      <td style={{ padding: "8px 6px", fontWeight: 600, color: u.milton_messages > 0 ? "#cc2222" : "var(--ink-3)" }}>{u.milton_messages || 0}</td>
-                      <td style={{ padding: "8px 6px", fontSize: 11, color: "var(--ink-3)" }}>
-                        {u.seller_urls.slice(0, 3).join(", ") || "—"}
-                        {u.seller_urls.length > 3 && ` +${u.seller_urls.length - 3}`}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {/* Quick actions bar */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 11, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 4 }}>
+                  {data.users.length} users · {data.orgs.length} orgs
+                </div>
+              </div>
+              {planSaveMsg && <div style={{ fontSize: 12, color: "var(--green)", fontWeight: 600, marginBottom: 10, padding: "6px 12px", background: "var(--green-bg)", borderRadius: 8 }}>✓ {planSaveMsg}</div>}
+
+              {/* User cards */}
+              {data.users.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
+                const org = data.orgs.find(o => o.id === u.org_id);
+                return (
+                  <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, padding: "14px 16px", marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "#fff" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                      {/* Avatar */}
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
+                        {(u.name || u.email || "").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "··"}
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-0)" }}>{u.name || u.email?.split("@")[0]}</div>
+                          {u.email === SUPERUSER_EMAIL && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "#8B5CF622", color: "#8B5CF6" }}>SUPER</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 6 }}>{u.email}</div>
+
+                        {/* Stats row */}
+                        <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--ink-2)", flexWrap: "wrap" }}>
+                          <span>{u.session_count} sessions</span>
+                          <span>Active {timeAgo(u.last_active)}</span>
+                          {u.milton_messages > 0 && <span style={{ color: "#cc2222" }}>{u.milton_messages} Milton msgs</span>}
+                          {u.seller_urls.length > 0 && <span>{u.seller_urls.length} seller URL{u.seller_urls.length > 1 ? "s" : ""}</span>}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
+                        {/* Role selector */}
+                        <select value={u.role || "rep"}
+                          onChange={async e => {
+                            const newRole = e.target.value;
+                            await fetch(`${SB_URL}/rest/v1/users?id=eq.${u.id}`, {
+                              method: "PATCH",
+                              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                              body: JSON.stringify({ role: newRole }),
+                            });
+                            setPlanSaveMsg(`${u.name || u.email} → ${newRole}`);
+                            setTimeout(() => setPlanSaveMsg(""), 3000);
+                          }}
+                          style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--line-0)", fontWeight: 600,
+                            background: u.role === "admin" ? "var(--navy-bg)" : u.role === "manager" ? "var(--amber-bg)" : "var(--green-bg)",
+                            color: u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)" }}>
+                          <option value="rep">Rep</option>
+                          <option value="manager">Manager</option>
+                          <option value="admin">Admin</option>
+                        </select>
+
+                        {/* Org assignment */}
+                        <select value={u.org_id || ""}
+                          onChange={async e => {
+                            const newOrgId = e.target.value || null;
+                            await fetch(`${SB_URL}/rest/v1/users?id=eq.${u.id}`, {
+                              method: "PATCH",
+                              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                              body: JSON.stringify({ org_id: newOrgId }),
+                            });
+                            setPlanSaveMsg(`${u.name || u.email} → org ${newOrgId ? data.orgs.find(o=>o.id===newOrgId)?.name || newOrgId : "none"}`);
+                            setTimeout(() => setPlanSaveMsg(""), 3000);
+                          }}
+                          style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, border: "1px solid var(--line-0)", maxWidth: 140, color: "var(--ink-2)" }}>
+                          <option value="">No org</option>
+                          {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Org details (if assigned) */}
+                    {org && (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line-0)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ fontSize: 11, color: "var(--ink-2)" }}>
+                          <strong>{org.name}</strong> · {org.plan}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>Tokens:</span>
+                          <input type="number" value={org.run_count} readOnly
+                            style={{ width: 40, fontSize: 11, border: "none", background: "transparent", fontWeight: 700, textAlign: "center" }} />
+                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
+                          <input type="number" defaultValue={org.run_limit}
+                            onBlur={async e => {
+                              const val = Number(e.target.value);
+                              if (val === org.run_limit) return;
+                              await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
+                                method: "PATCH",
+                                headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                                body: JSON.stringify({ run_limit: val }),
+                              });
+                              setPlanSaveMsg(`${org.name} token limit → ${val}`);
+                              setTimeout(() => setPlanSaveMsg(""), 3000);
+                            }}
+                            style={{ width: 50, fontSize: 11, border: "1px solid var(--line-0)", borderRadius: 4, padding: "2px 4px", textAlign: "center" }} />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 10, color: "#8B5CF6" }}>Max:</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#8B5CF6" }}>{org.max_run_count || 0}</span>
+                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
+                          <input type="number" defaultValue={org.max_run_limit}
+                            onBlur={async e => {
+                              const val = Number(e.target.value);
+                              if (val === org.max_run_limit) return;
+                              await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
+                                method: "PATCH",
+                                headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                                body: JSON.stringify({ max_run_limit: val }),
+                              });
+                              setPlanSaveMsg(`${org.name} max token limit → ${val}`);
+                              setTimeout(() => setPlanSaveMsg(""), 3000);
+                            }}
+                            style={{ width: 50, fontSize: 11, border: "1px solid #8B5CF633", borderRadius: 4, padding: "2px 4px", textAlign: "center", color: "#8B5CF6" }} />
+                        </div>
+                        {/* Reset tokens button */}
+                        <button onClick={async () => {
+                          await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
+                            method: "PATCH",
+                            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                            body: JSON.stringify({ run_count: 0, max_run_count: 0 }),
+                          });
+                          setPlanSaveMsg(`${org.name} tokens reset to 0`);
+                          setTimeout(() => setPlanSaveMsg(""), 3000);
+                        }}
+                          style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer" }}>
+                          Reset Tokens
+                        </button>
+                        {/* Plan selector */}
+                        <select defaultValue={org.plan}
+                          onChange={async e => {
+                            await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
+                              method: "PATCH",
+                              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                              body: JSON.stringify({ plan: e.target.value }),
+                            });
+                            setPlanSaveMsg(`${org.name} plan → ${e.target.value}`);
+                            setTimeout(() => setPlanSaveMsg(""), 3000);
+                          }}
+                          style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, border: "1px solid var(--line-0)" }}>
+                          <option value="trial">Trial</option>
+                          <option value="paid">Paid</option>
+                          <option value="enterprise">Enterprise</option>
+                          <option value="suspended">Suspended</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
