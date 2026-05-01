@@ -735,6 +735,22 @@ function repairJSON(s) {
   return out;
 }
 
+// ── SANITIZE WEB SEARCH RESULTS ──────────────────────────────────────────
+// Web search returns content from arbitrary websites. A malicious site
+// could embed prompt injection patterns in its text. This recursively
+// sanitizes all string values in an object returned from web search.
+function sanitizeWebResult(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizeWebResult);
+  const clean = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === "string") clean[k] = sanitizeForPrompt(v);
+    else if (typeof v === "object" && v !== null) clean[k] = sanitizeWebResult(v);
+    else clean[k] = v;
+  }
+  return clean;
+}
+
 // ── GENERATE BRIEF ────────────────────────────────────────────────────────────
 // Build the unified "Seller Proof Pack" that gets prepended to every
 // customer-facing prompt (brief, hypothesis, solution fit, fit-score).
@@ -746,7 +762,8 @@ function repairJSON(s) {
 // LLMs), but raises the bar significantly against casual/automated attacks.
 function sanitizeForPrompt(str) {
   if (typeof str !== "string") return str;
-  return str
+  // Normalize unicode to catch homoglyph bypasses (Greek Iota for Latin I, etc.)
+  return str.normalize("NFKC")
     // Instruction override attempts
     .replace(/\b(ignore|disregard|forget|override|bypass|skip)\s+(all\s+)?(previous|above|prior|earlier|system|safety|your)\s+(instructions?|rules?|constraints?|prompts?|guidelines?|restrictions?)/gi, "[filtered]")
     // Persona switching
@@ -1241,7 +1258,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeExecs = (r2) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), executives:false}};
-    if (r2?.keyExecutives?.length) next.keyExecutives = r2.keyExecutives;
+    if (r2?.keyExecutives?.length) next.keyExecutives = sanitizeWebResult(r2.keyExecutives);
     if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
     return next;
   };
@@ -1276,10 +1293,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r4?.processMaturity?.dmiacStage) next.processMaturity = r4.processMaturity;
     return next;
   };
-  const mergeLive = (r5) => (prev) => {
+  const mergeLive = (r5raw) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), live:false}};
-    if (!r5) return next;
+    if (!r5raw) return next;
+    const r5 = sanitizeWebResult(r5raw); // Sanitize web search results
     const errorWords = ["unable","cannot","search failed","not available","web search"];
     const cleanHL = (r5.recentHeadlines||[]).filter(h => {
       const t = (h?.headline||"").toLowerCase();
@@ -3393,35 +3411,35 @@ ${scaleGuidance}
       return `You are a procurement intelligence analyst helping a seller find relevant RFPs. Use web_search with SPECIFIC queries. ${isOpen ? "Focus on ACTIVE (open) opportunities posted in the last 90 days." : "Focus on AWARDED (closed) contracts from the last 18 months that reveal incumbent vendors."}
 
 ━━━ SELLER PROFILE ━━━
-URL: ${sellerUrl}
-Market category: ${category}
-What makes them different: ${differ.slice(0,2).join(" · ") || "—"}
-They commonly displace: ${competitors.slice(0,2).join(" · ") || "—"}
+URL: ${sanitizeForPrompt(sellerUrl)}
+Market category: ${sanitizeForPrompt(category)}
+What makes them different: ${differ.slice(0,2).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
+They commonly displace: ${competitors.slice(0,2).map(c=>sanitizeForPrompt(c)).join(" · ") || "—"}
 
 ━━━ THEIR IDEAL BUYER (this is who's posting relevant RFPs) ━━━
-Industries:       ${industries.join(", ") || "—"}
-Buyer size:       ${size || "—"}
-Typical deal:     ${deal || "—"}
-Geographies:      ${geo.join(", ") || "North America"}
-Buyer personas:   ${buyers.join(", ") || "—"}
-Priority trigger: ${trigger || "—"}
-Exclusions:       ${disqual.slice(0,3).join(" · ") || "—"}
+Industries:       ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+Buyer size:       ${sanitizeForPrompt(size) || "—"}
+Typical deal:     ${sanitizeForPrompt(deal) || "—"}
+Geographies:      ${geo.map(g=>sanitizeForPrompt(g)).join(", ") || "North America"}
+Buyer personas:   ${buyers.map(b=>sanitizeForPrompt(b)).join(", ") || "—"}
+Priority trigger: ${sanitizeForPrompt(trigger) || "—"}
+Exclusions:       ${disqual.slice(0,3).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
 ${naicsCodes.length ? `NAICS codes (USA): ${naicsCodes.join(", ")}` : ""}
 ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
 
 ━━━ SEARCH STRATEGY (use 2-3 of these query patterns) ━━━
 ${isOpen ? `
-  - site:sam.gov "${category || industries[0] || "RFP"}" 2025${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
-  - "${industries[0] || "fintech"}" RFP 2025 "${buyers[0] || "CFO"}"
-  - ${category || industries[0] || "software"} procurement Ariba OR Coupa 2025
-  - site:ted.europa.eu ${industries[0] || "software"} 2025${cpvCodes.length ? ` CPV ${cpvCodes[0]}` : ""}
-  - "${trigger.split(" ").slice(0,4).join(" ") || industries[0]}" RFP request for proposal
+  - site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
+  - "${sanitizeForPrompt(industries[0] || "fintech")}" RFP 2025 "${sanitizeForPrompt(buyers[0] || "CFO")}"
+  - ${sanitizeForPrompt(category || industries[0] || "software")} procurement Ariba OR Coupa 2025
+  - site:ted.europa.eu ${sanitizeForPrompt(industries[0] || "software")} 2025${cpvCodes.length ? ` CPV ${cpvCodes[0]}` : ""}
+  - "${sanitizeForPrompt((trigger||"").split(" ").slice(0,4).join(" ") || industries[0])}" RFP request for proposal
 ` : `
-  - site:usaspending.gov ${category || industries[0]} contract 2024 OR 2025
-  - site:fpds.gov ${industries[0] || category} awarded 2024 OR 2025
-  - "${competitors[0] || category}" contract awarded 2024 OR 2025
-  - ${industries[0] || "SaaS"} "contract award" press release 2024 OR 2025
-  - "${buyers[0] || "CIO"}" selects vendor ${category || industries[0]} 2024 OR 2025
+  - site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
+  - site:fpds.gov ${sanitizeForPrompt(industries[0] || category)} awarded 2024 OR 2025
+  - "${sanitizeForPrompt(competitors[0] || category)}" contract awarded 2024 OR 2025
+  - ${sanitizeForPrompt(industries[0] || "SaaS")} "contract award" press release 2024 OR 2025
+  - "${sanitizeForPrompt(buyers[0] || "CIO")}" selects vendor ${sanitizeForPrompt(category || industries[0])} 2024 OR 2025
 `}
 
 ━━━ SOURCES ━━━

@@ -222,7 +222,7 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
 
   // Cap total input size (~150KB) to prevent billing abuse
   const inputSize = JSON.stringify(body.messages).length + (body.system?.length || 0);
-  if (inputSize > 150_000) {
+  if (inputSize > 50_000) { // Reduced from 150KB — 50KB is generous for any legitimate prompt
     throw { status: 400, message: "input too large" };
   }
 

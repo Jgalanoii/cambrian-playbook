@@ -85,6 +85,15 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Audit log — record every admin access
+    try {
+      await fetch(`${SB_URL}/rest/v1/api_usage_log`, {
+        method: "POST",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ user_id: payload.sub, model: "admin-dashboard", input_tokens: 0, output_tokens: 0, web_searches: 0, endpoint: "admin" }),
+      });
+    } catch {} // Best-effort audit — don't block the response
+
     // Fetch all data in parallel
     const [users, orgs, sessions, usageLogs] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
