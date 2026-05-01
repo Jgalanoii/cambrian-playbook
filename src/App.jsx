@@ -493,6 +493,7 @@ const COMPLIANCE_VERTICAL_KW = {
   digital_rewards_incentives: ["incentive", "reward", "gift card", "recognition", "promo", "loyalty", "stored-value"],
   health_wellness_b2b: ["health", "wellness", "clinical", "hipaa", "healthcare", "medical", "patient", "pharma", "telehealth"],
   market_research: ["research", "survey", "panel", "respondent", "insights"],
+  real_estate: ["real estate", "land", "homebuilder", "developer", "property", "wholesaling", "reit", "btr", "build-to-rent"],
 };
 function getComplianceInjection(sellerICP, targetIndustry) {
   if (!KL_COMPLIANCE?.frameworks?.length) return "";
@@ -553,13 +554,14 @@ function getComplianceDiscovery(sellerICP, targetIndustry) {
 }
 
 // ── REAL ESTATE KNOWLEDGE INJECTION ─────────────────────────────────────
-const REAL_ESTATE_KW = ["real estate", "land", "homebuilder", "developer", "property", "commercial real estate", "cre", "residential", "multifamily", "industrial", "btr", "build-to-rent", "wholesaling", "parcel", "reit", "land bank", "entitlement", "zoning", "mortgage", "construction"];
+const REAL_ESTATE_KW = ["real estate", "land", "homebuilder", "homebuilding", "developer", "property", "commercial real estate", "cre", "residential", "multifamily", "industrial", "btr", "build-to-rent", "wholesaling", "parcel", "reit", "land bank", "entitlement", "zoning", "mortgage", "construction"];
 function getRealEstateInjection(sellerICP, targetIndustry) {
   if (!KL_REAL_ESTATE) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
   if (!text) return "";
   const hits = REAL_ESTATE_KW.filter(kw => text.includes(kw));
-  if (hits.length < 2) return "";
+  // Threshold: 1 keyword is enough (real estate is broad — "homebuilding" alone should trigger)
+  if (hits.length < 1) return "";
   return "\n" + KL_REAL_ESTATE;
 }
 

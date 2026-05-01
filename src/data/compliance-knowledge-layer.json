@@ -621,6 +621,13 @@
       "secondary_frameworks": ["iso-27001", "tcpa-can-spam"],
       "adjacent_frameworks": ["hipaa"],
       "vertical_notes": "Lower density of industry-specific regulation, but heavy data privacy exposure given panel/respondent data. International respondent panels pull GDPR into central focus. HIPAA appears only when clinical research panels are involved."
+    },
+    "real_estate": {
+      "label": "Real Estate & Land Development",
+      "primary_frameworks": ["fincen-regulations", "ofac-sanctions", "gdpr-ccpa"],
+      "secondary_frameworks": ["bsa-aml", "tcpa-can-spam", "soc2-type-ii"],
+      "adjacent_frameworks": ["state-money-transmitter", "fcra"],
+      "vertical_notes": "FinCEN BOI reporting (March 2026 Residential Real Estate Rule) directly impacts land transactions. State-specific wholesaling licensing (IL, OK, AZ, SC) is the primary compliance concern. TCPA relevant for text/call marketing. BSA/AML applies when capital flows involve institutional investors. FCRA adjacent for tenant screening in BTR."
     }
   },
   "handoff_protocol": {
