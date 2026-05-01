@@ -51,6 +51,9 @@ let KL_PAYMENTS_DISCOVERY = ""; // Payments-specific discovery angles
 let KL_SALES_FRAMEWORKS = []; // 10 sales methodology frameworks (Gap Selling, SPIN, etc.)
 let KL_QUESTION_BANK = null; // Discovery interview question bank
 let KL_COMPLIANCE = null; // Compliance frameworks data (13 frameworks × 4 verticals)
+let KL_REAL_ESTATE = ""; // Real estate & land development knowledge injection
+let KL_REAL_ESTATE_SCORING = null; // Real estate scoring calibration
+let KL_REAL_ESTATE_DISCOVERY = ""; // Real estate-specific discovery angles
 
 async function fetchKnowledgeLayer() {
   try {
@@ -82,6 +85,10 @@ async function fetchKnowledgeLayer() {
     KL_QUESTION_BANK = d.discoveryQuestionBank || null;
     // Compliance awareness layer
     KL_COMPLIANCE = d.complianceFrameworks ? { frameworks: d.complianceFrameworks, verticalMap: d.complianceVerticalMap, handoff: d.complianceHandoff } : null;
+    // Real estate knowledge
+    KL_REAL_ESTATE = d.realEstateIndustry || "";
+    KL_REAL_ESTATE_SCORING = d.realEstateScoring || null;
+    KL_REAL_ESTATE_DISCOVERY = d.realEstateDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -545,6 +552,17 @@ function getComplianceDiscovery(sellerICP, targetIndustry) {
   return `\nCOMPLIANCE DISCOVERY (ask when relevant):\n${qs.slice(0, 4).map(q => `- ${q}`).join("\n")}\n`;
 }
 
+// ── REAL ESTATE KNOWLEDGE INJECTION ─────────────────────────────────────
+const REAL_ESTATE_KW = ["real estate", "land", "homebuilder", "developer", "property", "commercial real estate", "cre", "residential", "multifamily", "industrial", "btr", "build-to-rent", "wholesaling", "parcel", "reit", "land bank", "entitlement", "zoning", "mortgage", "construction"];
+function getRealEstateInjection(sellerICP, targetIndustry) {
+  if (!KL_REAL_ESTATE) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  const hits = REAL_ESTATE_KW.filter(kw => text.includes(kw));
+  if (hits.length < 2) return "";
+  return "\n" + KL_REAL_ESTATE;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -922,6 +940,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     verticalCtx +
     paymentsCtx +
     getComplianceInjection(sellerICP, member.ind) +
+    getRealEstateInjection(sellerICP, member.ind) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -3135,6 +3154,11 @@ ${scaleGuidance}
           ? `\nPAYMENTS VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_PAYMENTS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_PAYMENTS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_REAL_ESTATE_SCORING && getRealEstateInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nREAL ESTATE VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_REAL_ESTATE_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_REAL_ESTATE_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -4540,6 +4564,7 @@ ${isOpen
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
       getVerticalInjection(sellerICP, member.ind) +
       getComplianceInjection(sellerICP, member.ind) +
+      getRealEstateInjection(sellerICP, member.ind) +
       "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
       "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
@@ -4630,6 +4655,7 @@ ${isOpen
       (KL_PAYMENTS_DISCOVERY && getPaymentsInjection(sellerICP, member?.ind) ? KL_PAYMENTS_DISCOVERY + "\n" : "") +
       getVerticalInjection(sellerICP, member?.ind) +
       getComplianceDiscovery(sellerICP, member?.ind) +
+      (KL_REAL_ESTATE_DISCOVERY && getRealEstateInjection(sellerICP, member?.ind) ? KL_REAL_ESTATE_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

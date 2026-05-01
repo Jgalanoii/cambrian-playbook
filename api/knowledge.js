@@ -20,6 +20,7 @@ import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../s
 import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS, PRICING_NEGOTIATION, ARCHETYPE_BATTLE_CARDS, POST_SALE_EXPANSION, SALES_METHODOLOGY_FRAMEWORKS } from "../src/data/advancedKnowledge.js";
 import { PAYMENTS_INDUSTRY_INJECTION, PAYMENTS_SCORING_CONTEXT, PAYMENTS_DISCOVERY_INJECTION } from "../src/data/paymentsKnowledge.js";
 import { COMPLIANCE_FRAMEWORKS, COMPLIANCE_VERTICAL_MAP, COMPLIANCE_DISCLAIMER, HANDOFF_PROTOCOL } from "../src/data/complianceKnowledge.js";
+import { REAL_ESTATE_INDUSTRY_INJECTION, REAL_ESTATE_SCORING_CONTEXT, REAL_ESTATE_DISCOVERY_INJECTION } from "../src/data/realEstateKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -200,5 +201,9 @@ export default function handler(req, res) {
     complianceVerticalMap: COMPLIANCE_VERTICAL_MAP,
     complianceDisclaimer: COMPLIANCE_DISCLAIMER,
     complianceHandoff: HANDOFF_PROTOCOL,
+    // Real estate & land development knowledge layer
+    realEstateIndustry: REAL_ESTATE_INDUSTRY_INJECTION,
+    realEstateScoring: REAL_ESTATE_SCORING_CONTEXT,
+    realEstateDiscovery: REAL_ESTATE_DISCOVERY_INJECTION,
   });
 }
