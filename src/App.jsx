@@ -530,6 +530,11 @@ const COMPLIANCE_VERTICAL_KW = {
   health_wellness_b2b: ["health", "wellness", "clinical", "hipaa", "healthcare", "medical", "patient", "pharma", "telehealth"],
   market_research: ["research", "survey", "panel", "respondent", "insights"],
   real_estate: ["real estate", "land", "homebuilder", "developer", "property", "wholesaling", "reit", "btr", "build-to-rent"],
+  cybersecurity: ["cybersecurity", "security", "infosec", "soc", "siem", "edr", "xdr", "zero trust", "ransomware", "fedramp"],
+  manufacturing: ["manufacturing", "industrial", "factory", "plant", "oem", "automotive", "aerospace", "pharma", "fda"],
+  government: ["government", "federal", "state government", "public sector", "govtech", "defense", "dod", "fedramp", "fisma"],
+  saas_martech: ["saas", "software as a service", "martech", "marketing technology", "b2b software", "cloud software"],
+  education: ["education", "edtech", "k-12", "higher education", "university", "school district", "lms"],
 };
 function getComplianceInjection(sellerICP, targetIndustry) {
   if (!KL_COMPLIANCE?.frameworks?.length) return "";
