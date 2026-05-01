@@ -1231,13 +1231,19 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       // p5 focuses on news, sentiment, and signals. Open roles are handled
       // by the dedicated p6 call which has its own web_search budget + fallback.
       const prompt =
-        `Search for recent information about "${co}". PRIORITY ORDER:\n\n`+
-        `1. News from 2024-2026: headlines, M&A, leadership changes, funding, strategic announcements\n`+
-        `2. Ratings and sentiment: Glassdoor, G2, Trustpilot for "${co}"\n`+
-        `3. Growth signals or buying indicators\n`+
-        `4. Workforce and culture profile\n`+
+        `Search for recent information about "${co}". Use at least one search specifically for press releases.\n\n`+
+        `SEARCH STRATEGY:\n`+
+        `- Search 1: "${co}" news OR press release OR announcement last 12 months\n`+
+        `- Search 2: "${co}" site:prnewswire.com OR site:businesswire.com OR site:globenewswire.com 2025 OR 2026\n`+
+        `Press releases reveal: product launches, partnerships, executive hires, funding, expansions, awards, and strategic priorities the company chose to publicize.\n\n`+
+        `PRIORITY ORDER:\n`+
+        `1. Press releases and company announcements from the last 12 months — these are HIGHEST VALUE\n`+
+        `2. News coverage: M&A, leadership changes, funding, strategic moves\n`+
+        `3. Ratings and sentiment: Glassdoor, G2, Trustpilot for "${co}"\n`+
+        `4. Growth signals or buying indicators\n`+
+        `5. Workforce and culture profile\n`+
         `Return ONLY raw JSON (start with {):\n`+
-        `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters for a sale"},{"headline":"","relevance":""},{"headline":"","relevance":""}],`+
+        `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters","type":"press_release or news or review"},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""}],`+
         `"recentSignals":["Most actionable buying signal","Second","Third"],`+
         `"growthSignals":["Growth indicator with evidence","Second"],`+
         `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
@@ -5311,13 +5317,18 @@ ${isOpen
     const livePromise = (async () => {
       try {
         const prompt =
-          `Search for recent information about "${co}". PRIORITY ORDER:\n\n` +
-          `1. News from 2024-2026: headlines, M&A, leadership changes, funding, strategic announcements\n` +
-          `2. Ratings and sentiment: Glassdoor, G2, Trustpilot\n` +
-          `3. Growth signals or buying indicators\n` +
-          `4. Workforce and culture profile\n` +
+          `Search for recent information about "${co}". Use at least one search specifically for press releases.\n\n` +
+          `SEARCH STRATEGY:\n` +
+          `- Search 1: "${co}" news OR press release OR announcement last 12 months\n` +
+          `- Search 2: "${co}" site:prnewswire.com OR site:businesswire.com OR site:globenewswire.com 2025 OR 2026\n\n` +
+          `PRIORITY ORDER:\n` +
+          `1. Press releases and company announcements from the last 12 months\n` +
+          `2. News coverage: M&A, leadership changes, funding\n` +
+          `3. Ratings and sentiment: Glassdoor, G2, Trustpilot\n` +
+          `4. Growth signals or buying indicators\n` +
+          `5. Workforce and culture profile\n` +
           `Return ONLY raw JSON (start with {):\n` +
-          `{"recentHeadlines":[{"headline":"","relevance":""},{"headline":"","relevance":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
+          `{"recentHeadlines":[{"headline":"","relevance":"","type":"press_release or news"},{"headline":"","relevance":"","type":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
         const d = await claudeFetch({
           model: activeModel(),
           max_tokens: 1800, temperature: 0,
