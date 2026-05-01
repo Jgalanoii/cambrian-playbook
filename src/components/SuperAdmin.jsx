@@ -4,6 +4,8 @@
 import { useState, useEffect } from "react";
 
 const SUPERUSER_EMAIL = "itsjoegalano@gmail.com";
+const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 function timeAgo(dateStr) {
   if (!dateStr) return "never";
@@ -58,8 +60,41 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const s = data.summary;
   const c = data.costs?.total || {};
   const l = data.learnings || {};
+  // Pricing state
+  const [plans, setPlans] = useState([
+    { id: "trial", name: "Trial", tokens: 5, maxTokens: 0, price: 0, costPerToken: 1.16 },
+    { id: "starter", name: "Starter", tokens: 25, maxTokens: 5, price: 99, costPerToken: 1.16 },
+    { id: "pro", name: "Pro", tokens: 100, maxTokens: 20, price: 349, costPerToken: 1.16 },
+    { id: "team", name: "Team", tokens: 250, maxTokens: 50, price: 799, costPerToken: 1.16 },
+    { id: "enterprise", name: "Enterprise", tokens: 1000, maxTokens: 200, price: 2999, costPerToken: 1.16 },
+  ]);
+  const [opusRatio, setOpusRatio] = useState(75); // % of usage that's Opus
+  const [planSaveMsg, setPlanSaveMsg] = useState("");
+
+  // Cost calculation based on Opus ratio
+  const calcCostPerToken = () => {
+    const haikuCost = 0.20; // per brief, Haiku
+    const opusCost = 1.48;  // per brief, Opus
+    return (opusRatio / 100) * opusCost + ((100 - opusRatio) / 100) * haikuCost;
+  };
+
+  const applyPlanToOrg = async (orgId, planId) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    try {
+      await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}`, {
+        method: "PATCH",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ plan: plan.id, run_limit: plan.tokens, max_run_limit: plan.maxTokens }),
+      });
+      setPlanSaveMsg(`Applied "${plan.name}" to org ${orgId}`);
+      setTimeout(() => setPlanSaveMsg(""), 3000);
+    } catch { setPlanSaveMsg("Error applying plan"); }
+  };
+
   const tabs = [
     { id: "overview", label: "Overview" },
+    { id: "pricing", label: "Pricing" },
     { id: "learnings", label: "Learnings" },
     { id: "costs", label: `Costs ($${(c.cost||0).toFixed(2)})` },
     { id: "users", label: `Users (${s.total_users})` },
@@ -143,6 +178,140 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ═══ PRICING ═══ */}
+          {tab === "pricing" && (
+            <div>
+              {/* Opus ratio slider */}
+              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px", marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)" }}>Opus Usage Ratio</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#8B5CF6" }}>{opusRatio}% Opus / {100 - opusRatio}% Haiku</div>
+                </div>
+                <input type="range" min={0} max={100} step={5} value={opusRatio}
+                  onChange={e => { const v = Number(e.target.value); setOpusRatio(v); setPlans(p => p.map(pl => ({ ...pl, costPerToken: (v / 100) * 1.48 + ((100 - v) / 100) * 0.20 }))); }}
+                  style={{ width: "100%", accentColor: "#8B5CF6" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--ink-3)" }}>
+                  <span>100% Haiku ($0.20/brief)</span>
+                  <span>Blended: ${calcCostPerToken().toFixed(2)}/brief</span>
+                  <span>100% Opus ($1.48/brief)</span>
+                </div>
+              </div>
+
+              {/* Plan configuration table */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Plan Configuration</div>
+              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", marginBottom: 16 }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Plan</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Tokens/mo</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Max Tokens</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Price/mo</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Your Cost</th>
+                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plans.map((plan, i) => {
+                    const cost = plan.tokens * plan.costPerToken;
+                    const margin = plan.price > 0 ? Math.round((1 - cost / plan.price) * 100) : -100;
+                    return (
+                      <tr key={plan.id} style={{ borderBottom: "1px solid var(--line-0)" }}>
+                        <td style={{ padding: "8px 6px", fontWeight: 600 }}>
+                          <input value={plan.name} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, name: e.target.value } : pl))}
+                            style={{ border: "none", background: "transparent", fontWeight: 600, fontSize: 13, width: 100, outline: "none" }} />
+                        </td>
+                        <td style={{ padding: "8px 6px" }}>
+                          <input type="number" value={plan.tokens} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, tokens: Number(e.target.value) } : pl))}
+                            style={{ width: 60, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12 }} />
+                        </td>
+                        <td style={{ padding: "8px 6px" }}>
+                          <input type="number" value={plan.maxTokens} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, maxTokens: Number(e.target.value) } : pl))}
+                            style={{ width: 60, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12, color: "#8B5CF6" }} />
+                        </td>
+                        <td style={{ padding: "8px 6px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                            <span style={{ fontSize: 11, color: "var(--ink-3)" }}>$</span>
+                            <input type="number" value={plan.price} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, price: Number(e.target.value) } : pl))}
+                              style={{ width: 70, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12 }} />
+                          </div>
+                        </td>
+                        <td style={{ padding: "8px 6px", fontWeight: 600, color: "var(--ink-1)" }}>
+                          ${cost.toFixed(0)}
+                        </td>
+                        <td style={{ padding: "8px 6px" }}>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: margin > 70 ? "var(--green)" : margin > 50 ? "var(--amber)" : margin > 0 ? "var(--red)" : "var(--red)" }}>
+                            {plan.price > 0 ? `${margin}%` : "Free"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <button onClick={() => setPlans(p => [...p, { id: `custom-${Date.now()}`, name: "Custom", tokens: 50, maxTokens: 10, price: 199, costPerToken: calcCostPerToken() }])}
+                style={{ fontSize: 11, fontWeight: 600, padding: "5px 14px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "#fff", cursor: "pointer", color: "var(--ink-2)" }}>
+                + Add Plan
+              </button>
+
+              {/* Margin visualization */}
+              <div style={{ marginTop: 20, fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Margin by Plan</div>
+              {plans.filter(p => p.price > 0).map(plan => {
+                const cost = plan.tokens * plan.costPerToken;
+                const margin = Math.round((1 - cost / plan.price) * 100);
+                return (
+                  <div key={plan.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--line-0)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-0)", width: 80 }}>{plan.name}</div>
+                    <div style={{ flex: 1, height: 10, borderRadius: 5, background: "var(--bg-2)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 5, background: margin > 70 ? "var(--green)" : margin > 50 ? "var(--amber)" : "var(--red)", width: Math.max(0, margin) + "%" }} />
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, width: 40, textAlign: "right", color: margin > 70 ? "var(--green)" : margin > 50 ? "var(--amber)" : "var(--red)" }}>{margin}%</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", width: 100, textAlign: "right" }}>${plan.price} - ${cost.toFixed(0)} = ${(plan.price - cost).toFixed(0)}</div>
+                  </div>
+                );
+              })}
+
+              {/* Apply plan to org */}
+              <div style={{ marginTop: 20, fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Apply Plan to Organization</div>
+              {data.orgs.map(o => (
+                <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line-0)" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{o.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                      Current: {o.plan} · {o.run_count}/{o.run_limit} tokens · {o.max_run_count}/{o.max_run_limit} max
+                    </div>
+                  </div>
+                  <select defaultValue={o.plan}
+                    onChange={e => applyPlanToOrg(o.id, e.target.value)}
+                    style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "1.5px solid var(--line-0)" }}>
+                    {plans.map(p => <option key={p.id} value={p.id}>{p.name} ({p.tokens} tokens, ${p.price}/mo)</option>)}
+                  </select>
+                </div>
+              ))}
+              {planSaveMsg && <div style={{ marginTop: 8, fontSize: 12, color: "var(--green)", fontWeight: 600 }}>{planSaveMsg}</div>}
+
+              {/* Revenue projections */}
+              <div style={{ marginTop: 20, fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Revenue Projections</div>
+              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                  {[10, 25, 50, 100].map(users => {
+                    const avgPrice = plans.filter(p => p.price > 0).reduce((s, p) => s + p.price, 0) / plans.filter(p => p.price > 0).length;
+                    const avgCost = plans.filter(p => p.price > 0).reduce((s, p) => s + p.tokens * p.costPerToken, 0) / plans.filter(p => p.price > 0).length;
+                    const mrr = Math.round(users * avgPrice * 0.6); // assume 60% on avg paid plan
+                    const cost = Math.round(users * avgCost * 0.6);
+                    return (
+                      <div key={users} style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", marginBottom: 4 }}>{users} users</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: "var(--green)", fontFamily: "Lora,serif" }}>${(mrr / 1000).toFixed(1)}K</div>
+                        <div style={{ fontSize: 10, color: "var(--ink-3)" }}>MRR</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-1)", marginTop: 4 }}>${((mrr - cost) / 1000).toFixed(1)}K gross</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
