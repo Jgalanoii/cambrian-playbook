@@ -22,6 +22,15 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("overview"); // overview | users | activity | urls
+  const [plans, setPlans] = useState([
+    { id: "trial", name: "Trial", tokens: 5, maxTokens: 0, price: 0, costPerToken: 1.16 },
+    { id: "starter", name: "Starter", tokens: 25, maxTokens: 5, price: 99, costPerToken: 1.16 },
+    { id: "pro", name: "Pro", tokens: 100, maxTokens: 20, price: 349, costPerToken: 1.16 },
+    { id: "team", name: "Team", tokens: 250, maxTokens: 50, price: 799, costPerToken: 1.16 },
+    { id: "enterprise", name: "Enterprise", tokens: 1000, maxTokens: 200, price: 2999, costPerToken: 1.16 },
+  ]);
+  const [opusRatio, setOpusRatio] = useState(75);
+  const [planSaveMsg, setPlanSaveMsg] = useState("");
   const isSuperuser = sbUser?.email === SUPERUSER_EMAIL;
 
   useEffect(() => {
@@ -62,16 +71,6 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const s = data.summary;
   const c = data.costs?.total || {};
   const l = data.learnings || {};
-  // Pricing state
-  const [plans, setPlans] = useState([
-    { id: "trial", name: "Trial", tokens: 5, maxTokens: 0, price: 0, costPerToken: 1.16 },
-    { id: "starter", name: "Starter", tokens: 25, maxTokens: 5, price: 99, costPerToken: 1.16 },
-    { id: "pro", name: "Pro", tokens: 100, maxTokens: 20, price: 349, costPerToken: 1.16 },
-    { id: "team", name: "Team", tokens: 250, maxTokens: 50, price: 799, costPerToken: 1.16 },
-    { id: "enterprise", name: "Enterprise", tokens: 1000, maxTokens: 200, price: 2999, costPerToken: 1.16 },
-  ]);
-  const [opusRatio, setOpusRatio] = useState(75); // % of usage that's Opus
-  const [planSaveMsg, setPlanSaveMsg] = useState("");
 
   // Cost calculation based on Opus ratio
   const calcCostPerToken = () => {
