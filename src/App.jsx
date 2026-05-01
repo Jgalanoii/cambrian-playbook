@@ -3237,7 +3237,7 @@ ${scaleGuidance}
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to State Farm — same insurance vertical, comparable employee count (~60K), and identical buyer persona (VP Operations).","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"CURRENT status only — if company was acquired or went private, say Private (acquired by X). NEVER include a stale ticker for a company that delisted. No ticker unless you are certain it is currently listed.","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [named customer] — same vertical, comparable employee count, and identical buyer persona.","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"CURRENT status only — if company was acquired or went private, say Private (acquired by X). NEVER include a stale ticker for a company that delisted. No ticker unless you are certain it is currently listed.","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt, { maxTokens: 7500 });
@@ -6111,7 +6111,7 @@ ${isOpen
                 <div style={{background:"var(--navy-bg)",borderRadius:10,padding:"16px 18px",marginBottom:16,border:"2px solid var(--navy)"}}>
                   <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>Research any company</div>
                   <div style={{display:"flex",gap:8}}>
-                    <input id="quick-brief-input" type="text" placeholder="Company name (e.g. Stripe, Caterpillar, Charity on Top)"
+                    <input id="quick-brief-input" type="text" placeholder="Company name (e.g. Acme Corp, Nike, Salesforce)"
                       autoFocus
                       value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
                       onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();}}
@@ -6352,9 +6352,9 @@ ${isOpen
                       <option value="Certification">✅ Certification</option>
                     </select>
                     <input type="text" placeholder={
-                      pp.type==="Case Study"?"e.g. Cut HR ticket volume 40% for State Farm in 90 days":
+                      pp.type==="Case Study"?"e.g. Cut support ticket volume 40% for a Fortune 500 client in 90 days":
                       pp.type==="ROI Metric"?"e.g. Average 3.2x ROI within 12 months":
-                      pp.type==="Customer Win"?"e.g. Won USAA over Blackhawk Network — 18-month displacement":
+                      pp.type==="Customer Win"?"e.g. Won a major enterprise account over the incumbent — 18-month displacement":
                       pp.type==="Award"?"e.g. Industry award — Cool Vendor 2025 in Employee Experience":
                       pp.type==="Partnership"?"e.g. Salesforce AppExchange Partner — integrated rewards":
                       "e.g. SOC 2 Type II certified"
@@ -8511,7 +8511,7 @@ ${isOpen
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
                           <span style={{background:"var(--navy)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>Public / Private
                         </div>
-                        <EF value={brief.publicPrivate||""} onChange={v=>patchBrief(b=>{b.publicPrivate=v;})} single placeholder="e.g. Public (NYSE: ARMK)"/>
+                        <EF value={brief.publicPrivate||""} onChange={v=>patchBrief(b=>{b.publicPrivate=v;})} single placeholder="e.g. Public (NYSE: ACME) or Private"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
