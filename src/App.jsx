@@ -64,6 +64,12 @@ let KL_HEALTHCARE_DISCOVERY = "";
 let KL_AI_ML = ""; // AI/ML deep knowledge
 let KL_AI_ML_SCORING = null;
 let KL_AI_ML_DISCOVERY = "";
+let KL_FINTECH_DEEP = ""; // Fintech deep knowledge
+let KL_FINTECH_DEEP_SCORING = null;
+let KL_FINTECH_DEEP_DISCOVERY = "";
+let KL_REWARDS = ""; // Rewards & incentives deep knowledge (Cambrian core domain)
+let KL_REWARDS_SCORING = null;
+let KL_REWARDS_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -109,6 +115,12 @@ async function fetchKnowledgeLayer() {
     KL_AI_ML = d.aiMl || "";
     KL_AI_ML_SCORING = d.aiMlScoring || null;
     KL_AI_ML_DISCOVERY = d.aiMlDiscovery || "";
+    KL_FINTECH_DEEP = d.fintechDeep || "";
+    KL_FINTECH_DEEP_SCORING = d.fintechDeepScoring || null;
+    KL_FINTECH_DEEP_DISCOVERY = d.fintechDeepDiscovery || "";
+    KL_REWARDS = d.rewardsIncentives || "";
+    KL_REWARDS_SCORING = d.rewardsIncentivesScoring || null;
+    KL_REWARDS_DISCOVERY = d.rewardsIncentivesDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -649,6 +661,26 @@ function getAiMlInjection(sellerICP, targetIndustry) {
   return "\n" + KL_AI_ML;
 }
 
+// ── FINTECH DEEP KNOWLEDGE INJECTION ────────────────────────────────────
+const FINTECH_DEEP_KW = ["fintech", "financial technology", "neobank", "baas", "embedded finance", "lending platform", "regtech", "wealthtech", "insurtech", "sponsor bank", "card issuing"];
+function getFintechDeepInjection(sellerICP, targetIndustry) {
+  if (!KL_FINTECH_DEEP) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (FINTECH_DEEP_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_FINTECH_DEEP;
+}
+
+// ── REWARDS & INCENTIVES KNOWLEDGE INJECTION ────────────────────────────
+const REWARDS_KW = ["reward", "incentive", "gift card", "recognition", "prepaid", "loyalty", "promo", "spiff", "channel incentive", "research payout", "employee recognition", "blackhawk", "tango", "tremendous"];
+function getRewardsInjection(sellerICP, targetIndustry) {
+  if (!KL_REWARDS) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (REWARDS_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_REWARDS;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -1048,6 +1080,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getBankingInjection(sellerICP, member.ind) +
     getHealthcareInjection(sellerICP, member.ind) +
     getAiMlInjection(sellerICP, member.ind) +
+    getFintechDeepInjection(sellerICP, member.ind) +
+    getRewardsInjection(sellerICP, member.ind) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -3294,6 +3328,16 @@ ${scaleGuidance}
           ? `\nAI/ML VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_AI_ML_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_AI_ML_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_FINTECH_DEEP_SCORING && getFintechDeepInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nFINTECH VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_FINTECH_DEEP_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_FINTECH_DEEP_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_REWARDS_SCORING && getRewardsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nREWARDS/INCENTIVES VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_REWARDS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_REWARDS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -4704,6 +4748,8 @@ ${isOpen
       getBankingInjection(sellerICP, member.ind) +
       getHealthcareInjection(sellerICP, member.ind) +
       getAiMlInjection(sellerICP, member.ind) +
+      getFintechDeepInjection(sellerICP, member.ind) +
+      getRewardsInjection(sellerICP, member.ind) +
       (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
       "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
@@ -4800,6 +4846,8 @@ ${isOpen
       (KL_BANKING_DISCOVERY && getBankingInjection(sellerICP, member?.ind) ? KL_BANKING_DISCOVERY + "\n" : "") +
       (KL_HEALTHCARE_DISCOVERY && getHealthcareInjection(sellerICP, member?.ind) ? KL_HEALTHCARE_DISCOVERY + "\n" : "") +
       (KL_AI_ML_DISCOVERY && getAiMlInjection(sellerICP, member?.ind) ? KL_AI_ML_DISCOVERY + "\n" : "") +
+      (KL_FINTECH_DEEP_DISCOVERY && getFintechDeepInjection(sellerICP, member?.ind) ? KL_FINTECH_DEEP_DISCOVERY + "\n" : "") +
+      (KL_REWARDS_DISCOVERY && getRewardsInjection(sellerICP, member?.ind) ? KL_REWARDS_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

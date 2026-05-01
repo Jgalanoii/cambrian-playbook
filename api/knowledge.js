@@ -25,6 +25,8 @@ import { BANKING_INDUSTRY_INJECTION, BANKING_SCORING_CONTEXT, BANKING_DISCOVERY_
 import { ACCOUNTING_FINANCE_INJECTION, ACCOUNTING_FINANCE_SCORING, ACCOUNTING_FINANCE_DISCOVERY } from "../src/data/accountingFinanceKnowledge.js";
 import { HEALTHCARE_SAAS_INJECTION, HEALTHCARE_SAAS_SCORING, HEALTHCARE_SAAS_DISCOVERY } from "../src/data/healthcareSaasKnowledge.js";
 import { AI_ML_INJECTION, AI_ML_SCORING, AI_ML_DISCOVERY } from "../src/data/aiMlKnowledge.js";
+import { FINTECH_DEEP_INJECTION, FINTECH_DEEP_SCORING, FINTECH_DEEP_DISCOVERY } from "../src/data/fintechKnowledge.js";
+import { REWARDS_INCENTIVES_INJECTION, REWARDS_INCENTIVES_SCORING, REWARDS_INCENTIVES_DISCOVERY } from "../src/data/rewardsIncentivesKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -225,5 +227,13 @@ export default function handler(req, res) {
     aiMl: AI_ML_INJECTION,
     aiMlScoring: AI_ML_SCORING,
     aiMlDiscovery: AI_ML_DISCOVERY,
+    // Fintech deep knowledge
+    fintechDeep: FINTECH_DEEP_INJECTION,
+    fintechDeepScoring: FINTECH_DEEP_SCORING,
+    fintechDeepDiscovery: FINTECH_DEEP_DISCOVERY,
+    // Rewards & incentives deep knowledge (Cambrian's core domain)
+    rewardsIncentives: REWARDS_INCENTIVES_INJECTION,
+    rewardsIncentivesScoring: REWARDS_INCENTIVES_SCORING,
+    rewardsIncentivesDiscovery: REWARDS_INCENTIVES_DISCOVERY,
   });
 }
