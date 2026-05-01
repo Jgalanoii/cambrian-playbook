@@ -58,6 +58,12 @@ let KL_BANKING = ""; // Banking & capital markets knowledge injection
 let KL_BANKING_SCORING = null; // Banking scoring calibration
 let KL_BANKING_DISCOVERY = ""; // Banking-specific discovery angles
 let KL_ACCOUNTING = ""; // Accounting & financial management (cross-cutting)
+let KL_HEALTHCARE = ""; // Healthcare SaaS deep knowledge
+let KL_HEALTHCARE_SCORING = null;
+let KL_HEALTHCARE_DISCOVERY = "";
+let KL_AI_ML = ""; // AI/ML deep knowledge
+let KL_AI_ML_SCORING = null;
+let KL_AI_ML_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -97,6 +103,12 @@ async function fetchKnowledgeLayer() {
     KL_BANKING_SCORING = d.bankingScoring || null;
     KL_BANKING_DISCOVERY = d.bankingDiscovery || "";
     KL_ACCOUNTING = d.accountingFinance || "";
+    KL_HEALTHCARE = d.healthcareSaas || "";
+    KL_HEALTHCARE_SCORING = d.healthcareSaasScoring || null;
+    KL_HEALTHCARE_DISCOVERY = d.healthcareSaasDiscovery || "";
+    KL_AI_ML = d.aiMl || "";
+    KL_AI_ML_SCORING = d.aiMlScoring || null;
+    KL_AI_ML_DISCOVERY = d.aiMlDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -617,6 +629,26 @@ function getBankingInjection(sellerICP, targetIndustry) {
   return "\n" + KL_BANKING;
 }
 
+// ── HEALTHCARE SAAS KNOWLEDGE INJECTION ─────────────────────────────────
+const HEALTHCARE_KW = ["healthcare", "health tech", "healthtech", "clinical", "ehr", "epic", "hipaa", "hospital", "payer", "provider", "pharma", "biotech", "medical", "patient", "telehealth", "rcm", "revenue cycle", "digital health"];
+function getHealthcareInjection(sellerICP, targetIndustry) {
+  if (!KL_HEALTHCARE) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (HEALTHCARE_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_HEALTHCARE;
+}
+
+// ── AI/ML KNOWLEDGE INJECTION ───────────────────────────────────────────
+const AI_ML_KW = ["artificial intelligence", "machine learning", "ai/ml", "ai platform", "ai-powered", "llm", "genai", "deep learning", "foundation model", "mlops", "applied ai", "inference", "rag", "ai-native", "copilot"];
+function getAiMlInjection(sellerICP, targetIndustry) {
+  if (!KL_AI_ML) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (AI_ML_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_AI_ML;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -1014,6 +1046,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getComplianceInjection(sellerICP, member.ind) +
     getRealEstateInjection(sellerICP, member.ind) +
     getBankingInjection(sellerICP, member.ind) +
+    getHealthcareInjection(sellerICP, member.ind) +
+    getAiMlInjection(sellerICP, member.ind) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -3250,6 +3284,16 @@ ${scaleGuidance}
           ? `\nBANKING/FINSERV VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_BANKING_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_BANKING_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_HEALTHCARE_SCORING && getHealthcareInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nHEALTHCARE VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_HEALTHCARE_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_HEALTHCARE_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_AI_ML_SCORING && getAiMlInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nAI/ML VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_AI_ML_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_AI_ML_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -4658,6 +4702,8 @@ ${isOpen
       getComplianceInjection(sellerICP, member.ind) +
       getRealEstateInjection(sellerICP, member.ind) +
       getBankingInjection(sellerICP, member.ind) +
+      getHealthcareInjection(sellerICP, member.ind) +
+      getAiMlInjection(sellerICP, member.ind) +
       (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
       "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
@@ -4752,6 +4798,8 @@ ${isOpen
       getComplianceDiscovery(sellerICP, member?.ind) +
       (KL_REAL_ESTATE_DISCOVERY && getRealEstateInjection(sellerICP, member?.ind) ? KL_REAL_ESTATE_DISCOVERY + "\n" : "") +
       (KL_BANKING_DISCOVERY && getBankingInjection(sellerICP, member?.ind) ? KL_BANKING_DISCOVERY + "\n" : "") +
+      (KL_HEALTHCARE_DISCOVERY && getHealthcareInjection(sellerICP, member?.ind) ? KL_HEALTHCARE_DISCOVERY + "\n" : "") +
+      (KL_AI_ML_DISCOVERY && getAiMlInjection(sellerICP, member?.ind) ? KL_AI_ML_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

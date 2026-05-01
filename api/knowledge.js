@@ -23,6 +23,8 @@ import { COMPLIANCE_FRAMEWORKS, COMPLIANCE_VERTICAL_MAP, COMPLIANCE_DISCLAIMER, 
 import { REAL_ESTATE_INDUSTRY_INJECTION, REAL_ESTATE_SCORING_CONTEXT, REAL_ESTATE_DISCOVERY_INJECTION } from "../src/data/realEstateKnowledge.js";
 import { BANKING_INDUSTRY_INJECTION, BANKING_SCORING_CONTEXT, BANKING_DISCOVERY_INJECTION } from "../src/data/bankingKnowledge.js";
 import { ACCOUNTING_FINANCE_INJECTION, ACCOUNTING_FINANCE_SCORING, ACCOUNTING_FINANCE_DISCOVERY } from "../src/data/accountingFinanceKnowledge.js";
+import { HEALTHCARE_SAAS_INJECTION, HEALTHCARE_SAAS_SCORING, HEALTHCARE_SAAS_DISCOVERY } from "../src/data/healthcareSaasKnowledge.js";
+import { AI_ML_INJECTION, AI_ML_SCORING, AI_ML_DISCOVERY } from "../src/data/aiMlKnowledge.js";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
@@ -215,5 +217,13 @@ export default function handler(req, res) {
     accountingFinance: ACCOUNTING_FINANCE_INJECTION,
     accountingFinanceScoring: ACCOUNTING_FINANCE_SCORING,
     accountingFinanceDiscovery: ACCOUNTING_FINANCE_DISCOVERY,
+    // Healthcare SaaS deep knowledge
+    healthcareSaas: HEALTHCARE_SAAS_INJECTION,
+    healthcareSaasScoring: HEALTHCARE_SAAS_SCORING,
+    healthcareSaasDiscovery: HEALTHCARE_SAAS_DISCOVERY,
+    // AI/ML deep knowledge
+    aiMl: AI_ML_INJECTION,
+    aiMlScoring: AI_ML_SCORING,
+    aiMlDiscovery: AI_ML_DISCOVERY,
   });
 }
