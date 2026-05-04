@@ -101,7 +101,7 @@ async function provisionTrialOrg(userId) {
     const newOrgId = created?.[0]?.id;
     if (!newOrgId) return null;
 
-    // Bind user to the new org as admin
+    // Bind user to the new org as rep (consistent with DB trigger in migration 009)
     await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
       method: "PATCH",
       headers: {
@@ -109,7 +109,7 @@ async function provisionTrialOrg(userId) {
         Authorization: `Bearer ${SB_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ org_id: newOrgId, role: "admin" }),
+      body: JSON.stringify({ org_id: newOrgId, role: "rep" }),
     });
 
     console.log(`[usage] Auto-provisioned trial org ${newOrgId} for user ${userId}`);

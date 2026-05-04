@@ -32,12 +32,14 @@
   --red:        #9B2C2C;
   --amber:      #BA7517;
   --purple:     #6B3A7A;
+  --violet:     #8B5CF6;
 
   --green-bg:   #EEF5EE;
   --red-bg:     #FDE8E8;
   --amber-bg:   #FEF6E4;
   --navy-bg:    #EEF5F9;
   --purple-bg:  #F3EEF9;
+  --violet-bg:  rgba(139, 92, 246, 0.08);
 
   /* lines */
   --line-0:     #E8E6DF;   /* default border */

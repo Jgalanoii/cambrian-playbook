@@ -53,13 +53,13 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
   if (loading) return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: 40, fontSize: 14 }}>Loading analytics...</div>
+      <div style={{ background: "var(--surface)", borderRadius: 16, padding: 40, fontSize: 14 }}>Loading analytics...</div>
     </div>
   );
 
   if (error) return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: 40 }}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, padding: 40 }}>
         <div style={{ color: "var(--red)", marginBottom: 12 }}>Error: {error}</div>
         <button onClick={onClose} className="btn btn-secondary">Close</button>
       </div>
@@ -107,7 +107,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#fff", borderRadius: 16, width: "90%", maxWidth: 900, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "90%", maxWidth: 900, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-0)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -115,7 +115,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ink-0)" }}>Superuser Dashboard</div>
             <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Real-time engagement analytics</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ink-3)" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--ink-2)" }}>&times;</button>
         </div>
 
         {/* Tabs */}
@@ -124,7 +124,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
             <button key={t.id} onClick={() => setTab(t.id)}
               style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
                 color: tab === t.id ? "var(--ink-0)" : "var(--ink-3)",
-                borderBottom: tab === t.id ? "2px solid var(--ink-0)" : "2px solid transparent" }}>
+                borderBottom: tab === t.id ? "2px solid var(--tan-0)" : "2px solid transparent" }}>
               {t.label}
             </button>
           ))}
@@ -136,7 +136,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ OVERVIEW ═══ */}
           {tab === "overview" && (
             <div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
                 {[
                   { label: "Total Users", value: s.total_users, color: "var(--navy)" },
                   { label: "Active Today", value: s.active_today, color: "var(--green)" },
@@ -149,10 +149,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   </div>
                 ))}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
                 {[
                   { label: "Tokens Used", value: s.total_runs, color: "var(--ink-0)" },
-                  { label: "Max Tokens", value: s.total_max_runs, color: "#8B5CF6" },
+                  { label: "Max Tokens", value: s.total_max_runs, color: "var(--violet)" },
                   { label: "Organizations", value: s.total_orgs, color: "var(--navy)" },
                   { label: "Unique Sellers", value: s.unique_seller_urls, color: "var(--green)" },
                   { label: "Milton Messages", value: s.total_milton_messages || 0, color: "#cc2222" },
@@ -189,11 +189,11 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px", marginBottom: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)" }}>Opus Usage Ratio</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#8B5CF6" }}>{opusRatio}% Opus / {100 - opusRatio}% Haiku</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--violet)" }}>{opusRatio}% Opus / {100 - opusRatio}% Haiku</div>
                 </div>
                 <input type="range" min={0} max={100} step={5} value={opusRatio}
                   onChange={e => { const v = Number(e.target.value); setOpusRatio(v); setPlans(p => p.map(pl => ({ ...pl, costPerToken: (v / 100) * 1.48 + ((100 - v) / 100) * 0.20 }))); }}
-                  style={{ width: "100%", accentColor: "#8B5CF6" }} />
+                  style={{ width: "100%", accentColor: "var(--violet)" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--ink-3)" }}>
                   <span>100% Haiku ($0.20/brief)</span>
                   <span>Blended: ${calcCostPerToken().toFixed(2)}/brief</span>
@@ -230,7 +230,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                         </td>
                         <td style={{ padding: "8px 6px" }}>
                           <input type="number" value={plan.maxTokens} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, maxTokens: Number(e.target.value) } : pl))}
-                            style={{ width: 60, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12, color: "#8B5CF6" }} />
+                            style={{ width: 60, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12, color: "var(--violet)" }} />
                         </td>
                         <td style={{ padding: "8px 6px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -253,7 +253,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 </tbody>
               </table>
               <button onClick={() => setPlans(p => [...p, { id: `custom-${Date.now()}`, name: "Custom", tokens: 50, maxTokens: 10, price: 199, costPerToken: calcCostPerToken() }])}
-                style={{ fontSize: 11, fontWeight: 600, padding: "5px 14px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "#fff", cursor: "pointer", color: "var(--ink-2)" }}>
+                style={{ fontSize: 11, fontWeight: 600, padding: "5px 14px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", cursor: "pointer", color: "var(--ink-2)" }}>
                 + Add Plan
               </button>
 
@@ -296,7 +296,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {/* Revenue projections */}
               <div style={{ marginTop: 20, fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Revenue Projections</div>
               <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
                   {[10, 25, 50, 100].map(users => {
                     const avgPrice = plans.filter(p => p.price > 0).reduce((s, p) => s + p.price, 0) / plans.filter(p => p.price > 0).length;
                     const avgCost = plans.filter(p => p.price > 0).reduce((s, p) => s + p.tokens * p.costPerToken, 0) / plans.filter(p => p.price > 0).length;
@@ -319,7 +319,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ LEARNINGS ═══ */}
           {tab === "learnings" && (
             <div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
                 {[
                   { label: "Sessions Analyzed", value: l.sessions_analyzed || 0, color: "var(--ink-0)" },
                   { label: "Fast Track Rate", value: `${l.fastTrackRate || 0}%`, color: "var(--green)" },
@@ -393,13 +393,13 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {tab === "costs" && data.costs && (
             <div>
               {/* Summary cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
                 {[
                   { label: "Total Cost", value: `$${c.cost?.toFixed(2)}`, color: "var(--ink-0)" },
                   { label: "API Calls", value: c.api_calls?.toLocaleString(), color: "var(--navy)" },
                   { label: "Input Tokens", value: `${(c.input_tokens / 1000).toFixed(0)}K`, color: "var(--green)" },
                   { label: "Output Tokens", value: `${(c.output_tokens / 1000).toFixed(0)}K`, color: "var(--amber)" },
-                  { label: "Web Searches", value: c.web_searches, color: "#8B5CF6" },
+                  { label: "Web Searches", value: c.web_searches, color: "var(--violet)" },
                 ].map(m => (
                   <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
                     <div style={{ fontSize: 22, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
@@ -442,7 +442,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 {(data.costs.by_model || []).map((m, i) => (
                   <div key={i} style={{ background: "var(--bg-1)", borderRadius: 8, padding: "10px 14px", minWidth: 180 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-0)", marginBottom: 4 }}>{m.model}</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: m.model.includes("opus") ? "#8B5CF6" : "var(--green)", fontFamily: "Lora,serif" }}>${m.cost.toFixed(3)}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: m.model.includes("opus") ? "var(--violet)" : "var(--green)", fontFamily: "Lora,serif" }}>${m.cost.toFixed(3)}</div>
                     <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{m.calls} calls · {(m.input / 1000).toFixed(0)}K in · {(m.output / 1000).toFixed(0)}K out</div>
                   </div>
                 ))}
@@ -478,10 +478,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {data.users.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
                 const org = data.orgs.find(o => o.id === u.org_id);
                 return (
-                  <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, padding: "14px 16px", marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "#fff" }}>
+                  <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, padding: "14px 16px", marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "var(--surface)" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                       {/* Avatar */}
-                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
                         {(u.name || u.email || "").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "··"}
                       </div>
 
@@ -489,7 +489,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-0)" }}>{u.name || u.email?.split("@")[0]}</div>
-                          {u.email === SUPERUSER_EMAIL && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "#8B5CF622", color: "#8B5CF6" }}>SUPER</span>}
+                          {u.email === SUPERUSER_EMAIL && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "var(--violet-bg)", color: "var(--violet)" }}>SUPER</span>}
                         </div>
                         <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 6 }}>{u.email}</div>
 
@@ -569,8 +569,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             style={{ width: 50, fontSize: 11, border: "1px solid var(--line-0)", borderRadius: 4, padding: "2px 4px", textAlign: "center" }} />
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ fontSize: 10, color: "#8B5CF6" }}>Max:</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "#8B5CF6" }}>{org.max_run_count || 0}</span>
+                          <span style={{ fontSize: 10, color: "var(--violet)" }}>Max:</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--violet)" }}>{org.max_run_count || 0}</span>
                           <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
                           <input type="number" defaultValue={org.max_run_limit}
                             onBlur={async e => {
@@ -584,7 +584,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                               setPlanSaveMsg(`${org.name} max token limit → ${val}`);
                               setTimeout(() => setPlanSaveMsg(""), 3000);
                             }}
-                            style={{ width: 50, fontSize: 11, border: "1px solid #8B5CF633", borderRadius: 4, padding: "2px 4px", textAlign: "center", color: "#8B5CF6" }} />
+                            style={{ width: 50, fontSize: 11, border: "1px solid var(--violet)", borderRadius: 4, padding: "2px 4px", textAlign: "center", color: "var(--violet)" }} />
                         </div>
                         {/* Reset tokens button */}
                         <button onClick={async () => {
@@ -652,7 +652,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {data.environment && (
                 <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Environment</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
                     {[
                       { label: "Guest Mode", value: data.environment.guest_mode, ok: data.environment.guest_mode === "disabled" },
                       { label: "Environment", value: data.environment.environment, ok: data.environment.environment === "production" },
@@ -698,7 +698,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                         {o.run_count >= o.run_limit && <span style={{ color: "var(--red)", fontWeight: 700, marginLeft: 4 }}>LIMIT</span>}
                       </td>
                       <td style={{ padding: "8px 6px" }}>
-                        <span style={{ fontWeight: 600, color: "#8B5CF6" }}>{o.max_run_count}</span>
+                        <span style={{ fontWeight: 600, color: "var(--violet)" }}>{o.max_run_count}</span>
                         <span style={{ color: "var(--ink-3)" }}>/{o.max_run_limit}</span>
                       </td>
                       <td style={{ padding: "8px 6px", fontSize: 11, color: "var(--ink-3)" }}>{o.seller_url || "—"}</td>
@@ -710,7 +710,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {/* Totals */}
               <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px 16px", background: "var(--bg-1)", borderRadius: 10 }}>
                 <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>total tokens</span></div>
-                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "#8B5CF6" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max tokens</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "var(--violet)" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max tokens</span></div>
                 <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_orgs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>orgs</span></div>
               </div>
             </div>

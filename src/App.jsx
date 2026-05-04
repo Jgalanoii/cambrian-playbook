@@ -1102,11 +1102,12 @@ function buildUserEditContext(edits, userEdits) {
 function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null, icpEdits=[]){
   const co  = sanitizeForPrompt(member.company);
   const url = member.company_url || co;
+  const safeSellerUrl = sanitizeForPrompt(sellerUrl);
 
-  const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>u.url.trim());
+  const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>sanitizeForPrompt(u.url.trim()));
   const sellerCtx = sellerDocs.length>0
-    ? "SELLER DOCS:\n"+sellerDocs.map(d=>d.label+": "+d.content.slice(0,400)).join("\n")
-    : "Seller: "+sellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"");
+    ? "SELLER DOCS:\n"+sellerDocs.map(d=>sanitizeForPrompt(d.label)+": "+sanitizeForPrompt(d.content.slice(0,400))).join("\n")
+    : "Seller: "+safeSellerUrl+(activeProductUrls.length?" | Pages: "+activeProductUrls.join(", "):"");
   const prodCtx = products.filter(p=>p.name.trim()).length>0
     ? "\nPRODUCTS: "+products.filter(p=>p.name.trim()).map(p=>p.name+(p.description?" - "+p.description.slice(0,60):"")).join("; ")
     : "";
@@ -3337,7 +3338,7 @@ ${scaleGuidance}
     for (let i = 0; i < members.length; i += BATCH) batches.push(members.slice(i, i + BATCH));
 
     const scoreBatch = async (batch) => {
-      const companies = batch.map(m => `${m.company}|${m.ind||"Unknown — use training knowledge to identify industry"}|${m.company_url||""}`).join("\n");
+      const companies = batch.map(m => `${sanitizeForPrompt(m.company)}|${sanitizeForPrompt(m.ind||"Unknown — use training knowledge to identify industry")}|${sanitizeForPrompt(m.company_url||"")}`).join("\n");
       const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
       const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
       // Inject research-backed heuristics from knowledge layer
@@ -4292,7 +4293,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
+  const getSessionSnap=()=>({step,sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -4357,7 +4358,7 @@ ${isOpen
     if(d.contactRole) setContactRole(d.contactRole);
     if(d.dealClassification) setDealClassification(d.dealClassification);
     if(d.importMode) setImportMode(d.importMode);
-    setShowSessions(false);setStep(d.sellerUrl?1:0);
+    setShowSessions(false);setStep(d.step!=null?d.step:(d.sellerUrl?1:0));
     // Reset auto-save snapshot so restored state isn't immediately re-saved
     lastAutoSaveSnap.current = JSON.stringify(d);
   };
@@ -4698,13 +4699,8 @@ ${isOpen
     setBrief(skeleton);
     setBriefLoading(false);
     setBriefStatus("");
-    // Optimistically increment local usage counter (server increments authoritatively)
-    setOrgCtx(prev => {
-      if (!prev) return prev;
-      const next = { ...prev, run_count: prev.run_count + 1 };
-      if (cambrianMax) next.max_run_count = (prev.max_run_count || 0) + 1;
-      return next;
-    });
+    // Refresh org context from server to get authoritative token count
+    refreshOrgCtx();
 
     // Wire each section's merger to fire as it resolves.
     // Also track timing so we can warn if calls are taking too long.
@@ -5052,7 +5048,14 @@ ${isOpen
       console.log("[discovery] Generated", Object.keys(result).length, "stages");
       setDiscoveryQs(result);
     } else {
-      console.warn("[discovery] streamAI returned null — no questions generated");
+      console.warn("[discovery] streamAI returned null — using fallback questions");
+      setDiscoveryQs({
+        reality: [{ track: "sales", q: "Walk me through your current process for handling this today.", framework: "Current state", intent: "Understand baseline" }],
+        impact: [{ track: "sales", q: "What happens if this doesn't get addressed in the next 6 months?", framework: "Cost of inaction", intent: "Quantify urgency" }],
+        vision: [{ track: "sales", q: "If you could wave a magic wand, what does the ideal state look like?", framework: "Future state", intent: "Define success criteria" }],
+        entryPoints: [{ track: "sales", q: "Who else needs to be involved in this decision?", framework: "Buying committee", intent: "Map stakeholders" }],
+        route: [{ track: "sales", q: "What would a successful first 30 days look like for you?", framework: "Pilot scope", intent: "Define entry point" }],
+      });
     }
   };
 
@@ -5179,8 +5182,8 @@ ${isOpen
 
     setPostLoading(true);
     const riverSummary=RIVER_STAGES.map(s=>{
-      const gates=s.gates.map(g=>`${g.q}: ${gateAnswers[g.id]||"Not answered"}`).join("; ");
-      const disc=s.discovery.map(p=>`${p.label}: ${riverData[p.id]||"Not captured"}`).join("; ");
+      const gates=s.gates.map(g=>`${g.q}: ${sanitizeForPrompt(gateAnswers[g.id]||"Not answered")}`).join("; ");
+      const disc=s.discovery.map(p=>`${p.label}: ${sanitizeForPrompt(riverData[p.id]||"Not captured")}`).join("; ");
       return`${s.label}: ${gates} | ${disc}`;
     }).join("\n");
 
@@ -5200,7 +5203,7 @@ ${isOpen
       (brief?.elevatorPitch ? `Elevator Pitch: ${brief.elevatorPitch.slice(0,200)}\n` : "") +
       (brief?.strategicTheme ? `Strategic Theme: ${brief.strategicTheme.slice(0,200)}\n` : "") +
       (brief?.sellerOpportunity ? `Why Us: ${brief.sellerOpportunity.slice(0,200)}\n` : "") +
-      `\nCompany: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind} | Role: ${contactRole||"Unknown"} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%\n`+
+      `\nCompany: ${sanitizeForPrompt(selectedAccount?.company||"")} | Industry: ${sanitizeForPrompt(selectedAccount?.ind||"")} | Role: ${sanitizeForPrompt(contactRole||"Unknown")} | ACV: ${selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"Unknown"} | Confidence: ${confidence}%\n`+
       `Cohort: ${selectedCohort?.name} | Outcomes: ${selectedOutcomes.join(", ")}\n`+
       `Solutions: ${(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ")||"Unknown"}\n\n`+
 
@@ -5781,6 +5784,8 @@ ${isOpen
     window.addEventListener("usage-limit-exceeded", handler);
     return () => window.removeEventListener("usage-limit-exceeded", handler);
   }, []);
+  // Refresh orgCtx after billable calls to keep token count accurate
+  const refreshOrgCtx = () => { if (sbUser?.id && sbToken) fetchOrgContext(sbUser.id, sbToken).then(org => { if (org) setOrgCtx(org); }); };
 
   if(!authed) return <PasswordGate onAuth={async(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
@@ -5799,6 +5804,11 @@ ${isOpen
       } catch (e) { console.warn("Invite acceptance failed:", e.message); }
     }
     if(u?.id) fetchOrgContext(u.id,tok).then(org=>{ if(org) setOrgCtx(org); });
+    // Restore guest work if user just signed up after guest mode
+    try {
+      const guestState = localStorage.getItem("cambrian_guest_state");
+      if (guestState) { restoreSession({ id: null, name: "Guest Session", data: JSON.parse(guestState) }); localStorage.removeItem("cambrian_guest_state"); }
+    } catch {}
     // Auto-refresh tokens — update app state when token is silently refreshed
     sbSetTokenCallback((newToken) => { setSbToken(newToken); setAuthToken(newToken); });
   }}/>;
@@ -6105,8 +6115,8 @@ ${isOpen
               }}
               title={cambrianMax?"Switch to Standard":`Cambrian Max — premium intelligence${orgCtx?.max_run_limit?` (${orgCtx.max_run_count||0}/${orgCtx.max_run_limit} tokens used)`:""}`}
               style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.3px",
-                border:cambrianMax?"2px solid #8B5CF6":"1.5px solid var(--line-0)",
-                background:cambrianMax?"linear-gradient(135deg,#8B5CF6,#6D28D9)":"var(--surface)",
+                border:cambrianMax?"2px solid var(--violet)":"1.5px solid var(--line-0)",
+                background:cambrianMax?"linear-gradient(135deg,var(--violet),#6D28D9)":"var(--surface)",
                 color:cambrianMax?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
               {cambrianMax?"⚡ MAX":`⚡ Max${orgCtx?.max_run_limit?` ${orgCtx.max_run_count||0}/${orgCtx.max_run_limit}`:""}`}
             </button>
@@ -6173,8 +6183,8 @@ ${isOpen
                       <>
                         <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
                         <button onClick={()=>{setSuperAdminOpen(true);setMoreMenuOpen(false);}}
-                          style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"#8B5CF6",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
-                          onMouseEnter={e=>e.currentTarget.style.background="#8B5CF611"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                          style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--violet)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                          onMouseEnter={e=>e.currentTarget.style.background="var(--violet-bg)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
                           <span style={{width:20,textAlign:"center"}}>⚙</span> Admin Dashboard
                         </button>
                       </>
@@ -6196,7 +6206,11 @@ ${isOpen
         {!sbUser&&step>0&&(
           <div style={{background:"var(--amber-bg)",borderBottom:"1px solid #BA751744",padding:"7px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
             <div style={{fontSize:12,color:"#7A5010"}}>👤 <strong>Guest mode</strong> — your work is not being saved.</div>
-            <button onClick={()=>{setAuthed(false);}}
+            <button onClick={()=>{
+                // Serialize guest work to localStorage before unmounting so it survives signup
+                try { localStorage.setItem("cambrian_guest_state", JSON.stringify(getSessionSnap())); } catch {}
+                setAuthed(false);
+              }}
               style={{fontSize:12,fontWeight:700,padding:"4px 14px",borderRadius:8,background:"var(--ink-0)",color:"#fff",border:"none",cursor:"pointer"}}>
               Create Free Account
             </button>
@@ -6988,7 +7002,7 @@ ${isOpen
                   <div style={{display:"flex",gap:0,border:"1.5px solid var(--line-0)",borderRadius:8,overflow:"hidden"}}>
                     {[["icp","🎯 Your ICP"],["rfp","📡 RFP Intel"]].map(([tab,label])=>(
                       <button key={tab}
-                        onClick={()=>setIcpTab(tab)}
+                        onClick={()=>{setIcpTab(tab); if(tab==="rfp"&&!rfpData.open?.length&&!rfpData.closed?.length&&!rfpData.loading) fetchRFPIntel();}}
                         style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
                           background:icpTab===tab?"var(--ink-0)":"#fff",
                           color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s",position:"relative"}}>
@@ -8282,15 +8296,24 @@ ${isOpen
                 </div>
               </div>
               <div className="pie-card">
-                <div className="pie-title">Accounts by Cohort</div>
+                <div className="pie-title">Fit Score Distribution</div>
                 <div className="pie-wrap">
-                  <PieChart size={100} data={cohorts.map(c=>({label:c.name,value:c.size,color:c.color}))}/>
+                  <PieChart size={100} data={[
+                    {label:"Strong Fit (75+)",value:Object.values(fitScores).filter(f=>f.score>=75).length,color:"var(--green)"},
+                    {label:"Potential (55-74)",value:Object.values(fitScores).filter(f=>f.score>=55&&f.score<75).length,color:"var(--amber)"},
+                    {label:"Low Fit (<55)",value:Object.values(fitScores).filter(f=>f.score<55).length,color:"var(--red)"},
+                    {label:"Unscored",value:rows.length-Object.keys(fitScores).length,color:"var(--ink-3)"},
+                  ].filter(d=>d.value>0)}/>
                   <div className="pie-legend">
-                    {cohorts.map((c,i)=>(
+                    {[
+                      {label:"Strong Fit",value:Object.values(fitScores).filter(f=>f.score>=75).length,color:"var(--green)"},
+                      {label:"Potential Fit",value:Object.values(fitScores).filter(f=>f.score>=55&&f.score<75).length,color:"var(--amber)"},
+                      {label:"Low Fit",value:Object.values(fitScores).filter(f=>f.score<55).length,color:"var(--red)"},
+                    ].filter(d=>d.value>0).map((d,i)=>(
                       <div key={i} className="pie-legend-item">
-                        <div className="pie-legend-dot" style={{background:c.color}}/>
-                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{c.name}</span>
-                        <span className="pie-legend-val">{c.size} · {c.pct}%</span>
+                        <div className="pie-legend-dot" style={{background:d.color}}/>
+                        <span>{d.label}</span>
+                        <span className="pie-legend-val">{d.value} accts</span>
                       </div>
                     ))}
                   </div>
@@ -8859,7 +8882,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>📰</div>
-                      <div><div className="bb-title">Recent Headlines</div><div className="bb-sub">Notable news from 2024–2025</div></div>
+                      <div><div className="bb-title">Recent Headlines</div><div className="bb-sub">Notable recent developments</div></div>
                     </div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
                       {(brief.recentHeadlines||[]).filter(h=>{
@@ -10254,11 +10277,11 @@ ${isOpen
               {(orgCtx.max_run_limit||0)>0&&(
                 <>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:2}}>
-                    <span style={{fontSize:10,fontWeight:700,color:"#8B5CF6",textTransform:"uppercase",letterSpacing:"0.3px"}}>Max</span>
-                    <span style={{fontWeight:700,fontSize:12,color:"#8B5CF6"}}>{orgCtx.max_run_count||0}/{orgCtx.max_run_limit}</span>
+                    <span style={{fontSize:10,fontWeight:700,color:"var(--violet)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Max</span>
+                    <span style={{fontWeight:700,fontSize:12,color:"var(--violet)"}}>{orgCtx.max_run_count||0}/{orgCtx.max_run_limit}</span>
                   </div>
                   <div style={{width:80,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
-                    <div style={{height:"100%",borderRadius:2,background:(orgCtx.max_run_count||0)>=(orgCtx.max_run_limit||0)?"var(--red)":"#8B5CF6",width:Math.min(100,Math.round((orgCtx.max_run_count||0)/(orgCtx.max_run_limit||1)*100))+"%",transition:"width 0.3s"}}/>
+                    <div style={{height:"100%",borderRadius:2,background:(orgCtx.max_run_count||0)>=(orgCtx.max_run_limit||0)?"var(--red)":"var(--violet)",width:Math.min(100,Math.round((orgCtx.max_run_count||0)/(orgCtx.max_run_limit||1)*100))+"%",transition:"width 0.3s"}}/>
                   </div>
                 </>
               )}

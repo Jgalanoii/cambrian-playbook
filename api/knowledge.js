@@ -34,59 +34,7 @@ import { INVESTOR_INTELLIGENCE_INJECTION, INVESTOR_INTELLIGENCE_DISCOVERY } from
 import { BAAS_INJECTION, BAAS_SCORING, BAAS_DISCOVERY } from "../src/data/baasKnowledge.js";
 import { CHARITABLE_GIVING_INJECTION, CHARITABLE_GIVING_SCORING, CHARITABLE_GIVING_DISCOVERY } from "../src/data/charitableGivingKnowledge.js";
 
-import { createHmac, timingSafeEqual } from "crypto";
-import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage } from "./_guard.js";
-
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
-const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
-const SUPABASE_REF = process.env.VITE_SUPABASE_URL
-  ? new URL(process.env.VITE_SUPABASE_URL).hostname.split(".")[0]
-  : "";
-
-function verifyJwt(req) {
-  // Try JWT first — authenticated users get the full knowledge layer
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    const token = authHeader.slice(7);
-    if (token) {
-      try {
-        const parts = token.split(".");
-        if (parts.length === 3) {
-          const header = JSON.parse(Buffer.from(parts[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
-          if (header?.alg === "HS256") {
-            if (!JWT_SECRET) {
-              // No secret available — reject in production, allow in dev
-              if (IS_PRODUCTION) return false;
-            } else {
-              const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
-              const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
-              if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return false;
-              req._isGuest = false;
-              const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
-              const now = Math.floor(Date.now() / 1000);
-              if ((!payload.exp || payload.exp >= now) && SUPABASE_REF && (payload.iss === "supabase" || payload.iss?.includes(SUPABASE_REF))) return true;
-            }
-          } else if (header?.alg === "ES256" || header?.alg === "RS256") {
-            req._isGuest = false;
-            const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
-            const now = Math.floor(Date.now() / 1000);
-            if ((!payload.exp || payload.exp >= now) && SUPABASE_REF && (payload.iss === "supabase" || payload.iss?.includes(SUPABASE_REF))) return true;
-          }
-        }
-      } catch {}
-    }
-  }
-
-  // Guest mode fallback — gets stripped-down knowledge layer
-  // SAFETY: guest mode is disabled in production unless explicitly opted in
-  if (IS_PRODUCTION && !process.env.ALLOW_GUEST_PRODUCTION) return false;
-  const guestFlag = (process.env.ALLOW_GUEST || "").replace(/^["']|["']$/g, "").replace(/\\n/g, "").trim().toLowerCase();
-  if (guestFlag === "true" || guestFlag === "1" || guestFlag === "yes") {
-    req._isGuest = true;
-    return true;
-  }
-
-  return false;
+import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 }
 
 export default function handler(req, res) {

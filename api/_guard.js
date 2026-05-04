@@ -49,7 +49,7 @@ function base64UrlDecode(str) {
   return Buffer.from(str.replace(/-/g, "+").replace(/_/g, "/"), "base64");
 }
 
-function decodeJwtPayload(token) {
+export function decodeJwtPayload(token) {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
@@ -80,13 +80,12 @@ function verifyJwtSignature(token) {
       return timingSafeEqual(expected, actual);
     }
 
+    // ES256/RS256 — asymmetric signing. Without JWKS verification we can't
+    // cryptographically validate the signature, so reject in production.
+    // Supabase defaults to HS256 with the JWT secret, which IS verified above.
     if (alg === "ES256" || alg === "RS256") {
-      // Asymmetric signing (ECDSA / RSA) — Supabase signs the token,
-      // we verify via issuer + expiry checks in verifyJwt(). Full JWKS
-      // verification would require fetching the public key from Supabase's
-      // .well-known/jwks.json endpoint — acceptable trade-off since we
-      // also verify issuer matches our project ref and check expiry.
-      return true;
+      if (IS_PRODUCTION) return false; // Reject unverifiable signatures in prod
+      return true; // Allow in dev for flexibility
     }
 
     // Unknown algorithm — reject
@@ -115,7 +114,7 @@ export function getGuestRemaining(ip) {
   return Math.max(0, GUEST_LIMIT - (guestUsage.get(ip) || 0));
 }
 
-function verifyJwt(req) {
+export function verifyJwt(req) {
   // Try JWT auth first — authenticated users are never treated as guests
   const authHeader = req.headers.authorization || "";
   if (authHeader.startsWith("Bearer ")) {

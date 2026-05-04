@@ -21,9 +21,9 @@ export default function S9SolutionFit({
 
       {solutionFitLoading && (
         <div className="card">
-          <div style={{fontSize:13,color:"#777",marginBottom:12}}>Applying Solution Architecture framework to your discovery capture...</div>
+          <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:12}}>Applying Solution Architecture framework to your discovery capture...</div>
           <div className="pulse-wrap">{[70,90,55,80,65,75,50].map((w,i)=><div key={i} className="pulse-line" style={{width:w+"%",animationDelay:(i*0.12)+"s"}}/>)}</div>
-          <div style={{fontSize:12,color:"#8B6F47",marginTop:12,fontStyle:"italic"}}>
+          <div style={{fontSize:12,color:"var(--tan-0)",marginTop:12,fontStyle:"italic"}}>
             Evaluating business alignment, integration complexity, and implementation phasing...
           </div>
         </div>
@@ -42,8 +42,8 @@ export default function S9SolutionFit({
               ].filter(x=>x.val).map((x,i)=>{
                 const isStrong=x.val?.toLowerCase().includes("strong");
                 const isWeak=x.val?.toLowerCase().includes("weak");
-                const c=isStrong?"#2E6B2E":isWeak?"#9B2C2C":"#BA7517";
-                const bg=isStrong?"#EEF5EE":isWeak?"#FDE8E8":"#FEF6E4";
+                const c=isStrong?"var(--green)":isWeak?"var(--red)":"var(--amber)";
+                const bg=isStrong?"var(--green-bg)":isWeak?"var(--red-bg)":"var(--amber-bg)";
                 return(
                   <div key={i} style={{background:bg,border:"1px solid "+c+"44",borderRadius:10,padding:"10px 12px"}}>
                     <div style={{fontSize:10,fontWeight:700,color:c,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>{x.label}</div>
@@ -55,32 +55,32 @@ export default function S9SolutionFit({
           )}
 
           {solutionFit.adoptionProfile && (
-            <div style={{background:"#EEF5F9",border:"1px solid #1B3A6B44",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
+            <div style={{background:"var(--navy-bg)",border:"1px solid var(--navy)",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px"}}>📊 Adoption Profile (Moore)</div>
-                <span style={{background:"#1B3A6B",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{solutionFit.adoptionProfile}</span>
+                <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px"}}>📊 Adoption Profile (Moore)</div>
+                <span style={{background:"var(--navy)",color:"var(--surface)",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{solutionFit.adoptionProfile}</span>
               </div>
-              {solutionFit.adoptionImplication && <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{solutionFit.adoptionImplication}</div>}
+              {solutionFit.adoptionImplication && <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{solutionFit.adoptionImplication}</div>}
             </div>
           )}
 
           {solutionFit.dmiacStage && (
-            <div style={{background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
+            <div style={{background:"var(--bg-2)",border:"1px solid var(--line-0)",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,flexWrap:"wrap"}}>
-                <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,color:"#1a1a18"}}>DMAIC Stage:</div>
+                <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,color:"var(--ink-0)"}}>DMAIC Stage:</div>
                 {(()=>{
-                  const map={Define:"#9B2C2C",Measure:"#BA7517",Analyze:"#1B3A6B",Improve:"#2E6B2E",Control:"#6B3A7A"};
-                  const bgmap={Define:"#FDE8E8",Measure:"#FEF6E4",Analyze:"#EEF5F9",Improve:"#EEF5EE",Control:"#F3EEF9"};
-                  const c=map[solutionFit.dmiacStage]||"#555";
-                  const bg=bgmap[solutionFit.dmiacStage]||"#F8F6F1";
+                  const map={Define:"var(--red)",Measure:"var(--amber)",Analyze:"var(--navy)",Improve:"var(--green)",Control:"var(--purple)"};
+                  const bgmap={Define:"var(--red-bg)",Measure:"var(--amber-bg)",Analyze:"var(--navy-bg)",Improve:"var(--green-bg)",Control:"var(--purple-bg)"};
+                  const c=map[solutionFit.dmiacStage]||"var(--ink-2)";
+                  const bg=bgmap[solutionFit.dmiacStage]||"var(--bg-2)";
                   return<span style={{background:bg,color:c,border:"1.5px solid "+c+"44",borderRadius:20,padding:"4px 16px",fontSize:14,fontWeight:700}}>{solutionFit.dmiacStage}</span>;
                 })()}
               </div>
-              {solutionFit.dmiacRationale && <div style={{fontSize:14,color:"#555",lineHeight:1.6,marginBottom:solutionFit.entryStrategy?10:0}}>{solutionFit.dmiacRationale}</div>}
+              {solutionFit.dmiacRationale && <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:solutionFit.entryStrategy?10:0}}>{solutionFit.dmiacRationale}</div>}
               {solutionFit.entryStrategy && (
-                <div style={{background:"#1a1a18",borderRadius:8,padding:"10px 14px"}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Recommended Entry Strategy</div>
-                  <div style={{fontSize:13,color:"#fff",lineHeight:1.6}}>{solutionFit.entryStrategy}</div>
+                <div style={{background:"var(--ink-0)",borderRadius:8,padding:"10px 14px"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Recommended Entry Strategy</div>
+                  <div style={{fontSize:13,color:"var(--surface)",lineHeight:1.6}}>{solutionFit.entryStrategy}</div>
                 </div>
               )}
             </div>
@@ -88,13 +88,13 @@ export default function S9SolutionFit({
 
           {/* Integration complexity badge */}
           <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
-            <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"#1a1a18"}}>
+            <div style={{fontFamily:"Lora,serif",fontSize:16,fontWeight:600,color:"var(--ink-0)"}}>
               Integration Complexity:
             </div>
             {(()=>{
               const ic=(solutionFit.integrationComplexity||"").split("/")[0].trim().toLowerCase();
-              const c=ic==="low"?"#2E6B2E":ic==="medium"?"#BA7517":"#9B2C2C";
-              const bg=ic==="low"?"#EEF5EE":ic==="medium"?"#FEF6E4":"#FDE8E8";
+              const c=ic==="low"?"var(--green)":ic==="medium"?"var(--amber)":"var(--red)";
+              const bg=ic==="low"?"var(--green-bg)":ic==="medium"?"var(--amber-bg)":"var(--red-bg)";
               return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"4px 14px",fontSize:14,fontWeight:700}}>
                 {solutionFit.integrationComplexity}
               </span>;
@@ -110,33 +110,33 @@ export default function S9SolutionFit({
               </div>
               <div className="bb-body">
                 {solutionFit.confirmedSolutions.map((s,i)=>(
-                  <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<solutionFit.confirmedSolutions.length-1?"1px solid #F0EDE6":"none"}}>
+                  <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<solutionFit.confirmedSolutions.length-1?"1px solid var(--line-1)":"none"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-                      <div style={{background:"#F0EDE6",color:"#7A5C30",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
+                      <div style={{background:"var(--line-1)",color:"var(--tan-ink)",border:"1px solid var(--tan-2)",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
                         {s.product}
                       </div>
                       <div style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                        background:s.fitScore>=75?"#EEF5EE":s.fitScore>=50?"#FEF6E4":"#FDE8E8",
-                        color:s.fitScore>=75?"#2E6B2E":s.fitScore>=50?"#BA7517":"#9B2C2C",
-                        border:"1px solid "+(s.fitScore>=75?"#2E6B2E":s.fitScore>=50?"#BA7517":"#9B2C2C")+"44"}}>
+                        background:s.fitScore>=75?"var(--green-bg)":s.fitScore>=50?"var(--amber-bg)":"var(--red-bg)",
+                        color:s.fitScore>=75?"var(--green)":s.fitScore>=50?"var(--amber)":"var(--red)",
+                        border:"1px solid "+(s.fitScore>=75?"var(--green)":s.fitScore>=50?"var(--amber)":"var(--red)")+"44"}}>
                         {s.fitScore}% · {s.fitLabel}
                       </div>
-                      <div style={{fontSize:11,background:"#F8F6F1",border:"1px solid #E8E6DF",borderRadius:10,padding:"2px 10px",color:"#555"}}>
+                      <div style={{fontSize:11,background:"var(--bg-2)",border:"1px solid var(--line-0)",borderRadius:10,padding:"2px 10px",color:"var(--ink-2)"}}>
                         {s.implementationPhase}
                       </div>
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                       <div>
-                        <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Business Alignment</div>
-                        <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{s.businessAlignment}</div>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Business Alignment</div>
+                        <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{s.businessAlignment}</div>
                       </div>
                       <div>
-                        <div style={{fontSize:11,fontWeight:700,color:"#1B3A6B",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Architecture Notes</div>
-                        <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{s.architectureNotes}</div>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Architecture Notes</div>
+                        <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{s.architectureNotes}</div>
                       </div>
                     </div>
                     {s.risks && (
-                      <div style={{marginTop:8,padding:"8px 10px",background:"#FDE8E8",borderRadius:6,fontSize:12,color:"#9B2C2C"}}>
+                      <div style={{marginTop:8,padding:"8px 10px",background:"var(--red-bg)",borderRadius:6,fontSize:12,color:"var(--red)"}}>
                         ⚠ {s.risks}
                       </div>
                     )}
@@ -155,17 +155,17 @@ export default function S9SolutionFit({
               </div>
               <div className="bb-body">
                 {solutionFit.revisedSolutions.map((r,i)=>(
-                  <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",background:"#FAF8F4",borderRadius:8,marginBottom:8,border:"1px solid #E8E6DF"}}>
+                  <div key={i} style={{display:"flex",gap:10,padding:"10px 12px",background:"var(--bg-1)",borderRadius:8,marginBottom:8,border:"1px solid var(--line-0)"}}>
                     <div style={{flex:1}}>
                       <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
-                        <span style={{fontWeight:700,fontSize:13,color:"#1a1a18"}}>{r.product}</span>
+                        <span style={{fontWeight:700,fontSize:13,color:"var(--ink-0)"}}>{r.product}</span>
                         <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,
-                          background:r.change==="Upgraded"?"#EEF5EE":r.change==="Removed"?"#FDE8E8":"#FEF6E4",
-                          color:r.change==="Upgraded"?"#2E6B2E":r.change==="Removed"?"#9B2C2C":"#BA7517"}}>
+                          background:r.change==="Upgraded"?"var(--green-bg)":r.change==="Removed"?"var(--red-bg)":"var(--amber-bg)",
+                          color:r.change==="Upgraded"?"var(--green)":r.change==="Removed"?"var(--red)":"var(--amber)"}}>
                           {r.change}
                         </span>
                       </div>
-                      <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{r.reason}</div>
+                      <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.5}}>{r.reason}</div>
                     </div>
                   </div>
                 ))}
@@ -182,9 +182,9 @@ export default function S9SolutionFit({
               </div>
               <div className="bb-body">
                 {solutionFit.architectureGaps.map((g,i)=>(
-                  <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<solutionFit.architectureGaps.length-1?"1px solid #F0EDE6":"none"}}>
-                    <div style={{fontSize:13,fontWeight:600,color:"#9B2C2C",marginBottom:4}}>Gap: {g.gap}</div>
-                    <div style={{fontSize:13,color:"#2E6B2E",lineHeight:1.5}}>→ {g.recommendation}</div>
+                  <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<solutionFit.architectureGaps.length-1?"1px solid var(--line-1)":"none"}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--red)",marginBottom:4}}>Gap: {g.gap}</div>
+                    <div style={{fontSize:13,color:"var(--green)",lineHeight:1.5}}>→ {g.recommendation}</div>
                   </div>
                 ))}
               </div>
@@ -199,7 +199,7 @@ export default function S9SolutionFit({
                 <div><div className="bb-title">Implementation Roadmap</div><div className="bb-sub">Recommended phasing based on their outcomes and architecture</div></div>
               </div>
               <div className="bb-body">
-                <div style={{fontSize:14,color:"#333",lineHeight:1.7}}>{solutionFit.implementationRoadmap}</div>
+                <div style={{fontSize:14,color:"var(--ink-1)",lineHeight:1.7}}>{solutionFit.implementationRoadmap}</div>
               </div>
             </div>
           )}
@@ -214,8 +214,8 @@ export default function S9SolutionFit({
               <div className="bb-body">
                 {solutionFit.successMetrics.filter(Boolean).map((m,i)=>(
                   <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}}>
-                    <div style={{width:20,height:20,borderRadius:"50%",background:"#2E6B2E",color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
-                    <div style={{fontSize:14,color:"#333",lineHeight:1.6}}>{m}</div>
+                    <div style={{width:20,height:20,borderRadius:"50%",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{i+1}</div>
+                    <div style={{fontSize:14,color:"var(--ink-1)",lineHeight:1.6}}>{m}</div>
                   </div>
                 ))}
               </div>
@@ -224,15 +224,15 @@ export default function S9SolutionFit({
 
           {/* Discovery Gaps — what the rep needs to capture next */}
           {(solutionFit.discoveryGaps||[]).filter(Boolean).length > 0 && (
-            <div style={{background:"#FEF6E4",border:"1.5px solid #BA751744",borderRadius:14,padding:"16px 20px",marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#BA7517",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Missing Discovery Data — Capture on Next Call</div>
-              <div style={{fontSize:13,color:"#333",lineHeight:1.7,marginBottom:8}}>
+            <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:14,padding:"16px 20px",marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Missing Discovery Data — Capture on Next Call</div>
+              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.7,marginBottom:8}}>
                 The following information was not captured during discovery. This SA review is based on incomplete data — go back and capture these on your next interaction to strengthen the assessment.
               </div>
               {solutionFit.discoveryGaps.filter(Boolean).map((g, i) => (
                 <div key={i} style={{display:"flex",gap:8,marginBottom:6,alignItems:"flex-start"}}>
-                  <span style={{color:"#BA7517",fontWeight:700,flexShrink:0}}>!</span>
-                  <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{g}</div>
+                  <span style={{color:"var(--amber)",fontWeight:700,flexShrink:0}}>!</span>
+                  <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.5}}>{g}</div>
                 </div>
               ))}
             </div>
@@ -240,9 +240,9 @@ export default function S9SolutionFit({
 
           {/* SA Recommendation */}
           {solutionFit.saRecommendation && (
-            <div style={{background:"#1a1a18",borderRadius:14,padding:"20px 22px",marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#8B6F47",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>🏗 Senior SA Recommendation</div>
-              <div style={{fontSize:15,color:"#fff",lineHeight:1.7,fontStyle:"italic"}}>"{solutionFit.saRecommendation}"</div>
+            <div style={{background:"var(--ink-0)",borderRadius:14,padding:"20px 22px",marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>🏗 Senior SA Recommendation</div>
+              <div style={{fontSize:15,color:"var(--surface)",lineHeight:1.7,fontStyle:"italic"}}>"{solutionFit.saRecommendation}"</div>
             </div>
           )}
 
@@ -257,10 +257,10 @@ export default function S9SolutionFit({
       )}
 
       {!solutionFit && !solutionFitLoading && (
-        <div style={{background:"#FAF8F4",border:"1.5px dashed #C8C4BB",borderRadius:12,padding:32,textAlign:"center"}}>
+        <div style={{background:"var(--bg-1)",border:"1.5px dashed var(--line-2)",borderRadius:12,padding:32,textAlign:"center"}}>
           <div style={{fontSize:28,marginBottom:12}}>🏗</div>
-          <div style={{fontSize:15,fontWeight:600,color:"#1a1a18",marginBottom:6}}>Solution Architecture Review</div>
-          <div style={{fontSize:13,color:"#777",marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>Re-evaluate solution fit against what you heard in the call. Maps customer needs to your solutions using SA principles.</div>
+          <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>Solution Architecture Review</div>
+          <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>Re-evaluate solution fit against what you heard in the call. Maps customer needs to your solutions using SA principles.</div>
           <button className="btn btn-primary btn-lg" onClick={onRun}>Run Solution Fit Review →</button>
         </div>
       )}

@@ -110,7 +110,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9998 }} />
       <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-        <div style={{ background: "#fff", borderRadius: 16, width: "90%", maxWidth: 800, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", pointerEvents: "auto", boxShadow: "0 8px 48px rgba(0,0,0,0.15)" }}>
+        <div style={{ background: "var(--surface)", borderRadius: 16, width: "90%", maxWidth: 800, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden", pointerEvents: "auto", boxShadow: "0 8px 48px rgba(0,0,0,0.15)" }}>
 
           {/* Header */}
           <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-0)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -122,7 +122,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                 {orgCtx?.plan === "trial" ? "Trial" : orgCtx?.plan || "—"} plan · {orgCtx ? `${orgCtx.run_count}/${orgCtx.run_limit} tokens used` : ""} · {sbUser?.email}
               </div>
             </div>
-            <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--ink-3)" }}>×</button>
+            <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--ink-2)" }}>&times;</button>
           </div>
 
           {/* Tabs */}
@@ -131,7 +131,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
                   color: tab === t.id ? "var(--ink-0)" : "var(--ink-3)",
-                  borderBottom: tab === t.id ? "2px solid var(--ink-0)" : "2px solid transparent" }}>
+                  borderBottom: tab === t.id ? "2px solid var(--tan-0)" : "2px solid transparent" }}>
                 {t.label}
               </button>
             ))}
@@ -143,7 +143,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
             {/* ═══ OVERVIEW ═══ */}
             {tab === "overview" && (
               <div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
                   {[
                     { label: "Total Sessions", value: analytics.totalSessions, color: "var(--ink-0)" },
                     { label: "Active This Week", value: analytics.activeLast7d, color: "var(--green)" },
@@ -174,13 +174,13 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                     {(orgCtx.max_run_limit || 0) > 0 && (
                       <>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 6 }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "#8B5CF6" }}>Cambrian Max Tokens</div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "#8B5CF6" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>Cambrian Max Tokens</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>
                             {orgCtx.max_run_count || 0} / {orgCtx.max_run_limit}
                           </div>
                         </div>
                         <div style={{ height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
-                          <div style={{ height: "100%", borderRadius: 4, background: "#8B5CF6", transition: "width 0.3s",
+                          <div style={{ height: "100%", borderRadius: 4, background: "var(--violet)", transition: "width 0.3s",
                             width: Math.min(100, Math.round((orgCtx.max_run_count || 0) / (orgCtx.max_run_limit || 1) * 100)) + "%" }} />
                         </div>
                       </>
@@ -219,7 +219,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                   </div>
                 ))}
                 {(savedSessions || []).length === 0 && (
-                  <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: "24px 0" }}>No sessions yet. Start your first playbook to see activity here.</div>
+                  <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "24px 0" }}>No sessions yet. Start your first playbook to see activity here.</div>
                 )}
               </div>
             )}
@@ -273,7 +273,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
             {tab === "insights" && (
               <div>
                 {/* Summary cards */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
                   {[
                     { label: "Deals Routed", value: analytics.totalDeals, color: "var(--ink-0)" },
                     { label: "Fast Track Rate", value: `${analytics.fastTrackRate}%`, color: "var(--green)" },
@@ -326,7 +326,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                 )}
 
                 {analytics.totalDeals === 0 && analytics.topEditedFields.length === 0 && (
-                  <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: "32px 0" }}>
+                  <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "32px 0" }}>
                     Complete more sessions to see deal routing insights, ICP corrections, and intel adjustments here.
                   </div>
                 )}
@@ -382,13 +382,13 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                   </div>
                   <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8B5CF6" }}>Max Tokens</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#8B5CF6" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--violet)" }}>Max Tokens</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--violet)" }}>
                         {orgCtx.max_run_count || 0} / {orgCtx.max_run_limit || 0}
                       </div>
                     </div>
                     <div style={{ height: 10, borderRadius: 5, background: "var(--bg-2)", overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: 5, background: "#8B5CF6", transition: "width 0.3s",
+                      <div style={{ height: "100%", borderRadius: 5, background: "var(--violet)", transition: "width 0.3s",
                         width: (orgCtx.max_run_limit || 0) > 0 ? Math.min(100, Math.round((orgCtx.max_run_count || 0) / orgCtx.max_run_limit * 100)) + "%" : "0%" }} />
                     </div>
                     <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4 }}>

@@ -3,15 +3,11 @@
 // POST { email, role } with admin JWT → creates invitation row +
 // sends Supabase invite email with acceptance link.
 
-import { createHmac, timingSafeEqual } from "crypto";
-import { checkRateLimit, isAllowedOrigin } from "./_guard.js";
+import { isAllowedOrigin, verifyJwt, decodeJwtPayload } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 const APP_URL = process.env.VITE_APP_URL || "https://www.cambriancatalyst.ai";
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
-const SB_REF = SB_URL ? new URL(SB_URL).hostname.split(".")[0] : "";
-const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 
 // Stricter rate limit for invites — 10 per minute per IP
 const inviteRateBuckets = new Map();
@@ -27,32 +23,6 @@ function checkInviteRateLimit(ip) {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-function decodeJwt(req) {
-  const auth = req.headers.authorization || "";
-  if (!auth.startsWith("Bearer ")) return null;
-  try {
-    const parts = auth.slice(7).split(".");
-    if (parts.length !== 3) return null;
-    const header = JSON.parse(Buffer.from(parts[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
-    if (header?.alg === "HS256") {
-      if (!JWT_SECRET) { if (IS_PRODUCTION) return null; }
-      else {
-        const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
-        const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
-        if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-      }
-    } else if (header?.alg !== "ES256" && header?.alg !== "RS256") {
-      return null;
-    }
-    const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) return null;
-    if (!SB_REF) return null;
-    if (payload.iss !== "supabase" && !payload.iss?.includes(SB_REF)) return null;
-    return payload;
-  } catch { return null; }
-}
 
 async function sbFetch(path, method = "GET", body = null, token = SB_KEY) {
   const headers = {
@@ -86,8 +56,10 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "Too many invitations — try again in a minute" });
   }
 
-  // Verify caller identity
-  const payload = decodeJwt(req);
+  // Verify caller identity — use consolidated JWT verification from _guard.js
+  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  const authToken = (req.headers.authorization || "").slice(7);
+  const payload = decodeJwtPayload(authToken);
   if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
 
   const { email, role } = req.body || {};

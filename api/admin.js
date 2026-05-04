@@ -3,47 +3,11 @@
 // GET with admin JWT → returns aggregated engagement data across all
 // users, orgs, and sessions. Locked to SUPERUSER_EMAIL only.
 
-import { createHmac, timingSafeEqual } from "crypto";
-import { checkRateLimit, isAllowedOrigin } from "./_guard.js";
+import { checkRateLimit, isAllowedOrigin, verifyJwt, decodeJwtPayload } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || "";
-const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 const SUPERUSER_EMAIL = process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com";
-const SUPABASE_REF = SB_URL ? new URL(SB_URL).hostname.split(".")[0] : "";
-
-function decodeAndVerifyJwt(req) {
-  const auth = req.headers.authorization || "";
-  if (!auth.startsWith("Bearer ")) return null;
-  try {
-    const parts = auth.slice(7).split(".");
-    if (parts.length !== 3) return null;
-    const header = JSON.parse(Buffer.from(parts[0].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
-
-    // Verify signature based on algorithm
-    if (header?.alg === "HS256") {
-      if (!JWT_SECRET) { if (IS_PRODUCTION) return null; }
-      else {
-        const expected = createHmac("sha256", JWT_SECRET).update(parts[0] + "." + parts[1]).digest();
-        const actual = Buffer.from(parts[2].replace(/-/g, "+").replace(/_/g, "/"), "base64");
-        if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-      }
-    } else if (header?.alg !== "ES256" && header?.alg !== "RS256") {
-      return null; // Unknown/none algorithm — reject
-    }
-
-    const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) return null;
-
-    // Verify issuer matches Supabase project
-    if (!SUPABASE_REF) return null;
-    if (payload.iss !== "supabase" && !payload.iss?.includes(SUPABASE_REF)) return null;
-
-    return payload;
-  } catch { return null; }
-}
 
 async function sbFetch(path) {
   const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
@@ -73,8 +37,10 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "rate limit exceeded" });
   }
 
-  // Verify JWT and check superuser
-  const payload = decodeAndVerifyJwt(req);
+  // Verify JWT and check superuser — uses consolidated JWT from _guard.js
+  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  const authToken = (req.headers.authorization || "").slice(7);
+  const payload = decodeJwtPayload(authToken);
   if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
 
   // Look up the caller's email — must match superuser

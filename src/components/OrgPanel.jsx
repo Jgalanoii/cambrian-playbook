@@ -237,12 +237,12 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                   return (
                     <div key={m.id} style={{
                       display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                      background: m.id === sbUser?.id ? "var(--bg-1)" : "#fff",
+                      background: m.id === sbUser?.id ? "var(--bg-1)" : "var(--surface)",
                       border: "1px solid var(--line-0)", borderRadius: 10, marginBottom: 6,
                     }}>
                       {/* Avatar */}
                       <div style={{
-                        width: 36, height: 36, borderRadius: "50%", background: roleColor(m.role), color: "#fff",
+                        width: 36, height: 36, borderRadius: "50%", background: roleColor(m.role), color: "var(--surface)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 13, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0,
                       }}>
@@ -300,7 +300,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                       display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
                       background: "var(--amber-bg)", border: "1px solid var(--amber)", borderRadius: 10, marginBottom: 6,
                     }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--amber)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--amber)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>
                         ✉
                       </div>
                       <div style={{ flex: 1 }}>
@@ -343,7 +343,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                 </div>
                 {(orgCtx?.max_run_limit || 0) > 0 && (
                   <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: "#8B5CF6", fontFamily: "Lora,serif" }}>⚡ {orgCtx?.max_run_count || 0}</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "var(--violet)", fontFamily: "Lora,serif" }}>⚡ {orgCtx?.max_run_count || 0}</span>
                     <span style={{ fontSize: 11, color: "var(--ink-3)" }}>/ {orgCtx?.max_run_limit} Max tokens</span>
                   </div>
                 )}
@@ -361,7 +361,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                     <input value={orgName} onChange={e => setOrgName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") saveOrgName(); e.stopPropagation(); }}
                       style={{ flex: 1, fontSize: 14, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }} />
                     <button onClick={saveOrgName}
-                      style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                      style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
                   </div>
                 ) : (
                   <div style={{ fontSize: 14, color: "var(--ink-1)" }}>{orgCtx?.name}</div>
@@ -377,7 +377,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                       style={{ flex: 1, fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}
                       onKeyDown={e => { if (e.key === "Enter") saveOrgSellerUrl(); e.stopPropagation(); }} />
                     <button onClick={saveOrgSellerUrl}
-                      style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                      style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
                   </div>
                 ) : (
                   <div style={{ fontSize: 13, color: "var(--ink-1)" }}>{orgCtx?.seller_url || "Not set"}</div>
@@ -439,7 +439,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                   const isRecent = (Date.now() - new Date(s.updated_at).getTime()) < 86400000;
                   const member = members.find(m => m.id === s.user_id);
                   return (
-                    <div key={s.id} style={{ padding: "10px 12px", background: "#fff", border: "1px solid var(--line-0)", borderRadius: 8, marginBottom: 6 }}>
+                    <div key={s.id} style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 8, marginBottom: 6 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         {isRecent && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)", flexShrink: 0 }} />}
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -471,7 +471,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
       {/* Confirm dialog for destructive actions */}
       {confirmAction && (
         <div style={{ position: "fixed", inset: 0, zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)" }}>
-          <div style={{ background: "#fff", borderRadius: 14, padding: "24px 28px", maxWidth: 380, width: "90%", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+          <div style={{ background: "var(--surface)", borderRadius: 14, padding: "24px 28px", maxWidth: 380, width: "90%", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>⚠️</div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink-0)", marginBottom: 8 }}>
               Remove {confirmAction.name}?
@@ -481,9 +481,9 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setConfirmAction(null)}
-                style={{ padding: "10px 20px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                style={{ padding: "10px 20px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
               <button onClick={() => removeUser(confirmAction.userId)}
-                style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "var(--red)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Remove</button>
+                style={{ padding: "10px 20px", borderRadius: 8, border: "none", background: "var(--red)", color: "var(--surface)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Remove</button>
             </div>
           </div>
         </div>
