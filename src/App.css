@@ -576,57 +576,6 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .app[data-focus="call"] .incall-title { font-size: 16px; }
 .app[data-focus="call"] .conf-pct { font-size: 28px; }
 
-/* ── PHASE 3b: DARK MODE ─────────────────────────────────
-   Token overrides. Toggled via [data-theme="dark"] on .app
-   or :root. The editorial warm palette shifts to warm-dark
-   (not cold blue-black like Linear — our brand stays warm). */
-[data-theme="dark"] {
-  --bg-0:       #1c1b18;
-  --bg-1:       #242320;
-  --bg-2:       #2e2d28;
-  --surface:    #212019;
-  --ink-0:      #e8e6de;
-  --ink-1:      #b0aea4;
-  --ink-2:      #7a7870;
-  --ink-3:      #555550;
-  --tan-0:      #C8A87A;
-  --tan-1:      #A88C60;
-  --tan-2:      #5A4A35;
-  --tan-3:      #2e2a22;
-  --tan-ink:    #C8A87A;
-  --navy:       #6B9FD8;
-  --navy-dark:  #4A7AB8;
-  --green:      #5AAF5A;
-  --green-dark: #3D8A3D;
-  --red:        #D06060;
-  --amber:      #D4A030;
-  --purple:     #A070C0;
-  --green-bg:   #1e2e1e;
-  --red-bg:     #2e1e1e;
-  --amber-bg:   #2e2a1a;
-  --navy-bg:    #1a2230;
-  --purple-bg:  #261e2e;
-  --line-0:     #363530;
-  --line-1:     #2e2d28;
-  --line-2:     #4a4840;
-  --sh-1:       0 1px 4px rgba(0,0,0,0.3);
-  --sh-2:       0 4px 14px rgba(0,0,0,0.35);
-  --sh-3:       0 14px 40px rgba(0,0,0,0.45);
-  --sh-ring:    0 0 0 3px rgba(200,168,122,0.15);
-  --sh-focus:   0 0 0 4px rgba(200,168,122,0.12);
-}
-[data-theme="dark"] body { background: var(--bg-0); color: var(--ink-0); }
-[data-theme="dark"] .header { background: var(--surface); border-bottom-color: var(--line-0); }
-[data-theme="dark"] .tbl th { background: var(--bg-2); }
-[data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea {
-  background: var(--bg-1); color: var(--ink-0); border-color: var(--line-0);
-}
-[data-theme="dark"] .cmd-overlay { background: rgba(0,0,0,0.6); }
-[data-theme="dark"] .cmd-box { background: var(--surface); }
-[data-theme="dark"] .bb-hdr { background: var(--bg-1); border-bottom-color: var(--line-0); }
-[data-theme="dark"] .upload-zone { background: var(--bg-1); }
-[data-theme="dark"] .pw-tabs { background: var(--bg-2); }
-
 /* ── CHAT ASSISTANT PANEL ─────────────────────────────────
    Slide-out right panel. Available on every stage. Contains
    streaming conversation with session context. */

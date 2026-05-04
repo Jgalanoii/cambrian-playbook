@@ -2892,7 +2892,7 @@ export default function App(){
   const[customOutcome,setCustomOutcome]=useState(""); // free-form outcome
   const[cmdOpen,setCmdOpen]=useState(false); // Cmd-K command palette
   const[celebrateStep,setCelebrateStep]=useState(null); // milestone celebration pulse
-  const[darkMode,setDarkMode]=useState(false); // Phase 3b dark mode toggle
+  // dark mode removed — not needed for beta
   const[cambrianMax,setCambrianMax]=useState(false); // Premium Opus tier toggle
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState([]); // [{role:'user'|'assistant', content}]
@@ -6047,7 +6047,7 @@ ${isOpen
 
       <div className="app"
         data-focus={step===7 ? "call" : undefined}
-        data-theme={darkMode ? "dark" : undefined}>
+        >
 
         {/* HEADER */}
         <header className="header">
@@ -6169,7 +6169,6 @@ ${isOpen
                       <span style={{width:20,textAlign:"center"}}>✉</span> Contact Us
                     </button>
                     <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
-                    {/* Dark mode hidden for beta — CSS coverage incomplete */}
                     {sbUser?.email==="itsjoegalano@gmail.com"&&(
                       <>
                         <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
