@@ -2193,6 +2193,7 @@ function PasswordGate({ onAuth }) {
     setErr("");setLoading(true);
     try {
       if(mode==="signup"){
+        if(pw.length<8){setErr("Password must be at least 8 characters.");setLoading(false);return;}
         const d=await sbAuth('signup',{email,password:pw,data:{first_name:first,last_name:last,full_name:first+' '+last}});
         if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
         else if(d.id){setVerifying(true);}
@@ -2228,11 +2229,12 @@ function PasswordGate({ onAuth }) {
     <AuthShell>
       <div className="page" style={{maxWidth:480,paddingTop:48}}>
         <div className="page-title">
-          {mode==="signup" ? "Create your account" : "Welcome back"}
+          {mode==="signup" ? "Create your account" : mode==="reset" ? "Reset your password" : "Welcome back"}
         </div>
         <div className="page-sub">
           {mode==="signup"
             ? "Build sales briefs that make prospects feel understood from the first conversation. Live research, leadership intel, and tailored talk tracks — in minutes, not hours. Free during the private beta."
+            : mode==="reset" ? "Enter your email and we'll send you a link to reset your password."
             : "Sign in to continue your sales intelligence work."}
         </div>
 
