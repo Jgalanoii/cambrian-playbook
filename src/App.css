@@ -591,7 +591,7 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 }
 .chat-toggle:hover { transform: scale(1.08); box-shadow: var(--sh-3), 0 0 0 4px rgba(139,111,71,0.15); }
 .chat-panel {
-  position: fixed; top: 0; right: 0; bottom: 0; width: 400px; max-width: 90vw;
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(400px, 92vw);
   z-index: 600; background: var(--surface); box-shadow: -8px 0 32px rgba(26,26,24,0.12);
   display: flex; flex-direction: column;
   animation: chat-slide-in var(--t-med) var(--ease);
@@ -760,4 +760,48 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
   .setup-card { padding: 16px !important; }
   .setup-url-bar { flex-direction: column; }
   .setup-url-input { width: 100% !important; }
+
+  /* Command palette */
+  .cmd-box { max-width: 92vw; }
+
+  /* Tables: enable horizontal scroll */
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { font-size: 11px; }
+
+  /* Modals: tighter padding */
+  .card { padding: 14px !important; }
+
+  /* Favorites panel */
+  .fav-panel { width: min(340px, 92vw) !important; }
+}
+
+/* ── SMALL PHONE (375px and below) ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  .page { padding: 8px !important; }
+  .page-title { font-size: 18px !important; }
+  .page-sub { font-size: 12px !important; }
+  body { font-size: 13px; }
+
+  /* Step rail: numbers only, no labels */
+  .stepper { gap: 0; }
+  .step-item { min-width: 30px; padding: 6px 2px; font-size: 11px; }
+
+  /* Brief sections: reduce padding */
+  .bb { margin-bottom: 10px; }
+  .bb-hdr { padding: 10px 12px; }
+  .bb-body { padding: 10px 12px; }
+
+  /* Header: compact */
+  .header { padding: 8px 12px !important; }
+  .logo { font-size: 16px !important; }
+
+  /* Session bar: stack on mobile */
+  .session-bar { flex-wrap: wrap; gap: 4px; font-size: 10px; padding: 6px 12px !important; }
+
+  /* Stat cards in admin: smaller */
+  .stat-card { padding: 8px 10px; }
+  .stat-num { font-size: 20px; }
+
+  /* Footer */
+  .footer { font-size: 10px; padding: 8px 12px; }
 }

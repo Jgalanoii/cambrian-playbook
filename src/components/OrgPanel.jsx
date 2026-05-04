@@ -161,7 +161,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} />
 
       <div onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-        position: "relative", zIndex: 1, width: 480, maxWidth: "90vw", background: "var(--surface)",
+        position: "relative", zIndex: 1, width: "min(480px, 92vw)", background: "var(--surface)",
         borderLeft: "1px solid var(--line-0)", display: "flex", flexDirection: "column",
         boxShadow: "-4px 0 20px rgba(0,0,0,0.1)", overflow: "hidden"
       }}>

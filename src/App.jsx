@@ -2742,7 +2742,7 @@ class ErrorBoundary extends React.Component {
             <div style={{fontSize:16,fontWeight:700,color:"var(--red)",marginBottom:8}}>Render Error</div>
             <div style={{fontSize:13,color:"#555",marginBottom:16}}>{this.state.error?.message||"Unknown error"}</div>
             <button onClick={()=>this.setState({hasError:false,error:null})}
-              style={{background:"var(--ink-0)",color:"#fff",border:"none",padding:"8px 16px",borderRadius:8,cursor:"pointer",fontSize:13}}>
+              style={{background:"var(--ink-0)",color:"var(--surface)",border:"none",padding:"8px 16px",borderRadius:8,cursor:"pointer",fontSize:13}}>
               Try Again
             </button>
           </div>
@@ -5873,7 +5873,7 @@ ${isOpen
 
       {/* ── RESOURCES DRAWER ─────────────────────────────────────────── */}
       {resourcesOpen && (
-        <div style={{position:"fixed",top:0,right:0,bottom:0,width:380,maxWidth:"90vw",background:"var(--bg-0)",borderLeft:"1.5px solid var(--line-0)",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1100,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{position:"fixed",top:0,right:0,bottom:0,width:"min(380px, 92vw)",background:"var(--bg-0)",borderLeft:"1.5px solid var(--line-0)",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1100,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           {/* Header */}
           <div style={{padding:"16px 20px 12px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{fontFamily:"Lora,serif",fontSize:17,fontWeight:700,color:"var(--ink-0)"}}>Resources</div>
@@ -6134,7 +6134,7 @@ ${isOpen
 
             {/* Sessions */}
             {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
-              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#555",cursor:"pointer"}}>
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"#555",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
             </button>}
 
@@ -6147,7 +6147,7 @@ ${isOpen
               {moreMenuOpen&&(
                 <>
                   <div onClick={()=>setMoreMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:999}}/>
-                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"#fff",borderRadius:12,border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:200,zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
+                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:12,border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:200,maxWidth:"85vw",zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
                     <button onClick={()=>{setCmdOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
@@ -6196,7 +6196,7 @@ ${isOpen
 
             {/* Sign out */}
             {sbUser&&<button onClick={()=>{sbClearTokens();window.location.reload();}}
-              style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",color:"#aaa",cursor:"pointer"}}>
+              style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"#aaa",cursor:"pointer"}}>
               {sbUser.user_metadata?.first_name||sbUser.email?.split('@')[0]} · Sign out
             </button>}
           </div>
@@ -6211,7 +6211,7 @@ ${isOpen
                 try { localStorage.setItem("cambrian_guest_state", JSON.stringify(getSessionSnap())); } catch {}
                 setAuthed(false);
               }}
-              style={{fontSize:12,fontWeight:700,padding:"4px 14px",borderRadius:8,background:"var(--ink-0)",color:"#fff",border:"none",cursor:"pointer"}}>
+              style={{fontSize:12,fontWeight:700,padding:"4px 14px",borderRadius:8,background:"var(--ink-0)",color:"var(--surface)",border:"none",cursor:"pointer"}}>
               Create Free Account
             </button>
           </div>
@@ -6221,16 +6221,16 @@ ${isOpen
         {showSavePrompt&&(
           <>
             <div onClick={()=>setShowSavePrompt(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:2000}}/>
-            <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"#fff",borderRadius:16,padding:"36px 40px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+            <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:16,padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
               <div style={{fontSize:28,marginBottom:12}}>💾</div>
               <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,marginBottom:8}}>Save your work</div>
               <div style={{fontSize:14,color:"#555",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
               <button onClick={()=>{setShowSavePrompt(false);setAuthed(false);}}
-                style={{width:"100%",padding:"13px 0",borderRadius:10,background:"var(--ink-0)",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",marginBottom:10}}>
+                style={{width:"100%",padding:"13px 0",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",marginBottom:10}}>
                 Create Free Account →
               </button>
               <button onClick={()=>setShowSavePrompt(false)}
-                style={{width:"100%",padding:"11px 0",borderRadius:10,background:"#fff",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid var(--line-0)",cursor:"pointer"}}>
+                style={{width:"100%",padding:"11px 0",borderRadius:10,background:"var(--surface)",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid var(--line-0)",cursor:"pointer"}}>
                 Maybe later
               </button>
             </div>
@@ -6241,7 +6241,7 @@ ${isOpen
         {showSessions&&sbUser&&(
           <>
             <div onClick={()=>setShowSessions(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.2)",zIndex:999}}/>
-            <div style={{position:"fixed",top:0,right:0,height:"100vh",width:320,background:"#fff",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1000,display:"flex",flexDirection:"column"}}>
+            <div style={{position:"fixed",top:0,right:0,height:"100vh",width:"min(320px, 92vw)",background:"var(--surface)",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1000,display:"flex",flexDirection:"column"}}>
               <div style={{padding:"18px 18px 12px",borderBottom:"1px solid var(--line-0)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700}}>Saved Sessions</div>
@@ -6251,7 +6251,7 @@ ${isOpen
               </div>
               <div style={{padding:"8px 10px 0"}}>
                 <button onClick={()=>{clearSession();setShowSessions(false);}}
-                  style={{width:"100%",padding:"10px",borderRadius:8,background:"#fff",border:"1.5px solid var(--green)",color:"var(--green)",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                  style={{width:"100%",padding:"10px",borderRadius:8,background:"var(--surface)",border:"1.5px solid var(--green)",color:"var(--green)",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
                   + New Session
                 </button>
               </div>
@@ -6273,7 +6273,7 @@ ${isOpen
               </div>
               <div style={{padding:12,borderTop:"1px solid var(--line-0)"}}>
                 <input value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder={sellerUrl||"Session name..."} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
-                <button onClick={saveSession} style={{width:"100%",padding:"10px",borderRadius:8,background:"var(--ink-0)",color:"#fff",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"}}>
+                <button onClick={saveSession} style={{width:"100%",padding:"10px",borderRadius:8,background:"var(--ink-0)",color:"var(--surface)",fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:700,border:"none",cursor:"pointer"}}>
                   {saveStatus==="saving"?"Saving...":saveStatus==="saved"?"✓ Saved":saveStatus==="auto-saved"?"✓ Auto-saved":"Save Session"}
                 </button>
               </div>
@@ -6339,7 +6339,7 @@ ${isOpen
               <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
               <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Sales Intelligence Platform</div>
               <div style={{textAlign:"center",marginBottom:10}}>
-                <span style={{display:"inline-block",background:"var(--green)",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
+                <span style={{display:"inline-block",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
               <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
                 <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most prepared person in every conversation.</div>
@@ -6385,10 +6385,10 @@ ${isOpen
                       autoFocus
                       value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
                       onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();}}
-                      style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--navy)",borderRadius:8,background:"#fff"}}/>
+                      style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--navy)",borderRadius:8,background:"var(--surface)"}}/>
                     <button className="btn" onClick={launchQuickBrief}
                       disabled={!quickBriefInput.trim()}
-                      style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--navy)",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
+                      style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--navy)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
                       Build Brief →
                     </button>
                   </div>
@@ -6694,7 +6694,7 @@ ${isOpen
                         <span>✓</span> {productUrls.filter(u=>u.url).length} product page{productUrls.filter(u=>u.url).length!==1?"s":""} confirmed
                       </div>
                       <button onClick={()=>setUrlScanConfirmed(false)}
-                        style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--green)",background:"#fff",color:"var(--green)",cursor:"pointer"}}>
+                        style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--green)",background:"var(--surface)",color:"var(--green)",cursor:"pointer"}}>
                         Edit
                       </button>
                     </div>
@@ -6906,7 +6906,7 @@ ${isOpen
                           <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>✦ Why We Win</div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {sellerICP.icp.uniqueDifferentiators.filter(Boolean).map((d,i)=>(
-                              <span key={i} style={{fontSize:11,background:"#fff",border:"1px solid #2E6B2E44",borderRadius:10,padding:"2px 8px",color:"var(--green)"}}>{d}</span>
+                              <span key={i} style={{fontSize:11,background:"var(--surface)",border:"1px solid #2E6B2E44",borderRadius:10,padding:"2px 8px",color:"var(--green)"}}>{d}</span>
                             ))}
                           </div>
                         </div>
@@ -7218,7 +7218,7 @@ ${isOpen
                 </div>
                 <div className="bb-body">
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                    {icpTargeting.segment&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--ink-0)",color:"#fff"}}>{icpTargeting.segment}</span>}
+                    {icpTargeting.segment&&<span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--ink-0)",color:"var(--surface)"}}>{icpTargeting.segment}</span>}
                     {(Array.isArray(icpTargeting.headcount)?icpTargeting.headcount:[icpTargeting.headcount]).filter(Boolean).map((v,i)=><span key={"h"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid var(--navy)44"}}>{v} employees</span>)}
                     {(Array.isArray(icpTargeting.revenue)?icpTargeting.revenue:[icpTargeting.revenue]).filter(Boolean).map((v,i)=><span key={"r"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",border:"1px solid var(--green)44"}}>{v}</span>)}
                     {(Array.isArray(icpTargeting.ownership)?icpTargeting.ownership:[icpTargeting.ownership]).filter(Boolean).map((v,i)=><span key={"o"+i} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:"var(--bg-1)",color:"var(--tan-0)",border:"1px solid var(--tan-0)44"}}>{v}</span>)}
@@ -8043,7 +8043,7 @@ ${isOpen
                       />
                       {entry._suggested && !entry.url && (
                         <button
-                          style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",fontSize:11,background:"var(--green)",color:"#fff",border:"none",borderRadius:12,padding:"2px 10px",cursor:"pointer",fontWeight:600}}
+                          style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",fontSize:11,background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:12,padding:"2px 10px",cursor:"pointer",fontWeight:600}}
                           onClick={()=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,url:entry._suggested}:x))}>
                           Accept
                         </button>
@@ -8122,7 +8122,7 @@ ${isOpen
                   <strong>ICP updated</strong> — {icpEdits.filter(e => e.timestamp > lastScoreTime).length} change{icpEdits.filter(e => e.timestamp > lastScoreTime).length !== 1 ? "s" : ""} since last scoring.
                   Re-score to apply your edits.
                 </div>
-                <button className="btn btn-sm" style={{background:"var(--amber)",color:"#fff",border:"none",fontWeight:700,fontSize:11,padding:"5px 14px",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}
+                <button className="btn btn-sm" style={{background:"var(--amber)",color:"var(--surface)",border:"none",fontWeight:700,fontSize:11,padding:"5px 14px",borderRadius:8,cursor:"pointer",whiteSpace:"nowrap"}}
                   onClick={()=>{const all=cohorts.flatMap(c=>c.members);if(all.length)scoreFit(all,buildSellerCtx());}}>
                   Re-score All
                 </button>
@@ -8165,7 +8165,7 @@ ${isOpen
               </div>
               <div className="tbl-wrap" style={{maxHeight:"480px",overflowY:"scroll",border:"1px solid var(--tan-3)",borderRadius:8}}>
                 <table className="tbl" style={{fontSize:13}}>
-                  <thead style={{position:"sticky",top:0,zIndex:10,background:"#fff"}}>
+                  <thead style={{position:"sticky",top:0,zIndex:10,background:"var(--surface)"}}>
                     <tr>
                       <th>Company</th>
                       <th>Industry</th>
@@ -8746,7 +8746,7 @@ ${isOpen
                         <span>💡</span> Pro tip: Practice this out loud twice before your call. It should feel natural, not rehearsed.
                       </div>
                       <button onClick={()=>{if(brief.elevatorPitch) navigator.clipboard?.writeText(brief.elevatorPitch);}}
-                        style={{marginLeft:"auto",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--green)",background:"#fff",color:"var(--green)",cursor:"pointer",whiteSpace:"nowrap"}}>
+                        style={{marginLeft:"auto",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--green)",background:"var(--surface)",color:"var(--green)",cursor:"pointer",whiteSpace:"nowrap"}}>
                         Copy
                       </button>
                     </div>
@@ -8778,25 +8778,25 @@ ${isOpen
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}}>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"var(--green)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>Annual Revenue / ARR
+                          <span style={{background:"var(--green)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>Annual Revenue / ARR
                         </div>
                         <EF value={brief.revenue||""} onChange={v=>patchBrief(b=>{b.revenue=v;})} single placeholder="e.g. $18.8B annual revenue (FY2025)"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"var(--navy)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>Public / Private
+                          <span style={{background:"var(--navy)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>OWNERSHIP</span>Public / Private
                         </div>
                         <EF value={brief.publicPrivate||""} onChange={v=>patchBrief(b=>{b.publicPrivate=v;})} single placeholder="e.g. Public (NYSE: ACME) or Private"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>EMPLOYEES</span>Employee Count
+                          <span style={{background:"var(--tan-0)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>EMPLOYEES</span>Employee Count
                         </div>
                         <EF value={brief.employeeCount||""} onChange={v=>patchBrief(b=>{b.employeeCount=v;})} single placeholder="e.g. ~270,000 globally"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{background:"var(--purple)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>HQ</span>HQ · Founded
+                          <span style={{background:"var(--purple)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>HQ</span>HQ · Founded
                         </div>
                         <EF value={(brief.headquarters||(brief.founded?" · Founded "+brief.founded:""))||""} onChange={v=>patchBrief(b=>{b.headquarters=v;})} single placeholder="e.g. Philadelphia, PA · Founded 1959"/>
                       </div>
@@ -8837,8 +8837,8 @@ ${isOpen
                           const recent=fp.includes("2024")||fp.includes("2025")||fp.includes("2026")||fp.includes("recently");
                           return(<span style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                             {label&&<span style={{background:lBg,color:lColor,border:"1px solid "+lColor+"44",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>{label}</span>}
-                            {recent&&isSeries&&<span style={{background:"var(--green)",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>⚡ 18-mo buy window</span>}
-                            {isPE&&<span style={{background:"var(--amber)",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>60-90 day budget cycle</span>}
+                            {recent&&isSeries&&<span style={{background:"var(--green)",color:"var(--surface)",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>⚡ 18-mo buy window</span>}
+                            {isPE&&<span style={{background:"var(--amber)",color:"var(--surface)",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>60-90 day budget cycle</span>}
                           </span>);
                         })()}
                       </div>
@@ -8857,7 +8857,7 @@ ${isOpen
                     {(brief.keyExecutives||[]).filter(e=>e?.name).length > 0
                       ? (brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
-                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
+                          <div className="contact-av" style={{background:"#2C4A7A",color:"var(--surface)",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)"}}>{ex.name}</div>
                             <div style={{fontSize:13,color:"#777",marginBottom:4}}>{ex.title}</div>
@@ -8955,7 +8955,7 @@ ${isOpen
                       {(brief.openRoles.roles||[]).filter(r=>r?.title).length>0&&(
                         <div style={{display:"flex",flexDirection:"column",gap:6}}>
                           {(brief.openRoles.roles||[]).filter(r=>r?.title).map((role,i)=>(
-                            <div key={i} style={{padding:"12px 14px",background:"#fff",border:"1px solid var(--line-0)",borderRadius:10,marginBottom:2}}>
+                            <div key={i} style={{padding:"12px 14px",background:"var(--surface)",border:"1px solid var(--line-0)",borderRadius:10,marginBottom:2}}>
                               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:role.signal?6:0}}>
                                 <div style={{background:"var(--tan-3)",color:"var(--tan-ink)",borderRadius:5,padding:"3px 9px",fontSize:10,fontWeight:700,whiteSpace:"nowrap",flexShrink:0,border:"1px solid #D4C4A8"}}>{role.dept||"Open"}</div>
                                 <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{role.title}</div>
@@ -9058,7 +9058,7 @@ ${isOpen
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                       {(brief.leadershipTeam||[]).filter(l=>l?.name).map((l,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
-                          <div className="contact-av" style={{background:"#2C4A7A",color:"#fff",fontSize:11,fontWeight:700}}>{l.initials||l.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
+                          <div className="contact-av" style={{background:"#2C4A7A",color:"var(--surface)",fontSize:11,fontWeight:700}}>{l.initials||l.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)"}}>{l.name}</div>
                             <div style={{fontSize:10,color:"#777",marginBottom:3}}>{l.title}</div>
@@ -9292,7 +9292,7 @@ ${isOpen
                                 {label:"CRM",val:brief.incumbentVendors.crmSystem},
                                 {label:"Cards",val:brief.incumbentVendors.cardProvider},
                               ].filter(x=>x.val).map((x,i)=>(
-                                <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:"#fff",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px"}}>
+                                <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:"var(--surface)",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px"}}>
                                   <span style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase"}}>{x.label}</span>
                                   <span style={{fontSize:12,fontWeight:700,color:"var(--ink-0)"}}>{x.val}</span>
                                 </div>
@@ -9473,7 +9473,7 @@ ${isOpen
                               <div style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Board Members</div>
                               {brief.boardAndInvestors.boardMembers.map((b,i) => (
                                 <div key={i} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:i<brief.boardAndInvestors.boardMembers.length-1?"1px solid var(--line-0)":"none"}}>
-                                  <div style={{width:32,height:32,borderRadius:"50%",background:"var(--navy)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
+                                  <div style={{width:32,height:32,borderRadius:"50%",background:"var(--navy)",color:"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
                                     {(b.name||"").split(" ").map(w=>w[0]||"").join("").slice(0,2).toUpperCase()}
                                   </div>
                                   <div style={{flex:1}}>
@@ -9559,7 +9559,7 @@ ${isOpen
                       {(brief.keyContacts||[]).filter(c=>c?.name||c?.title).map((c,i)=>(
                         <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.keyContacts||[]).filter(x=>x?.name||x?.title).length-1)?"1px solid var(--tan-3)":"none"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                            <div style={{width:30,height:30,borderRadius:"50%",background:"var(--green)",color:"#fff",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            <div style={{width:30,height:30,borderRadius:"50%",background:"var(--green)",color:"var(--surface)",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                               {c.initials||c.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}
                             </div>
                             <div>
@@ -10238,7 +10238,7 @@ ${isOpen
       {/* Edit toast — flashes when user modifies any field */}
       {editToast && (
         <div className="no-print" style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:9999,
-          background:"var(--green)",color:"#fff",padding:"8px 20px",borderRadius:10,fontSize:12,fontWeight:600,
+          background:"var(--green)",color:"var(--surface)",padding:"8px 20px",borderRadius:10,fontSize:12,fontWeight:600,
           boxShadow:"0 4px 16px rgba(0,0,0,0.15)",animation:"fadeInUp 0.3s ease",maxWidth:400,textAlign:"center"}}>
           ✓ {editToast}
         </div>
@@ -10295,7 +10295,7 @@ ${isOpen
       {contactOpen && (
         <>
           <div onClick={()=>setContactOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
-          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"#fff",borderRadius:16,padding:"32px 36px",maxWidth:420,width:"90%",zIndex:9999,boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:16,padding:"32px 36px",maxWidth:420,width:"90%",zIndex:9999,boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
               <div>
                 <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,color:"var(--ink-0)"}}>Contact Us</div>
@@ -10344,7 +10344,7 @@ ${isOpen
         <>
           <div onClick={()=>setFavPanelOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
           <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-            <div style={{background:"#fff",borderRadius:16,width:"90%",maxWidth:600,maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden",pointerEvents:"auto",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+            <div style={{background:"var(--surface)",borderRadius:16,width:"90%",maxWidth:600,maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden",pointerEvents:"auto",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
               <div style={{padding:"16px 20px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
                   <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>★ Favorites</div>
@@ -10401,7 +10401,7 @@ ${isOpen
       {dqModalTarget && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={()=>setDqModalTarget(null)}>
-          <div style={{background:"#fff",borderRadius:14,padding:"24px 28px",maxWidth:400,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+          <div style={{background:"var(--surface)",borderRadius:14,padding:"24px 28px",maxWidth:400,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Disqualify — {dqModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
@@ -10422,7 +10422,7 @@ ${isOpen
               ].map(reason => (
                 <button key={reason}
                   onClick={()=>{setDisqualified(prev=>({...prev,[dqModalTarget]:reason}));setDqModalTarget(null);}}
-                  style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:500,cursor:"pointer",textAlign:"left",color:"var(--ink-1)"}}
+                  style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:500,cursor:"pointer",textAlign:"left",color:"var(--ink-1)"}}
                   onMouseEnter={e=>{e.target.style.background="var(--red-bg)";e.target.style.borderColor="var(--red)";e.target.style.color="var(--red)";}}
                   onMouseLeave={e=>{e.target.style.background="#fff";e.target.style.borderColor="var(--line-0)";e.target.style.color="var(--ink-1)";}}>
                   {reason}
@@ -10430,7 +10430,7 @@ ${isOpen
               ))}
             </div>
             <button onClick={()=>setDqModalTarget(null)}
-              style={{marginTop:12,width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
+              style={{marginTop:12,width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
               Cancel
             </button>
           </div>
@@ -10441,7 +10441,7 @@ ${isOpen
       {intelModalTarget && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={()=>setIntelModalTarget(null)}>
-          <div style={{background:"#fff",borderRadius:14,padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+          <div style={{background:"var(--surface)",borderRadius:14,padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Intel Adjustment — {intelModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
@@ -10477,7 +10477,7 @@ ${isOpen
                 </button>
               )}
               <button onClick={e=>{e.stopPropagation();setIntelModalTarget(null);}}
-                style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
+                style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
                 Cancel
               </button>
               <button onClick={e=>{
@@ -10487,7 +10487,7 @@ ${isOpen
                   if (adj?.modifier != null) trackUserEdit("intel", "fit adjustment", "", `${adj.modifier>0?"+":""}${adj.modifier}: ${adj.reason||"no reason"}`, intelModalTarget);
                   setIntelModalTarget(null);
                 }}
-                style={{padding:"8px 16px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                style={{padding:"8px 16px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                 Save
               </button>
             </div>
@@ -10499,12 +10499,12 @@ ${isOpen
       {confirmModal && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={confirmModal.onCancel}>
-          <div style={{background:"#fff",borderRadius:14,padding:"28px 32px",maxWidth:420,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+          <div style={{background:"var(--surface)",borderRadius:14,padding:"28px 32px",maxWidth:420,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:16,lineHeight:1.5}}>{confirmModal.message}</div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <button onClick={confirmModal.onCancel} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",color:"#555"}}>Cancel</button>
-              <button onClick={confirmModal.onConfirm} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Regenerate Anyway</button>
+              <button onClick={confirmModal.onCancel} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:13,fontWeight:600,cursor:"pointer",color:"#555"}}>Cancel</button>
+              <button onClick={confirmModal.onConfirm} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"var(--surface)",fontSize:13,fontWeight:600,cursor:"pointer"}}>Regenerate Anyway</button>
             </div>
           </div>
         </div>
@@ -10534,7 +10534,7 @@ ${isOpen
               </div>
             </div>
             <a href="mailto:info@cambriancatalyst.com?subject=Upgrade%20Cambrian%20Playbook&body=Hi%2C%0A%0AI'd%20like%20to%20upgrade%20my%20Cambrian%20Playbook%20account.%0A%0AOrg%3A%20"
-              style={{display:"inline-block",padding:"12px 28px",borderRadius:10,background:"var(--ink-0)",color:"#fff",fontSize:15,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",marginBottom:12}}>
+              style={{display:"inline-block",padding:"12px 28px",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontSize:15,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",marginBottom:12}}>
               Contact Us to Upgrade
             </a>
             <div>

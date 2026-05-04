@@ -125,7 +125,7 @@ export default function S9SolutionFit({
                         {s.implementationPhase}
                       </div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:12}}>
                       <div>
                         <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Business Alignment</div>
                         <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{s.businessAlignment}</div>
