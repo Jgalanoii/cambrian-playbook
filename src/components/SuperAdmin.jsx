@@ -155,7 +155,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   { label: "Max Tokens", value: s.total_max_runs, color: "var(--violet)" },
                   { label: "Organizations", value: s.total_orgs, color: "var(--navy)" },
                   { label: "Unique Sellers", value: s.unique_seller_urls, color: "var(--green)" },
-                  { label: "Milton Messages", value: s.total_milton_messages || 0, color: "#cc2222" },
+                  { label: "Milton Messages", value: s.total_milton_messages || 0, color: "var(--red)" },
+                  { label: "Guest API Calls", value: s.guest_api_calls || 0, color: "var(--ink-2)" },
                 ].map(m => (
                   <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", textAlign: "center" }}>
                     <div style={{ fontSize: 28, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
@@ -627,6 +628,35 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ ACTIVITY ═══ */}
           {tab === "activity" && (
             <div>
+              {/* Guest activity summary */}
+              {data.guestActivity?.total_calls > 0 && (
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Guest Sessions (unauthenticated)</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 10 }}>
+                    <div style={{ background: "var(--surface)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "var(--ink-0)", fontFamily: "Lora,serif" }}>{data.guestActivity.total_calls}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase" }}>API Calls</div>
+                    </div>
+                    <div style={{ background: "var(--surface)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "var(--amber)", fontFamily: "Lora,serif" }}>${data.guestActivity.total_cost?.toFixed(2) || "0.00"}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase" }}>Cost</div>
+                    </div>
+                  </div>
+                  {data.guestActivity.by_endpoint?.length > 0 && (
+                    <div style={{ fontSize: 11, color: "var(--ink-2)", marginBottom: 6 }}>
+                      <strong>By endpoint:</strong> {data.guestActivity.by_endpoint.map(e => `${e.endpoint} (${e.count})`).join(" · ")}
+                    </div>
+                  )}
+                  {data.guestActivity.by_day?.length > 0 && (
+                    <div style={{ fontSize: 11, color: "var(--ink-2)" }}>
+                      <strong>Recent days:</strong> {data.guestActivity.by_day.slice(0, 7).map(d => `${d.day.slice(5)} (${d.count})`).join(" · ")}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Authenticated user activity */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Authenticated Activity</div>
               {data.recent_activity.map((a, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--line-0)" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: (Date.now() - new Date(a.updated_at).getTime()) < 86400000 ? "var(--green)" : "var(--line-0)", flexShrink: 0 }} />
@@ -636,7 +666,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>{a.user_name}</span>
                       {a.user_email && <span> ({a.user_email})</span>}
                       {a.seller_url && <span> · {a.seller_url}</span>}
-                      {a.milton_messages > 0 && <span style={{ color: "#cc2222" }}> · {a.milton_messages} Milton msgs</span>}
+                      {a.milton_messages > 0 && <span style={{ color: "var(--red)" }}> · {a.milton_messages} Milton msgs</span>}
                     </div>
                   </div>
                   <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>{timeAgo(a.updated_at)}</div>

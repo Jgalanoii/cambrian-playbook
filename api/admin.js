@@ -61,11 +61,12 @@ export default async function handler(req, res) {
     } catch {} // Best-effort audit — don't block the response
 
     // Fetch all data in parallel
-    const [users, orgs, sessions, usageLogs] = await Promise.all([
+    const [users, orgs, sessions, usageLogs, guestLogs] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
       sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=500"),
       sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc&limit=5000"),
+      sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=500"),
     ]);
 
     // Build user activity map
@@ -247,6 +248,25 @@ export default async function handler(req, res) {
     learnings.fastTrackRate = learnings.totalDeals > 0 ? Math.round(learnings.dealRoutes.FAST_TRACK / learnings.totalDeals * 100) : 0;
     learnings.disqualifyRate = learnings.totalDeals > 0 ? Math.round(learnings.dealRoutes.DISQUALIFY / learnings.totalDeals * 100) : 0;
 
+    // ── Guest activity from usage logs ──
+    const guestActivity = {
+      total_calls: (guestLogs || []).length,
+      by_endpoint: {},
+      by_day: {},
+      total_cost: 0,
+    };
+    (guestLogs || []).forEach(g => {
+      const ep = g.endpoint || "claude";
+      guestActivity.by_endpoint[ep] = (guestActivity.by_endpoint[ep] || 0) + 1;
+      const day = g.created_at?.slice(0, 10) || "unknown";
+      if (!guestActivity.by_day[day]) guestActivity.by_day[day] = 0;
+      guestActivity.by_day[day]++;
+      const pricing = PRICING[g.model] || DEFAULT_PRICING;
+      guestActivity.total_cost += ((g.input_tokens || 0) * pricing.input + (g.output_tokens || 0) * pricing.output) / 1_000_000;
+    });
+    guestActivity.by_endpoint = Object.entries(guestActivity.by_endpoint).map(([endpoint, count]) => ({ endpoint, count }));
+    guestActivity.by_day = Object.entries(guestActivity.by_day).map(([day, count]) => ({ day, count })).sort((a, b) => b.day.localeCompare(a.day));
+
     res.setHeader("Cache-Control", "private, no-cache");
     res.json({
       summary: {
@@ -259,6 +279,7 @@ export default async function handler(req, res) {
         total_orgs: (orgs || []).length,
         unique_seller_urls: allSellerUrls.length,
         total_milton_messages: totalMiltonMessages,
+        guest_api_calls: guestActivity.total_calls,
       },
       environment: envStatus,
       users: Object.entries(userMap).map(([id, u]) => ({
@@ -272,6 +293,7 @@ export default async function handler(req, res) {
       seller_urls: allSellerUrls,
       costs,
       learnings,
+      guestActivity,
     });
   } catch (e) {
     res.status(500).json({ error: "Failed to fetch analytics" });
