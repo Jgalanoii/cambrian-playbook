@@ -2,20 +2,11 @@
 // Locked to superuser email only. Shows engagement metrics across all users.
 
 import { useState, useEffect } from "react";
+import { timeAgo } from "../lib/utils.js";
 
 const SUPERUSER_EMAIL = "itsjoegalano@gmail.com";
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-function timeAgo(dateStr) {
-  if (!dateStr) return "never";
-  const ago = Date.now() - new Date(dateStr).getTime();
-  if (ago < 60000) return "just now";
-  if (ago < 3600000) return `${Math.floor(ago / 60000)}m ago`;
-  if (ago < 86400000) return `${Math.floor(ago / 3600000)}h ago`;
-  if (ago < 604800000) return `${Math.floor(ago / 86400000)}d ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
 
 export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [data, setData] = useState(null);

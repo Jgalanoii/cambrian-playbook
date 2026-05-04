@@ -962,7 +962,13 @@ function sanitizeForPrompt(str) {
     .replace(/\b(if you were|if you could|hypothetically|in a scenario where|let's say you)\s+(allowed|able|free|permitted|unrestricted)/gi, "[filtered]")
     // Script injection
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/[<>]/g, "");
+    .replace(/[<>]/g, "")
+    // Line-break injection — collapse runs of newlines that create fake section headers
+    .replace(/\n{3,}/g, "\n\n")
+    // Markdown/formatting injection — strip header markers and horizontal rules
+    .replace(/^#{1,6}\s/gm, "")
+    .replace(/^[═━─]{3,}/gm, "---")
+    .replace(/^```[\s\S]*?```$/gm, "[code block filtered]");
 }
 
 // composes everything the seller has captured: ICP differentiators,
@@ -1955,7 +1961,7 @@ function CompanyLogo({ domain, name, size = 40, style = {} }) {
       onError={() => setFailed(true)}
       style={{
         borderRadius: size > 32 ? "var(--r-md)" : "var(--r-sm)",
-        objectFit: "contain", background: "#fff",
+        objectFit: "contain", background: "var(--surface)",
         border: "1px solid var(--line-1)", flexShrink: 0, ...style,
       }}
     />
@@ -2434,7 +2440,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
                   </td>
                   <td style={{color:"#555",fontSize:12}}>{m.geography||"—"}</td>
                   <td>{fitScores&&fitScores[m.company]?(
-                    <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:12,
+                    <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:"var(--r-md)",
                       background:fitScores[m.company].bg,color:fitScores[m.company].color,
                       border:"1px solid "+fitScores[m.company].color+"44",whiteSpace:"nowrap",display:"inline-block"}}
                       title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk, fitScores[m.company].score < 65 ? "Stretch target — may be viable with additional relationship context or intel" : ""].filter(Boolean).join(" · ")}>
@@ -2557,11 +2563,11 @@ function ExportMenu({ onPDF, onCSV, label = "Export", style = {}, locked = false
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
       <button onClick={() => setOpen(!open)}
-        style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, border: "1.5px solid var(--line-0)", borderRadius: 8, background: locked ? "var(--bg-1)" : "#fff", color: locked ? "var(--ink-3)" : "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+        style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, border: "1.5px solid var(--line-0)", borderRadius: 8, background: locked ? "var(--bg-1)" : "var(--surface)", color: locked ? "var(--ink-3)" : "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
         {locked ? "🔒 " : ""}{label} <span style={{ fontSize: 9 }}>▼</span>
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#fff", border: "1.5px solid var(--line-0)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 180, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "var(--surface)", border: "1.5px solid var(--line-0)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 180, overflow: "hidden" }}>
           {locked ? (
             <div style={{ padding: "12px 14px", fontSize: 12, color: "var(--ink-2)", lineHeight: 1.5 }}>
               Export is available on paid plans. <strong style={{ color: "var(--ink-0)" }}>Upgrade to export</strong> your briefs, ICP, and account data.
@@ -2694,11 +2700,11 @@ function HelpGuide({ step, style = {} }) {
     <div style={{ ...style }}>
       <div style={{ display: "flex", gap: 6 }}>
         <button onClick={() => { setOpen(!open); setShowFAQ(false); }}
-          style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: open ? "var(--navy-bg)" : "#fff", color: open ? "var(--navy)" : "var(--ink-3)", cursor: "pointer" }}>
+          style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: open ? "var(--navy-bg)" : "var(--surface)", color: open ? "var(--navy)" : "var(--ink-3)", cursor: "pointer" }}>
           {open ? "Hide Guide" : "? Guide"}
         </button>
         <button onClick={() => { setShowFAQ(!showFAQ); setOpen(false); }}
-          style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: showFAQ ? "var(--navy-bg)" : "#fff", color: showFAQ ? "var(--navy)" : "var(--ink-3)", cursor: "pointer" }}>
+          style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: showFAQ ? "var(--navy-bg)" : "var(--surface)", color: showFAQ ? "var(--navy)" : "var(--ink-3)", cursor: "pointer" }}>
           {showFAQ ? "Hide FAQ" : "FAQ"}
         </button>
       </div>
@@ -2738,7 +2744,7 @@ class ErrorBoundary extends React.Component {
     if(this.state.hasError){
       return(
         <div style={{padding:40,maxWidth:600,margin:"60px auto",fontFamily:"DM Sans,sans-serif"}}>
-          <div style={{background:"var(--red-bg)",border:"1px solid var(--red)",borderRadius:12,padding:24}}>
+          <div style={{background:"var(--red-bg)",border:"1px solid var(--red)",borderRadius:"var(--r-md)",padding:24}}>
             <div style={{fontSize:16,fontWeight:700,color:"var(--red)",marginBottom:8}}>Render Error</div>
             <div style={{fontSize:13,color:"#555",marginBottom:16}}>{this.state.error?.message||"Unknown error"}</div>
             <button onClick={()=>this.setState({hasError:false,error:null})}
@@ -5682,7 +5688,6 @@ ${isOpen
       `   - Hypothesis or talk track is off → "You can edit the hypothesis directly on Step 6 — click any text. Or regenerate with updated brief data."`,
       `   WHY: Changes made in chat stay in chat. Changes made in the app propagate through scoring, briefs, hypothesis, discovery, and post-call analysis. ALWAYS redirect corrections to the app.`,
       `   TONE: Don't be dismissive — acknowledge the correction is valuable, then guide them. "That's exactly the kind of intel that makes your briefs sharper — go drop it into [location] and the whole pipeline updates."`,
-      `═══ END ABSOLUTE RULES ═══`,
       `10. PLAIN ENGLISH TEACHER: When a user is confused about a concept, output, or term — explain it in plain English like a mentor would. You CAN explain:`,
       `   - WHAT something is: "An elevator pitch is a 45-second introduction that proves you did your homework on their company."`,
       `   - WHY it matters: "NRR above 120% means your existing customers are growing faster than you're losing them — that's what investors look for."`,
@@ -5692,6 +5697,7 @@ ${isOpen
       `   - HOW the tool calculates or generates anything (scoring formulas, prompt engineering, AI methodology, knowledge layer structure)`,
       `   - WHAT frameworks the tool uses internally (don't name them — just explain the concept the output represents)`,
       `   The distinction: teach the CONCEPT, never the MACHINERY. A good coach explains what a fastball is and when to throw it — not the physics of the pitching machine.`,
+      `═══ END ABSOLUTE RULES ═══`,
       ``,
       `\nTOOL CAPABILITIES (know what the tool can do — guide reps to use these features):`,
       `- BUILD TARGET ACCOUNTS: The Import page has a "Build my target accounts" button that generates 20 ICP-matched companies automatically via web search. If a rep asks for a target list, ALWAYS direct them to this feature. Never tell them to go build a list elsewhere.`,
@@ -6126,7 +6132,7 @@ ${isOpen
               <button onClick={saveSession}
                 style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,cursor:"pointer",
                   border:"1.5px solid "+(sbUser?"var(--green)":"var(--amber)"),
-                  background:(saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green-bg)":sbUser?"#fff":"var(--amber-bg)",
+                  background:(saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green-bg)":sbUser?"var(--surface)":"var(--amber-bg)",
                   color:sbUser?((saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green)":"var(--green)"):"#7A5010"}}>
                 {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":(saveStatus==="saved"||saveStatus==="auto-saved")?"✓":"💾"} {saveStatus==="auto-saved"?"Auto-saved":saveStatus==="saved"?"Saved":"Save"}
               </button>
@@ -6141,13 +6147,13 @@ ${isOpen
             {/* More menu (⋯) — Search, Dark mode, Resources, Reports, Org, Contact, Admin */}
             <div style={{position:"relative"}}>
               <button onClick={()=>setMoreMenuOpen(m=>!m)}
-                style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:moreMenuOpen?"var(--bg-1)":"#fff",cursor:"pointer",fontSize:15,color:"var(--ink-2)",lineHeight:1,fontWeight:700}}>
+                style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:moreMenuOpen?"var(--bg-1)":"var(--surface)",cursor:"pointer",fontSize:15,color:"var(--ink-2)",lineHeight:1,fontWeight:700}}>
                 ···
               </button>
               {moreMenuOpen&&(
                 <>
                   <div onClick={()=>setMoreMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:999}}/>
-                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:12,border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:200,maxWidth:"85vw",zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
+                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:200,maxWidth:"85vw",zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
                     <button onClick={()=>{setCmdOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
@@ -6221,7 +6227,7 @@ ${isOpen
         {showSavePrompt&&(
           <>
             <div onClick={()=>setShowSavePrompt(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:2000}}/>
-            <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:16,padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+            <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
               <div style={{fontSize:28,marginBottom:12}}>💾</div>
               <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,marginBottom:8}}>Save your work</div>
               <div style={{fontSize:14,color:"#555",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
@@ -6259,7 +6265,7 @@ ${isOpen
                 {savedSessions.length===0&&<div style={{textAlign:"center",color:"#aaa",fontSize:13,padding:"32px 0"}}>No saved sessions yet.</div>}
                 {savedSessions.map(s=>(
                   <div key={s.id} onClick={()=>restoreSession(s)}
-                    style={{padding:"10px 12px",borderRadius:10,border:"1.5px solid "+(s.id===currentSessionId?"var(--ink-0)":"var(--line-0)"),background:s.id===currentSessionId?"var(--bg-1)":"#fff",marginBottom:8,cursor:"pointer"}}>
+                    style={{padding:"10px 12px",borderRadius:10,border:"1.5px solid "+(s.id===currentSessionId?"var(--ink-0)":"var(--line-0)"),background:s.id===currentSessionId?"var(--bg-1)":"var(--surface)",marginBottom:8,cursor:"pointer"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
@@ -6355,9 +6361,9 @@ ${isOpen
               {/* Mode toggle: Full Session vs Quick Brief */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
                 <div onClick={()=>setSessionMode("full")}
-                  style={{padding:"16px",borderRadius:12,cursor:"pointer",transition:"all 0.2s",
+                  style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
                     border:sessionMode==="full"?"2px solid var(--green)":"2px solid var(--line-0)",
-                    background:sessionMode==="full"?"var(--green-bg)":"#fff",
+                    background:sessionMode==="full"?"var(--green-bg)":"var(--surface)",
                     transform:sessionMode==="full"?"translateY(-2px)":"none",
                     boxShadow:sessionMode==="full"?"0 4px 12px rgba(46,107,46,0.12)":"none"}}>
                   <div style={{fontSize:20,marginBottom:6}}>🎯</div>
@@ -6365,9 +6371,9 @@ ${isOpen
                   <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate tailored briefs with solution mapping, and prepare for calls.</div>
                 </div>
                 <div onClick={()=>setSessionMode("quick")}
-                  style={{padding:"16px",borderRadius:12,cursor:"pointer",transition:"all 0.2s",
+                  style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
                     border:sessionMode==="quick"?"2px solid var(--navy)":"2px solid var(--line-0)",
-                    background:sessionMode==="quick"?"var(--navy-bg)":"#fff",
+                    background:sessionMode==="quick"?"var(--navy-bg)":"var(--surface)",
                     transform:sessionMode==="quick"?"translateY(-2px)":"none",
                     boxShadow:sessionMode==="quick"?"0 4px 12px rgba(27,58,107,0.12)":"none"}}>
                   <div style={{fontSize:20,marginBottom:6}}>🔍</div>
@@ -6423,7 +6429,7 @@ ${isOpen
                     {["Bootstrapped","Angel","Seed","Series A","Series B","Series C","Series D+","PE-Backed","Public"].map(stage=>(
                       <button key={stage} onClick={()=>setSellerStage(stage)}
                         style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"var(--ink-0)":"var(--line-0)"),
-                          background:sellerStage===stage?"var(--ink-0)":"#fff",color:sellerStage===stage?"#fff":"#555",
+                          background:sellerStage===stage?"var(--ink-0)":"var(--surface)",color:sellerStage===stage?"#fff":"#555",
                           fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.13s"}}>
                         {stage}
                       </button>
@@ -6464,7 +6470,7 @@ ${isOpen
                       const atLimit = !sel && (icpTargeting[field] || []).length >= max;
                       return <button key={val} onClick={() => toggleArr(field, val, max)} disabled={atLimit && !sel}
                         style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: atLimit && !sel ? "not-allowed" : "pointer", transition: "all 0.13s", opacity: atLimit && !sel ? 0.4 : 1,
-                          border: `1.5px solid ${sel ? color : "var(--line-0)"}`, background: sel ? color : "#fff", color: sel ? "#fff" : "#555" }}>{val}</button>;
+                          border: `1.5px solid ${sel ? color : "var(--line-0)"}`, background: sel ? color : "var(--surface)", color: sel ? "#fff" : "#555" }}>{val}</button>;
                     };
                     return <>
 
@@ -6476,7 +6482,7 @@ ${isOpen
                         const sel=icpTargeting.segment===v;
                         return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,segment:sel?"":v}))}
                           style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--ink-0)":"var(--line-0)"),background:sel?"var(--ink-0)":"#fff",color:sel?"#fff":"#555"}}>{v}</button>;
+                            border:"1.5px solid "+(sel?"var(--ink-0)":"var(--line-0)"),background:sel?"var(--ink-0)":"var(--surface)",color:sel?"#fff":"#555"}}>{v}</button>;
                       })}
                     </div>
                   </div>
@@ -6521,7 +6527,7 @@ ${isOpen
                         const sel=(icpTargeting.excludes||[]).includes(v);
                         return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,excludes:sel?(p.excludes||[]).filter(x=>x!==v):[...(p.excludes||[]),v]}))}
                           style={{padding:"4px 9px",borderRadius:20,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--red)":"var(--line-0)"),background:sel?"var(--red-bg)":"#fff",color:sel?"var(--red)":"#999",
+                            border:"1.5px solid "+(sel?"var(--red)":"var(--line-0)"),background:sel?"var(--red-bg)":"var(--surface)",color:sel?"var(--red)":"#999",
                             textDecoration:sel?"line-through":"none"}}>{v}</button>;
                       })}
                     </div>
@@ -6818,108 +6824,6 @@ ${isOpen
                   <span style={{fontSize:14}}>✓</span> <strong>ICP ready</strong> — you'll review and edit it on the next step
                 </div>
               )}
-              {false&&(
-                <div style={{marginTop:16}}>
-                  <div style={{height:1,background:"var(--line-0)",marginBottom:16}}/>
-                  <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:10}}>
-                    Your ICP — {sellerICP?.sellerName||sellerInput}
-                  </div>
-                  {icpLoading&&!sellerICP&&(
-                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#aaa",padding:"8px 0"}}>
-                      <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Building your ICP...
-                    </div>
-                  )}
-                  {sellerICP?.icp&&(
-                    <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                      {sellerICP.sellerDescription&&(
-                        <div style={{fontSize:13,color:"#555",lineHeight:1.6,fontStyle:"italic"}}>"{sellerICP.sellerDescription}"</div>
-                      )}
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                        {sellerICP.icp.industries?.length>0&&(
-                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Target Industries</div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {sellerICP.icp.industries.map((ind,i)=>(
-                                <span key={i} style={{fontSize:11,background:"var(--line-0)",borderRadius:10,padding:"2px 8px",color:"#555"}}>{ind}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {sellerICP.icp.buyerPersonas?.length>0&&(
-                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Buyer Personas</div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {sellerICP.icp.buyerPersonas.slice(0,3).map((p,i)=>(
-                                <span key={i} style={{fontSize:11,background:"var(--navy-bg)",borderRadius:10,padding:"2px 8px",color:"var(--navy)"}}>{typeof p==="object"?p.title:p}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {(sellerICP.icp.companySize||sellerICP.icp.dealSize)&&(
-                          <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Sweet Spot</div>
-                            {sellerICP.icp.companySize&&<div style={{fontSize:12,color:"#333"}}>{sellerICP.icp.companySize}</div>}
-                            {sellerICP.icp.dealSize&&<div style={{fontSize:11,color:"#777",marginTop:2}}>{sellerICP.icp.dealSize}</div>}
-                          </div>
-                        )}
-                        {sellerICP.icp.disqualifiers?.length>0&&(
-                          <div style={{background:"var(--red-bg)",borderRadius:8,padding:"10px 12px"}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Not a Fit</div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {sellerICP.icp.disqualifiers.slice(0,2).map((d,i)=>(
-                                <span key={i} style={{fontSize:11,background:"var(--red-bg)",borderRadius:10,padding:"2px 8px",color:"var(--red)"}}>{d}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      {sellerICP.icp.painPoints?.length>0&&(
-                        <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--purple)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Top Pains We Solve</div>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                            {(sellerICP.icp.topPains||sellerICP.icp.painPoints||[]).filter(Boolean).map((p,i)=>(
-                              <span key={i} style={{fontSize:11,background:"var(--purple-bg)",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px",color:"var(--purple)"}}>{p}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {sellerICP.icp.priorityInitiative&&(
-                        <div style={{background:"var(--amber-bg)",border:"1px solid #BA751744",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>⚡ Trigger to Buy</div>
-                          <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.priorityInitiative}</div>
-                        </div>
-                      )}
-                      {sellerICP.icp.perceivedBarriers&&(
-                        <div style={{background:"var(--red-bg)",border:"1px solid #9B2C2C44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>🚧 Perceived Barriers</div>
-                          <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{sellerICP.icp.perceivedBarriers}</div>
-                        </div>
-                      )}
-                      {sellerICP.icp.adoptionProfile&&(
-                        <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 Buyer Adoption Profile</div>
-                          <div style={{fontSize:12,color:"#555"}}>{sellerICP.icp.adoptionProfile}</div>
-                        </div>
-                      )}
-                      {sellerICP.icp.uniqueDifferentiators?.filter(Boolean).length>0&&(
-                        <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E44",borderRadius:8,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>✦ Why We Win</div>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                            {sellerICP.icp.uniqueDifferentiators.filter(Boolean).map((d,i)=>(
-                              <span key={i} style={{fontSize:11,background:"var(--surface)",border:"1px solid #2E6B2E44",borderRadius:10,padding:"2px 8px",color:"var(--green)"}}>{d}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {sellerICP.icp.customerExamples?.filter(Boolean).length>0&&(
-                        <div style={{fontSize:12,color:"#aaa"}}>
-                          Known customers: {sellerICP.icp.customerExamples.filter(Boolean).join(" · ")}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div style={{height:1,background:"var(--line-0)",margin:"20px 0"}}/>
 
@@ -6996,7 +6900,7 @@ ${isOpen
                     onClick={()=>{if(!icpLoading&&!checkNoChange("icp",getIcpSig,()=>buildSellerICP(sellerUrl,{forceRefresh:true})))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     disabled={icpLoading}
                     title="Force rebuild ICP (clears cache)"
-                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:icpLoading?"var(--bg-1)":"#fff",color:icpLoading?"var(--ink-3)":"#555",cursor:icpLoading?"wait":"pointer"}}>
+                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:icpLoading?"var(--bg-1)":"var(--surface)",color:icpLoading?"var(--ink-3)":"#555",cursor:icpLoading?"wait":"pointer"}}>
                     {icpLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
                   </button>
                   <div style={{display:"flex",gap:0,border:"1.5px solid var(--line-0)",borderRadius:8,overflow:"hidden"}}>
@@ -7004,7 +6908,7 @@ ${isOpen
                       <button key={tab}
                         onClick={()=>{setIcpTab(tab); if(tab==="rfp"&&!rfpData.open?.length&&!rfpData.closed?.length&&!rfpData.loading) fetchRFPIntel();}}
                         style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
-                          background:icpTab===tab?"var(--ink-0)":"#fff",
+                          background:icpTab===tab?"var(--ink-0)":"var(--surface)",
                           color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s",position:"relative"}}>
                         {label}
                         {tab==="rfp"&&rfpData.loading&&(
@@ -7074,7 +6978,7 @@ ${isOpen
                           <button key={val} onClick={()=>setRfpFilter(val)}
                             style={{padding:"5px 12px",fontSize:11,fontWeight:700,borderRadius:20,border:"1.5px solid",
                               borderColor:rfpFilter===val?"var(--ink-0)":"var(--line-0)",
-                              background:rfpFilter===val?"var(--ink-0)":"#fff",
+                              background:rfpFilter===val?"var(--ink-0)":"var(--surface)",
                               color:rfpFilter===val?"#fff":"#555",cursor:"pointer"}}>
                             {label}
                           </button>
@@ -7791,7 +7695,7 @@ ${isOpen
               {[["csv","📂  Upload CSV"],["quick","⚡  Quick Entry"]].map(([mode,label])=>(
                 <button key={mode} onClick={()=>setImportMode(mode)}
                   style={{padding:"8px 20px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
-                    background:importMode===mode?"#fff":"transparent",
+                    background:importMode===mode?"var(--surface)":"transparent",
                     color:importMode===mode?"var(--ink-0)":"#999",
                     boxShadow:importMode===mode?"0 1px 3px rgba(0,0,0,0.1)":"none",
                     transition:"all 0.15s"}}>
@@ -7918,8 +7822,8 @@ ${isOpen
                               const val=h+" employees";
                               const sel=targetHeadcount.includes(val);
                               return <button key={h} onClick={()=>setTargetHeadcount(prev=>sel?prev.filter(x=>x!==val):prev.length<2?[...prev,val]:prev)}
-                                style={{fontSize:11,padding:"3px 8px",borderRadius:14,border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
-                                  background:sel?"var(--green-bg)":"#fff",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{h}</button>;
+                                style={{fontSize:11,padding:"3px 8px",borderRadius:"var(--r-lg)",border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
+                                  background:sel?"var(--green-bg)":"var(--surface)",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{h}</button>;
                             })}
                           </div>
                           {targetHeadcount.length===0&&<div style={{fontSize:10,color:"var(--ink-3)",marginTop:3}}>Default: {sellerICP?.icp?.companySize||"any"}</div>}
@@ -7932,8 +7836,8 @@ ${isOpen
                             {["Under $1M","$1M-$10M","$10M-$50M","$50M-$100M","$100M-$500M","$500M-$1B","$1B-$10B","$10B+"].map(r=>{
                               const sel=targetRevenue.includes(r);
                               return <button key={r} onClick={()=>setTargetRevenue(prev=>sel?prev.filter(x=>x!==r):prev.length<2?[...prev,r]:prev)}
-                                style={{fontSize:11,padding:"3px 8px",borderRadius:14,border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
-                                  background:sel?"var(--green-bg)":"#fff",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{r}</button>;
+                                style={{fontSize:11,padding:"3px 8px",borderRadius:"var(--r-lg)",border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
+                                  background:sel?"var(--green-bg)":"var(--surface)",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{r}</button>;
                             })}
                           </div>
                           {targetRevenue.length===0&&<div style={{fontSize:10,color:"var(--ink-3)",marginTop:3}}>Default: {sellerICP?.icp?.revenueRange||"any"}</div>}
@@ -7949,8 +7853,8 @@ ${isOpen
                           {["Public","Private","PE-backed","VC-backed","Bootstrapped"].map(o=>{
                             const sel=targetOwnership.includes(o);
                             return <button key={o} onClick={()=>setTargetOwnership(prev=>sel?prev.filter(x=>x!==o):prev.length<2?[...prev,o]:prev)}
-                              style={{fontSize:11,padding:"3px 10px",borderRadius:14,border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
-                                background:sel?"var(--green-bg)":"#fff",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{o}</button>;
+                              style={{fontSize:11,padding:"3px 10px",borderRadius:"var(--r-lg)",border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
+                                background:sel?"var(--green-bg)":"var(--surface)",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{o}</button>;
                           })}
                         </div>
                       </div>
@@ -8043,7 +7947,7 @@ ${isOpen
                       />
                       {entry._suggested && !entry.url && (
                         <button
-                          style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",fontSize:11,background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:12,padding:"2px 10px",cursor:"pointer",fontWeight:600}}
+                          style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",fontSize:11,background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:"var(--r-md)",padding:"2px 10px",cursor:"pointer",fontWeight:600}}
                           onClick={()=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,url:entry._suggested}:x))}>
                           Accept
                         </button>
@@ -8193,7 +8097,7 @@ ${isOpen
                           })}>
                           <td style={{fontWeight:600,color:"var(--ink-0)"}}>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <div style={{width:20,height:20,borderRadius:4,border:"2px solid "+(inQueue?"var(--ink-0)":"#ddd"),background:inQueue?"var(--ink-0)":"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"var(--tan-0)",fontWeight:700}}>
+                              <div style={{width:20,height:20,borderRadius:4,border:"2px solid "+(inQueue?"var(--ink-0)":"#ddd"),background:inQueue?"var(--ink-0)":"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"var(--tan-0)",fontWeight:700}}>
                                 {inQueue?qPos+1:""}
                               </div>
                               <div>
@@ -8712,7 +8616,7 @@ ${isOpen
                 {sellerUrl && sellerUrl !== "research-only" && (brief.elevatorPitch || brief._loadingSections?.strategy) && (
                   <div style={{
                     background:"var(--green-bg)",
-                    borderRadius:14, padding:"20px 24px", marginBottom:16,
+                    borderRadius:"var(--r-lg)", padding:"20px 24px", marginBottom:16,
                     border:"2px solid var(--green)",
                   }}>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
@@ -8807,13 +8711,13 @@ ${isOpen
                       <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>
                         {brief.website&&(
                           <a href={"https://"+brief.website.replace(/^https?:\/\//,"")} target="_blank" rel="noopener noreferrer"
-                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"var(--navy)",textDecoration:"none",background:"var(--navy-bg)",border:"1px solid #1B3A6B44",borderRadius:16,padding:"4px 12px",fontWeight:600}}>
+                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"var(--navy)",textDecoration:"none",background:"var(--navy-bg)",border:"1px solid #1B3A6B44",borderRadius:"var(--r-lg)",padding:"4px 12px",fontWeight:600}}>
                             🌐 {brief.website.replace(/^https?:\/\//,"")}
                           </a>
                         )}
                         {brief.linkedIn&&(
                           <a href={"https://"+brief.linkedIn.replace(/^https?:\/\//,"")} target="_blank" rel="noopener noreferrer"
-                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#0a66c2",textDecoration:"none",background:"#e8f3fc",border:"1px solid #0a66c244",borderRadius:16,padding:"4px 12px",fontWeight:600}}>
+                            style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#0a66c2",textDecoration:"none",background:"#e8f3fc",border:"1px solid #0a66c244",borderRadius:"var(--r-lg)",padding:"4px 12px",fontWeight:600}}>
                             in {brief.linkedIn.replace(/^https?:\/\//,"").replace(/^linkedin\.com\/company\//,"")}
                           </a>
                         )}
@@ -9956,7 +9860,7 @@ ${isOpen
                     </div>
 
                     {/* Talk Track */}
-                    <div style={{background:"var(--green-bg)",border:"2px solid var(--green)",borderRadius:12,padding:"16px 18px",marginBottom:14}}>
+                    <div style={{background:"var(--green-bg)",border:"2px solid var(--green)",borderRadius:"var(--r-md)",padding:"16px 18px",marginBottom:14}}>
                       <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Talk Track</div>
                       <div style={{fontSize:14,color:"var(--ink-0)",lineHeight:1.7,fontStyle:"italic"}}>{stage.talkTrack}</div>
                     </div>
@@ -10143,7 +10047,7 @@ ${isOpen
                 {(()=>{
                   const health = calcDealHealth(gateAnswers, riverData);
                   return (
-                    <div style={{background:"var(--bg-1)",borderRadius:12,padding:"14px 16px",marginBottom:16}}>
+                    <div style={{background:"var(--bg-1)",borderRadius:"var(--r-md)",padding:"14px 16px",marginBottom:16}}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                         <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px"}}>Deal Health by Stage</div>
                         <div style={{fontSize:13,fontWeight:700,color:confColor(health.overall)}}>{health.overall}% overall</div>
@@ -10247,7 +10151,7 @@ ${isOpen
       {/* Milton nudge — cheeky warning for frivolous inputs */}
       {miltonNudge && (
         <div className="no-print" style={{position:"fixed",bottom:100,left:"50%",transform:"translateX(-50%)",zIndex:10000,
-          background:"var(--surface)",border:"2px solid var(--amber)",color:"var(--ink-0)",padding:"14px 22px",borderRadius:14,fontSize:13,fontWeight:500,lineHeight:1.5,
+          background:"var(--surface)",border:"2px solid var(--amber)",color:"var(--ink-0)",padding:"14px 22px",borderRadius:"var(--r-lg)",fontSize:13,fontWeight:500,lineHeight:1.5,
           boxShadow:"0 8px 32px rgba(0,0,0,0.12)",animation:"fadeInUp 0.3s ease",maxWidth:440,textAlign:"left"}}>
           <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
             <span style={{fontSize:20,flexShrink:0}}>🤨</span>
@@ -10261,7 +10165,7 @@ ${isOpen
 
       {/* Token usage badge — visible to all org members, hidden in print */}
       {orgCtx && (
-        <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:12,padding:"8px 14px",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",fontSize:12,cursor:"pointer"}}
+        <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:"var(--r-md)",padding:"8px 14px",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",fontSize:12,cursor:"pointer"}}
           onClick={()=>{loadSessions();setReportPanelOpen(true);}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{display:"flex",flexDirection:"column",gap:4,flex:1}}>
@@ -10295,7 +10199,7 @@ ${isOpen
       {contactOpen && (
         <>
           <div onClick={()=>setContactOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
-          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:16,padding:"32px 36px",maxWidth:420,width:"90%",zIndex:9999,boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"32px 36px",maxWidth:420,width:"90%",zIndex:9999,boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
               <div>
                 <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,color:"var(--ink-0)"}}>Contact Us</div>
@@ -10344,7 +10248,7 @@ ${isOpen
         <>
           <div onClick={()=>setFavPanelOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
           <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-            <div style={{background:"var(--surface)",borderRadius:16,width:"90%",maxWidth:600,maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden",pointerEvents:"auto",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+            <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",width:"90%",maxWidth:600,maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden",pointerEvents:"auto",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
               <div style={{padding:"16px 20px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
                   <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>★ Favorites</div>
@@ -10401,7 +10305,7 @@ ${isOpen
       {dqModalTarget && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={()=>setDqModalTarget(null)}>
-          <div style={{background:"var(--surface)",borderRadius:14,padding:"24px 28px",maxWidth:400,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"24px 28px",maxWidth:400,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Disqualify — {dqModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
@@ -10424,7 +10328,7 @@ ${isOpen
                   onClick={()=>{setDisqualified(prev=>({...prev,[dqModalTarget]:reason}));setDqModalTarget(null);}}
                   style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:500,cursor:"pointer",textAlign:"left",color:"var(--ink-1)"}}
                   onMouseEnter={e=>{e.target.style.background="var(--red-bg)";e.target.style.borderColor="var(--red)";e.target.style.color="var(--red)";}}
-                  onMouseLeave={e=>{e.target.style.background="#fff";e.target.style.borderColor="var(--line-0)";e.target.style.color="var(--ink-1)";}}>
+                  onMouseLeave={e=>{e.target.style.background="var(--surface)";e.target.style.borderColor="var(--line-0)";e.target.style.color="var(--ink-1)";}}>
                   {reason}
                 </button>
               ))}
@@ -10441,7 +10345,7 @@ ${isOpen
       {intelModalTarget && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={()=>setIntelModalTarget(null)}>
-          <div style={{background:"var(--surface)",borderRadius:14,padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Intel Adjustment — {intelModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
@@ -10454,7 +10358,7 @@ ${isOpen
                   <button key={v} onClick={e=>{e.stopPropagation();const t=intelModalTarget;setIntelAdjustments(prev=>({...prev,[t]:{...(prev[t]||{}),modifier:v}}));}}
                     style={{padding:"4px 10px",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",
                       border:"1.5px solid "+((intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green)":"var(--red)"):"var(--line-0)"),
-                      background:(intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green-bg)":"var(--red-bg)"):"#fff",
+                      background:(intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green-bg)":"var(--red-bg)"):"var(--surface)",
                       color:(intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green)":"var(--red)"):"var(--ink-2)"}}>
                     {v>0?"+":""}{v}
                   </button>
@@ -10499,7 +10403,7 @@ ${isOpen
       {confirmModal && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={confirmModal.onCancel}>
-          <div style={{background:"var(--surface)",borderRadius:14,padding:"28px 32px",maxWidth:420,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 32px",maxWidth:420,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:16,lineHeight:1.5}}>{confirmModal.message}</div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
@@ -10513,7 +10417,7 @@ ${isOpen
       {/* Upgrade prompt modal */}
       {upgradeOpen && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.5)"}}>
-          <div style={{background:"var(--surface)",borderRadius:16,padding:"32px 36px",maxWidth:440,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"32px 36px",maxWidth:440,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
             <div style={{fontSize:40,marginBottom:12}}>🚀</div>
             <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
               {!sbUser ? "You've used your 3 free previews" : `You've used all ${orgCtx?.run_limit||5} tokens this month`}

@@ -4,16 +4,7 @@
 // Admin/superuser sees the full SuperAdmin dashboard instead.
 
 import { useState, useMemo } from "react";
-
-function timeAgo(dateStr) {
-  if (!dateStr) return "never";
-  const ago = Date.now() - new Date(dateStr).getTime();
-  if (ago < 60000) return "just now";
-  if (ago < 3600000) return `${Math.floor(ago / 60000)}m ago`;
-  if (ago < 86400000) return `${Math.floor(ago / 3600000)}h ago`;
-  if (ago < 604800000) return `${Math.floor(ago / 86400000)}d ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
+import { timeAgo } from "../lib/utils.js";
 
 export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) {
   const [tab, setTab] = useState("overview");

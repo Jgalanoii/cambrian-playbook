@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchOrgMembers, fetchOrgInvitations, sbPatch, sbRpc } from "../lib/org.js";
+import { timeAgo } from "../lib/utils.js";
 
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -140,15 +141,6 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
   const roleBg = (r) =>
     r === "admin" ? "var(--navy-bg)" : r === "manager" ? "var(--amber-bg)" : "var(--green-bg)";
 
-  const timeAgo = (dateStr) => {
-    if (!dateStr) return "never";
-    const ago = Date.now() - new Date(dateStr).getTime();
-    if (ago < 60000) return "just now";
-    if (ago < 3600000) return `${Math.floor(ago / 60000)}m ago`;
-    if (ago < 86400000) return `${Math.floor(ago / 3600000)}h ago`;
-    if (ago < 604800000) return `${Math.floor(ago / 86400000)}d ago`;
-    return new Date(dateStr).toLocaleDateString();
-  };
 
   const tabs = [
     { id: "members", label: `Team (${members.length})`, show: canViewTeam },

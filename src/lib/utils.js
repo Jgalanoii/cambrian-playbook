@@ -90,8 +90,40 @@ export function extractJSON(text){
   }catch{return null;}
 }
 
+export function timeAgo(dateStr) {
+  if (!dateStr) return "never";
+  const ago = Date.now() - new Date(dateStr).getTime();
+  if (ago < 60000) return "just now";
+  if (ago < 3600000) return `${Math.floor(ago / 60000)}m ago`;
+  if (ago < 86400000) return `${Math.floor(ago / 3600000)}h ago`;
+  if (ago < 604800000) return `${Math.floor(ago / 86400000)}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 export function safeParseJSON(text){
   try{return JSON.parse(text);}catch{}
   const s=text.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
   // Also strip trailing commas before arrays/objects close
-  const noTrailing = s.replace(/,\s*([}
+  const noTrailing = s.replace(/,\s*([}\]])/g,"$1");
+  try{return JSON.parse(noTrailing);}catch{}
+  let out="",inStr=false,esc=false;
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    if(esc){out+=ch;esc=false;continue;}
+    if(ch==="\\"){out+=ch;esc=true;continue;}
+    if(inStr){
+      if(ch==="\n"){out+="\\n";continue;}
+      if(ch==="\r"){out+="\\r";continue;}
+      if(ch==='"'){
+        let j=i+1;
+        while(j<s.length){if("\n\r \t".includes(s[j])){j++;continue;}if(s[j]==="\\"){j+=2;continue;}break;}
+        const nxt=j<s.length?s[j]:"";
+        if(nxt===","||nxt==="}"||nxt==="]"||nxt===":"||nxt===""){inStr=false;out+=ch;}
+        else out+='\\"';
+        continue;
+      }
+      out+=ch;
+    }else{if(ch==='"'){inStr=true;out+=ch;}else out+=ch;}
+  }
+  try{return JSON.parse(out);}catch(e){console.error("JSON repair failed:",e.message);return null;}
+}

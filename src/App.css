@@ -673,8 +673,9 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
   .river-pills, .stepper, .account-strip,
   [class*="load-"], .load-box, .no-print { display: none !important; }
 
-  /* Hide buttons but keep non-interactive elements that look like buttons (pills, chips) */
-  button, .btn { display: none !important; }
+  /* Hide interactive buttons but keep badge-style elements (pills, chips, role/plan indicators) */
+  button:not([class*="badge"]):not([disabled]), .btn { display: none !important; }
+  select, input[type="range"] { display: none !important; }
 
   /* Show ALL collapsed sections — user may not have expanded everything */
   .bb-body-wrap.collapsed { max-height: none !important; overflow: visible !important; }
