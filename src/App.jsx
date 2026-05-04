@@ -977,9 +977,10 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   const icp = sellerICP.icp;
   const out = [];
   const sellerLabel = sellerICP.sellerName || sellerICP.marketCategory || "this seller";
-  out.push(`═══ WHY BUY FROM ${sellerLabel.toUpperCase()} — ground every claim in this proof ═══`);
-  if (sellerICP.sellerDescription) out.push(`What we sell: ${sellerICP.sellerDescription}`);
-  if (sellerICP.marketCategory)    out.push(`Market category: ${sellerICP.marketCategory}`);
+  const s = sanitizeForPrompt;
+  out.push(`═══ WHY BUY FROM ${s(sellerLabel).toUpperCase()} — ground every claim in this proof ═══`);
+  if (sellerICP.sellerDescription) out.push(`What we sell: ${s(sellerICP.sellerDescription)}`);
+  if (sellerICP.marketCategory)    out.push(`Market category: ${s(sellerICP.marketCategory)}`);
 
   const diffs   = (icp.uniqueDifferentiators || []).filter(Boolean);
   const cust    = (icp.customerExamples || []).filter(Boolean);
@@ -988,36 +989,36 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
 
   if (diffs.length) {
     out.push(`\nUnique differentiators (name these to justify "why us"):`);
-    diffs.forEach(d => out.push(`  • ${d}`));
+    diffs.forEach(d => out.push(`  • ${s(d)}`));
   }
   if (cust.length) {
     out.push(`\nNamed customers (cite by name as social proof when proposing solutions; do NOT invent other customer names):`);
-    cust.forEach(c => out.push(`  • ${c}`));
+    cust.forEach(c => out.push(`  • ${s(c)}`));
   }
   if (alts.length) {
     out.push(`\nCompetitive alternatives we displace/replace (know the terrain):`);
-    alts.forEach(a => out.push(`  • ${a}`));
+    alts.forEach(a => out.push(`  • ${s(a)}`));
   }
   if (icp.successFactors) {
     out.push(`\nWhat winning looks like for our customers (frame outcomes in these terms):`);
-    out.push(`  ${icp.successFactors}`);
+    out.push(`  ${s(icp.successFactors)}`);
   }
   if (icp.priorityInitiative) {
     out.push(`\nWhat triggers our buyers to act NOW (use this for urgency framing):`);
-    out.push(`  ${icp.priorityInitiative}`);
+    out.push(`  ${s(icp.priorityInitiative)}`);
   }
   if (channels.length) {
     out.push(`\nProven go-to-market channels:`);
-    channels.forEach(c => out.push(`  • ${c}`));
+    channels.forEach(c => out.push(`  • ${s(c)}`));
   }
   if (sellerDocs.length) {
     out.push(`\nUploaded proof documents (case studies, datasheets — quote when relevant):`);
-    sellerDocs.forEach(d => out.push(`  • ${d.label}: ${(d.content || "").slice(0, 300)}${d.content && d.content.length > 300 ? "…" : ""}`));
+    sellerDocs.forEach(d => out.push(`  • ${s(d.label)}: ${s((d.content || "").slice(0, 300))}${d.content && d.content.length > 300 ? "…" : ""}`));
   }
   const namedProducts = (products || []).filter(p => p?.name?.trim());
   if (namedProducts.length) {
     out.push(`\nSeller's product catalog (use these EXACT names — do NOT invent products):`);
-    namedProducts.forEach(p => out.push(`  • ${p.name}${p.description ? " — " + p.description.slice(0, 120) : ""}`));
+    namedProducts.forEach(p => out.push(`  • ${s(p.name)}${p.description ? " — " + s(p.description.slice(0, 120)) : ""}`));
   }
 
   // Manually-entered proof points (case studies, ROI metrics, awards, etc.)
@@ -2127,6 +2128,7 @@ function PasswordGate({ onAuth }) {
   const[loading,setLoading]=React.useState(false);
   const[verifying,setVerifying]=React.useState(false);
   const[guestOk,setGuestOk]=React.useState(false);
+  const[resetSent,setResetSent]=React.useState(false);
 
   React.useEffect(()=>{
     // Check for invitation token in URL
@@ -2182,16 +2184,21 @@ function PasswordGate({ onAuth }) {
 
   const submit=async()=>{
     setErr("");setLoading(true);
-    if(mode==="signup"){
-      const d=await sbAuth('signup',{email,password:pw,data:{first_name:first,last_name:last,full_name:first+' '+last}});
-      if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
-      else if(d.id){setVerifying(true);}
-      else setErr(d.msg||d.error_description||'Sign up failed');
-    } else {
-      const d=await sbAuth('token?grant_type=password',{email,password:pw});
-      if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
-      else setErr(d.error_description||'Incorrect email or password');
-    }
+    try {
+      if(mode==="signup"){
+        const d=await sbAuth('signup',{email,password:pw,data:{first_name:first,last_name:last,full_name:first+' '+last}});
+        if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
+        else if(d.id){setVerifying(true);}
+        else setErr(d.msg||d.error_description||'Sign up failed');
+      } else if(mode==="reset"){
+        await sbAuth('recover',{email});
+        setErr("");setResetSent(true);
+      } else {
+        const d=await sbAuth('token?grant_type=password',{email,password:pw});
+        if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
+        else setErr(d.error_description||'Incorrect email or password');
+      }
+    } catch(e) { setErr('Network error — check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -2240,16 +2247,33 @@ function PasswordGate({ onAuth }) {
             </div>
           )}
           <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}}/>
-          <input type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>
+          {mode!=="reset"&&<input type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>}
 
           {err && <div className="pw-error">{err}</div>}
+          {resetSent && <div style={{fontSize:12,color:"var(--green)",fontWeight:600,marginBottom:8}}>Password reset link sent to {email}. Check your inbox.</div>}
 
-          <button className="btn btn-primary btn-lg"
-            style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}}
-            onClick={submit}
-            disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
-            {loading ? (mode==="signup"?"Creating account…":"Signing in…") : (mode==="signup"?"Create Account →":"Sign In →")}
-          </button>
+          {mode==="reset"?(
+            <>
+              <button className="btn btn-primary btn-lg"
+                style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}}
+                onClick={submit} disabled={loading||!email}>
+                {loading?"Sending…":"Send Reset Link →"}
+              </button>
+              <button style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--tan-0)",fontWeight:600,marginTop:10,textAlign:"center",width:"100%"}}
+                onClick={()=>{setMode("signin");setErr("");setResetSent(false);}}>← Back to Sign In</button>
+            </>
+          ):(
+            <>
+              <button className="btn btn-primary btn-lg"
+                style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}}
+                onClick={submit}
+                disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
+                {loading ? (mode==="signup"?"Creating account…":"Signing in…") : (mode==="signup"?"Create Account →":"Sign In →")}
+              </button>
+              {mode==="signin"&&<button style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-2)",marginTop:10,textAlign:"center",width:"100%"}}
+                onClick={()=>{setMode("reset");setErr("");}}>Forgot password?</button>}
+            </>
+          )}
         </div>
 
         <div style={{textAlign:"center",marginTop:16}}>
@@ -4282,7 +4306,7 @@ ${isOpen
     const nm=sessionName||sellerUrl||'Session '+new Date().toLocaleDateString();
     const data=getSessionSnap();
     // Upsert user record
-    await sbSessions('POST','users?on_conflict=id',sbToken,{id:sbUser.id,email:sbUser.email,name:sbUser.user_metadata?.full_name||sbUser.email,role:'rep'});
+    await sbSessions('POST','users?on_conflict=id',sbToken,{id:sbUser.id,email:sbUser.email,name:sbUser.user_metadata?.full_name||sbUser.email});
     if(currentSessionId){
       await sbSessions('PATCH',`sessions?id=eq.${currentSessionId}`,sbToken,{name:nm,seller_url:sellerUrl,data});
     } else {
@@ -4330,6 +4354,9 @@ ${isOpen
     if(d.notes) setNotes(d.notes);
     if(d.postCall) setPostCall(d.postCall);
     if(d.solutionFit) setSolutionFit(d.solutionFit);
+    if(d.contactRole) setContactRole(d.contactRole);
+    if(d.dealClassification) setDealClassification(d.dealClassification);
+    if(d.importMode) setImportMode(d.importMode);
     setShowSessions(false);setStep(d.sellerUrl?1:0);
     // Reset auto-save snapshot so restored state isn't immediately re-saved
     lastAutoSaveSnap.current = JSON.stringify(d);
@@ -4393,8 +4420,8 @@ ${isOpen
       const tag = el?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
       if (el?.isContentEditable) return;
-      // Also skip if any overlay/panel is open (OrgPanel, sessions drawer, etc.)
-      if (orgPanelOpen || showSessions || cmdOpen) return;
+      // Skip if any overlay/panel/modal is open or in-call step active
+      if (orgPanelOpen || showSessions || cmdOpen || chatOpen || favPanelOpen || resourcesOpen || contactOpen || dqModalTarget || intelModalTarget || confirmModal || upgradeOpen || reportPanelOpen || superAdminOpen || moreMenuOpen) return;
       // Cmd-S — save session
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -4408,11 +4435,11 @@ ${isOpen
         doExport();
         return;
       }
-      // Arrow keys — stage navigation (only on main workflow pages)
+      // Arrow keys & number keys — stage navigation (disabled during in-call to prevent accidental navigation)
+      if (step === 7) return; // In-call: no keyboard nav
       if (e.key === "ArrowRight" && step < 9) { setStep(s => Math.min(s + 1, 9)); return; }
       if (e.key === "ArrowLeft"  && step > 0) { setStep(s => Math.max(s - 1, 0)); return; }
       // Number keys 1-9, 0 — jump to stage (user-facing 1-10, internal 0-9)
-      // 1=Session, 2=ICP, 3=Import, ..., 9=Post-Call, 0=Solution Fit
       if (e.key === "0") { setStep(9); return; }
       const num = parseInt(e.key, 10);
       if (num >= 1 && num <= 9) { setStep(num - 1); return; }
@@ -5755,8 +5782,22 @@ ${isOpen
     return () => window.removeEventListener("usage-limit-exceeded", handler);
   }, []);
 
-  if(!authed) return <PasswordGate onAuth={(u,tok)=>{
+  if(!authed) return <PasswordGate onAuth={async(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
+    // Accept pending invitation before fetching org context
+    const pendingInvite = sessionStorage.getItem("pending_invite_token");
+    if (pendingInvite && u?.id) {
+      try {
+        const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+        const res = await fetch(`${SB_URL}/rest/v1/rpc/accept_invitation`, {
+          method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}`, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+          body: JSON.stringify({ p_token: pendingInvite, p_user_id: u.id }),
+        });
+        const result = await res.json();
+        if (result?.ok) sessionStorage.removeItem("pending_invite_token");
+        else console.warn("Invite acceptance:", result?.error || "unknown error");
+      } catch (e) { console.warn("Invite acceptance failed:", e.message); }
+    }
     if(u?.id) fetchOrgContext(u.id,tok).then(org=>{ if(org) setOrgCtx(org); });
     // Auto-refresh tokens — update app state when token is silently refreshed
     sbSetTokenCallback((newToken) => { setSbToken(newToken); setAuthToken(newToken); });
@@ -6128,11 +6169,7 @@ ${isOpen
                       <span style={{width:20,textAlign:"center"}}>✉</span> Contact Us
                     </button>
                     <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
-                    <button onClick={()=>{setDarkMode(d=>!d);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>{darkMode?"☀️":"🌙"}</span> {darkMode?"Light Mode":"Dark Mode"}
-                    </button>
+                    {/* Dark mode hidden for beta — CSS coverage incomplete */}
                     {sbUser?.email==="itsjoegalano@gmail.com"&&(
                       <>
                         <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
@@ -8581,13 +8618,9 @@ ${isOpen
               <>
                 {briefError&&(
                   <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:8}}>⚠ Research Error — Action Required</div>
-                    <div style={{fontSize:11,color:"#7A2020",fontFamily:"monospace",background:"rgba(0,0,0,0.05)",padding:"8px 10px",borderRadius:6,marginBottom:10,wordBreak:"break-word",lineHeight:1.5}}>{briefError}</div>
-                    <div style={{fontSize:10,color:"#7A2020",lineHeight:2}}>
-                      <strong>Fix:</strong> Vercel → Project → Settings → Environment Variables<br/>
-                      Add <code style={{background:"#f5c6c6",padding:"1px 6px",borderRadius:3}}>ANTHROPIC_API_KEY</code> = sk-ant-... key (no VITE_ prefix) → <strong>Redeploy</strong><br/>
-                      Check browser DevTools (F12) Console for detailed error.<br/>
-                      <em style={{color:"#aaa"}}>Brief below uses cached knowledge only — no live research.</em>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:8}}>⚠ Research encountered an issue</div>
+                    <div style={{fontSize:12,color:"#7A2020",lineHeight:1.6}}>
+                      Some sections may be incomplete. Try <strong>regenerating</strong> the brief, or contact <a href="mailto:support@cambriancatalyst.com" style={{color:"var(--tan-0)"}}>support@cambriancatalyst.com</a> if the issue persists.
                     </div>
                   </div>
                 )}
@@ -10461,11 +10494,12 @@ ${isOpen
           <div style={{background:"var(--surface)",borderRadius:16,padding:"32px 36px",maxWidth:440,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
             <div style={{fontSize:40,marginBottom:12}}>🚀</div>
             <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-              You've used all {orgCtx?.run_limit||5} tokens this month
+              {!sbUser ? "You've used your 3 free previews" : `You've used all ${orgCtx?.run_limit||5} tokens this month`}
             </div>
             <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:20}}>
-              Your {orgCtx?.plan==="trial"?"trial":"plan"} includes {orgCtx?.run_limit||5} tokens per month. Each full brief build uses 1 token.
-              Upgrade to get more tokens and unlock premium features.
+              {!sbUser
+                ? "Create a free account to continue exploring with 5 tokens per month. It takes 30 seconds."
+                : `Your ${orgCtx?.plan==="trial"?"trial":"plan"} includes ${orgCtx?.run_limit||5} tokens per month. Each full brief build uses 1 token. Upgrade to get more tokens and unlock premium features.`}
             </div>
             <div style={{background:"var(--bg-1)",borderRadius:10,padding:"14px 16px",marginBottom:20,textAlign:"left"}}>
               <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>What you get with an upgrade:</div>
