@@ -200,31 +200,26 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Invite form (admin only) */}
               {isAdmin && (
-                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginBottom: 8 }}>Invite a Team Member</div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                      placeholder="email@company.com" type="email"
-                      style={{ flex: 1, fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8, boxSizing: "border-box" }}
-                      onKeyDown={e => { if (e.key === "Enter") sendInvite(); e.stopPropagation(); }} />
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-0)", marginBottom: 10 }}>Invite a Team Member</div>
+                  <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                    placeholder="colleague@company.com" type="email"
+                    style={{ width: "100%", fontSize: 14, padding: "10px 14px", border: "1.5px solid var(--line-0)", borderRadius: 8, boxSizing: "border-box", marginBottom: 10 }}
+                    onKeyDown={e => { if (e.key === "Enter") sendInvite(); e.stopPropagation(); }} />
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
-                      style={{ fontSize: 12, padding: "8px 10px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}>
-                      <option value="rep">Rep</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">Admin</option>
+                      style={{ fontSize: 13, padding: "9px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8, flex: 1 }}>
+                      <option value="rep">Rep — build briefs, use playbook</option>
+                      <option value="manager">Manager — view team sessions & reports</option>
+                      <option value="admin">Admin — full access, invites & settings</option>
                     </select>
                     <button onClick={sendInvite} disabled={inviteLoading || !inviteEmail.trim()}
-                      style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: inviteLoading || !inviteEmail.trim() ? 0.5 : 1, whiteSpace: "nowrap" }}>
-                      {inviteLoading ? "..." : "Invite"}
+                      style={{ padding: "9px 20px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: inviteLoading || !inviteEmail.trim() ? 0.5 : 1, whiteSpace: "nowrap" }}>
+                      {inviteLoading ? "Sending..." : "Send Invite"}
                     </button>
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 6 }}>
-                    <strong>Rep</strong> — can build briefs and use the playbook.
-                    <strong style={{ marginLeft: 6 }}>Manager</strong> — can view team sessions and reports.
-                    <strong style={{ marginLeft: 6 }}>Admin</strong> — full access including invites, roles, and settings.
-                  </div>
                   {inviteMsg && (
-                    <div style={{ fontSize: 12, color: inviteMsg.startsWith("Error") ? "var(--red)" : "var(--green)", marginTop: 6 }}>
+                    <div style={{ fontSize: 12, color: inviteMsg.startsWith("Error") ? "var(--red)" : "var(--green)", marginTop: 8, fontWeight: 600 }}>
                       {inviteMsg}
                     </div>
                   )}
