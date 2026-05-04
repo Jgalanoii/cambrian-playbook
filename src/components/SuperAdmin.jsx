@@ -31,6 +31,12 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   ]);
   const [opusRatio, setOpusRatio] = useState(75);
   const [planSaveMsg, setPlanSaveMsg] = useState("");
+  // ── GLOBAL FILTERS ──
+  const [dateRange, setDateRange] = useState("all"); // today | 7d | 30d | 90d | all
+  const [userTypeFilter, setUserTypeFilter] = useState("all"); // all | authenticated | guest
+  const [roleFilter, setRoleFilter] = useState(""); // "" | admin | manager | rep
+  const [planFilter, setPlanFilter] = useState(""); // "" | trial | paid | enterprise | suspended
+  const [searchQuery, setSearchQuery] = useState("");
   const isSuperuser = sbUser?.email === SUPERUSER_EMAIL;
 
   useEffect(() => {
@@ -71,6 +77,65 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const s = data.summary;
   const c = data.costs?.total || {};
   const l = data.learnings || {};
+
+  // ── Filter helpers ──
+  const dateRangeCutoff = () => {
+    const now = Date.now();
+    if (dateRange === "today") return now - 86400000;
+    if (dateRange === "7d") return now - 7 * 86400000;
+    if (dateRange === "30d") return now - 30 * 86400000;
+    if (dateRange === "90d") return now - 90 * 86400000;
+    return 0; // "all"
+  };
+  const cutoff = dateRangeCutoff();
+  const inDateRange = (dateStr) => !dateStr || dateRange === "all" || new Date(dateStr).getTime() >= cutoff;
+  const matchesSearch = (u) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (u.name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q) || (u.org_name || "").toLowerCase().includes(q);
+  };
+
+  // Filtered datasets
+  const filteredUsers = (data.users || []).filter(u => {
+    if (userTypeFilter === "guest") return false; // guests aren't in users table
+    if (roleFilter && u.role !== roleFilter) return false;
+    if (planFilter && u.org_plan !== planFilter) return false;
+    if (!matchesSearch(u)) return false;
+    if (dateRange !== "all" && u.last_active && !inDateRange(u.last_active)) return false;
+    return true;
+  });
+  const filteredActivity = (data.recent_activity || []).filter(a => {
+    if (!inDateRange(a.updated_at)) return false;
+    if (userTypeFilter === "guest") return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!(a.user_name || "").toLowerCase().includes(q) && !(a.user_email || "").toLowerCase().includes(q) && !(a.session_name || "").toLowerCase().includes(q) && !(a.seller_url || "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  const filteredCostsByUser = (data.costs?.by_user || []).filter(u => {
+    if (userTypeFilter === "guest" && u.user_id !== "guest") return false;
+    if (userTypeFilter === "authenticated" && u.user_id === "guest") return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!(u.user_name || "").toLowerCase().includes(q) && !(u.user_email || "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  const filteredCostsByDay = (data.costs?.by_day || []).filter(d => {
+    if (dateRange === "all") return true;
+    return new Date(d.day).getTime() >= cutoff;
+  });
+  const filteredOrgs = (data.orgs || []).filter(o => {
+    if (planFilter && o.plan !== planFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!(o.name || "").toLowerCase().includes(q) && !(o.seller_url || "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const hasActiveFilters = dateRange !== "all" || userTypeFilter !== "all" || roleFilter || planFilter || searchQuery;
 
   // Cost calculation based on Opus ratio
   const calcCostPerToken = () => {
@@ -128,6 +193,52 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {t.label}
             </button>
           ))}
+        </div>
+
+        {/* Global filter bar */}
+        <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--line-0)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", background: hasActiveFilters ? "var(--amber-bg)" : "var(--bg-1)" }}>
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users, orgs, URLs..."
+            style={{ flex: "1 1 160px", minWidth: 120, fontSize: 12, padding: "6px 10px", border: "1.5px solid var(--line-0)", borderRadius: 6, background: "var(--surface)" }} />
+          <select value={dateRange} onChange={e => setDateRange(e.target.value)}
+            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+          </select>
+          <select value={userTypeFilter} onChange={e => setUserTypeFilter(e.target.value)}
+            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
+            <option value="all">All users</option>
+            <option value="authenticated">Authenticated</option>
+            <option value="guest">Guests only</option>
+          </select>
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
+            <option value="">Any role</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="rep">Rep</option>
+          </select>
+          <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
+            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
+            <option value="">Any plan</option>
+            <option value="trial">Trial</option>
+            <option value="paid">Paid</option>
+            <option value="enterprise">Enterprise</option>
+            <option value="suspended">Suspended</option>
+          </select>
+          {hasActiveFilters && (
+            <button onClick={() => { setDateRange("all"); setUserTypeFilter("all"); setRoleFilter(""); setPlanFilter(""); setSearchQuery(""); }}
+              style={{ fontSize: 10, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1.5px solid var(--amber)", background: "var(--surface)", color: "var(--amber)", cursor: "pointer", whiteSpace: "nowrap" }}>
+              Clear filters
+            </button>
+          )}
+          {hasActiveFilters && (
+            <span style={{ fontSize: 10, color: "var(--amber)", fontWeight: 600 }}>
+              {filteredUsers.length} users · {filteredActivity.length} activities · {filteredOrgs.length} orgs
+            </span>
+          )}
         </div>
 
         {/* Content */}
@@ -422,7 +533,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.costs.by_user || []).map((u, i) => (
+                  {filteredCostsByUser.map((u, i) => (
                     <tr key={i} style={{ borderBottom: "1px solid var(--line-0)" }}>
                       <td style={{ padding: "6px" }}>
                         <div style={{ fontWeight: 600 }}>{u.user_name}</div>
@@ -451,7 +562,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
               {/* Cost by day */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Daily Cost</div>
-              {(data.costs.by_day || []).slice(0, 14).map((d, i) => (
+              {filteredCostsByDay.slice(0, 30).map((d, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--line-0)" }}>
                   <div style={{ fontSize: 12, color: "var(--ink-1)", width: 90, fontWeight: 600 }}>{d.day}</div>
                   <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
@@ -470,13 +581,13 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {/* Quick actions bar */}
               <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
                 <div style={{ fontSize: 11, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 4 }}>
-                  {data.users.length} users · {data.orgs.length} orgs
+                  {hasActiveFilters ? `${filteredUsers.length} of ${data.users.length}` : data.users.length} users · {filteredOrgs.length} orgs
                 </div>
               </div>
               {planSaveMsg && <div style={{ fontSize: 12, color: "var(--green)", fontWeight: 600, marginBottom: 10, padding: "6px 12px", background: "var(--green-bg)", borderRadius: 8 }}>✓ {planSaveMsg}</div>}
 
               {/* User cards */}
-              {data.users.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
+              {filteredUsers.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
                 const org = data.orgs.find(o => o.id === u.org_id);
                 return (
                   <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, padding: "14px 16px", marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "var(--surface)" }}>
@@ -656,8 +767,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               )}
 
               {/* Authenticated user activity */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Authenticated Activity</div>
-              {data.recent_activity.map((a, i) => (
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                Authenticated Activity {hasActiveFilters && <span style={{ fontWeight: 400, color: "var(--amber)" }}>({filteredActivity.length} of {data.recent_activity.length})</span>}
+              </div>
+              {filteredActivity.map((a, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--line-0)" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: (Date.now() - new Date(a.updated_at).getTime()) < 86400000 ? "var(--green)" : "var(--line-0)", flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
@@ -711,7 +824,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.orgs.sort((a, b) => (b.run_count || 0) - (a.run_count || 0)).map(o => (
+                  {filteredOrgs.sort((a, b) => (b.run_count || 0) - (a.run_count || 0)).map(o => (
                     <tr key={o.id} style={{ borderBottom: "1px solid var(--line-0)" }}>
                       <td style={{ padding: "8px 6px", fontWeight: 600 }}>{o.name}</td>
                       <td style={{ padding: "8px 6px" }}>
