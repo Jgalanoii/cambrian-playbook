@@ -160,12 +160,13 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
   const tabs = [
     { id: "overview", label: "Overview" },
-    { id: "pricing", label: "Pricing" },
-    { id: "learnings", label: "Learnings" },
-    { id: "costs", label: `Costs ($${(c.cost||0).toFixed(2)})` },
+    { id: "sessions", label: `Sessions (${s.total_sessions})` },
     { id: "users", label: `Users (${s.total_users})` },
-    { id: "usage", label: "Usage" },
+    { id: "costs", label: `Costs ($${(c.cost||0).toFixed(2)})` },
+    { id: "learnings", label: "Learnings" },
     { id: "activity", label: "Activity" },
+    { id: "usage", label: "Usage" },
+    { id: "pricing", label: "Pricing" },
     { id: "urls", label: `URLs (${s.unique_seller_urls})` },
   ];
 
@@ -291,6 +292,157 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ═══ SESSIONS ═══ */}
+          {tab === "sessions" && (
+            <div>
+              {/* Session funnel */}
+              {data.sessionFunnel && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Pipeline Funnel</div>
+                  <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+                    {[
+                      { label: "Sessions", value: data.sessionFunnel.total, color: "var(--ink-0)" },
+                      { label: "Built ICP", value: data.sessionFunnel.with_icp, color: "var(--navy)" },
+                      { label: "Generated Brief", value: data.sessionFunnel.with_brief, color: "var(--green)" },
+                      { label: "Hypothesis", value: data.sessionFunnel.with_hypothesis, color: "var(--amber)" },
+                      { label: "Post-Call", value: data.sessionFunnel.with_post_call, color: "var(--violet)" },
+                      { label: "Solution Fit", value: data.sessionFunnel.with_solution_fit, color: "var(--red)" },
+                    ].map((step, i) => {
+                      const pct = data.sessionFunnel.total > 0 ? Math.round(step.value / data.sessionFunnel.total * 100) : 0;
+                      return (
+                        <div key={i} style={{ flex: 1, textAlign: "center" }}>
+                          <div style={{ height: 40, background: "var(--bg-2)", borderRadius: 6, position: "relative", overflow: "hidden", marginBottom: 4 }}>
+                            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `${pct}%`, background: step.color, borderRadius: 6, opacity: 0.2 }} />
+                            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 16, fontWeight: 700, color: step.color, fontFamily: "Lora,serif" }}>{step.value}</div>
+                          </div>
+                          <div style={{ fontSize: 9, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase" }}>{step.label}</div>
+                          <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{pct}%</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Aggregate stats */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
+                    {[
+                      { label: "Companies Scored", value: data.sessionFunnel.total_companies_scored, color: "var(--green)" },
+                      { label: "Companies Queued", value: data.sessionFunnel.total_companies_queued, color: "var(--navy)" },
+                      { label: "Avg per Session", value: data.sessionFunnel.avg_companies_per_session, color: "var(--ink-0)" },
+                      { label: "Fast Track", value: data.sessionFunnel.deal_routes?.fast_track || 0, color: "var(--green)" },
+                      { label: "Nurture", value: data.sessionFunnel.deal_routes?.nurture || 0, color: "var(--amber)" },
+                      { label: "Disqualify", value: data.sessionFunnel.deal_routes?.disqualify || 0, color: "var(--red)" },
+                    ].map(m => (
+                      <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
+                        <div style={{ fontSize: 9, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase" }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Top industries */}
+                  {data.sessionFunnel.top_industries?.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Top Industries Researched</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {data.sessionFunnel.top_industries.map((ind, i) => (
+                          <span key={i} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "var(--navy-bg)", color: "var(--navy)", fontWeight: 600 }}>
+                            {ind.industry} ({ind.count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Seller stages */}
+                  {data.sessionFunnel.top_seller_stages?.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Seller Stages</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {data.sessionFunnel.top_seller_stages.map((st, i) => (
+                          <span key={i} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "var(--green-bg)", color: "var(--green)", fontWeight: 600 }}>
+                            {st.stage} ({st.count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* All sessions table */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                All Sessions {hasActiveFilters && <span style={{ fontWeight: 400, color: "var(--amber)" }}>({filteredActivity.length} of {data.recent_activity.length})</span>}
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", minWidth: 700 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
+                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Session</th>
+                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>User</th>
+                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Seller</th>
+                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Depth</th>
+                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Accounts</th>
+                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Route</th>
+                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredActivity.map((a, i) => {
+                      const depthDots = [a.hasICP, a.hasBrief, a.hasHypo, a.hasPostCall, a.hasSolutionFit];
+                      const depthLabels = ["ICP", "Brief", "Hypo", "Post", "SA"];
+                      return (
+                        <tr key={i} style={{ borderBottom: "1px solid var(--line-0)" }}>
+                          <td style={{ padding: "8px 6px" }}>
+                            <div style={{ fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.session_name}</div>
+                            {a.selected_account && <div style={{ fontSize: 10, color: "var(--ink-3)" }}>Target: {a.selected_account}</div>}
+                          </td>
+                          <td style={{ padding: "8px 6px" }}>
+                            <div style={{ fontWeight: 600, color: "var(--ink-0)" }}>{a.user_name?.split(" ")[0] || "—"}</div>
+                            <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{a.user_role}</div>
+                          </td>
+                          <td style={{ padding: "8px 6px" }}>
+                            <div style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink-1)" }}>{a.seller_url || "—"}</div>
+                            {a.products_count > 0 && <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{a.products_count} products · {a.docs_count} docs</div>}
+                          </td>
+                          <td style={{ padding: "8px 6px" }}>
+                            <div style={{ display: "flex", gap: 2 }}>
+                              {depthDots.map((filled, j) => (
+                                <span key={j} title={depthLabels[j]} style={{
+                                  width: 14, height: 14, borderRadius: 3, fontSize: 7, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+                                  background: filled ? "var(--green)" : "var(--bg-2)", color: filled ? "var(--surface)" : "var(--ink-3)"
+                                }}>{depthLabels[j][0]}</span>
+                              ))}
+                            </div>
+                            {a.gates_filled > 0 && <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 2 }}>{a.gates_filled}G {a.discovery_filled}D</div>}
+                          </td>
+                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, color: "var(--ink-0)" }}>{a.companies_scored > 0 ? a.companies_scored : "—"}</div>
+                            {a.companies_queued > 0 && <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{a.companies_queued} queued</div>}
+                          </td>
+                          <td style={{ padding: "8px 6px" }}>
+                            {a.deal_route ? (
+                              <span style={{
+                                fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 10,
+                                background: a.deal_route === "FAST_TRACK" ? "var(--green-bg)" : a.deal_route === "NURTURE" ? "var(--amber-bg)" : "var(--red-bg)",
+                                color: a.deal_route === "FAST_TRACK" ? "var(--green)" : a.deal_route === "NURTURE" ? "var(--amber)" : "var(--red)",
+                              }}>{a.deal_route.replace("_", " ")}</span>
+                            ) : <span style={{ fontSize: 10, color: "var(--ink-3)" }}>—</span>}
+                            {a.deal_value && <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 2 }}>${Number(a.deal_value).toLocaleString()}</div>}
+                          </td>
+                          <td style={{ padding: "8px 6px", fontSize: 10, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
+                            {timeAgo(a.updated_at)}
+                            {a.milton_messages > 0 && <div style={{ fontSize: 9, color: "var(--red)" }}>{a.milton_messages} Milton</div>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {filteredActivity.length === 0 && <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: 20 }}>No sessions match the current filters.</div>}
             </div>
           )}
 

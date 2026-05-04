@@ -64,9 +64,9 @@ export default async function handler(req, res) {
     const [users, orgs, sessions, usageLogs, guestLogs] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
-      sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=500"),
-      sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc&limit=5000"),
-      sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=500"),
+      sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=2000"),
+      sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc&limit=10000"),
+      sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=2000"),
     ]);
 
     // Build user activity map
@@ -137,16 +137,57 @@ export default async function handler(req, res) {
     const totalRuns = (orgs || []).reduce((sum, o) => sum + (o.run_count || 0), 0);
     const totalMaxRuns = (orgs || []).reduce((sum, o) => sum + (o.max_run_count || 0), 0);
 
-    // Recent activity feed (last 50 sessions with user info)
-    const recentActivity = (sessions || []).slice(0, 50).map(s => ({
-      session_name: s.name || "Untitled",
-      seller_url: s.seller_url || "",
-      user_name: userMap[s.user_id]?.name || userMap[s.user_id]?.email || "Unknown",
-      user_email: userMap[s.user_id]?.email || "",
-      updated_at: s.updated_at,
-      created_at: s.created_at,
-      milton_messages: Number(s.data?.miltonMsgCount) || 0,
-    }));
+    // Full session detail feed — extract intelligence from every session
+    const recentActivity = (sessions || []).map(s => {
+      const d = s.data || {};
+      const companies = (d.accountQueue || []).map(a => a?.company).filter(Boolean);
+      const scoredCompanies = Object.keys(d.fitScores || {});
+      const industries = [...new Set((d.cohorts || []).map(c => c.name).filter(Boolean))];
+      const hasICP = !!d.sellerICP?.icp;
+      const hasBrief = !!d.brief?.companySnapshot;
+      const hasHypo = !!d.riverHypo?.reality;
+      const hasPostCall = !!d.postCall?.dealRoute;
+      const hasSolutionFit = !!d.solutionFit?.confirmedSolutions;
+      const dealRoute = d.postCall?.dealRoute || null;
+      const selectedAccount = d.selectedAccount?.company || null;
+      const outcomeCount = (d.selectedOutcomes || []).length;
+      const editCount = (d.icpEdits || []).length + (d.userEdits || []).length;
+      const favCount = (d.favorites || []).length;
+      const stage = d.step != null ? d.step : (d.brief ? 5 : d.sellerICP ? 1 : 0);
+      const gatesFilled = d.gateAnswers ? Object.values(d.gateAnswers).filter(Boolean).length : 0;
+      const discoveryFilled = d.riverData ? Object.values(d.riverData).filter(v => v?.trim()).length : 0;
+
+      return {
+        id: s.id,
+        session_name: s.name || "Untitled",
+        seller_url: s.seller_url || "",
+        user_id: s.user_id,
+        user_name: userMap[s.user_id]?.name || userMap[s.user_id]?.email || "Unknown",
+        user_email: userMap[s.user_id]?.email || "",
+        user_role: userMap[s.user_id]?.role || "unknown",
+        updated_at: s.updated_at,
+        created_at: s.created_at,
+        milton_messages: Number(d.miltonMsgCount) || 0,
+        // Session depth indicators
+        stage,
+        hasICP, hasBrief, hasHypo, hasPostCall, hasSolutionFit,
+        // Content stats
+        companies_queued: companies.length,
+        companies_scored: scoredCompanies.length,
+        industries,
+        selected_account: selectedAccount,
+        deal_route: dealRoute,
+        deal_value: d.dealValue || null,
+        outcomes: outcomeCount,
+        edits: editCount,
+        favorites: favCount,
+        gates_filled: gatesFilled,
+        discovery_filled: discoveryFilled,
+        seller_stage: d.sellerStage || null,
+        products_count: (d.products || []).filter(p => p?.name?.trim()).length,
+        docs_count: (d.sellerDocs || []).length,
+      };
+    });
 
     // All unique seller URLs being researched
     const allSellerUrls = [...new Set((sessions || []).map(s => s.seller_url).filter(Boolean))];
@@ -248,6 +289,22 @@ export default async function handler(req, res) {
     learnings.fastTrackRate = learnings.totalDeals > 0 ? Math.round(learnings.dealRoutes.FAST_TRACK / learnings.totalDeals * 100) : 0;
     learnings.disqualifyRate = learnings.totalDeals > 0 ? Math.round(learnings.dealRoutes.DISQUALIFY / learnings.totalDeals * 100) : 0;
 
+    // ── Session funnel analytics ──
+    const sessionFunnel = {
+      total: recentActivity.length,
+      with_icp: recentActivity.filter(s => s.hasICP).length,
+      with_brief: recentActivity.filter(s => s.hasBrief).length,
+      with_hypothesis: recentActivity.filter(s => s.hasHypo).length,
+      with_post_call: recentActivity.filter(s => s.hasPostCall).length,
+      with_solution_fit: recentActivity.filter(s => s.hasSolutionFit).length,
+      total_companies_scored: recentActivity.reduce((s, a) => s + a.companies_scored, 0),
+      total_companies_queued: recentActivity.reduce((s, a) => s + a.companies_queued, 0),
+      avg_companies_per_session: recentActivity.length > 0 ? Math.round(recentActivity.reduce((s, a) => s + a.companies_queued, 0) / recentActivity.length * 10) / 10 : 0,
+      deal_routes: { fast_track: recentActivity.filter(s => s.deal_route === "FAST_TRACK").length, nurture: recentActivity.filter(s => s.deal_route === "NURTURE").length, disqualify: recentActivity.filter(s => s.deal_route === "DISQUALIFY").length },
+      top_industries: Object.entries(recentActivity.flatMap(s => s.industries).reduce((acc, ind) => { acc[ind] = (acc[ind] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([industry, count]) => ({ industry, count })),
+      top_seller_stages: Object.entries(recentActivity.map(s => s.seller_stage).filter(Boolean).reduce((acc, st) => { acc[st] = (acc[st] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).map(([stage, count]) => ({ stage, count })),
+    };
+
     // ── Guest activity from usage logs ──
     const guestActivity = {
       total_calls: (guestLogs || []).length,
@@ -293,6 +350,7 @@ export default async function handler(req, res) {
       seller_urls: allSellerUrls,
       costs,
       learnings,
+      sessionFunnel,
       guestActivity,
     });
   } catch (e) {
