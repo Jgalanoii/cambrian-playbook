@@ -2298,7 +2298,7 @@ function PasswordGate({ onAuth }) {
           {/* Right — auth form */}
           <div style={{flex:"0 1 380px",minWidth:280}}>
             <div style={{fontSize:13,fontWeight:600,color:"var(--ink-2)",marginBottom:8}}>
-              {mode==="signup"?"Start free — no credit card required":mode==="reset"?"Reset your password":"Welcome back"}
+              {mode==="signup"?"Start free — 3 full runs, no credit card":mode==="reset"?"Reset your password":"Welcome back"}
             </div>
             {authForm}
             <div style={{textAlign:"center",marginTop:12}}>
@@ -2397,7 +2397,7 @@ function PasswordGate({ onAuth }) {
             Stop researching. Start closing.
           </div>
           <div style={{fontSize:14,color:"var(--ink-3)",lineHeight:1.6,marginBottom:20}}>
-            Free during private beta. No credit card. Full access to briefs, hypothesis, discovery coaching, and Milton.
+            Register free to get 3 full runs — ICP, briefs, hypothesis, coaching, and Milton. No credit card required.
           </div>
           <button className="btn btn-lg"
             onClick={()=>{window.scrollTo({top:0,behavior:"smooth"});setMode("signup");}}
@@ -10558,8 +10558,9 @@ ${isOpen
               </div>
               <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.5}}>
                 {!sbUser
-                  ? "Create a free account to get 5 tokens/month — or upgrade for more."
-                  : `You're on the ${orgCtx?.plan||"trial"} plan (${orgCtx?.run_count||0}/${orgCtx?.run_limit||5} tokens used). Choose a plan below.`}
+                  ? "Create a free account to unlock 3 full runs — ICP, briefs, hypothesis, coaching, and more."
+                  : orgCtx?.plan==="trial" ? `You're on the free trial (${orgCtx?.run_count||0}/${orgCtx?.run_limit||3} runs used). Upgrade to keep going.`
+                  : `You're on the ${orgCtx?.plan} plan (${orgCtx?.run_count||0}/${orgCtx?.run_limit||3} tokens used). Choose a plan below.`}
               </div>
             </div>
 

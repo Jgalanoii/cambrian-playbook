@@ -86,7 +86,7 @@ async function provisionTrialOrg(userId) {
     const user = users?.[0];
     const orgName = user?.name || user?.email || "My Organization";
 
-    // Create a trial org with default limits (run_limit=5, max_run_limit=0)
+    // Create a trial org with default limits (run_limit=3, max_run_limit=0)
     const createRes = await fetch(`${SB_URL}/rest/v1/orgs`, {
       method: "POST",
       headers: {
