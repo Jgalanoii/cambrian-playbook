@@ -2215,8 +2215,15 @@ function PasswordGate({ onAuth }) {
         else if(d.id){setVerifying(true);}
         else setErr(d.msg||d.error_description||'Sign up failed');
       } else if(mode==="reset"){
-        await sbAuth('recover',{email});
-        setErr("");setResetSent(true);
+        const SB_URL=import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const r=await fetch(`${SB_URL}/auth/v1/recover`,{
+          method:"POST",
+          headers:{"apikey":SB_KEY,"Content-Type":"application/json"},
+          body:JSON.stringify({email}),
+        });
+        if(r.ok){setErr("");setResetSent(true);}
+        else{const d=await r.json().catch(()=>({}));setErr(d.error_description||d.msg||`Reset failed (${r.status}). Check that the email exists.`);}
       } else if(mode==="newpassword"){
         if(newPw.length<8){setErr("Password must be at least 8 characters.");setLoading(false);return;}
         if(newPw!==newPwConfirm){setErr("Passwords don't match.");setLoading(false);return;}
