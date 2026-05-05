@@ -2154,25 +2154,49 @@ function PasswordGate({ onAuth }) {
   const[recoveryToken,setRecoveryToken]=React.useState(null); // token from password reset email
   const[passwordUpdated,setPasswordUpdated]=React.useState(false);
 
+  const[inviteEmail,setInviteEmail]=React.useState("");
+
   React.useEffect(()=>{
-    // Check for password recovery token in URL hash (Supabase redirects with #access_token=xxx&type=recovery)
+    // Check for Supabase auth redirects in URL hash
     const hash = window.location.hash;
-    if (hash && hash.includes("type=recovery")) {
+    if (hash) {
       const hashParams = new URLSearchParams(hash.replace("#", ""));
       const accessToken = hashParams.get("access_token");
-      if (accessToken) {
+      const type = hashParams.get("type");
+
+      if (accessToken && type === "recovery") {
+        // Password reset flow
         setRecoveryToken(accessToken);
         setMode("newpassword");
-        // Clean the URL
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (accessToken && (type === "invite" || type === "signup" || type === "magiclink")) {
+        // Invite flow — user clicked invite email link, Supabase created the account
+        // They have a valid token but need to set a password
+        setRecoveryToken(accessToken); // reuse recovery token for password setting
+        setMode("invite_setpassword");
+        // Try to extract email from the token payload
+        try {
+          const payload = JSON.parse(atob(accessToken.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+          if (payload.email) setInviteEmail(payload.email);
+        } catch {}
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
 
-    // Check for invitation token in URL
+    // Check for custom invitation token in URL query (?token=xxx)
     const params = new URLSearchParams(window.location.search);
     const invToken = params.get("token");
     if (invToken) {
       sessionStorage.setItem("pending_invite_token", invToken);
+      // Try to look up the invite to get the email
+      const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      fetch(`${SB_URL}/rest/v1/invitations?token=eq.${invToken}&select=email&accepted_at=is.null`, {
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+      }).then(r => r.json()).then(data => {
+        if (data?.[0]?.email) { setEmail(data[0].email); setInviteEmail(data[0].email); }
+      }).catch(() => {});
+      setMode("signup");
       window.history.replaceState({}, "", window.location.pathname);
     }
 
@@ -2237,7 +2261,7 @@ function PasswordGate({ onAuth }) {
         });
         if(r.ok){setErr("");setResetSent(true);}
         else{const d=await r.json().catch(()=>({}));setErr(d.error_description||d.msg||`Reset failed (${r.status}). Check that the email exists.`);}
-      } else if(mode==="newpassword"){
+      } else if(mode==="newpassword"||mode==="invite_setpassword"){
         if(newPw.length<8){setErr("Password must be at least 8 characters.");setLoading(false);return;}
         if(newPw!==newPwConfirm){setErr("Passwords don't match.");setLoading(false);return;}
         const SB_URL=import.meta.env.VITE_SUPABASE_URL;
@@ -2247,8 +2271,16 @@ function PasswordGate({ onAuth }) {
           headers:{apikey:SB_KEY,Authorization:`Bearer ${recoveryToken}`,"Content-Type":"application/json"},
           body:JSON.stringify({password:newPw}),
         });
-        if(r.ok){setPasswordUpdated(true);setErr("");}
-        else{const d=await r.json();setErr(d.error_description||d.msg||"Failed to update password. The link may have expired — request a new one.");}
+        if(r.ok){
+          if(mode==="invite_setpassword"){
+            // Invite flow — user just set their password, log them in directly
+            sbStoreTokens({access_token:recoveryToken});
+            const u=await sbGetUser(recoveryToken);
+            if(u?.id){onAuth(u,recoveryToken);return;}
+          }
+          setPasswordUpdated(true);setErr("");
+        }
+        else{const d=await r.json();setErr(d.error_description||d.msg||"Failed to set password. The invite link may have expired — ask your admin to resend.");}
       } else {
         const d=await sbAuth('token?grant_type=password',{email,password:pw});
         if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
@@ -2268,6 +2300,35 @@ function PasswordGate({ onAuth }) {
             We sent a verification link to <strong style={{color:"var(--ink-0)"}}>{email}</strong>. Click it, then come back and sign in.
           </div>
           <button className="btn btn-secondary" onClick={()=>{setVerifying(false);setMode("signin");}}>← Back to Sign In</button>
+        </div>
+      </div>
+    </AuthShell>
+  );
+
+  // ── Invite acceptance form (shown when user clicks invite link from email) ──
+  if (mode === "invite_setpassword") return (
+    <AuthShell>
+      <div className="page" style={{maxWidth:440,paddingTop:48}}>
+        <div className="page-title">You're in. Set your password.</div>
+        <div className="page-sub">Your team is already using Cambrian Catalyst. Set a password and you'll be building briefs in 30 seconds.</div>
+        <div className="card" style={{padding:22}}>
+          {inviteEmail && (
+            <div style={{fontSize:13,color:"var(--ink-1)",marginBottom:12,padding:"8px 12px",background:"var(--bg-1)",borderRadius:8}}>
+              Joining as <strong style={{color:"var(--ink-0)"}}>{inviteEmail}</strong>
+            </div>
+          )}
+          <input type="password" placeholder="Choose a password (8+ characters)" value={newPw} onChange={e=>setNewPw(e.target.value)}
+            autoFocus style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&newPwConfirm&&submit()} />
+          <input type="password" placeholder="Confirm password" value={newPwConfirm} onChange={e=>setNewPwConfirm(e.target.value)}
+            style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&submit()} />
+          {err && <div className="pw-error">{err}</div>}
+          <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1}}
+            onClick={submit} disabled={loading||!newPw||!newPwConfirm}>
+            {loading ? "Setting up..." : "Join My Team →"}
+          </button>
+          <div style={{textAlign:"center",marginTop:12,fontSize:11,color:"var(--ink-3)",fontStyle:"italic"}}>
+            One password. That's it. Then you'll see what all the fuss is about.
+          </div>
         </div>
       </div>
     </AuthShell>
@@ -2322,13 +2383,19 @@ function PasswordGate({ onAuth }) {
           </button>
         ))}
       </div>
+      {/* Invite context banner */}
+      {inviteEmail && mode==="signup" && (
+        <div style={{fontSize:12,color:"var(--green)",fontWeight:600,marginBottom:10,padding:"8px 12px",background:"var(--green-bg)",borderRadius:8}}>
+          You've been invited to join a team on Cambrian Catalyst. Create your account to get started.
+        </div>
+      )}
       {mode==="signup" && (
         <div className="field-grid-2" style={{marginBottom:10}}>
           <input placeholder="First name" value={first} onChange={e=>setFirst(e.target.value)} autoFocus/>
           <input placeholder="Last name"  value={last}  onChange={e=>setLast(e.target.value)}/>
         </div>
       )}
-      <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}}/>
+      <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}} readOnly={!!inviteEmail && mode==="signup"}/>
       {mode!=="reset"&&<input type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>}
       {err && <div className="pw-error">{err}</div>}
       {resetSent && <div style={{fontSize:12,color:"var(--green)",fontWeight:600,marginBottom:8}}>Password reset link sent to {email}. Check your inbox.</div>}
