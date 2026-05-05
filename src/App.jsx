@@ -2106,10 +2106,10 @@ function BriefLoader({ company, status }) {
 
 // ── PRICING TIERS (shared by landing page + upgrade modal) ───────────────────
 const PRICING_TIERS = [
-  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",maxRuns:"5 Max runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"]},
-  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",maxRuns:"20 Max runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true},
-  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",maxRuns:"50 Max runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"]},
-  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",maxRuns:"200 Max runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"]},
+  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",maxRuns:"5 Max runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"],priceId:"price_1TTsKW1ukA5Jsm7o41o7K39i"},
+  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",maxRuns:"20 Max runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true,priceId:"price_1TTsKH1ukA5Jsm7oKosAgD2i"},
+  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",maxRuns:"50 Max runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"],priceId:"price_1TTsK31ukA5Jsm7odTEg1faZ"},
+  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",maxRuns:"200 Max runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"],priceId:"price_1TTsJr1ukA5Jsm7oFWPVRXWW"},
 ];
 
 // ── AUTH / PASSWORD GATE ──────────────────────────────────────────────────────
@@ -6104,6 +6104,22 @@ ${isOpen
   }, []);
   // Refresh orgCtx after billable calls to keep token count accurate
   const refreshOrgCtx = () => { if (sbUser?.id && sbToken) fetchOrgContext(sbUser.id, sbToken).then(org => { if (org) setOrgCtx(org); }); };
+
+  // Detect checkout success/cancel from Stripe redirect
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    if (checkout === "success") {
+      const plan = params.get("plan") || "paid";
+      window.history.replaceState({}, "", window.location.pathname);
+      // Refresh org context to pick up new plan limits from webhook
+      setTimeout(refreshOrgCtx, 2000); // Give webhook a moment to fire
+      setChatMessages(prev => [...prev, { role: "assistant", content: `Welcome to the ${plan.charAt(0).toUpperCase()+plan.slice(1)} plan! Your runs have been upgraded. Let's go close some deals.` }]);
+      setChatOpen(true);
+    } else if (checkout === "cancel") {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   if(!authed) return <PasswordGate onAuth={async(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
@@ -10802,10 +10818,18 @@ ${isOpen
                       <span style={{color:"var(--green)",flexShrink:0}}>✓</span>{f}
                     </div>
                   ))}
-                  <a href={`mailto:info@cambriancatalyst.com?subject=Upgrade to ${plan.name}&body=Hi,%0A%0AI'd like to upgrade to the ${plan.name} plan (${plan.price}/mo).%0A%0AOrg: ${encodeURIComponent(orgCtx?.name||"")}%0AEmail: ${encodeURIComponent(sbUser?.email||"")}`}
-                    style={{display:"block",textAlign:"center",padding:"10px",borderRadius:8,background:plan.popular?"var(--tan-0)":"var(--ink-0)",color:"var(--surface)",fontSize:12,fontWeight:700,textDecoration:"none",marginTop:12,fontFamily:"DM Sans,sans-serif"}}>
-                    Select {plan.name}
-                  </a>
+                  <button onClick={async()=>{
+                    if(!sbUser){setUpgradeOpen(false);setAuthed(false);return;}
+                    try{
+                      const r=await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({priceId:plan.priceId,planId:plan.id})});
+                      const d=await r.json();
+                      if(d.url)window.location.href=d.url;
+                      else setPlanSaveMsg?.(d.error||"Checkout failed");
+                    }catch{setPlanSaveMsg?.("Failed to start checkout");}
+                  }}
+                    style={{display:"block",width:"100%",textAlign:"center",padding:"10px",borderRadius:8,background:plan.popular?"var(--tan-0)":"var(--ink-0)",color:"var(--surface)",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",marginTop:12,fontFamily:"DM Sans,sans-serif"}}>
+                    Start with {plan.name} →
+                  </button>
                 </div>
               ))}
             </div>
