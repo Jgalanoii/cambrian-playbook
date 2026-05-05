@@ -2120,7 +2120,7 @@ function AuthShell({ children }) {
         </div>
       </header>
       {children}
-      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA · Evolve how you sell · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a></footer>
+      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA · Evolve how you sell · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a> · <a href="/terms" style={{color:"var(--ink-3)",textDecoration:"none",fontSize:11}}>Terms</a> · <a href="/privacy" style={{color:"var(--ink-3)",textDecoration:"none",fontSize:11}}>Privacy</a></footer>
     </div>
   );
 }
@@ -2292,7 +2292,7 @@ function PasswordGate({ onAuth }) {
 
   // ── Auth form (reused in hero and standalone) ──
   const authForm = (
-    <div className="card" style={{padding:22}}>
+    <div className="card" style={{padding:22,minHeight:mode==="signup"?280:220,transition:"min-height 0.2s ease"}}>
       <div className="pw-tabs" role="tablist" style={{marginBottom:18}}>
         {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
           <button key={m} role="tab" aria-selected={mode===m}
@@ -6532,14 +6532,35 @@ ${isOpen
               <div style={{textAlign:"center",marginBottom:10}}>
                 <span style={{display:"inline-block",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
-              <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
-                <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most prepared person in every conversation.</div>
-                <div style={{fontSize:14,color:"#666",lineHeight:1.7}}>Your prospects will notice. Walk into every meeting with deep research on their strategy, leadership, pain points, and the exact angle that earns their trust. When you know more than anyone else in the room, deals move.</div>
-              </div>
+              {/* Welcome card for authenticated users */}
+              {sbUser && (
+                <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:"var(--r-md)",padding:"16px 20px",marginBottom:20,textAlign:"left"}}>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:4}}>
+                    Welcome{sbUser.user_metadata?.first_name ? `, ${sbUser.user_metadata.first_name}` : ""}
+                  </div>
+                  <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6,marginBottom:8}}>
+                    You have <strong>{Math.max(0,(orgCtx?.run_limit||3)-(orgCtx?.run_count||0))}</strong> of <strong>{orgCtx?.run_limit||3}</strong> runs remaining this month.
+                    {orgCtx?.plan==="trial" && " Upgrade anytime for more."}
+                  </div>
+                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6}}>
+                    <strong>How it works:</strong> Enter your website below to build your ICP, then import target accounts, generate deep briefs, build a RIVER hypothesis, and coach through live calls.
+                    {sessionMode==="quick" && " Or use Quick Brief to research any company instantly."}
+                  </div>
+                </div>
+              )}
+
+              {/* Value prop for guests */}
+              {!sbUser && (
+                <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
+                  <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most prepared person in every conversation.</div>
+                  <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7}}>Deep research on strategy, leadership, pain points, and the exact angle that earns trust. When you know more than anyone else in the room, deals move.</div>
+                </div>
+              )}
+
               <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
-                {[["⚡","Sales brief in seconds"],["🎯","15+ sales frameworks"],["🔍","Live web research"],["📋","Pre-call hypothesis"]].map(([icon,label])=>(
-                  <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#777"}}>
-                    <span style={{fontSize:15}}>{icon}</span><span>{label}</span>
+                {[["⚡","Brief in minutes"],["🎯","15+ frameworks"],["🔍","Live research"],["📋","RIVER hypothesis"],["🎙","In-call coaching"]].map(([icon,label])=>(
+                  <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"var(--ink-3)"}}>
+                    <span style={{fontSize:14}}>{icon}</span><span>{label}</span>
                   </div>
                 ))}
               </div>
@@ -8742,9 +8763,13 @@ ${isOpen
                 {briefError&&(
                   <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:8}}>⚠ Research encountered an issue</div>
-                    <div style={{fontSize:12,color:"#7A2020",lineHeight:1.6}}>
-                      Some sections may be incomplete. Try <strong>regenerating</strong> the brief, or contact <a href="mailto:support@cambriancatalyst.com" style={{color:"var(--tan-0)"}}>support@cambriancatalyst.com</a> if the issue persists.
+                    <div style={{fontSize:12,color:"#7A2020",lineHeight:1.6,marginBottom:10}}>
+                      Some sections may be incomplete. This won't count against your tokens — retry for free.
                     </div>
+                    <button onClick={()=>{setBriefError("");pickAccount(selectedAccount,null,true);}}
+                      style={{padding:"8px 16px",borderRadius:8,background:"var(--red)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      Retry Brief (free) →
+                    </button>
                   </div>
                 )}
                 {/* Action bar */}
@@ -10687,7 +10712,7 @@ ${isOpen
       )}
 
       <footer className="footer">
-        © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a>
+        © 2026 Cambrian Catalyst LLC · Seattle, WA · All rights reserved · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a> · <a href="/terms" style={{color:"var(--ink-3)",textDecoration:"none",fontSize:11}}>Terms</a> · <a href="/privacy" style={{color:"var(--ink-3)",textDecoration:"none",fontSize:11}}>Privacy</a>
       </footer>
 
       {/* Print-only footer — appears on every printed page */}
