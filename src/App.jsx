@@ -2111,7 +2111,7 @@ function AuthShell({ children }) {
         <div style={{display:"flex",flexDirection:"column",gap:2}}>
           <div className="logo">Cambrian <span>Catalyst</span></div>
           <div style={{fontSize:9,letterSpacing:"0.7px",color:"var(--ink-3)",fontWeight:700,textTransform:"uppercase"}}>
-            Reality · Impact · Vision · Entry · Route
+            Evolve how you sell
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:700,color:"var(--tan-0)",letterSpacing:"0.5px",textTransform:"uppercase"}}>
@@ -2120,7 +2120,7 @@ function AuthShell({ children }) {
         </div>
       </header>
       {children}
-      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a></footer>
+      <footer className="footer">© 2026 Cambrian Catalyst LLC · Seattle, WA · Evolve how you sell · <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",textDecoration:"none"}}>info@cambriancatalyst.com</a></footer>
     </div>
   );
 }
@@ -2276,13 +2276,13 @@ function PasswordGate({ onAuth }) {
           {/* Left — value prop */}
           <div style={{flex:"1 1 400px",minWidth:280}}>
             <div style={{fontFamily:"Lora,serif",fontSize:32,fontWeight:700,color:"var(--ink-0)",lineHeight:1.25,marginBottom:16}}>
-              Your prospects can tell<br/>when you didn't<br/>do your homework.
+              541 million years ago,<br/>everything evolved at once.<br/>Your sales motion is next.
             </div>
             <div style={{fontSize:16,color:"var(--ink-1)",lineHeight:1.7,marginBottom:8,maxWidth:480}}>
-              Cambrian Catalyst does it for you — deep company intel, executive profiles, tailored talk tracks, and a deal strategy that makes buyers think you've been studying them for weeks. In about 15 minutes.
+              The Cambrian Explosion was the biggest burst of evolution in Earth's history — new capabilities emerging faster than anyone thought possible. We're doing the same thing to sales prep. Deep company intel, executive profiles, tailored talk tracks, and deal strategy — evolved from hours of manual work to 15 minutes.
             </div>
             <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:24,maxWidth:480,fontStyle:"italic"}}>
-              Because "I saw on your website that you do things" is not a discovery call.
+              Because "I saw on your website that you do things" is not a discovery call. It's a fossil.
             </div>
             <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:24}}>
               {[
@@ -2317,10 +2317,10 @@ function PasswordGate({ onAuth }) {
       <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-            More intel in 15 minutes than your team gets in 4 hours
+            The anatomy of an evolved sales brief
           </div>
           <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:600,margin:"0 auto",lineHeight:1.6}}>
-            Nine phases of live research, AI-powered analysis, and proven frameworks. Not a ChatGPT summary with a logo on it.
+            Nine phases of live intelligence. Like the Cambrian Explosion gave organisms eyes, limbs, and shells all at once — we give your team sight, structure, and armor for every deal.
           </div>
         </div>
 
@@ -2347,12 +2347,12 @@ function PasswordGate({ onAuth }) {
         <div style={{maxWidth:960,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:28}}>
             <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-              Be honest — how much of your "research" is just skimming the About page?
+              Adapt or get left behind
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:20}}>
             <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"20px 18px"}}>
-              <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--red)",marginBottom:8}}>Without Cambrian</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--red)",marginBottom:8}}>Pre-Cambrian (the old way)</div>
               <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
                 {["2-4 hours per account researching manually","Generic talk tracks that sound like every other vendor","No structured qualification framework","Executives feel like you didn't do your homework","Deals stall because you missed the real buying committee","Post-call notes are scattered across 5 tools"].map(t=>(
                   <div key={t} style={{display:"flex",gap:8,marginBottom:4}}><span style={{color:"var(--red)",flexShrink:0}}>✗</span>{t}</div>
@@ -2360,7 +2360,7 @@ function PasswordGate({ onAuth }) {
               </div>
             </div>
             <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:10,padding:"20px 18px"}}>
-              <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:8}}>With Cambrian</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:8}}>Post-Cambrian (evolved)</div>
               <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
                 {["15-minute deep brief with 9 phases of intelligence","Tailored hypothesis with Challenger insights and proof points","RIVER framework structures every conversation","Prospects say \"you clearly understand our business\"","Buying committee mapped before the first call","CRM note, follow-up email, and deal routing in one click"].map(t=>(
                   <div key={t} style={{display:"flex",gap:8,marginBottom:4}}><span style={{color:"var(--green)",flexShrink:0}}>✓</span>{t}</div>
@@ -2375,15 +2375,15 @@ function PasswordGate({ onAuth }) {
       <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-            For teams who think "winging it" is a fireable offense
+            Built for the species that survives — the ones who adapt
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14}}>
           {[
-            {role:"Account Executives",desc:"Deep briefs that make every discovery call feel like a warm introduction"},
-            {role:"Sales Leaders",desc:"Team-wide consistency, pipeline intelligence, and deal routing at scale"},
-            {role:"Solutions Architects",desc:"Dual-track discovery with architecture qualification built in"},
-            {role:"Revenue Operations",desc:"ICP scoring, fit analytics, and usage data for strategic planning"},
+            {role:"Account Executives",desc:"Walk into every call with the confidence of someone who's been studying the account for weeks. Because you kind of have."},
+            {role:"Sales Leaders",desc:"Give your whole team evolved instincts — consistent prep, pipeline intelligence, and deal routing that actually routes."},
+            {role:"Solutions Architects",desc:"Dual-track discovery with architecture qualification baked in. No more finding out about the integration nightmare on day 45."},
+            {role:"Revenue Operations",desc:"ICP scoring across 15 verticals, fit analytics, and usage data. Finally, a tool that makes your CRM data look honest."},
           ].map(p=>(
             <div key={p.role} style={{background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"16px 14px",textAlign:"center"}}>
               <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{p.role}</div>
@@ -2397,15 +2397,15 @@ function PasswordGate({ onAuth }) {
       <div style={{background:"var(--ink-0)",padding:"40px 20px",textAlign:"center"}}>
         <div style={{maxWidth:500,margin:"0 auto"}}>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--surface)",marginBottom:8}}>
-            Your competitors are still Googling.<br/>You could be closing.
+            The Cambrian Explosion didn't wait<br/>for permission. Neither should you.
           </div>
           <div style={{fontSize:14,color:"var(--ink-3)",lineHeight:1.6,marginBottom:20}}>
-            3 full runs free. No credit card. No "let me schedule a demo." Just sign up and go.
+            3 full runs free. No credit card. No "let me schedule a demo." Just evolve.
           </div>
           <button className="btn btn-lg"
             onClick={()=>{window.scrollTo({top:0,behavior:"smooth"});setMode("signup");}}
             style={{padding:"14px 36px",borderRadius:10,background:"var(--tan-0)",color:"var(--surface)",fontSize:16,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
-            Get Started Free →
+            Start Your Evolution →
           </button>
         </div>
       </div>
