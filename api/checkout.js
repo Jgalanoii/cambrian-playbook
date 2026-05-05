@@ -3,7 +3,7 @@
 // Creates a Stripe Checkout session for plan upgrades.
 // POST { priceId, planId } with JWT → returns checkout URL.
 
-import { verifyJwt, decodeJwtPayload, isAllowedOrigin } from "./_guard.js";
+import { verifyJwt, decodeJwtPayload, isAllowedOrigin, checkRateLimit } from "./_guard.js";
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 const APP_URL = process.env.VITE_APP_URL || "https://www.cambriancatalyst.ai";
@@ -25,6 +25,13 @@ export default async function handler(req, res) {
   // Origin check
   const origin = req.headers.origin || req.headers.referer || "";
   if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "Origin not allowed" });
+
+  // Rate limiting
+  const xff = req.headers["x-forwarded-for"];
+  const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
+           || (xff ? xff.split(",").pop().trim() : "")
+           || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
+  if (!checkRateLimit(ip)) return res.status(429).json({ error: "Too many requests" });
 
   // Auth
   if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
