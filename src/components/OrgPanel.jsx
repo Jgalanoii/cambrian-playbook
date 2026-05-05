@@ -13,15 +13,15 @@ const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const ROLE_META = {
   admin: {
     label: "Admin", color: "var(--navy)", bg: "var(--navy-bg)",
-    permissions: ["Build briefs & use playbook", "View team sessions & reports", "Invite & remove members", "Change roles", "Edit org settings", "Manage token limits"],
+    permissions: ["Build briefs & run the full playbook", "See how the team is prepping", "Invite & remove members", "Change roles", "Edit org settings", "Manage run limits"],
   },
   manager: {
     label: "Manager", color: "var(--amber)", bg: "var(--amber-bg)",
-    permissions: ["Build briefs & use playbook", "View team sessions & reports"],
+    permissions: ["Build briefs & run the full playbook", "See how the team is prepping"],
   },
   rep: {
     label: "Rep", color: "var(--green)", bg: "var(--green-bg)",
-    permissions: ["Build briefs & use playbook"],
+    permissions: ["Build briefs & run the full playbook"],
   },
 };
 
@@ -216,9 +216,9 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
         {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-0)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Organization</div>
+            <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Your Team</div>
             <div style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 6 }}>
-              {orgCtx?.name || "Your Org"} · {members.length} member{members.length !== 1 ? "s" : ""}
+              {orgCtx?.name || "Your Org"} · {members.length === 1 ? "just you (for now)" : `${members.length} members`}
               {orgCtx?.plan && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: orgCtx.plan === "paid" ? "var(--green-bg)" : "var(--amber-bg)", color: orgCtx.plan === "paid" ? "var(--green)" : "var(--amber)" }}>{orgCtx.plan}</span>}
             </div>
           </div>
@@ -331,11 +331,11 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
               {/* Usage summary */}
               <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "12px 14px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
-                  Token Usage This Month
+                  Run Usage This Month
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                   <span style={{ fontSize: 22, fontWeight: 700, color: "var(--ink-0)", fontFamily: "Lora,serif" }}>{orgCtx?.run_count || 0}</span>
-                  <span style={{ fontSize: 12, color: "var(--ink-3)" }}>/ {orgCtx?.run_limit || 5} standard tokens</span>
+                  <span style={{ fontSize: 12, color: "var(--ink-3)" }}>/ {orgCtx?.run_limit || 5} standard runs</span>
                 </div>
                 <div style={{ height: 5, borderRadius: 3, background: "var(--bg-2)", overflow: "hidden", marginTop: 4 }}>
                   <div style={{
@@ -348,7 +348,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                 {(orgCtx?.max_run_limit || 0) > 0 && (
                   <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: "var(--violet)", fontFamily: "Lora,serif" }}>⚡ {orgCtx?.max_run_count || 0}</span>
-                    <span style={{ fontSize: 11, color: "var(--ink-3)" }}>/ {orgCtx?.max_run_limit} Max tokens</span>
+                    <span style={{ fontSize: 11, color: "var(--ink-3)" }}>/ {orgCtx?.max_run_limit} Max runs</span>
                   </div>
                 )}
               </div>
@@ -469,7 +469,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
               )}
 
               {invitations.length === 0 && (
-                <div style={{ fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: 16 }}>No pending invitations</div>
+                <div style={{ fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: 16 }}>No pending invitations. Invite your team — they'll thank you after their first brief.</div>
               )}
             </div>
           )}
@@ -478,7 +478,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
           {tab === "roles" && canViewTeam && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6 }}>
-                Role-based access controls determine what each team member can see and do. Only admins can change roles, invite members, or modify org settings.
+                Who can see what, and who can change what. Only admins can adjust roles, invite members, or edit org settings.
               </div>
 
               {/* Role permission matrix */}
@@ -569,7 +569,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
               )}
 
               {teamSessions.length === 0 && !sessionsLoading && (
-                <div style={{ fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: 20 }}>No team sessions yet.</div>
+                <div style={{ fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: 20 }}>No team sessions yet. Once your team starts running briefs, you'll see every session here.</div>
               )}
               {teamSessions
                 .filter(s => !sessionFilter || s.user_id === sessionFilter)
@@ -647,19 +647,19 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                   {orgCtx?.plan || "trial"}
                 </span>
                 <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>
-                  {orgCtx?.run_limit || 5} tokens/month · {(orgCtx?.max_run_limit || 0) > 0 ? `${orgCtx.max_run_limit} Max tokens` : "Max not included"}
+                  {orgCtx?.run_limit || 5} runs/month · {(orgCtx?.max_run_limit || 0) > 0 ? `${orgCtx.max_run_limit} Max runs` : "Max not included"}
                 </div>
               </div>
 
               <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.6, borderTop: "1px solid var(--line-0)", paddingTop: 12 }}>
-                Need to upgrade, add tokens, or change your plan? Contact <a href="mailto:info@cambriancatalyst.com" style={{ color: "var(--tan-0)" }}>info@cambriancatalyst.com</a>
+                Need more runs, a plan change, or just want to talk? <a href="mailto:info@cambriancatalyst.com" style={{ color: "var(--tan-0)" }}>info@cambriancatalyst.com</a> — we reply fast.
               </div>
             </div>
           )}
 
           {!canViewTeam && tab !== "settings" && (
             <div style={{ fontSize: 13, color: "var(--ink-3)", textAlign: "center", padding: 20 }}>
-              Team features are available for managers and admins.
+              Team visibility is a manager or admin perk. Ask your admin to level you up if you need it.
             </div>
           )}
         </div>
@@ -674,7 +674,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
               Remove {confirmAction.name}?
             </div>
             <div style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5, marginBottom: 20 }}>
-              They will lose access to this organization's sessions, data, and tokens. This action can be reversed by re-inviting them.
+              They will lose access to this organization's sessions, data, and runs. This action can be reversed by re-inviting them.
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button onClick={() => setConfirmAction(null)}

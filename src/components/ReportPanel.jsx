@@ -110,7 +110,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                 Reports — {orgCtx?.name || "Your Organization"}
               </div>
               <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                {orgCtx?.plan === "trial" ? "Trial" : orgCtx?.plan || "—"} plan · {orgCtx ? `${orgCtx.run_count}/${orgCtx.run_limit} tokens used` : ""} · {sbUser?.email}
+                {orgCtx?.plan === "trial" ? "Trial" : orgCtx?.plan || "—"} plan · {orgCtx ? `${orgCtx.run_count}/${orgCtx.run_limit} runs used` : ""} · {sbUser?.email}
               </div>
             </div>
             <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--ink-2)" }}>&times;</button>
@@ -152,7 +152,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                 {orgCtx && (
                   <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px", marginBottom: 20 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)" }}>Tokens Used</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)" }}>Runs Used</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: orgCtx.run_count >= orgCtx.run_limit ? "var(--red)" : "var(--green)" }}>
                         {orgCtx.run_count} / {orgCtx.run_limit}
                       </div>
@@ -165,7 +165,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                     {(orgCtx.max_run_limit || 0) > 0 && (
                       <>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 6 }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>Cambrian Max Tokens</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>Cambrian Max Runs</div>
                           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>
                             {orgCtx.max_run_count || 0} / {orgCtx.max_run_limit}
                           </div>
@@ -210,7 +210,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                   </div>
                 ))}
                 {(savedSessions || []).length === 0 && (
-                  <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "24px 0" }}>No sessions yet. Start your first playbook to see activity here.</div>
+                  <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "24px 0" }}>No sessions yet. Run your first brief and this dashboard comes alive — deal routing, ICP accuracy trends, all of it.</div>
                 )}
               </div>
             )}
@@ -318,7 +318,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
 
                 {analytics.totalDeals === 0 && analytics.topEditedFields.length === 0 && (
                   <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "32px 0" }}>
-                    Complete more sessions to see deal routing insights, ICP corrections, and intel adjustments here.
+                    Complete more sessions and this fills up — deal routing patterns, ICP corrections, intel adjustments.
                   </div>
                 )}
               </div>
@@ -357,7 +357,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                   <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)" }}>Standard Tokens</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)" }}>Standard Runs</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: orgCtx.run_count >= orgCtx.run_limit ? "var(--red)" : "var(--green)" }}>
                         {orgCtx.run_count} / {orgCtx.run_limit}
                       </div>
@@ -368,12 +368,12 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                         width: Math.min(100, Math.round(orgCtx.run_count / orgCtx.run_limit * 100)) + "%" }} />
                     </div>
                     <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4 }}>
-                      {Math.max(0, orgCtx.run_limit - orgCtx.run_count)} tokens remaining this month
+                      {Math.max(0, orgCtx.run_limit - orgCtx.run_count)} runs remaining this month
                     </div>
                   </div>
                   <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--violet)" }}>Max Tokens</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--violet)" }}>Max Runs</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "var(--violet)" }}>
                         {orgCtx.max_run_count || 0} / {orgCtx.max_run_limit || 0}
                       </div>
@@ -383,7 +383,7 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                         width: (orgCtx.max_run_limit || 0) > 0 ? Math.min(100, Math.round((orgCtx.max_run_count || 0) / orgCtx.max_run_limit * 100)) + "%" : "0%" }} />
                     </div>
                     <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4 }}>
-                      {(orgCtx.max_run_limit || 0) > 0 ? `${Math.max(0, orgCtx.max_run_limit - (orgCtx.max_run_count || 0))} Max tokens remaining` : "Not available on current plan"}
+                      {(orgCtx.max_run_limit || 0) > 0 ? `${Math.max(0, orgCtx.max_run_limit - (orgCtx.max_run_count || 0))} Max runs remaining` : "Not available on current plan"}
                     </div>
                   </div>
                 </div>

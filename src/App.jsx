@@ -1874,6 +1874,11 @@ const LOADER_QUIPS = [
   "Almost there — this is the good part...",
   "Preparing your strongest opening...",
   "Making sure you walk in ready...",
+  "Making sure your prospect doesn't have to explain the basics...",
+  "Your prospect is going to wonder how you knew all this...",
+  "Building the brief that turns 'tell me about your company' into 'I noticed you just...'",
+  "This is the part where you stop guessing and start knowing...",
+  "When you know more, the conversation is better for everyone...",
 ];
 // ── CHAT ASSISTANT PANEL (Pattern B) ─────────────────────────────────────────
 // Persistent right-rail chat with session context. Available on every stage.
@@ -2098,6 +2103,14 @@ function BriefLoader({ company, status }) {
     </div>
   );
 }
+
+// ── PRICING TIERS (shared by landing page + upgrade modal) ───────────────────
+const PRICING_TIERS = [
+  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",maxRuns:"5 Max runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"]},
+  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",maxRuns:"20 Max runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true},
+  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",maxRuns:"50 Max runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"]},
+  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",maxRuns:"200 Max runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"]},
+];
 
 // ── AUTH / PASSWORD GATE ──────────────────────────────────────────────────────
 // AuthShell is at module scope (NOT inside PasswordGate) so its component
@@ -2462,6 +2475,46 @@ function PasswordGate({ onAuth }) {
               <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>{p.desc}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── PRICING ── */}
+      <div style={{background:"var(--bg-1)",padding:"40px 20px"}}>
+        <div style={{maxWidth:960,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:28}}>
+            <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
+              Pricing that respects your intelligence
+            </div>
+            <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:500,margin:"0 auto",lineHeight:1.6}}>
+              No per-seat gotchas. No "contact sales" for a number. Pick a plan, start closing.
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14}}>
+            {PRICING_TIERS.map(plan=>(
+              <div key={plan.id} style={{background:"var(--surface)",border:plan.popular?"2px solid var(--tan-0)":"1.5px solid var(--line-0)",borderRadius:10,padding:"20px 16px",position:"relative"}}>
+                {plan.popular&&<div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:10,fontWeight:700,padding:"2px 10px",borderRadius:20,background:"var(--tan-0)",color:"var(--surface)",textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Most Popular</div>}
+                <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>{plan.name}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:2,marginBottom:4}}>
+                  <span style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>{plan.price}</span>
+                  <span style={{fontSize:12,color:"var(--ink-3)"}}>{plan.period}</span>
+                </div>
+                <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.runs} · {plan.maxRuns}</div>
+                <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:12,fontStyle:"italic"}}>{plan.desc}</div>
+                {plan.features.map(f=>(
+                  <div key={f} style={{fontSize:11,color:"var(--ink-1)",padding:"2px 0",display:"flex",gap:6}}>
+                    <span style={{color:"var(--green)",flexShrink:0}}>✓</span>{f}
+                  </div>
+                ))}
+                <button onClick={()=>{window.scrollTo({top:0,behavior:"smooth"});setMode("signup");}}
+                  style={{display:"block",width:"100%",textAlign:"center",padding:"10px",borderRadius:8,background:plan.popular?"var(--tan-0)":"var(--ink-0)",color:"var(--surface)",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",marginTop:14,fontFamily:"DM Sans,sans-serif"}}>
+                  Start with {plan.name}
+                </button>
+              </div>
+            ))}
+          </div>
+          <div style={{textAlign:"center",marginTop:16,fontSize:13,color:"var(--ink-2)"}}>
+            Need custom volume, SSO, or invoice billing? <a href="mailto:info@cambriancatalyst.com?subject=Enterprise%20Inquiry" style={{color:"var(--tan-0)",fontWeight:600,textDecoration:"none"}}>Let's talk →</a>
+          </div>
         </div>
       </div>
 
@@ -6216,7 +6269,7 @@ ${isOpen
                 )}
 
                 {!brief && !riverHypo && !postCall && !solutionFit && !sellerICP?.icp && (
-                  <div style={{padding:20,textAlign:"center",color:"var(--ink-2)",fontSize:13}}>No outputs generated yet. Build a brief to get started.</div>
+                  <div style={{padding:20,textAlign:"center",color:"var(--ink-2)",fontSize:13}}>Nothing here yet. Build a brief and this panel fills with everything you've generated.</div>
                 )}
               </div>
             )}
@@ -6307,11 +6360,11 @@ ${isOpen
             <button onClick={()=>{
                 if (!cambrianMax && orgCtx && (orgCtx.max_run_limit||0) <= 0) { setUpgradeOpen(true); return; }
                 if (!cambrianMax && orgCtx && (orgCtx.max_run_count||0) >= (orgCtx.max_run_limit||0)) {
-                  alert(`You've used all ${orgCtx.max_run_limit} Max tokens this month. Tokens reset monthly, or upgrade for more.`); return;
+                  alert(`You've used all ${orgCtx.max_run_limit} Max runs this month. Runs reset monthly, or upgrade for more.`); return;
                 }
                 const next=!cambrianMax;setCambrianMax(next);setCambrianMaxMode(next);
               }}
-              title={cambrianMax?"Switch to Standard":`Cambrian Max — premium intelligence${orgCtx?.max_run_limit?` (${orgCtx.max_run_count||0}/${orgCtx.max_run_limit} tokens used)`:""}`}
+              title={cambrianMax?"Switch to Standard":`Cambrian Max — premium intelligence${orgCtx?.max_run_limit?` (${orgCtx.max_run_count||0}/${orgCtx.max_run_limit} runs used)`:""}`}
               style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.3px",
                 border:cambrianMax?"2px solid var(--violet)":"1.5px solid var(--line-0)",
                 background:cambrianMax?"linear-gradient(135deg,var(--violet),#6D28D9)":"var(--surface)",
@@ -6429,7 +6482,7 @@ ${isOpen
               </button>
               <button onClick={()=>setShowSavePrompt(false)}
                 style={{width:"100%",padding:"11px 0",borderRadius:10,background:"var(--surface)",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid var(--line-0)",cursor:"pointer"}}>
-                Maybe later
+                I like living dangerously
               </button>
             </div>
           </>
@@ -6543,14 +6596,14 @@ ${isOpen
               {sbUser && (
                 <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:"var(--r-md)",padding:"16px 20px",marginBottom:20,textAlign:"left"}}>
                   <div style={{fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:4}}>
-                    Welcome{sbUser.user_metadata?.first_name ? `, ${sbUser.user_metadata.first_name}` : ""}
+                    Welcome back{sbUser.user_metadata?.first_name ? `, ${sbUser.user_metadata.first_name}` : ""}. Let's make someone's day.
                   </div>
                   <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6,marginBottom:8}}>
-                    You have <strong>{Math.max(0,(orgCtx?.run_limit||3)-(orgCtx?.run_count||0))}</strong> of <strong>{orgCtx?.run_limit||3}</strong> runs remaining this month.
+                    You have <strong>{Math.max(0,(orgCtx?.run_limit||3)-(orgCtx?.run_count||0))}</strong> of <strong>{orgCtx?.run_limit||3}</strong> runs this month. Every run makes you sharper — and your prospect's experience better.
                     {orgCtx?.plan==="trial" && " Upgrade anytime for more."}
                   </div>
                   <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6}}>
-                    <strong>How it works:</strong> Enter your website below to build your ICP, then import target accounts, generate deep briefs, build a RIVER hypothesis, and coach through live calls.
+                    <strong>How it works:</strong> Enter your website → build your ICP → import targets → generate deep briefs → build a RIVER hypothesis → coach through live calls.
                     {sessionMode==="quick" && " Or use Quick Brief to research any company instantly."}
                   </div>
                 </div>
@@ -6560,12 +6613,12 @@ ${isOpen
               {!sbUser && (
                 <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
                   <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most prepared person in every conversation.</div>
-                  <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7}}>Deep research on strategy, leadership, pain points, and the exact angle that earns trust. When you know more than anyone else in the room, deals move.</div>
+                  <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7}}>Deep research on strategy, leadership, pain points, and the exact angle that earns trust. When you know more, everyone in the room has a better conversation — including the prospect.</div>
                 </div>
               )}
 
               <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
-                {[["⚡","Brief in minutes"],["🎯","15+ frameworks"],["🔍","Live research"],["📋","RIVER hypothesis"],["🎙","In-call coaching"]].map(([icon,label])=>(
+                {[["⚡","Brief in minutes, not hours"],["🎯","15+ proven frameworks"],["🔍","Live research, not cached"],["📋","Structured hypothesis"],["🎙","Coaching with Milton"]].map(([icon,label])=>(
                   <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"var(--ink-3)"}}>
                     <span style={{fontSize:14}}>{icon}</span><span>{label}</span>
                   </div>
@@ -6623,7 +6676,7 @@ ${isOpen
                       Build Brief →
                     </button>
                   </div>
-                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 token · Full brief: executives, strategy, sentiment, news, open roles, competitive landscape</div>
+                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 run · Full brief: executives, strategy, sentiment, news, open roles, competitive landscape</div>
                 </div>
               )}
 
@@ -7155,7 +7208,7 @@ ${isOpen
             )}
 
             {!sellerICP&&!icpLoading&&(
-              <EmptyState icon="🔍" title="ICP not built yet" sub="Build your Ideal Customer Profile to start seeing target-matched intelligence." action={()=>buildSellerICP(sellerUrl)} actionLabel="Build ICP Now"/>
+              <EmptyState icon="🔍" title="Your ICP is waiting" sub="Build your Ideal Customer Profile and we'll start matching you to accounts that actually matter — not what a generic template thinks." action={()=>buildSellerICP(sellerUrl)} actionLabel="Build ICP Now"/>
             )}
 
             {icpTab==="rfp"&&sellerICP?.icp&&(()=>{
@@ -7180,7 +7233,7 @@ ${isOpen
                   </div>
                 )}
                 {!rfpData.loading && !rfpData.error && !hasData && (
-                  <EmptyState icon="📡" title="No matching RFPs found" sub="Public procurement databases (SAM.gov, Ariba, TED Europa) didn't return specific RFPs for your ICP. This is common for niche markets — try broadening your ICP industries or check back later as new opportunities are posted." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="↻ Search again"/>
+                  <EmptyState icon="📡" title="No RFPs matched — yet" sub="We searched SAM.gov, Ariba, and TED Europa. Your ICP might be too niche for public procurement right now — broaden your industries or check back later." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="↻ Search again"/>
                 )}
                 {hasData && (
                   <>
@@ -7341,7 +7394,7 @@ ${isOpen
                 <div className="bb-hdr">
                   <div className="bb-icon" style={{fontSize:12}}>🎯</div>
                   <div>
-                    <div className="bb-title">Your Targeting Preferences</div>
+                    <div className="bb-title">Who You're Going After</div>
                     <div className="bb-sub">You set these on the Session page — they shape your ICP, targets, and scoring</div>
                   </div>
                 </div>
@@ -7484,7 +7537,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">🎯</div>
-                    <div><div className="bb-title">Market Positioning</div></div>
+                    <div><div className="bb-title">How the Market Sees You</div></div>
                   </div>
                   <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
                     <div>
@@ -7532,7 +7585,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">🏢</div>
-                    <div><div className="bb-title">Target Customer Profile</div></div>
+                    <div><div className="bb-title">Your Ideal Customer</div></div>
                   </div>
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                     <div>
@@ -7671,7 +7724,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">👤</div>
-                    <div><div className="bb-title">Buyer Personas</div><div className="bb-sub">Economic buyer · Champion · Technical evaluator</div></div>
+                    <div><div className="bb-title">The People You're Selling To</div><div className="bb-sub">Economic buyer · Champion · Technical evaluator</div></div>
                   </div>
                   <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
                     {(sellerICP.icp.buyerPersonas||[]).filter(Boolean).map((p,i)=>{
@@ -7708,7 +7761,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">💡</div>
-                    <div><div className="bb-title">Buying Insight Profile</div><div className="bb-sub">Why they buy, what stops them, how they decide</div></div>
+                    <div><div className="bb-title">Why They Buy (and Why They Don't)</div><div className="bb-sub">Why they buy, what stops them, how they decide</div></div>
                   </div>
                   <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                     {[
@@ -7731,7 +7784,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">🎯</div>
-                    <div><div className="bb-title">Customer Profile</div></div>
+                    <div><div className="bb-title">Who's Already Buying</div></div>
                   </div>
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                     <div>
@@ -7771,7 +7824,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon">📡</div>
-                    <div><div className="bb-title">Go-to-Market Channels</div></div>
+                    <div><div className="bb-title">How You Reach Them</div></div>
                   </div>
                   <div className="bb-body">
                     <div style={{marginBottom:10}}>
@@ -8748,7 +8801,7 @@ ${isOpen
               </div>
             </div>
             <div className="page-sub">
-              {briefLoading?"Hang tight — live research in progress.":"Built from proprietary sales intelligence and live research. All fields are editable — click any text to refine before your call."}
+              {briefLoading?"Hang tight — live research in progress.":"Built from live research and proprietary intelligence. All fields are editable. When you walk in this prepared, the conversation is better for everyone in the room."}
             </div>
 
             {/* ICP changed since brief was built */}
@@ -8771,7 +8824,7 @@ ${isOpen
                   <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:8}}>⚠ Research encountered an issue</div>
                     <div style={{fontSize:12,color:"#7A2020",lineHeight:1.6,marginBottom:10}}>
-                      Some sections may be incomplete. This won't count against your tokens — retry for free.
+                      Some sections may be incomplete. This won't count against your runs — retry for free.
                     </div>
                     <button onClick={()=>{setBriefError("");pickAccount(selectedAccount,null,true);}}
                       style={{padding:"8px 16px",borderRadius:8,background:"var(--red)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer"}}>
@@ -8890,7 +8943,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr" onClick={()=>toggleBB("overview")}>
                     <div className="bb-icon">◎</div>
-                    <div style={{flex:1}}><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to edit</div></div>
+                    <div style={{flex:1}}><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to refine — your judgment + our research</div></div>
                     <StarButton id={`overview-${selectedAccount?.company}`} type="Brief" label="Company Overview" content={brief?.companySnapshot} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                     {bbChevron("overview")}
                   </div>
@@ -9015,7 +9068,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>📰</div>
-                      <div><div className="bb-title">Recent Headlines</div><div className="bb-sub">Notable recent developments</div></div>
+                      <div><div className="bb-title">Recent Headlines</div><div className="bb-sub">What they've been up to — and what it might mean for you</div></div>
                     </div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
                       {(brief.recentHeadlines||[]).filter(h=>{
@@ -9046,7 +9099,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>📈</div>
-                      <div><div className="bb-title">Buying Signals</div><div className="bb-sub">Growth indicators and recent triggers</div></div>
+                      <div><div className="bb-title">Buying Signals</div><div className="bb-sub">Signals that say now might be the right time</div></div>
                     </div>
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                       {(brief.growthSignals||[]).filter(Boolean).length>0&&(
@@ -9074,7 +9127,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>💼</div>
-                      <div><div className="bb-title">Open Positions at {selectedAccount?.company||"Target"}</div><div className="bb-sub">Hiring signals reveal strategic priorities — interpret the pattern</div></div>
+                      <div><div className="bb-title">Open Positions at {selectedAccount?.company||"Target"}</div><div className="bb-sub">What they're hiring for tells you what they're building</div></div>
                     </div>
                     <div className="bb-body">
                       {brief.openRoles.summary&&(
@@ -9107,7 +9160,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:11}}>💬</div>
-                      <div><div className="bb-title">Market Sentiment</div><div className="bb-sub">Glassdoor · G2 · press · employee & customer voice</div></div>
+                      <div><div className="bb-title">Market Sentiment</div><div className="bb-sub">What employees, customers, and the press actually say</div></div>
                     </div>
                     <div className="bb-body">
                       {/* Score chips row */}
@@ -9186,7 +9239,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr">
                       <div className="bb-icon">👤</div>
-                      <div><div className="bb-title">Leadership Team</div><div className="bb-sub">Real names from research — click angles to edit</div></div>
+                      <div><div className="bb-title">Leadership Team</div><div className="bb-sub">Real names, real titles — your way into the org chart</div></div>
                     </div>
                     <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                       {(brief.leadershipTeam||[]).filter(l=>l?.name).map((l,i)=>(
@@ -9350,7 +9403,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr" onClick={()=>toggleBB("techstack")}>
                       <div className="bb-icon" style={{fontSize:13}}>🔌</div>
-                      <div><div className="bb-title">Tech Stack & Integrations</div><div className="bb-sub">Known SaaS platforms, tools, and systems in use</div></div>
+                      <div><div className="bb-title">Tech Stack & Integrations</div><div className="bb-sub">What they run today — and where you might plug in</div></div>
                       {bbChevron("techstack")}
                     </div>
                     <div className={`bb-body-wrap ${bbIsOpen("techstack")?"":"collapsed"}`}><div className="bb-body">
@@ -9386,7 +9439,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr" onClick={()=>toggleBB("culture")}>
                       <div className="bb-icon" style={{fontSize:12}}>🏛</div>
-                      <div><div className="bb-title">Culture, Workforce & Incumbents</div><div className="bb-sub">How they operate · who they are · what you're up against</div></div>
+                      <div><div className="bb-title">Culture, Workforce & Incumbents</div><div className="bb-sub">Their culture, their people, and who got there before you</div></div>
                       {bbChevron("culture")}
                     </div>
                     <div className={`bb-body-wrap ${bbIsOpen("culture")?"":"collapsed"}`}><div className="bb-body">
@@ -9479,7 +9532,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr" onClick={()=>toggleBB("financial")}>
                       <div className="bb-icon" style={{fontSize:12}}>📊</div>
-                      <div style={{flex:1}}><div className="bb-title">Financial Intelligence</div><div className="bb-sub">Revenue trends, margins, capital priorities, and management guidance</div></div>
+                      <div style={{flex:1}}><div className="bb-title">Financial Intelligence</div><div className="bb-sub">Follow the money — where it's coming from and where they're putting it</div></div>
                       <StarButton id={`financial-${selectedAccount?.company}`} type="Brief" label="Financial Intelligence" content={brief?.financialDeepDive?.revenueTrend} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                       {bbChevron("financial")}
                     </div>
@@ -9761,9 +9814,9 @@ ${isOpen
             </div>
             <div className="page-sub">
               {riverHypoLoading
-                ? "Building your hypothesis — usually ready before you finish reading the brief..."
+                ? "Building your hypothesis — usually finishes before you're done reading the brief. Good problem to have."
                 : riverHypo
-                  ? "Your pre-call hypothesis is ready. Edit any field before going live."
+                  ? "Your pre-call hypothesis is ready. This isn't a script — it's a strategy built on what you actually know. Edit anything before you go live."
                   : "Generate your RIVER hypothesis below."}
             </div>
 
@@ -9918,7 +9971,7 @@ ${isOpen
             )}
 
             {!riverHypo&&!riverHypoLoading&&(
-              <EmptyState icon="🧪" title="Hypothesis not yet generated" sub="Build your RIVER hypothesis to prepare talk tracks, teaching insights, and an indecision plan." action={()=>buildRiverHypo(brief,selectedAccount)} actionLabel="Build Hypothesis →"/>
+              <EmptyState icon="🧪" title="No hypothesis yet" sub="Build your RIVER hypothesis — structured talk tracks, a teaching insight, and an indecision plan. This is where prep becomes unfair advantage." action={()=>buildRiverHypo(brief,selectedAccount)} actionLabel="Build Hypothesis →"/>
             )}
 
             <div className="actions-row">
@@ -9931,6 +9984,7 @@ ${isOpen
                 Start In-Call →
               </button>
             </div>
+            <div style={{fontSize:11,color:"var(--ink-3)",textAlign:"center",marginTop:6,fontStyle:"italic"}}>You're about to be the most prepared person on this call.</div>
           </div></ErrorBoundary>
         )}
 
@@ -10192,7 +10246,7 @@ ${isOpen
         {step===8&&(
           <div className="page">
             <div className="page-title">Post-Call Route</div>
-            <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, CRM note, and follow-up email.</div>
+            <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, and a follow-up email that sounds like you were actually listening. Because you were.</div>
 
             {/* ── Transcript upload — analyze a prior call ── */}
             {!postCall && !postLoading && (
@@ -10399,7 +10453,7 @@ ${isOpen
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{display:"flex",flexDirection:"column",gap:4,flex:1}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                <span style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Tokens</span>
+                <span style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Runs</span>
                 <span style={{fontWeight:700,fontSize:12,color:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--ink-0)"}}>
                   {orgCtx.run_count}/{orgCtx.run_limit}
                 </span>
@@ -10654,24 +10708,19 @@ ${isOpen
             <div style={{padding:"24px 28px 16px",textAlign:"center",borderBottom:"1px solid var(--line-0)"}}>
               <div style={{fontSize:32,marginBottom:8}}>🚀</div>
               <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>
-                {!sbUser ? "You've used your 2 free preview briefs" : `Upgrade your plan`}
+                {!sbUser ? "You've seen what prepared looks like" : `Ready for more?`}
               </div>
               <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.5}}>
                 {!sbUser
-                  ? "Create a free account to unlock 3 full runs — ICP, briefs, hypothesis, coaching, and more."
-                  : orgCtx?.plan==="trial" ? `You're on the free trial (${orgCtx?.run_count||0}/${orgCtx?.run_limit||3} runs used). Upgrade to keep going.`
-                  : `You're on the ${orgCtx?.plan} plan (${orgCtx?.run_count||0}/${orgCtx?.run_limit||3} tokens used). Choose a plan below.`}
+                  ? "Create a free account — 3 full runs, zero credit card. Full ICP, deep briefs, RIVER hypothesis, and the confidence that comes from actually doing your homework."
+                  : orgCtx?.plan==="trial" ? `You've used ${orgCtx?.run_count||0} of ${orgCtx?.run_limit||3} trial runs. If the briefs made you better, imagine what a full month does.`
+                  : `You're on the ${orgCtx?.plan} plan (${orgCtx?.run_count||0}/${orgCtx?.run_limit||3} runs used). Need more firepower?`}
               </div>
             </div>
 
             {/* Pricing cards */}
             <div style={{padding:"20px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(145px, 1fr))",gap:10}}>
-              {[
-                {id:"starter",name:"Starter",price:"$99",period:"/mo",tokens:"25 tokens",max:"5 Max",desc:"Solo AE or small team",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"]},
-                {id:"pro",name:"Pro",price:"$349",period:"/mo",tokens:"100 tokens",max:"20 Max",desc:"Sales team (3-5 reps)",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true},
-                {id:"team",name:"Team",price:"$799",period:"/mo",tokens:"250 tokens",max:"50 Max",desc:"Sales org (10+ reps)",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"]},
-                {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",tokens:"1,000 tokens",max:"200 Max",desc:"Revenue org (25+ reps)",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"]},
-              ].map(plan=>(
+              {PRICING_TIERS.map(plan=>(
                 <div key={plan.id} style={{border:plan.popular?"2px solid var(--tan-0)":"1.5px solid var(--line-0)",borderRadius:10,padding:"18px 16px",position:"relative",background:plan.popular?"var(--bg-1)":"var(--surface)"}}>
                   {plan.popular&&<div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:10,fontWeight:700,padding:"2px 10px",borderRadius:20,background:"var(--tan-0)",color:"var(--surface)",textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Most Popular</div>}
                   <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>{plan.name}</div>
@@ -10679,7 +10728,7 @@ ${isOpen
                     <span style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>{plan.price}</span>
                     <span style={{fontSize:12,color:"var(--ink-3)"}}>{plan.period}</span>
                   </div>
-                  <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.tokens} · {plan.max}</div>
+                  <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.runs} · {plan.maxRuns}</div>
                   <div style={{fontSize:11,color:"var(--ink-3)",marginBottom:10}}>{plan.desc}</div>
                   {plan.features.map(f=>(
                     <div key={f} style={{fontSize:11,color:"var(--ink-1)",padding:"2px 0",display:"flex",gap:6}}>
@@ -10699,7 +10748,7 @@ ${isOpen
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>Enterprise or need an invoice?</div>
-                  <div style={{fontSize:12,color:"var(--ink-2)"}}>Custom tokens, SSO, dedicated onboarding, and NET-30 invoicing for procurement teams.</div>
+                  <div style={{fontSize:12,color:"var(--ink-2)"}}>Custom volume, SSO, dedicated onboarding, and NET-30 invoicing for procurement teams.</div>
                 </div>
                 <a href={`mailto:info@cambriancatalyst.com?subject=Enterprise / Invoice Request&body=Hi,%0A%0AI'd like to discuss enterprise pricing or request an invoice for procurement.%0A%0ACompany: %0AEstimated users: %0AContact: ${encodeURIComponent(sbUser?.email||"")}%0A%0APlease send me:%0A☐ Enterprise pricing details%0A☐ Invoice for purchase order processing%0A☐ Security/compliance documentation%0A☐ SOC 2 readiness information`}
                   style={{display:"inline-block",padding:"10px 20px",borderRadius:8,border:"1.5px solid var(--ink-0)",background:"var(--surface)",color:"var(--ink-0)",fontSize:12,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
@@ -10711,7 +10760,7 @@ ${isOpen
             {/* Close */}
             <div style={{padding:"12px 24px",textAlign:"center",borderTop:"1px solid var(--line-0)"}}>
               <button onClick={()=>setUpgradeOpen(false)} style={{background:"none",border:"none",fontSize:13,color:"var(--ink-3)",cursor:"pointer",padding:"6px 16px",fontFamily:"inherit"}}>
-                Maybe later
+                I'll keep winging it for now
               </button>
             </div>
           </div>
