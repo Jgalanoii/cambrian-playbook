@@ -1308,13 +1308,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
-    `"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. Be specific — name Glassdoor themes, G2 review patterns, press coverage tone. What's the narrative?",`+
-    `"glassdoorRating":"Glassdoor rating as number e.g. 3.8 — or empty",`+
-    `"g2Rating":"G2 rating as number e.g. 4.2 — or empty if not software",`+
-    `"npsSignal":"NPS/CSAT data if published, or customer loyalty signals (churn rate, advocacy programs, renewal patterns)",`+
-    `"trustpilotRating":"Trustpilot score or empty",`+
-    `"employeeScore":"Glassdoor CEO approval % or Indeed rating — signals culture health",`+
-    `"standoutReview":{"text":"Most revealing quote from a customer or employee review — something a seller would want to know before calling","source":"G2 / Glassdoor / press","sentiment":"positive or negative"},`+
+    `"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. For B2B/SaaS: cite Glassdoor themes, G2 review patterns. For B2C/consumer: cite consumer reviews (Amazon, Trustpilot, BBB), brand perception, press coverage. For all: what's the narrative among employees and the market?",`+
+    `"glassdoorRating":"Glassdoor rating as number e.g. 3.8 — empty string if not found (don't write 'Not found')",`+
+    `"g2Rating":"G2 rating as number e.g. 4.2 — empty string if not a software company (don't write 'Not found')",`+
+    `"npsSignal":"NPS/CSAT if published, OR consumer sentiment signals: brand loyalty indicators, consumer satisfaction data, Net Promoter signals, renewal/repurchase rates. For B2C: Amazon rating, consumer survey data, brand perception scores.",`+
+    `"trustpilotRating":"Trustpilot or consumer review score — empty string if not found (don't write 'Not found')",`+
+    `"employeeScore":"Glassdoor CEO approval % or Indeed rating or Comparably score — empty string if not found",`+
+    `"standoutReview":{"text":"Most revealing quote from a customer/consumer review, employee review, or press piece — something a seller would want to know before calling. For B2C companies: a consumer review or analyst quote is fine.","source":"G2 / Glassdoor / press / Amazon / analyst report","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
@@ -1398,7 +1398,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `PRIORITY ORDER:\n`+
         `1. Press releases and company announcements from the last 12 months — these are HIGHEST VALUE\n`+
         `2. News coverage: M&A, leadership changes, funding, strategic moves\n`+
-        `3. Ratings and sentiment: Glassdoor, G2, Trustpilot for "${co}"\n`+
+        `3. Ratings and sentiment: Glassdoor + G2 (B2B/SaaS), Trustpilot + Amazon + consumer reviews (B2C), press tone for "${co}"\n`+
         `4. Growth signals or buying indicators\n`+
         `5. Workforce and culture profile\n`+
         `Return ONLY raw JSON (start with {):\n`+
@@ -1408,7 +1408,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
         `"cultureProfile":{"coreValues":"2-3 stated company values","communicationStyle":"formal/informal","decisionMaking":"top-down/consensus/distributed","sellerLanguageHint":"the vocabulary and tone this company responds to"},`+
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
-        `"sentimentScores":{"glassdoorRating":"rating found or empty","g2Rating":"rating found or empty","trustpilotRating":"rating found or empty","npsSignal":"any NPS or CSAT data found or sentiment description","standoutReview":{"text":"best quote found","source":"source","sentiment":"positive or negative"}},`+
+        `"sentimentScores":{"glassdoorRating":"rating or empty string (not 'Not found')","g2Rating":"rating or empty string if not software","trustpilotRating":"Trustpilot or consumer review score or empty string","npsSignal":"NPS/CSAT data or consumer loyalty signals or brand perception","standoutReview":{"text":"most revealing quote — consumer review, employee review, or press","source":"source platform","sentiment":"positive or negative"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
       const d = await claudeFetch({
         model:activeModel(),
@@ -9506,7 +9506,7 @@ ${isOpen
                   <div className="bb">
                     <div className="bb-hdr" onClick={()=>toggleBB("culture")}>
                       <div className="bb-icon" style={{fontSize:12}}>🏛</div>
-                      <div><div className="bb-title">Culture, Workforce & Incumbents</div><div className="bb-sub">Their culture, their people, and who got there before you</div></div>
+                      <div><div className="bb-title">{sellerUrl==="research-only"?"Culture & Workforce":"Culture, Workforce & Incumbents"}</div><div className="bb-sub">Their culture, their people{sellerUrl==="research-only"?"":", and who got there before you"}</div></div>
                       {bbChevron("culture")}
                     </div>
                     <div className={`bb-body-wrap ${bbIsOpen("culture")?"":"collapsed"}`}><div className="bb-body">
@@ -9534,8 +9534,8 @@ ${isOpen
                             )}
                           </div>
                         )}
-                        {/* Incumbents */}
-                        {(brief.incumbentVendors?.hrSystem||brief.incumbentVendors?.financeSystem||brief.incumbentVendors?.crmSystem)&&(
+                        {/* Incumbents — only show when a seller is configured (not Quick Brief) */}
+                        {sellerUrl!=="research-only"&&(brief.incumbentVendors?.hrSystem||brief.incumbentVendors?.financeSystem||brief.incumbentVendors?.crmSystem)&&(
                           <div style={{background:"#FDE8E833",border:"1px solid #9B2C2C33",borderRadius:8,padding:"10px 12px",gridColumn:"1/-1"}}>
                             <div style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>⚔️ Incumbent Vendors — Know What You're Displacing</div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
