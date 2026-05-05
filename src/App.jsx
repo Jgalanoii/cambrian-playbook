@@ -2439,7 +2439,7 @@ function PasswordGate({ onAuth }) {
             <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:24}}>
               {[
                 {num:"10x",label:"faster prep"},
-                {num:"9",label:"intelligence phases"},
+                {num:"Deep",label:"industry, target & persona intel"},
                 {num:"15+",label:"industry verticals"},
               ].map(s=>(
                 <div key={s.label} style={{textAlign:"center"}}>
