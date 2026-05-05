@@ -2276,10 +2276,13 @@ function PasswordGate({ onAuth }) {
           {/* Left — value prop */}
           <div style={{flex:"1 1 400px",minWidth:280}}>
             <div style={{fontFamily:"Lora,serif",fontSize:32,fontWeight:700,color:"var(--ink-0)",lineHeight:1.25,marginBottom:16}}>
-              Every sales conversation<br/>deserves preparation<br/>this good.
+              Your prospects can tell<br/>when you didn't<br/>do your homework.
             </div>
-            <div style={{fontSize:16,color:"var(--ink-1)",lineHeight:1.7,marginBottom:24,maxWidth:480}}>
-              Cambrian Catalyst builds deep, AI-powered sales briefs that make prospects feel understood from the first conversation. Live company research, executive intelligence, tailored talk tracks, and deal strategy — in minutes, not hours.
+            <div style={{fontSize:16,color:"var(--ink-1)",lineHeight:1.7,marginBottom:8,maxWidth:480}}>
+              Cambrian Catalyst does it for you — deep company intel, executive profiles, tailored talk tracks, and a deal strategy that makes buyers think you've been studying them for weeks. In about 15 minutes.
+            </div>
+            <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:24,maxWidth:480,fontStyle:"italic"}}>
+              Because "I saw on your website that you do things" is not a discovery call.
             </div>
             <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:24}}>
               {[
@@ -2314,10 +2317,10 @@ function PasswordGate({ onAuth }) {
       <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-            What a Cambrian brief delivers
+            More intel in 15 minutes than your team gets in 4 hours
           </div>
           <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:600,margin:"0 auto",lineHeight:1.6}}>
-            Every brief is built from live research, proprietary knowledge layers, and proven sales frameworks — not templates or generic summaries.
+            Nine phases of live research, AI-powered analysis, and proven frameworks. Not a ChatGPT summary with a logo on it.
           </div>
         </div>
 
@@ -2344,7 +2347,7 @@ function PasswordGate({ onAuth }) {
         <div style={{maxWidth:960,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:28}}>
             <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-              The problem with sales prep today
+              Be honest — how much of your "research" is just skimming the About page?
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:20}}>
@@ -2372,7 +2375,7 @@ function PasswordGate({ onAuth }) {
       <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-            Built for revenue teams that refuse to wing it
+            For teams who think "winging it" is a fireable offense
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14}}>
@@ -2394,10 +2397,10 @@ function PasswordGate({ onAuth }) {
       <div style={{background:"var(--ink-0)",padding:"40px 20px",textAlign:"center"}}>
         <div style={{maxWidth:500,margin:"0 auto"}}>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--surface)",marginBottom:8}}>
-            Stop researching. Start closing.
+            Your competitors are still Googling.<br/>You could be closing.
           </div>
           <div style={{fontSize:14,color:"var(--ink-3)",lineHeight:1.6,marginBottom:20}}>
-            Register free to get 3 full runs — ICP, briefs, hypothesis, coaching, and Milton. No credit card required.
+            3 full runs free. No credit card. No "let me schedule a demo." Just sign up and go.
           </div>
           <button className="btn btn-lg"
             onClick={()=>{window.scrollTo({top:0,behavior:"smooth"});setMode("signup");}}
@@ -10565,11 +10568,12 @@ ${isOpen
             </div>
 
             {/* Pricing cards */}
-            <div style={{padding:"20px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
+            <div style={{padding:"20px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(145px, 1fr))",gap:10}}>
               {[
                 {id:"starter",name:"Starter",price:"$99",period:"/mo",tokens:"25 tokens",max:"5 Max",desc:"Solo AE or small team",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"]},
                 {id:"pro",name:"Pro",price:"$349",period:"/mo",tokens:"100 tokens",max:"20 Max",desc:"Sales team (3-5 reps)",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true},
                 {id:"team",name:"Team",price:"$799",period:"/mo",tokens:"250 tokens",max:"50 Max",desc:"Sales org (10+ reps)",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"]},
+                {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",tokens:"1,000 tokens",max:"200 Max",desc:"Revenue org (25+ reps)",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"]},
               ].map(plan=>(
                 <div key={plan.id} style={{border:plan.popular?"2px solid var(--tan-0)":"1.5px solid var(--line-0)",borderRadius:10,padding:"18px 16px",position:"relative",background:plan.popular?"var(--bg-1)":"var(--surface)"}}>
                   {plan.popular&&<div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:10,fontWeight:700,padding:"2px 10px",borderRadius:20,background:"var(--tan-0)",color:"var(--surface)",textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Most Popular</div>}

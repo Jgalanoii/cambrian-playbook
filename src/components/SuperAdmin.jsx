@@ -14,11 +14,11 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [error, setError] = useState("");
   const [tab, setTab] = useState("overview"); // overview | users | activity | urls
   const [plans, setPlans] = useState([
-    { id: "trial", name: "Trial", tokens: 5, maxTokens: 0, price: 0, costPerToken: 1.16 },
+    { id: "trial", name: "Trial", tokens: 3, maxTokens: 0, price: 0, costPerToken: 1.16 },
     { id: "starter", name: "Starter", tokens: 25, maxTokens: 5, price: 99, costPerToken: 1.16 },
     { id: "pro", name: "Pro", tokens: 100, maxTokens: 20, price: 349, costPerToken: 1.16 },
     { id: "team", name: "Team", tokens: 250, maxTokens: 50, price: 799, costPerToken: 1.16 },
-    { id: "enterprise", name: "Enterprise", tokens: 1000, maxTokens: 200, price: 2999, costPerToken: 1.16 },
+    { id: "enterprise", name: "Enterprise", tokens: 1000, maxTokens: 200, price: 2500, costPerToken: 1.16 },
   ]);
   const [opusRatio, setOpusRatio] = useState(75);
   const [planSaveMsg, setPlanSaveMsg] = useState("");
