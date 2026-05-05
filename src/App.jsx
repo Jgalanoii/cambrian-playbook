@@ -2225,69 +2225,184 @@ function PasswordGate({ onAuth }) {
     </AuthShell>
   );
 
+  // ── Auth form (reused in hero and standalone) ──
+  const authForm = (
+    <div className="card" style={{padding:22}}>
+      <div className="pw-tabs" role="tablist" style={{marginBottom:18}}>
+        {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
+          <button key={m} role="tab" aria-selected={mode===m}
+            className={`pw-tab ${mode===m?"active":""}`}
+            onClick={()=>{setMode(m);setErr("");}}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode==="signup" && (
+        <div className="field-grid-2" style={{marginBottom:10}}>
+          <input placeholder="First name" value={first} onChange={e=>setFirst(e.target.value)} autoFocus/>
+          <input placeholder="Last name"  value={last}  onChange={e=>setLast(e.target.value)}/>
+        </div>
+      )}
+      <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}}/>
+      {mode!=="reset"&&<input type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>}
+      {err && <div className="pw-error">{err}</div>}
+      {resetSent && <div style={{fontSize:12,color:"var(--green)",fontWeight:600,marginBottom:8}}>Password reset link sent to {email}. Check your inbox.</div>}
+      {mode==="reset"?(
+        <>
+          <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}} onClick={submit} disabled={loading||!email}>
+            {loading?"Sending…":"Send Reset Link →"}
+          </button>
+          <button style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--tan-0)",fontWeight:600,marginTop:10,textAlign:"center",width:"100%"}}
+            onClick={()=>{setMode("signin");setErr("");setResetSent(false);}}>← Back to Sign In</button>
+        </>
+      ):(
+        <>
+          <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}} onClick={submit}
+            disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
+            {loading ? (mode==="signup"?"Creating account…":"Signing in…") : (mode==="signup"?"Create Account →":"Sign In →")}
+          </button>
+          {mode==="signin"&&<button style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-2)",marginTop:10,textAlign:"center",width:"100%"}}
+            onClick={()=>{setMode("reset");setErr("");}}>Forgot password?</button>}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <AuthShell>
-      <div className="page" style={{maxWidth:480,paddingTop:48}}>
-        <div className="page-title">
-          {mode==="signup" ? "Create your account" : mode==="reset" ? "Reset your password" : "Welcome back"}
-        </div>
-        <div className="page-sub">
-          {mode==="signup"
-            ? "Build sales briefs that make prospects feel understood from the first conversation. Live research, leadership intel, and tailored talk tracks — in minutes, not hours. Free during the private beta."
-            : mode==="reset" ? "Enter your email and we'll send you a link to reset your password."
-            : "Sign in to continue your sales intelligence work."}
-        </div>
-
-        <div className="card" style={{padding:22}}>
-          <div className="pw-tabs" role="tablist" style={{marginBottom:18}}>
-            {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
-              <button key={m} role="tab" aria-selected={mode===m}
-                className={`pw-tab ${mode===m?"active":""}`}
-                onClick={()=>{setMode(m);setErr("");}}>
-                {label}
-              </button>
-            ))}
+      {/* ── HERO ── */}
+      <div style={{background:"linear-gradient(180deg, var(--bg-0) 0%, var(--surface) 100%)",padding:"48px 20px 32px"}}>
+        <div style={{maxWidth:960,margin:"0 auto",display:"flex",gap:40,alignItems:"flex-start",flexWrap:"wrap"}}>
+          {/* Left — value prop */}
+          <div style={{flex:"1 1 400px",minWidth:280}}>
+            <div style={{fontFamily:"Lora,serif",fontSize:32,fontWeight:700,color:"var(--ink-0)",lineHeight:1.25,marginBottom:16}}>
+              Every sales conversation<br/>deserves preparation<br/>this good.
+            </div>
+            <div style={{fontSize:16,color:"var(--ink-1)",lineHeight:1.7,marginBottom:24,maxWidth:480}}>
+              Cambrian Catalyst builds deep, AI-powered sales briefs that make prospects feel understood from the first conversation. Live company research, executive intelligence, tailored talk tracks, and deal strategy — in minutes, not hours.
+            </div>
+            <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:24}}>
+              {[
+                {num:"10x",label:"faster prep"},
+                {num:"9",label:"intelligence phases"},
+                {num:"15+",label:"industry verticals"},
+              ].map(s=>(
+                <div key={s.label} style={{textAlign:"center"}}>
+                  <div style={{fontSize:28,fontWeight:700,color:"var(--tan-0)",fontFamily:"Lora,serif"}}>{s.num}</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.3px"}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {mode==="signup" && (
-            <div className="field-grid-2" style={{marginBottom:10}}>
-              <input placeholder="First name" value={first} onChange={e=>setFirst(e.target.value)} autoFocus/>
-              <input placeholder="Last name"  value={last}  onChange={e=>setLast(e.target.value)}/>
+          {/* Right — auth form */}
+          <div style={{flex:"0 1 380px",minWidth:280}}>
+            <div style={{fontSize:13,fontWeight:600,color:"var(--ink-2)",marginBottom:8}}>
+              {mode==="signup"?"Start free — no credit card required":mode==="reset"?"Reset your password":"Welcome back"}
             </div>
-          )}
-          <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}}/>
-          {mode!=="reset"&&<input type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>}
-
-          {err && <div className="pw-error">{err}</div>}
-          {resetSent && <div style={{fontSize:12,color:"var(--green)",fontWeight:600,marginBottom:8}}>Password reset link sent to {email}. Check your inbox.</div>}
-
-          {mode==="reset"?(
-            <>
-              <button className="btn btn-primary btn-lg"
-                style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}}
-                onClick={submit} disabled={loading||!email}>
-                {loading?"Sending…":"Send Reset Link →"}
+            {authForm}
+            <div style={{textAlign:"center",marginTop:12}}>
+              <button className="pw-guest" onClick={()=>setGuestOk(true)}>
+                Continue as guest · work won't be saved
               </button>
-              <button style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--tan-0)",fontWeight:600,marginTop:10,textAlign:"center",width:"100%"}}
-                onClick={()=>{setMode("signin");setErr("");setResetSent(false);}}>← Back to Sign In</button>
-            </>
-          ):(
-            <>
-              <button className="btn btn-primary btn-lg"
-                style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1,marginTop:4}}
-                onClick={submit}
-                disabled={loading||!email||!pw||(mode==="signup"&&(!first||!last))}>
-                {loading ? (mode==="signup"?"Creating account…":"Signing in…") : (mode==="signup"?"Create Account →":"Sign In →")}
-              </button>
-              {mode==="signin"&&<button style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-2)",marginTop:10,textAlign:"center",width:"100%"}}
-                onClick={()=>{setMode("reset");setErr("");}}>Forgot password?</button>}
-            </>
-          )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── WHAT YOU GET ── */}
+      <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
+            What a Cambrian brief delivers
+          </div>
+          <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:600,margin:"0 auto",lineHeight:1.6}}>
+            Every brief is built from live research, proprietary knowledge layers, and proven sales frameworks — not templates or generic summaries.
+          </div>
         </div>
 
-        <div style={{textAlign:"center",marginTop:16}}>
-          <button className="pw-guest" onClick={()=>setGuestOk(true)}>
-            Continue as guest · work won't be saved
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(250px, 1fr))",gap:16,marginBottom:40}}>
+          {[
+            {icon:"🔍",title:"Company Intelligence",desc:"Real-time research across company overview, financials, competitive positioning, M&A signals, and hiring trends. Not a Wikipedia summary — live, actionable intel."},
+            {icon:"👥",title:"Executive Profiles",desc:"Leadership backgrounds, career trajectories, compensation context, and communication angles. Know who you're talking to before you dial."},
+            {icon:"🎯",title:"Solution Mapping",desc:"Your products mapped to their specific pain points with Challenger-style teaching insights, JOLT indecision removers, and named customer proof."},
+            {icon:"📊",title:"ICP Fit Scoring",desc:"Three-dimensional fit scoring calibrated across 15+ industry verticals. Know which accounts deserve your time — and which don't."},
+            {icon:"🧪",title:"RIVER Hypothesis",desc:"Structured pre-call strategy across Reality, Impact, Vision, Entry Points, and Route. Dual discovery tracks for sales and solution architecture."},
+            {icon:"🎙",title:"In-Call Coaching",desc:"Live confidence scoring, gate-based qualification, and Milton — your AI sales coach with full session context and zero patience for mediocrity."},
+          ].map(f=>(
+            <div key={f.title} style={{background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"20px 18px"}}>
+              <div style={{fontSize:24,marginBottom:8}}>{f.icon}</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{f.title}</div>
+              <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.6}}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── THE PROBLEM WE SOLVE ── */}
+      <div style={{background:"var(--bg-1)",padding:"40px 20px"}}>
+        <div style={{maxWidth:960,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:28}}>
+            <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
+              The problem with sales prep today
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:20}}>
+            <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"20px 18px"}}>
+              <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--red)",marginBottom:8}}>Without Cambrian</div>
+              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
+                {["2-4 hours per account researching manually","Generic talk tracks that sound like every other vendor","No structured qualification framework","Executives feel like you didn't do your homework","Deals stall because you missed the real buying committee","Post-call notes are scattered across 5 tools"].map(t=>(
+                  <div key={t} style={{display:"flex",gap:8,marginBottom:4}}><span style={{color:"var(--red)",flexShrink:0}}>✗</span>{t}</div>
+                ))}
+              </div>
+            </div>
+            <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:10,padding:"20px 18px"}}>
+              <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:8}}>With Cambrian</div>
+              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
+                {["15-minute deep brief with 9 phases of intelligence","Tailored hypothesis with Challenger insights and proof points","RIVER framework structures every conversation","Prospects say \"you clearly understand our business\"","Buying committee mapped before the first call","CRM note, follow-up email, and deal routing in one click"].map(t=>(
+                  <div key={t} style={{display:"flex",gap:8,marginBottom:4}}><span style={{color:"var(--green)",flexShrink:0}}>✓</span>{t}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── WHO IT'S FOR ── */}
+      <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
+            Built for revenue teams that refuse to wing it
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14}}>
+          {[
+            {role:"Account Executives",desc:"Deep briefs that make every discovery call feel like a warm introduction"},
+            {role:"Sales Leaders",desc:"Team-wide consistency, pipeline intelligence, and deal routing at scale"},
+            {role:"Solutions Architects",desc:"Dual-track discovery with architecture qualification built in"},
+            {role:"Revenue Operations",desc:"ICP scoring, fit analytics, and usage data for strategic planning"},
+          ].map(p=>(
+            <div key={p.role} style={{background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"16px 14px",textAlign:"center"}}>
+              <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{p.role}</div>
+              <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>{p.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── BOTTOM CTA ── */}
+      <div style={{background:"var(--ink-0)",padding:"40px 20px",textAlign:"center"}}>
+        <div style={{maxWidth:500,margin:"0 auto"}}>
+          <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--surface)",marginBottom:8}}>
+            Stop researching. Start closing.
+          </div>
+          <div style={{fontSize:14,color:"var(--ink-3)",lineHeight:1.6,marginBottom:20}}>
+            Free during private beta. No credit card. Full access to briefs, hypothesis, discovery coaching, and Milton.
+          </div>
+          <button className="btn btn-lg"
+            onClick={()=>{window.scrollTo({top:0,behavior:"smooth"});setMode("signup");}}
+            style={{padding:"14px 36px",borderRadius:10,background:"var(--tan-0)",color:"var(--surface)",fontSize:16,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
+            Get Started Free →
           </button>
         </div>
       </div>
