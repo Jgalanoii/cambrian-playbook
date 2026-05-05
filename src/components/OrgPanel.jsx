@@ -48,6 +48,14 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
     if (result?.[0]) setOrgCtx(prev => ({ ...prev, seller_url: orgSellerUrl.trim() }));
   };
 
+  const APP_URL = import.meta.env.VITE_APP_URL || "https://www.cambriancatalyst.ai";
+  const getInviteLink = (token) => `${APP_URL}?token=${token}`;
+  const copyInviteLink = (token) => {
+    navigator.clipboard.writeText(getInviteLink(token));
+    setInviteMsg("Invite link copied to clipboard");
+    setTimeout(() => setInviteMsg(""), 3000);
+  };
+
   const sendInvite = async () => {
     if (!inviteEmail.trim() || !isAdmin) return;
     setInviteLoading(true);
@@ -60,7 +68,11 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
       });
       const data = await res.json();
       if (data.ok) {
-        setInviteMsg("Invitation sent to " + inviteEmail.trim());
+        if (data.email_sent === false) {
+          setInviteMsg("Invitation created — email delivery is pending. Use the invite link below to share directly.");
+        } else {
+          setInviteMsg("Invitation sent to " + inviteEmail.trim());
+        }
         setInviteEmail("");
         fetchOrgInvitations(orgCtx.id, sbToken).then(setInvitations);
       } else {
@@ -289,28 +301,39 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                   </div>
                   {invitations.map(inv => (
                     <div key={inv.id} style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                      background: "var(--amber-bg)", border: "1px solid var(--amber)", borderRadius: 10, marginBottom: 6,
+                      background: "var(--amber-bg)", border: "1px solid var(--amber)", borderRadius: 10, marginBottom: 6, padding: "12px 14px",
                     }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--amber)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>
-                        ✉
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{inv.email}</div>
-                        <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                          {inv.role} · expires {new Date(inv.expires_at).toLocaleDateString()}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--amber)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                          ✉
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{inv.email}</div>
+                          <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                            {inv.role} · expires {new Date(inv.expires_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button onClick={() => copyInviteLink(inv.token)}
+                            style={{ fontSize: 10, color: "var(--navy)", background: "var(--navy-bg)", border: "1px solid var(--navy)", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>
+                            Copy link
+                          </button>
+                          <button onClick={() => resendInvite(inv)} disabled={inviteLoading}
+                            style={{ fontSize: 10, color: "var(--ink-1)", background: "none", border: "1px solid var(--line-0)", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>
+                            Resend
+                          </button>
+                          <button onClick={() => revokeInvite(inv.id)}
+                            style={{ fontSize: 10, color: "var(--red)", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: "3px 4px" }}>
+                            Revoke
+                          </button>
                         </div>
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <button onClick={() => resendInvite(inv)} disabled={inviteLoading}
-                          style={{ fontSize: 10, color: "var(--ink-1)", background: "none", border: "1px solid var(--line-0)", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontWeight: 600 }}>
-                          Resend
-                        </button>
-                        <button onClick={() => revokeInvite(inv.id)}
-                          style={{ fontSize: 10, color: "var(--red)", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}>
-                          Revoke
-                        </button>
-                      </div>
+                      {inv.token && (
+                        <div style={{ marginTop: 8, fontSize: 10, color: "var(--ink-3)", background: "var(--surface)", borderRadius: 6, padding: "6px 10px", wordBreak: "break-all", cursor: "pointer" }}
+                          onClick={() => copyInviteLink(inv.token)} title="Click to copy">
+                          {getInviteLink(inv.token)}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
