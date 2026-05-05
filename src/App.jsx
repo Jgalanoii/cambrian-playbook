@@ -2129,6 +2129,8 @@ function PasswordGate({ onAuth }) {
   const[mode,setMode]=React.useState("signup");
   const[email,setEmail]=React.useState("");
   const[pw,setPw]=React.useState("");
+  const[newPw,setNewPw]=React.useState("");
+  const[newPwConfirm,setNewPwConfirm]=React.useState("");
   const[first,setFirst]=React.useState("");
   const[last,setLast]=React.useState("");
   const[err,setErr]=React.useState("");
@@ -2136,13 +2138,27 @@ function PasswordGate({ onAuth }) {
   const[verifying,setVerifying]=React.useState(false);
   const[guestOk,setGuestOk]=React.useState(false);
   const[resetSent,setResetSent]=React.useState(false);
+  const[recoveryToken,setRecoveryToken]=React.useState(null); // token from password reset email
+  const[passwordUpdated,setPasswordUpdated]=React.useState(false);
 
   React.useEffect(()=>{
+    // Check for password recovery token in URL hash (Supabase redirects with #access_token=xxx&type=recovery)
+    const hash = window.location.hash;
+    if (hash && hash.includes("type=recovery")) {
+      const hashParams = new URLSearchParams(hash.replace("#", ""));
+      const accessToken = hashParams.get("access_token");
+      if (accessToken) {
+        setRecoveryToken(accessToken);
+        setMode("newpassword");
+        // Clean the URL
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+
     // Check for invitation token in URL
     const params = new URLSearchParams(window.location.search);
     const invToken = params.get("token");
     if (invToken) {
-      // Store invite token for after auth, clean URL
       sessionStorage.setItem("pending_invite_token", invToken);
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -2201,6 +2217,18 @@ function PasswordGate({ onAuth }) {
       } else if(mode==="reset"){
         await sbAuth('recover',{email});
         setErr("");setResetSent(true);
+      } else if(mode==="newpassword"){
+        if(newPw.length<8){setErr("Password must be at least 8 characters.");setLoading(false);return;}
+        if(newPw!==newPwConfirm){setErr("Passwords don't match.");setLoading(false);return;}
+        const SB_URL=import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const r=await fetch(`${SB_URL}/auth/v1/user`,{
+          method:"PUT",
+          headers:{apikey:SB_KEY,Authorization:`Bearer ${recoveryToken}`,"Content-Type":"application/json"},
+          body:JSON.stringify({password:newPw}),
+        });
+        if(r.ok){setPasswordUpdated(true);setErr("");}
+        else{const d=await r.json();setErr(d.error_description||d.msg||"Failed to update password. The link may have expired — request a new one.");}
       } else {
         const d=await sbAuth('token?grant_type=password',{email,password:pw});
         if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);}
@@ -2220,6 +2248,43 @@ function PasswordGate({ onAuth }) {
             We sent a verification link to <strong style={{color:"var(--ink-0)"}}>{email}</strong>. Click it, then come back and sign in.
           </div>
           <button className="btn btn-secondary" onClick={()=>{setVerifying(false);setMode("signin");}}>← Back to Sign In</button>
+        </div>
+      </div>
+    </AuthShell>
+  );
+
+  // ── Password recovery form (shown when user clicks reset link from email) ──
+  if (mode === "newpassword") return (
+    <AuthShell>
+      <div className="page" style={{maxWidth:440,paddingTop:48}}>
+        <div className="page-title">Set your new password</div>
+        <div className="page-sub">Enter a new password for your account.</div>
+        <div className="card" style={{padding:22}}>
+          {passwordUpdated ? (
+            <>
+              <div style={{textAlign:"center",padding:"12px 0"}}>
+                <div style={{fontSize:32,marginBottom:8}}>✓</div>
+                <div style={{fontSize:15,fontWeight:600,color:"var(--green)",marginBottom:8}}>Password updated successfully</div>
+                <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:16}}>You can now sign in with your new password.</div>
+                <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center"}}
+                  onClick={()=>{setMode("signin");setPasswordUpdated(false);setRecoveryToken(null);setNewPw("");setNewPwConfirm("");}}>
+                  Sign In →
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <input type="password" placeholder="New password (8+ characters)" value={newPw} onChange={e=>setNewPw(e.target.value)}
+                autoFocus style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&newPwConfirm&&submit()} />
+              <input type="password" placeholder="Confirm new password" value={newPwConfirm} onChange={e=>setNewPwConfirm(e.target.value)}
+                style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&submit()} />
+              {err && <div className="pw-error">{err}</div>}
+              <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1}}
+                onClick={submit} disabled={loading||!newPw||!newPwConfirm}>
+                {loading ? "Updating..." : "Update Password →"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </AuthShell>

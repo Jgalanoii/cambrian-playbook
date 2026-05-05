@@ -795,6 +795,40 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                           <option value="">No org</option>
                           {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
                         </select>
+
+                        {/* Admin actions */}
+                        <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                          <button onClick={async () => {
+                            try {
+                              const r = await fetch("/api/admin-action", {
+                                method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                                body: JSON.stringify({ action: "reset_password", email: u.email }),
+                              });
+                              const d = await r.json();
+                              setPlanSaveMsg(d.ok ? `Password reset sent to ${u.email}` : `Error: ${d.error}`);
+                            } catch { setPlanSaveMsg("Failed to send reset"); }
+                            setTimeout(() => setPlanSaveMsg(""), 4000);
+                          }}
+                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-2)", cursor: "pointer", fontWeight: 600 }}
+                            title="Send password reset email">
+                            Reset PW
+                          </button>
+                          <button onClick={async () => {
+                            try {
+                              const r = await fetch("/api/admin-action", {
+                                method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                                body: JSON.stringify({ action: "resend_invite", email: u.email }),
+                              });
+                              const d = await r.json();
+                              setPlanSaveMsg(d.ok ? `Invite resent to ${u.email}` : `Error: ${d.error}`);
+                            } catch { setPlanSaveMsg("Failed to resend"); }
+                            setTimeout(() => setPlanSaveMsg(""), 4000);
+                          }}
+                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-2)", cursor: "pointer", fontWeight: 600 }}
+                            title="Resend signup/invite email">
+                            Resend
+                          </button>
+                        </div>
                       </div>
                     </div>
 
