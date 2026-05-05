@@ -10829,8 +10829,8 @@ ${isOpen
                       const r=await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({priceId:plan.priceId,planId:plan.id})});
                       const d=await r.json();
                       if(d.url)window.location.href=d.url;
-                      else setPlanSaveMsg?.(d.error||"Checkout failed");
-                    }catch{setPlanSaveMsg?.("Failed to start checkout");}
+                      else alert(d.error||"Checkout failed — please try again.");
+                    }catch{alert("Failed to start checkout — check your connection.");}
                   }}
                     style={{display:"block",width:"100%",textAlign:"center",padding:"10px",borderRadius:8,background:plan.popular?"var(--tan-0)":"var(--ink-0)",color:"var(--surface)",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",marginTop:12,fontFamily:"DM Sans,sans-serif"}}>
                     Start with {plan.name} →
