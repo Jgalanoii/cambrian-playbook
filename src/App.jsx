@@ -2955,7 +2955,7 @@ export default function App(){
   const[quickBriefInput,setQuickBriefInput]=useState(""); // a la carte brief company name
   const[favorites,setFavorites]=useState([]); // [{id, type, label, content, company, step, timestamp}]
   const[favPanelOpen,setFavPanelOpen]=useState(false);
-  const[sessionMode,setSessionMode]=useState("full"); // "full" | "quick"
+  const[sessionMode,setSessionMode]=useState(sbUser ? "full" : "quick"); // "full" | "quick" (guests default to quick)
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
   const lastGenSig = useRef({ icp: "", brief: "", hypo: "", postCall: "" });
@@ -5978,8 +5978,8 @@ ${isOpen
       {/* Command palette overlay */}
       {cmdOpen && <CommandPalette commands={cmdCommands} onClose={()=>setCmdOpen(false)}/>}
 
-      {/* Chat assistant — floating toggle + slide-out panel */}
-      {!chatOpen && (
+      {/* Chat assistant — floating toggle + slide-out panel (authenticated users only) */}
+      {!chatOpen && sbUser && (
         <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Ask Milton">
           💬
         </button>
@@ -6328,7 +6328,7 @@ ${isOpen
         {/* GUEST BANNER */}
         {!sbUser&&step>0&&(
           <div style={{background:"var(--amber-bg)",borderBottom:"1px solid #BA751744",padding:"7px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-            <div style={{fontSize:12,color:"#7A5010"}}>👤 <strong>Guest mode</strong> — your work is not being saved.</div>
+            <div style={{fontSize:12,color:"#7A5010"}}>👤 <strong>Guest mode</strong> — briefs only (2 previews). No ICP, coaching, or saved sessions.</div>
             <button onClick={()=>{
                 // Serialize guest work to localStorage before unmounting so it survives signup
                 try { localStorage.setItem("cambrian_guest_state", JSON.stringify(getSessionSnap())); } catch {}
@@ -6475,29 +6475,41 @@ ${isOpen
                   </div>
                 ))}
               </div>
-              {/* Mode toggle: Full Session vs Quick Brief */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-                <div onClick={()=>setSessionMode("full")}
-                  style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
-                    border:sessionMode==="full"?"2px solid var(--green)":"2px solid var(--line-0)",
-                    background:sessionMode==="full"?"var(--green-bg)":"var(--surface)",
-                    transform:sessionMode==="full"?"translateY(-2px)":"none",
-                    boxShadow:sessionMode==="full"?"0 4px 12px rgba(46,107,46,0.12)":"none"}}>
-                  <div style={{fontSize:20,marginBottom:6}}>🎯</div>
-                  <div style={{fontSize:14,fontWeight:700,color:sessionMode==="full"?"var(--green)":"var(--ink-2)",marginBottom:4}}>Full Sales Session</div>
-                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate tailored briefs with solution mapping, and prepare for calls.</div>
+              {/* Mode toggle: Full Session vs Quick Brief (guests get Quick Brief only) */}
+              {!sbUser ? (
+                <div style={{background:"var(--navy-bg)",border:"2px solid var(--navy)",borderRadius:"var(--r-md)",padding:"16px",marginBottom:20}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                    <span style={{fontSize:20}}>🔍</span>
+                    <span style={{fontSize:14,fontWeight:700,color:"var(--navy)"}}>Quick Brief — Guest Preview</span>
+                  </div>
+                  <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>
+                    Research any company — executives, strategy, news, and sentiment. Create a free account to unlock full sessions with ICP scoring, solution mapping, hypothesis, coaching, and more.
+                  </div>
                 </div>
-                <div onClick={()=>setSessionMode("quick")}
-                  style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
-                    border:sessionMode==="quick"?"2px solid var(--navy)":"2px solid var(--line-0)",
-                    background:sessionMode==="quick"?"var(--navy-bg)":"var(--surface)",
-                    transform:sessionMode==="quick"?"translateY(-2px)":"none",
-                    boxShadow:sessionMode==="quick"?"0 4px 12px rgba(27,58,107,0.12)":"none"}}>
-                  <div style={{fontSize:20,marginBottom:6}}>🔍</div>
-                  <div style={{fontSize:14,fontWeight:700,color:sessionMode==="quick"?"var(--navy)":"var(--ink-2)",marginBottom:4}}>Quick Brief</div>
-                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Deep research on any company — no seller context needed. Executives, strategy, news, hiring signals, and sentiment.</div>
+              ) : (
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+                  <div onClick={()=>setSessionMode("full")}
+                    style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
+                      border:sessionMode==="full"?"2px solid var(--green)":"2px solid var(--line-0)",
+                      background:sessionMode==="full"?"var(--green-bg)":"var(--surface)",
+                      transform:sessionMode==="full"?"translateY(-2px)":"none",
+                      boxShadow:sessionMode==="full"?"0 4px 12px rgba(46,107,46,0.12)":"none"}}>
+                    <div style={{fontSize:20,marginBottom:6}}>🎯</div>
+                    <div style={{fontSize:14,fontWeight:700,color:sessionMode==="full"?"var(--green)":"var(--ink-2)",marginBottom:4}}>Full Sales Session</div>
+                    <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate tailored briefs with solution mapping, and prepare for calls.</div>
+                  </div>
+                  <div onClick={()=>setSessionMode("quick")}
+                    style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
+                      border:sessionMode==="quick"?"2px solid var(--navy)":"2px solid var(--line-0)",
+                      background:sessionMode==="quick"?"var(--navy-bg)":"var(--surface)",
+                      transform:sessionMode==="quick"?"translateY(-2px)":"none",
+                      boxShadow:sessionMode==="quick"?"0 4px 12px rgba(27,58,107,0.12)":"none"}}>
+                    <div style={{fontSize:20,marginBottom:6}}>🔍</div>
+                    <div style={{fontSize:14,fontWeight:700,color:sessionMode==="quick"?"var(--navy)":"var(--ink-2)",marginBottom:4}}>Quick Brief</div>
+                    <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Deep research on any company — no seller context needed. Executives, strategy, news, hiring signals, and sentiment.</div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Quick Brief mode */}
               {sessionMode==="quick"&&(
@@ -10531,35 +10543,72 @@ ${isOpen
         </div>
       )}
 
-      {/* Upgrade prompt modal */}
+      {/* Upgrade / Pricing modal */}
       {upgradeOpen && (
-        <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.5)"}}>
-          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"32px 36px",maxWidth:440,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.15)"}}>
-            <div style={{fontSize:40,marginBottom:12}}>🚀</div>
-            <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-              {!sbUser ? "You've used your 3 free previews" : `You've used all ${orgCtx?.run_limit||5} tokens this month`}
-            </div>
-            <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:20}}>
-              {!sbUser
-                ? "Create a free account to continue exploring with 5 tokens per month. It takes 30 seconds."
-                : `Your ${orgCtx?.plan==="trial"?"trial":"plan"} includes ${orgCtx?.run_limit||5} tokens per month. Each full brief build uses 1 token. Upgrade to get more tokens and unlock premium features.`}
-            </div>
-            <div style={{background:"var(--bg-1)",borderRadius:10,padding:"14px 16px",marginBottom:20,textAlign:"left"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>What you get with an upgrade:</div>
-              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
-                ✓ More monthly tokens<br/>
-                ✓ Full ICP + brief + hypothesis pipeline<br/>
-                ✓ In-call coaching + post-call analysis<br/>
-                ✓ Team collaboration (invite reps + managers)<br/>
-                ✓ Priority support
+        <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.5)",overflow:"auto",padding:20}}
+          onClick={()=>setUpgradeOpen(false)}>
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",maxWidth:680,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.15)",overflow:"hidden"}}
+            onClick={e=>e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{padding:"24px 28px 16px",textAlign:"center",borderBottom:"1px solid var(--line-0)"}}>
+              <div style={{fontSize:32,marginBottom:8}}>🚀</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>
+                {!sbUser ? "You've used your 2 free preview briefs" : `Upgrade your plan`}
+              </div>
+              <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.5}}>
+                {!sbUser
+                  ? "Create a free account to get 5 tokens/month — or upgrade for more."
+                  : `You're on the ${orgCtx?.plan||"trial"} plan (${orgCtx?.run_count||0}/${orgCtx?.run_limit||5} tokens used). Choose a plan below.`}
               </div>
             </div>
-            <a href="mailto:info@cambriancatalyst.com?subject=Upgrade%20Cambrian%20Playbook&body=Hi%2C%0A%0AI'd%20like%20to%20upgrade%20my%20Cambrian%20Playbook%20account.%0A%0AOrg%3A%20"
-              style={{display:"inline-block",padding:"12px 28px",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontSize:15,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",marginBottom:12}}>
-              Contact Us to Upgrade
-            </a>
-            <div>
-              <button onClick={()=>setUpgradeOpen(false)} style={{background:"none",border:"none",fontSize:13,color:"var(--ink-3)",cursor:"pointer",padding:"8px 16px",fontFamily:"inherit"}}>
+
+            {/* Pricing cards */}
+            <div style={{padding:"20px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
+              {[
+                {id:"starter",name:"Starter",price:"$99",period:"/mo",tokens:"25 tokens",max:"5 Max",desc:"Solo AE or small team",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"]},
+                {id:"pro",name:"Pro",price:"$349",period:"/mo",tokens:"100 tokens",max:"20 Max",desc:"Sales team (3-5 reps)",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true},
+                {id:"team",name:"Team",price:"$799",period:"/mo",tokens:"250 tokens",max:"50 Max",desc:"Sales org (10+ reps)",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"]},
+              ].map(plan=>(
+                <div key={plan.id} style={{border:plan.popular?"2px solid var(--tan-0)":"1.5px solid var(--line-0)",borderRadius:10,padding:"18px 16px",position:"relative",background:plan.popular?"var(--bg-1)":"var(--surface)"}}>
+                  {plan.popular&&<div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:10,fontWeight:700,padding:"2px 10px",borderRadius:20,background:"var(--tan-0)",color:"var(--surface)",textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Most Popular</div>}
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>{plan.name}</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:2,marginBottom:2}}>
+                    <span style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>{plan.price}</span>
+                    <span style={{fontSize:12,color:"var(--ink-3)"}}>{plan.period}</span>
+                  </div>
+                  <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.tokens} · {plan.max}</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)",marginBottom:10}}>{plan.desc}</div>
+                  {plan.features.map(f=>(
+                    <div key={f} style={{fontSize:11,color:"var(--ink-1)",padding:"2px 0",display:"flex",gap:6}}>
+                      <span style={{color:"var(--green)",flexShrink:0}}>✓</span>{f}
+                    </div>
+                  ))}
+                  <a href={`mailto:info@cambriancatalyst.com?subject=Upgrade to ${plan.name}&body=Hi,%0A%0AI'd like to upgrade to the ${plan.name} plan (${plan.price}/mo).%0A%0AOrg: ${encodeURIComponent(orgCtx?.name||"")}%0AEmail: ${encodeURIComponent(sbUser?.email||"")}`}
+                    style={{display:"block",textAlign:"center",padding:"10px",borderRadius:8,background:plan.popular?"var(--tan-0)":"var(--ink-0)",color:"var(--surface)",fontSize:12,fontWeight:700,textDecoration:"none",marginTop:12,fontFamily:"DM Sans,sans-serif"}}>
+                    Select {plan.name}
+                  </a>
+                </div>
+              ))}
+            </div>
+
+            {/* Enterprise / Invoice */}
+            <div style={{padding:"16px 24px",borderTop:"1px solid var(--line-0)",background:"var(--bg-1)"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>Enterprise or need an invoice?</div>
+                  <div style={{fontSize:12,color:"var(--ink-2)"}}>Custom tokens, SSO, dedicated onboarding, and NET-30 invoicing for procurement teams.</div>
+                </div>
+                <a href={`mailto:info@cambriancatalyst.com?subject=Enterprise / Invoice Request&body=Hi,%0A%0AI'd like to discuss enterprise pricing or request an invoice for procurement.%0A%0ACompany: %0AEstimated users: %0AContact: ${encodeURIComponent(sbUser?.email||"")}%0A%0APlease send me:%0A☐ Enterprise pricing details%0A☐ Invoice for purchase order processing%0A☐ Security/compliance documentation%0A☐ SOC 2 readiness information`}
+                  style={{display:"inline-block",padding:"10px 20px",borderRadius:8,border:"1.5px solid var(--ink-0)",background:"var(--surface)",color:"var(--ink-0)",fontSize:12,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
+                  Request Invoice / Enterprise
+                </a>
+              </div>
+            </div>
+
+            {/* Close */}
+            <div style={{padding:"12px 24px",textAlign:"center",borderTop:"1px solid var(--line-0)"}}>
+              <button onClick={()=>setUpgradeOpen(false)} style={{background:"none",border:"none",fontSize:13,color:"var(--ink-3)",cursor:"pointer",padding:"6px 16px",fontFamily:"inherit"}}>
                 Maybe later
               </button>
             </div>
