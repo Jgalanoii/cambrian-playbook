@@ -6512,6 +6512,11 @@ ${isOpen
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
                       <span style={{width:20,textAlign:"center"}}>✉</span> Contact Us
                     </button>
+                    {sbUser&&<button onClick={()=>{setUpgradeOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--tan-0)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      <span style={{width:20,textAlign:"center"}}>⚡</span> Plans & Pricing
+                    </button>}
                     <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
                     {sbUser?.email==="itsjoegalano@gmail.com"&&(
                       <>
