@@ -1308,13 +1308,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
-    `"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. ALWAYS check Glassdoor (every company with employees has reviews). Also check: G2 (if software/SaaS), Trustpilot, Amazon reviews (if consumer products), BBB, press coverage. What's the narrative?",`+
-    `"glassdoorRating":"Glassdoor rating as number e.g. 3.8 — EVERY company has Glassdoor reviews, search for it. Empty string ONLY if genuinely not on Glassdoor.",`+
-    `"g2Rating":"G2 rating as number e.g. 4.2 — empty string if not a software company",`+
-    `"npsSignal":"NPS/CSAT if published, brand loyalty indicators, consumer satisfaction data (J.D. Power, ACSI), renewal/repurchase rates, Amazon ratings for consumer products.",`+
-    `"trustpilotRating":"Trustpilot score or consumer review score — empty string if not found",`+
-    `"employeeScore":"Glassdoor CEO approval % or Indeed rating or Comparably score — search for this, most large employers have it",`+
-    `"standoutReview":{"text":"Most revealing quote from an employee review (Glassdoor), customer review (G2/Amazon/Trustpilot), or press piece — something a seller would want to know before calling","source":"Glassdoor / G2 / press / Amazon / analyst report","sentiment":"positive or negative"},`+
+    `"onlineSentiment":"2-3 sentences synthesizing what employees, press, and the market say about ${co} as a COMPANY TO SELL INTO. Focus on: employee morale (Glassdoor themes), leadership reputation, workplace culture signals, press narrative, and brand health. This is NOT about their product quality vs competitors — it's about what a seller needs to know before calling.",`+
+    `"glassdoorRating":"Glassdoor employer rating as number e.g. 3.8 — EVERY company with employees has Glassdoor reviews, search for it. Empty string ONLY if genuinely not on Glassdoor.",`+
+    `"g2Rating":"G2 rating as number e.g. 4.2 — only for software/SaaS companies, empty string otherwise",`+
+    `"npsSignal":"Consumer brand health signals when relevant (brand loyalty, market share trajectory, customer satisfaction trends). Useful context for understanding the company's position, not for comparing their products to competitors.",`+
+    `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found or not applicable",`+
+    `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — search for this, most large employers have it. This tells the seller about leadership stability.",`+
+    `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company — something that tells a seller what it's like to work with or sell into this organization","source":"Glassdoor / Indeed / press / analyst","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
