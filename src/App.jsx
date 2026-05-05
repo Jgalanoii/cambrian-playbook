@@ -1308,13 +1308,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
-    `"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. For B2B/SaaS: cite Glassdoor themes, G2 review patterns. For B2C/consumer: cite consumer reviews (Amazon, Trustpilot, BBB), brand perception, press coverage. For all: what's the narrative among employees and the market?",`+
-    `"glassdoorRating":"Glassdoor rating as number e.g. 3.8 — empty string if not found (don't write 'Not found')",`+
-    `"g2Rating":"G2 rating as number e.g. 4.2 — empty string if not a software company (don't write 'Not found')",`+
-    `"npsSignal":"NPS/CSAT if published, OR consumer sentiment signals: brand loyalty indicators, consumer satisfaction data, Net Promoter signals, renewal/repurchase rates. For B2C: Amazon rating, consumer survey data, brand perception scores.",`+
-    `"trustpilotRating":"Trustpilot or consumer review score — empty string if not found (don't write 'Not found')",`+
-    `"employeeScore":"Glassdoor CEO approval % or Indeed rating or Comparably score — empty string if not found",`+
-    `"standoutReview":{"text":"Most revealing quote from a customer/consumer review, employee review, or press piece — something a seller would want to know before calling. For B2C companies: a consumer review or analyst quote is fine.","source":"G2 / Glassdoor / press / Amazon / analyst report","sentiment":"positive or negative"},`+
+    `"onlineSentiment":"2-3 sentences synthesizing what customers, employees, and media say about ${co} right now. ALWAYS check Glassdoor (every company with employees has reviews). Also check: G2 (if software/SaaS), Trustpilot, Amazon reviews (if consumer products), BBB, press coverage. What's the narrative?",`+
+    `"glassdoorRating":"Glassdoor rating as number e.g. 3.8 — EVERY company has Glassdoor reviews, search for it. Empty string ONLY if genuinely not on Glassdoor.",`+
+    `"g2Rating":"G2 rating as number e.g. 4.2 — empty string if not a software company",`+
+    `"npsSignal":"NPS/CSAT if published, brand loyalty indicators, consumer satisfaction data (J.D. Power, ACSI), renewal/repurchase rates, Amazon ratings for consumer products.",`+
+    `"trustpilotRating":"Trustpilot score or consumer review score — empty string if not found",`+
+    `"employeeScore":"Glassdoor CEO approval % or Indeed rating or Comparably score — search for this, most large employers have it",`+
+    `"standoutReview":{"text":"Most revealing quote from an employee review (Glassdoor), customer review (G2/Amazon/Trustpilot), or press piece — something a seller would want to know before calling","source":"Glassdoor / G2 / press / Amazon / analyst report","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
@@ -1398,7 +1398,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `PRIORITY ORDER:\n`+
         `1. Press releases and company announcements from the last 12 months — these are HIGHEST VALUE\n`+
         `2. News coverage: M&A, leadership changes, funding, strategic moves\n`+
-        `3. Ratings and sentiment: Glassdoor + G2 (B2B/SaaS), Trustpilot + Amazon + consumer reviews (B2C), press tone for "${co}"\n`+
+        `3. Ratings and sentiment: ALWAYS search Glassdoor (employer reviews), plus G2 (if software), Trustpilot, Amazon reviews (if consumer products) for "${co}"\n`+
         `4. Growth signals or buying indicators\n`+
         `5. Workforce and culture profile\n`+
         `Return ONLY raw JSON (start with {):\n`+
