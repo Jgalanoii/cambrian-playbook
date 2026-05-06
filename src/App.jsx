@@ -6697,6 +6697,43 @@ ${isOpen
                 </div>
               )}
 
+              {/* Company setup prompt — show when org has no seller_url */}
+              {sbUser && orgCtx && !orgCtx.seller_url && (
+                <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:"var(--r-md)",padding:"14px 18px",marginBottom:16}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--amber)",marginBottom:6}}>Set up your selling organization</div>
+                  <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6,marginBottom:10}}>
+                    Your organization in Cambrian represents <strong>the company you sell for</strong> — not your personal account. Adding your company website connects your team, pre-fills sessions, and helps new teammates join automatically.
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                    <input id="setup-org-url" placeholder="yourcompany.com" defaultValue={orgCtx.seller_url||""}
+                      style={{flex:"1 1 200px",fontSize:13,padding:"8px 12px",border:"1.5px solid var(--amber)",borderRadius:8,background:"var(--surface)"}}
+                      onKeyDown={e=>{if(e.key==="Enter"){document.getElementById("setup-org-save")?.click();}e.stopPropagation();}} />
+                    <input id="setup-org-name" placeholder="Company name" defaultValue={orgCtx.name||""}
+                      style={{flex:"1 1 160px",fontSize:13,padding:"8px 12px",border:"1.5px solid var(--line-0)",borderRadius:8}}
+                      onKeyDown={e=>{if(e.key==="Enter"){document.getElementById("setup-org-save")?.click();}e.stopPropagation();}} />
+                    <button id="setup-org-save" onClick={async()=>{
+                      const url=document.getElementById("setup-org-url")?.value?.trim();
+                      const name=document.getElementById("setup-org-name")?.value?.trim();
+                      const patch={};
+                      if(url)patch.seller_url=url.startsWith("http")?url:`https://${url}`;
+                      if(name)patch.name=name;
+                      if(Object.keys(patch).length){
+                        const SB_URL=import.meta.env.VITE_SUPABASE_URL;
+                        const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
+                        await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgCtx.id}`,{method:"PATCH",headers:{apikey:SB_KEY,Authorization:`Bearer ${sbToken}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(patch)});
+                        setOrgCtx(prev=>({...prev,...patch}));
+                      }
+                    }}
+                      style={{padding:"8px 16px",borderRadius:8,background:"var(--amber)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                      Save
+                    </button>
+                  </div>
+                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:6}}>
+                    This is your selling company, not the companies you research. Think of it as "who signs your paycheck."
+                  </div>
+                </div>
+              )}
+
               {/* Value prop for guests */}
               {!sbUser && (
                 <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
