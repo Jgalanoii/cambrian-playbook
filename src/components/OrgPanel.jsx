@@ -216,9 +216,9 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
         {/* Header */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-0)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Your Team</div>
+            <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Your Selling Organization</div>
             <div style={{ fontSize: 12, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 6 }}>
-              {orgCtx?.name || "Your Org"} · {members.length === 1 ? "just you (for now)" : `${members.length} members`}
+              {orgCtx?.name || "Your Company"} · {members.length === 1 ? "just you (for now)" : `${members.length} members`}
               {orgCtx?.plan && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: orgCtx.plan === "paid" ? "var(--green-bg)" : "var(--amber-bg)", color: orgCtx.plan === "paid" ? "var(--green)" : "var(--amber)" }}>{orgCtx.plan}</span>}
             </div>
           </div>
@@ -601,8 +601,13 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
           {/* ═══ SETTINGS TAB ═══ */}
           {tab === "settings" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "12px 14px", marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 0 }}>
+                  Your organization is your <strong style={{ color: "var(--ink-0)" }}>selling company</strong> — the company you represent when running briefs. Everyone in your org shares runs, sessions, and team features.
+                </div>
+              </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>Organization Name</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>Company Name</div>
                 {isAdmin ? (
                   <div style={{ display: "flex", gap: 8 }}>
                     <input value={orgName} onChange={e => setOrgName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") saveOrgName(); e.stopPropagation(); }}
@@ -616,8 +621,8 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
               </div>
 
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Default Seller URL</div>
-                <div style={{ fontSize: 10, color: "var(--ink-3)", marginBottom: 6 }}>Pre-fills new sessions for all team members</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Company Website</div>
+                <div style={{ fontSize: 10, color: "var(--ink-3)", marginBottom: 6 }}>Your company's website — pre-fills new sessions and helps match new teammates automatically</div>
                 {isAdmin ? (
                   <div style={{ display: "flex", gap: 8 }}>
                     <input value={orgSellerUrl} onChange={e => setOrgSellerUrl(e.target.value)} placeholder="https://yourcompany.com"

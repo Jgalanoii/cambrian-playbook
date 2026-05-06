@@ -6505,7 +6505,7 @@ ${isOpen
                     {orgCtx&&<button onClick={()=>{setOrgPanelOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>👥</span> {orgCtx.userRole==="admin"?"Organization":"Team"}
+                      <span style={{width:20,textAlign:"center"}}>👥</span> My Company
                     </button>}
                     <button onClick={()=>{setContactOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}

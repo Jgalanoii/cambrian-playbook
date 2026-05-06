@@ -30,8 +30,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [searchQuery, setSearchQuery] = useState("");
   const isSuperuser = sbUser?.email === SUPERUSER_EMAIL;
 
-  const fetchData = () => {
-    setLoading(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const fetchData = (showSpinner) => {
+    if (showSpinner) setLoading(true);
+    else setRefreshing(true);
     fetch("/api/admin", {
       headers: { Authorization: `Bearer ${sbToken}` },
     })
@@ -41,12 +43,12 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
         else { setData(d); setError(""); }
       })
       .catch(() => setError("Failed to load"))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setRefreshing(false); });
   };
 
   useEffect(() => {
     if (!isSuperuser) return;
-    fetchData();
+    fetchData(true); // initial load shows spinner
   }, [sbToken]);
 
   // Superuser check — after all hooks
@@ -177,8 +179,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
             <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "var(--violet-bg)", color: "var(--violet)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Superuser</span>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={fetchData} disabled={loading} style={{ padding: "6px 12px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--ink-2)" }}>
-              {loading ? "Loading..." : "↻ Refresh"}
+            <button onClick={() => fetchData(false)} disabled={refreshing} style={{ padding: "6px 12px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--ink-2)" }}>
+              {refreshing ? "Refreshing..." : "↻ Refresh"}
             </button>
             <button onClick={onClose} style={{ padding: "6px 16px", borderRadius: 8, border: "1.5px solid var(--ink-0)", background: "var(--ink-0)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--surface)" }}>
               ← Back to App
