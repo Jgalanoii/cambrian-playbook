@@ -842,11 +842,16 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   setTimeout(() => setPlanSaveMsg(""), 4000);
                 };
                 const patchUser = async (fields, msg) => {
-                  await fetch(`${SB_URL}/rest/v1/users?id=eq.${u.id}`, {
-                    method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                    body: JSON.stringify(fields),
-                  });
-                  setPlanSaveMsg(msg); setTimeout(() => setPlanSaveMsg(""), 3000);
+                  try {
+                    const r = await fetch("/api/admin-action", {
+                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ action: "update_user", userId: u.id, email: u.email, fields }),
+                    });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? msg : `Error: ${d.error}`);
+                  } catch { setPlanSaveMsg("Failed to save"); }
+                  setTimeout(() => setPlanSaveMsg(""), 3000);
+                  setTimeout(fetchData, 500);
                 };
                 return (
                   <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "var(--surface)", overflow: "hidden" }}>
@@ -974,26 +979,35 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 const members = data.users.filter(u => u.org_id === o.id);
                 const nonMembers = data.users.filter(u => u.org_id !== o.id);
                 const patchOrg = async (fields, msg) => {
-                  await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${o.id}`, {
-                    method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                    body: JSON.stringify(fields),
-                  });
-                  setPlanSaveMsg(`✓ ${msg}`); setTimeout(() => setPlanSaveMsg(""), 3000);
+                  try {
+                    const r = await fetch("/api/admin-action", {
+                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ action: "update_org", orgId: o.id, email: "org", fields }),
+                    });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? `✓ ${msg}` : `Error: ${d.error}`);
+                  } catch { setPlanSaveMsg("Failed to save"); }
+                  setTimeout(() => setPlanSaveMsg(""), 3000);
+                  setTimeout(fetchData, 500);
                 };
                 const moveUser = async (userId, userName) => {
-                  await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
-                    method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                    body: JSON.stringify({ org_id: o.id }),
-                  });
-                  setPlanSaveMsg(`✓ ${userName} added to ${o.name}`); setTimeout(() => setPlanSaveMsg(""), 3000);
+                  try {
+                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ action: "update_user", userId, email: userName, fields: { org_id: o.id } }) });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? `✓ ${userName} added to ${o.name}` : `Error: ${d.error}`);
+                  } catch { setPlanSaveMsg("Failed"); }
+                  setTimeout(() => setPlanSaveMsg(""), 3000);
                   setTimeout(fetchData, 500);
                 };
                 const removeUser = async (userId, userName) => {
-                  await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
-                    method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                    body: JSON.stringify({ org_id: null }),
-                  });
-                  setPlanSaveMsg(`✓ ${userName} removed from ${o.name}`); setTimeout(() => setPlanSaveMsg(""), 3000);
+                  try {
+                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ action: "update_user", userId, email: userName, fields: { org_id: null } }) });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? `✓ ${userName} removed from ${o.name}` : `Error: ${d.error}`);
+                  } catch { setPlanSaveMsg("Failed"); }
+                  setTimeout(() => setPlanSaveMsg(""), 3000);
                   setTimeout(fetchData, 500);
                 };
                 const isPaid = ["paid","starter","pro","team","enterprise"].includes(o.plan);

@@ -134,6 +134,41 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Failed to delete org" });
     }
 
+    if (action === "update_user") {
+      const { userId, fields } = req.body || {};
+      if (!userId || !fields) return res.status(400).json({ error: "userId and fields required" });
+      // Only allow safe fields
+      const allowed = ["role", "org_id", "name"];
+      const patch = {};
+      for (const k of allowed) { if (k in fields) patch[k] = fields[k]; }
+      if (!Object.keys(patch).length) return res.status(400).json({ error: "No valid fields" });
+
+      const r = await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: "PATCH",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify(patch),
+      });
+      if (r.ok) return res.json({ ok: true, message: `Updated ${email}` });
+      return res.status(400).json({ error: "Failed to update user" });
+    }
+
+    if (action === "update_org") {
+      const { orgId, fields } = req.body || {};
+      if (!orgId || !fields) return res.status(400).json({ error: "orgId and fields required" });
+      const allowed = ["name", "seller_url", "plan", "run_limit", "max_run_limit", "run_count", "max_run_count"];
+      const patch = {};
+      for (const k of allowed) { if (k in fields) patch[k] = fields[k]; }
+      if (!Object.keys(patch).length) return res.status(400).json({ error: "No valid fields" });
+
+      const r = await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}`, {
+        method: "PATCH",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify(patch),
+      });
+      if (r.ok) return res.json({ ok: true, message: `Updated org` });
+      return res.status(400).json({ error: "Failed to update org" });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
   } catch (e) {
     return res.status(500).json({ error: e.message });
