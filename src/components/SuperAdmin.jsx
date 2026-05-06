@@ -743,19 +743,19 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {planSaveMsg && <div style={{ fontSize: 12, color: "var(--green)", fontWeight: 600, marginBottom: 10, padding: "6px 12px", background: "var(--green-bg)", borderRadius: 8 }}>✓ {planSaveMsg}</div>}
 
               {/* Invite to specific org */}
-              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginBottom: 8 }}>Invite User to Org</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", whiteSpace: "nowrap" }}>Invite →</span>
                   <input id="sa-invite-email" placeholder="email@company.com" type="email"
-                    style={{ flex: "1 1 180px", fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}
+                    style={{ flex: "1 1 160px", fontSize: 12, padding: "6px 10px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}
                     onKeyDown={e => e.stopPropagation()} />
                   <select id="sa-invite-org" defaultValue=""
-                    style={{ fontSize: 12, padding: "8px 10px", border: "1.5px solid var(--line-0)", borderRadius: 8, minWidth: 140 }}>
-                    <option value="" disabled>Select org...</option>
-                    {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
+                    style={{ fontSize: 11, padding: "6px 8px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}>
+                    <option value="" disabled>Org...</option>
+                    {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                   </select>
                   <select id="sa-invite-role" defaultValue="rep"
-                    style={{ fontSize: 12, padding: "8px 10px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}>
+                    style={{ fontSize: 11, padding: "6px 8px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}>
                     <option value="rep">Rep</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
@@ -776,7 +776,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     } catch { setPlanSaveMsg("Failed to invite"); }
                     setTimeout(() => setPlanSaveMsg(""), 4000);
                   }}
-                    style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    style={{ padding: "6px 14px", borderRadius: 6, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
                     Send Invite
                   </button>
                 </div>
@@ -826,100 +826,45 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       </div>
                     </div>
 
-                    {/* Management panel */}
+                    {/* Management panel — user-level only (org settings live in Orgs tab) */}
                     <div style={{ borderTop: "1px solid var(--line-0)", padding: "10px 14px", background: "var(--bg-1)" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 10 }}>
-                        {/* Role */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Role</div>
-                          <select value={u.role || "rep"} onChange={e => patchUser({ role: e.target.value }, `${u.email} → ${e.target.value}`)}
+                      <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+                        <div style={{ flex: "1 1 120px" }}>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Role</label>
+                          <select value={u.role || "rep"} onChange={e => { patchUser({ role: e.target.value }, `✓ ${u.email} → ${e.target.value}`); setTimeout(fetchData, 500); }}
                             style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", background: rb, color: rc, fontWeight: 700 }}>
                             <option value="rep">Rep</option>
                             <option value="manager">Manager</option>
                             <option value="admin">Admin</option>
                           </select>
                         </div>
-                        {/* Organization */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Organization</div>
-                          <select value={u.org_id || ""} onChange={e => patchUser({ org_id: e.target.value || null }, `${u.email} → ${e.target.value ? data.orgs.find(o => o.id === e.target.value)?.name : "no org"}`)}
+                        <div style={{ flex: "1 1 180px" }}>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Organization</label>
+                          <select value={u.org_id || ""} onChange={e => { patchUser({ org_id: e.target.value || null }, `✓ ${u.email} → ${e.target.value ? data.orgs.find(o => o.id === e.target.value)?.name : "no org"}`); setTimeout(fetchData, 500); }}
                             style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)" }}>
                             <option value="">No org</option>
                             {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
                           </select>
                         </div>
-                        {/* Name */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Display Name</div>
+                        <div style={{ flex: "1 1 140px" }}>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Display Name</label>
                           <input defaultValue={u.name || ""} placeholder="Full name"
-                            onBlur={e => { const v = e.target.value.trim(); if (v !== (u.name || "")) patchUser({ name: v }, `Name → ${v}`); }}
+                            onBlur={e => { const v = e.target.value.trim(); if (v !== (u.name || "")) patchUser({ name: v }, `✓ Name → ${v}`); }}
                             onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
                             style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", boxSizing: "border-box" }} />
                         </div>
                       </div>
 
-                      {/* Org details + plan management */}
+                      {/* Org summary (read-only — manage in Orgs tab) */}
                       {org && (
-                        <div style={{ marginBottom: 10 }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 8 }}>
-                            {/* Plan */}
-                            <div>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Plan</div>
-                              <select defaultValue={org.plan} onChange={async e => {
-                                const plan = e.target.value;
-                                const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 }, paid: {}, suspended: {} };
-                                const patch = { plan, ...(limits[plan] || {}) };
-                                await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(patch) });
-                                setPlanSaveMsg(`${org.name} → ${plan}${limits[plan]?.run_limit ? ` (${limits[plan].run_limit} runs)` : ""}`);
-                                setTimeout(() => setPlanSaveMsg(""), 3000);
-                              }}
-                                style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", fontWeight: 600,
-                                  background: org.plan === "paid" ? "var(--green-bg)" : org.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
-                                  color: org.plan === "paid" ? "var(--green)" : org.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>
-                                <option value="trial">Trial (3 runs)</option>
-                                <option value="starter">Starter (25 runs)</option>
-                                <option value="pro">Pro (100 runs)</option>
-                                <option value="team">Team (250 runs)</option>
-                                <option value="enterprise">Enterprise (1,000 runs)</option>
-                                <option value="paid">Paid (custom)</option>
-                                <option value="suspended">Suspended</option>
-                              </select>
-                            </div>
-                            {/* Run limit */}
-                            <div>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Run Limit</div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <span style={{ fontSize: 12, fontWeight: 700 }}>{org.run_count}</span>
-                                <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
-                                <input type="number" defaultValue={org.run_limit} style={{ width: 50, fontSize: 12, padding: "5px 6px", borderRadius: 6, border: "1px solid var(--line-0)", textAlign: "center" }}
-                                  onBlur={async e => { const v = Number(e.target.value); if (v === org.run_limit) return; await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ run_limit: v }) }); setPlanSaveMsg(`${org.name} run limit → ${v}`); setTimeout(() => setPlanSaveMsg(""), 3000); }}
-                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }} />
-                              </div>
-                            </div>
-                            {/* Max run limit */}
-                            <div>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--violet)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Max Runs</div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>{org.max_run_count || 0}</span>
-                                <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
-                                <input type="number" defaultValue={org.max_run_limit || 0} style={{ width: 50, fontSize: 12, padding: "5px 6px", borderRadius: 6, border: "1px solid var(--violet)", textAlign: "center", color: "var(--violet)" }}
-                                  onBlur={async e => { const v = Number(e.target.value); if (v === (org.max_run_limit || 0)) return; await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ max_run_limit: v }) }); setPlanSaveMsg(`${org.name} max run limit → ${v}`); setTimeout(() => setPlanSaveMsg(""), 3000); }}
-                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }} />
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "var(--ink-3)" }}>
-                            <span>{org.member_count} member{org.member_count !== 1 ? "s" : ""}</span>
-                            <span>·</span>
-                            <span>{org.name}</span>
-                            <button onClick={async () => {
-                              await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ run_count: 0, max_run_count: 0 }) });
-                              setPlanSaveMsg(`${org.name} runs reset to 0`); setTimeout(() => setPlanSaveMsg(""), 3000);
-                            }}
-                              style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer", marginLeft: "auto" }}>
-                              Reset Runs
-                            </button>
-                          </div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, color: "var(--ink-2)", marginBottom: 10, padding: "6px 10px", background: "var(--surface)", borderRadius: 6, flexWrap: "wrap" }}>
+                          <strong>{org.name}</strong>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20,
+                            background: ["paid","starter","pro","team","enterprise"].includes(org.plan) ? "var(--green-bg)" : org.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
+                            color: ["paid","starter","pro","team","enterprise"].includes(org.plan) ? "var(--green)" : org.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>{org.plan}</span>
+                          <span>{org.run_count}/{org.run_limit} runs</span>
+                          {(org.max_run_limit||0)>0 && <span style={{color:"var(--violet)"}}>{org.max_run_count||0}/{org.max_run_limit} max</span>}
+                          <button onClick={()=>setTab("orgs")} style={{marginLeft:"auto",fontSize:10,color:"var(--tan-0)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage org →</button>
                         </div>
                       )}
 
