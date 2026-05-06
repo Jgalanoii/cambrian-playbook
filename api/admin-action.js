@@ -178,8 +178,9 @@ export default async function handler(req, res) {
         body: JSON.stringify(orgData),
       });
       const d = await r.json();
+      console.log("[admin] create_org response:", r.status, JSON.stringify(d));
       if (d?.[0]?.id) return res.json({ ok: true, message: `Created "${orgData.name}"`, orgId: d[0].id });
-      return res.status(400).json({ error: "Failed to create org" });
+      return res.status(400).json({ error: d?.message || d?.error || d?.details || `Failed to create org (${r.status})` });
     }
 
     return res.status(400).json({ error: `Unknown action: ${action}` });
