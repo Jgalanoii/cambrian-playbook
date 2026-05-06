@@ -1070,15 +1070,27 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                           style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer" }}>
                           Reset Runs
                         </button>
-                        {members.length === 0 && <button onClick={async () => {
-                          if (!window.confirm(`Delete org "${o.name}"? This org has no members.`)) return;
+                        <button onClick={async () => {
+                          const msg = members.length > 0
+                            ? `Delete org "${o.name}"? ${members.length} member${members.length > 1 ? "s" : ""} will be moved to "No org" and lose access to shared sessions.`
+                            : `Delete org "${o.name}"?`;
+                          if (!window.confirm(msg)) return;
+                          // Unassign all members first
+                          if (members.length > 0) {
+                            for (const m of members) {
+                              await fetch(`${SB_URL}/rest/v1/users?id=eq.${m.id}`, {
+                                method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                                body: JSON.stringify({ org_id: null }),
+                              });
+                            }
+                          }
                           await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${o.id}`, { method: "DELETE", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } });
-                          setPlanSaveMsg(`Deleted org ${o.name}`);
-                          setTimeout(fetchData, 1500);
+                          setPlanSaveMsg(`Deleted org ${o.name}${members.length > 0 ? ` (${members.length} members unassigned)` : ""}`);
+                          setTimeout(fetchData, 1000);
                         }}
                           style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer" }}>
-                          Delete Org
-                        </button>}
+                          Delete Org{members.length > 0 ? ` (${members.length} members)` : ""}
+                        </button>
                       </div>
                     </div>
                   </div>
