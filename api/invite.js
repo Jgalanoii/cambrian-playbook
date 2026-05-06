@@ -62,29 +62,34 @@ export default async function handler(req, res) {
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
 
-  const { email, role } = req.body || {};
+  const { email, role, orgId: overrideOrgId } = req.body || {};
   if (!email || !EMAIL_RE.test(email.trim())) return res.status(400).json({ error: "Valid email required (user@domain.tld)" });
   if (role && !["rep", "manager", "admin"].includes(role)) return res.status(400).json({ error: "Invalid role" });
 
-  // Verify the caller is an admin of their org
-  const users = await sbFetch(`users?id=eq.${payload.sub}&select=org_id,role`);
+  // Verify the caller is an admin of their org (or superuser for cross-org invites)
+  const users = await sbFetch(`users?id=eq.${payload.sub}&select=org_id,role,email`);
   const caller = users?.[0];
-  if (!caller?.org_id) return res.status(403).json({ error: "You must belong to an organization" });
-  if (caller.role !== "admin") return res.status(403).json({ error: "Only admins can invite users" });
+  const isSuperuser = caller?.email === (process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com");
+
+  // Superuser can specify any orgId; regular admins use their own org
+  const targetOrgId = (isSuperuser && overrideOrgId) ? overrideOrgId : caller?.org_id;
+
+  if (!targetOrgId) return res.status(403).json({ error: "You must belong to an organization" });
+  if (!isSuperuser && caller.role !== "admin") return res.status(403).json({ error: "Only admins can invite users" });
 
   // Check if already a member of this org
-  const existingMembers = await sbFetch(`users?org_id=eq.${caller.org_id}&email=eq.${encodeURIComponent(email)}&select=id`);
-  if (existingMembers?.length > 0) return res.status(400).json({ error: "This person is already a member of your organization. No invite needed." });
+  const existingMembers = await sbFetch(`users?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(email)}&select=id`);
+  if (existingMembers?.length > 0) return res.status(400).json({ error: "This person is already a member of that organization. No invite needed." });
 
   // Delete any existing pending invitation for this email (allows resend)
-  await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${caller.org_id}&email=eq.${encodeURIComponent(email.trim().toLowerCase())}&accepted_at=is.null`, {
+  await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(email.trim().toLowerCase())}&accepted_at=is.null`, {
     method: "DELETE",
     headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
   });
 
   // Create fresh invitation record
   const invResult = await sbFetch("invitations", "POST", {
-    org_id: caller.org_id,
+    org_id: targetOrgId,
     email: email.trim().toLowerCase(),
     role: role || "rep",
     invited_by: payload.sub,

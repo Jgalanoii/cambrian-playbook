@@ -729,6 +729,46 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               </div>
               {planSaveMsg && <div style={{ fontSize: 12, color: "var(--green)", fontWeight: 600, marginBottom: 10, padding: "6px 12px", background: "var(--green-bg)", borderRadius: 8 }}>✓ {planSaveMsg}</div>}
 
+              {/* Invite to specific org */}
+              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginBottom: 8 }}>Invite User to Org</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <input id="sa-invite-email" placeholder="email@company.com" type="email"
+                    style={{ flex: "1 1 180px", fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}
+                    onKeyDown={e => e.stopPropagation()} />
+                  <select id="sa-invite-org" defaultValue=""
+                    style={{ fontSize: 12, padding: "8px 10px", border: "1.5px solid var(--line-0)", borderRadius: 8, minWidth: 140 }}>
+                    <option value="" disabled>Select org...</option>
+                    {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
+                  </select>
+                  <select id="sa-invite-role" defaultValue="rep"
+                    style={{ fontSize: 12, padding: "8px 10px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}>
+                    <option value="rep">Rep</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <button onClick={async () => {
+                    const email = document.getElementById("sa-invite-email")?.value?.trim();
+                    const orgId = document.getElementById("sa-invite-org")?.value;
+                    const role = document.getElementById("sa-invite-role")?.value || "rep";
+                    if (!email || !orgId) { setPlanSaveMsg("Email and org required"); setTimeout(() => setPlanSaveMsg(""), 3000); return; }
+                    try {
+                      const r = await fetch("/api/invite", {
+                        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                        body: JSON.stringify({ email, role, orgId }),
+                      });
+                      const d = await r.json();
+                      setPlanSaveMsg(d.ok ? `Invited ${email} to org` : `Error: ${d.error}`);
+                      if (d.ok) document.getElementById("sa-invite-email").value = "";
+                    } catch { setPlanSaveMsg("Failed to invite"); }
+                    setTimeout(() => setPlanSaveMsg(""), 4000);
+                  }}
+                    style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    Send Invite
+                  </button>
+                </div>
+              </div>
+
               {/* User cards */}
               {filteredUsers.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
                 const org = data.orgs.find(o => o.id === u.org_id);
