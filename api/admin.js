@@ -186,6 +186,10 @@ export default async function handler(req, res) {
         seller_stage: d.sellerStage || null,
         products_count: (d.products || []).filter(p => p?.name?.trim()).length,
         docs_count: (d.sellerDocs || []).length,
+        // Uploaded document details
+        docs: (d.sellerDocs || []).map(doc => ({ label: doc.label || "Untitled", contentPreview: (doc.content || "").slice(0, 200) })),
+        products: (d.products || []).filter(p => p?.name?.trim()).map(p => ({ name: p.name, description: (p.description || "").slice(0, 100) })),
+        proof_points: (d.sellerProofPoints || []).map(pp => ({ type: pp.type || "unknown", label: pp.label || "", content: (pp.content || "").slice(0, 150) })),
       };
     });
 

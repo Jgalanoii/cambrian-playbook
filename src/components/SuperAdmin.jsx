@@ -376,6 +376,46 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 </div>
               )}
 
+              {/* Uploaded documents across all sessions */}
+              {(()=>{
+                const allDocs = filteredActivity.filter(a => a.docs?.length > 0 || a.products?.length > 0 || a.proof_points?.length > 0);
+                return allDocs.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                      Uploaded Content ({allDocs.reduce((s,a) => s + (a.docs?.length||0) + (a.products?.length||0) + (a.proof_points?.length||0), 0)} items across {allDocs.length} sessions)
+                    </div>
+                    <div style={{ maxHeight: 300, overflow: "auto", border: "1px solid var(--line-0)", borderRadius: 8 }}>
+                      <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left", position: "sticky", top: 0, background: "var(--surface)" }}>
+                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Type</th>
+                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Name</th>
+                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Preview</th>
+                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>User</th>
+                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Session</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allDocs.flatMap(a => [
+                            ...(a.docs||[]).map((d,i) => ({ type: "📄 Doc", name: d.label, preview: d.contentPreview, user: a.user_name, session: a.session_name, key: `doc-${a.id}-${i}` })),
+                            ...(a.products||[]).map((p,i) => ({ type: "📦 Product", name: p.name, preview: p.description, user: a.user_name, session: a.session_name, key: `prod-${a.id}-${i}` })),
+                            ...(a.proof_points||[]).map((pp,i) => ({ type: `✓ ${pp.type}`, name: pp.label || pp.type, preview: pp.content, user: a.user_name, session: a.session_name, key: `pp-${a.id}-${i}` })),
+                          ]).map(row => (
+                            <tr key={row.key} style={{ borderBottom: "1px solid var(--line-1)" }}>
+                              <td style={{ padding: "5px 8px", whiteSpace: "nowrap", color: "var(--tan-0)", fontWeight: 600 }}>{row.type}</td>
+                              <td style={{ padding: "5px 8px", fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</td>
+                              <td style={{ padding: "5px 8px", color: "var(--ink-3)", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.preview || "—"}</td>
+                              <td style={{ padding: "5px 8px", color: "var(--ink-2)" }}>{row.user}</td>
+                              <td style={{ padding: "5px 8px", color: "var(--ink-3)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.session}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* All sessions table */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
                 All Sessions {hasActiveFilters && <span style={{ fontWeight: 400, color: "var(--amber)" }}>({filteredActivity.length} of {data.recent_activity.length})</span>}
