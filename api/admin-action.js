@@ -169,6 +169,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Failed to update org" });
     }
 
+    if (action === "create_org") {
+      const { orgData } = req.body || {};
+      if (!orgData?.name) return res.status(400).json({ error: "Org name required" });
+      const r = await fetch(`${SB_URL}/rest/v1/orgs`, {
+        method: "POST",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify(orgData),
+      });
+      const d = await r.json();
+      if (d?.[0]?.id) return res.json({ ok: true, message: `Created "${orgData.name}"`, orgId: d[0].id });
+      return res.status(400).json({ error: "Failed to create org" });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
   } catch (e) {
     return res.status(500).json({ error: e.message });

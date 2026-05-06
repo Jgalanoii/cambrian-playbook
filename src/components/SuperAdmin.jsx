@@ -741,6 +741,51 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ ORGANIZATIONS ═══ */}
           {tab === "orgs" && (
             <div>
+              {/* ── Create New Org ── */}
+              <div style={{ background: "var(--bg-1)", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", whiteSpace: "nowrap" }}>New Org →</span>
+                  <input id="sa-new-org-name" placeholder="Company name" onKeyDown={e => e.stopPropagation()}
+                    style={{ flex: "1 1 140px", fontSize: 12, padding: "6px 10px", border: "1.5px solid var(--line-0)", borderRadius: 6, background: "var(--surface)" }} />
+                  <input id="sa-new-org-url" placeholder="company.com (optional)" onKeyDown={e => e.stopPropagation()}
+                    style={{ flex: "1 1 140px", fontSize: 12, padding: "6px 10px", border: "1.5px solid var(--line-0)", borderRadius: 6, background: "var(--surface)" }} />
+                  <select id="sa-new-org-plan" defaultValue="trial"
+                    style={{ fontSize: 11, padding: "6px 8px", border: "1.5px solid var(--line-0)", borderRadius: 6, background: "var(--surface)" }}>
+                    <option value="trial">Trial (3 runs)</option>
+                    <option value="starter">Starter (25)</option>
+                    <option value="pro">Pro (100)</option>
+                    <option value="team">Team (250)</option>
+                    <option value="enterprise">Enterprise (1K)</option>
+                  </select>
+                  <button onClick={async () => {
+                    const name = document.getElementById("sa-new-org-name")?.value?.trim();
+                    if (!name) { setPlanSaveMsg("Org name required"); setTimeout(() => setPlanSaveMsg(""), 3000); return; }
+                    const url = document.getElementById("sa-new-org-url")?.value?.trim();
+                    const plan = document.getElementById("sa-new-org-plan")?.value || "trial";
+                    const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 } };
+                    const body = { name, plan, ...(limits[plan] || {}) };
+                    if (url) body.seller_url = url.startsWith("http") ? url : `https://${url}`;
+                    try {
+                      const r = await fetch("/api/admin-action", {
+                        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                        body: JSON.stringify({ action: "create_org", email: "org", orgData: body }),
+                      });
+                      const d = await r.json();
+                      if (d.ok) {
+                        setPlanSaveMsg(`✓ Created org "${name}"`);
+                        document.getElementById("sa-new-org-name").value = "";
+                        document.getElementById("sa-new-org-url").value = "";
+                        setTimeout(fetchData, 500);
+                      } else { setPlanSaveMsg(`Error: ${d.error}`); }
+                    } catch { setPlanSaveMsg("Failed to create org"); }
+                    setTimeout(() => setPlanSaveMsg(""), 3000);
+                  }}
+                    style={{ padding: "6px 14px", borderRadius: 6, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    Create
+                  </button>
+                </div>
+              </div>
+
               {/* ── Company Organizations ── */}
               {(() => {
                 const companyOrgs = filteredOrgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
