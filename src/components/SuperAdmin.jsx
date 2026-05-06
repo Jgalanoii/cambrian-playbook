@@ -778,9 +778,9 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             <tr key={o.id}>
                               <td>
                                 <input defaultValue={o.name}
-                                  onBlur={e => { const v = e.target.value.trim(); if (v && v !== o.name) patchOrg({ name: v }, `Renamed to ${v}`); }}
+                                  onBlur={e => { const v = e.target.value.trim(); if (v && v !== o.name) patchOrg({ name: v }, `✓ Renamed to ${v}`); }}
                                   onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                                  style={{ border: "none", background: "transparent", fontWeight: 600, fontSize: 13, width: "100%", outline: "none", color: "var(--ink-0)" }} />
+                                  style={{ border: "1px solid var(--line-0)", background: "var(--surface)", fontWeight: 600, fontSize: 13, width: "100%", padding: "4px 8px", borderRadius: 4, color: "var(--ink-0)" }} />
                               </td>
                               <td>
                                 <select defaultValue={o.plan} onChange={e => {
@@ -798,10 +798,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                 </select>
                               </td>
                               <td>
-                                <input defaultValue={o.seller_url || ""} placeholder="https://..."
-                                  onBlur={e => { const v = e.target.value.trim(); if (v !== (o.seller_url || "")) patchOrg({ seller_url: v || null }, `Website \u2192 ${v || "cleared"}`); }}
+                                <input defaultValue={o.seller_url || ""} placeholder="https://company.com"
+                                  onBlur={e => { const v = e.target.value.trim(); if (v !== (o.seller_url || "")) patchOrg({ seller_url: v || null }, `✓ Website → ${v || "cleared"}`); }}
                                   onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                                  style={{ border: "none", background: "transparent", fontSize: 11, width: "100%", outline: "none", color: "var(--ink-2)" }} />
+                                  style={{ border: "1px solid var(--line-0)", background: "var(--surface)", fontSize: 11, width: "100%", padding: "4px 8px", borderRadius: 4, color: "var(--ink-1)" }} />
                               </td>
                               <td style={{ whiteSpace: "nowrap" }}>
                                 <span style={{ fontWeight: 600 }}>{o.run_count}</span>
@@ -851,48 +851,80 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {/* ── Personal Workspaces ── */}
               {(() => {
                 const personalOrgs = filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+                const companyOrgList = (data.orgs || []).filter(o => o.seller_url || o.member_count > 1);
+                const patchOrgApi = async (orgId, fields, msg) => {
+                  try {
+                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ action: "update_org", orgId, email: "org", fields }) });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? msg : `Error: ${d.error}`);
+                  } catch { setPlanSaveMsg("Failed"); }
+                  setTimeout(() => setPlanSaveMsg(""), 3000); setTimeout(fetchData, 500);
+                };
+                const moveUserToOrg = async (userId, email, targetOrgId, targetOrgName) => {
+                  try {
+                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ action: "update_user", userId, email, fields: { org_id: targetOrgId } }) });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? `✓ Moved ${email} → ${targetOrgName}` : `Error: ${d.error}`);
+                  } catch { setPlanSaveMsg("Failed"); }
+                  setTimeout(() => setPlanSaveMsg(""), 3000); setTimeout(fetchData, 500);
+                };
                 return personalOrgs.length > 0 && (
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
                       Personal Workspaces ({personalOrgs.length})
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 10 }}>
+                      Move users to a company org, or add a website to convert a workspace into a company org.
                     </div>
                     <table className="admin-table">
                       <thead>
                         <tr>
                           <th>Name</th>
                           <th>Member</th>
-                          <th>Plan</th>
-                          <th>Runs</th>
+                          <th>Move to Company Org</th>
+                          <th>Or Set Website</th>
                           <th style={{ width: 60 }}>Delete</th>
                         </tr>
                       </thead>
                       <tbody>
                         {personalOrgs.map(o => {
                           const members = data.users.filter(u => u.org_id === o.id);
+                          const member = members[0];
                           return (
                             <tr key={o.id}>
                               <td style={{ fontWeight: 600, color: "var(--ink-1)" }}>{o.name}</td>
                               <td style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                                {members.length === 0 ? "Empty" : members.map(m => m.name || m.email?.split("@")[0]).join(", ")}
+                                {member ? (member.name || member.email?.split("@")[0]) : "Empty"}
+                                {member?.email && <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{member.email}</div>}
                               </td>
                               <td>
-                                <span className="admin-badge" style={{
-                                  background: ["paid","starter","pro","team","enterprise"].includes(o.plan) ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
-                                  color: ["paid","starter","pro","team","enterprise"].includes(o.plan) ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)",
-                                }}>{o.plan}</span>
-                              </td>
-                              <td style={{ whiteSpace: "nowrap" }}>
-                                <span style={{ fontWeight: 600 }}>{o.run_count}</span>
-                                <span style={{ color: "var(--ink-3)" }}>/{o.run_limit}</span>
+                                {member && companyOrgList.length > 0 ? (
+                                  <select defaultValue="" onChange={e => {
+                                    const targetId = e.target.value;
+                                    if (!targetId) return;
+                                    const targetOrg = companyOrgList.find(co => co.id === targetId);
+                                    moveUserToOrg(member.id, member.email, targetId, targetOrg?.name || "org");
+                                  }} style={{ fontSize: 11, padding: "3px 6px", borderRadius: 4 }}>
+                                    <option value="">Move to...</option>
+                                    {companyOrgList.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
+                                  </select>
+                                ) : <span style={{ fontSize: 10, color: "var(--ink-3)" }}>—</span>}
                               </td>
                               <td>
-                                <button className="admin-action-item danger" style={{ padding: "2px 8px", fontSize: 10, border: "1px solid var(--red)", borderRadius: 4, background: "var(--red-bg)" }}
+                                <input placeholder="company.com" style={{ fontSize: 11, padding: "3px 6px", border: "1px solid var(--line-0)", borderRadius: 4, width: 120 }}
+                                  onBlur={e => { const v = e.target.value.trim(); if (v) patchOrgApi(o.id, { seller_url: v.startsWith("http") ? v : `https://${v}` }, `✓ ${o.name} → company org (${v})`); }}
+                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }} />
+                              </td>
+                              <td>
+                                <button style={{ fontSize: 10, padding: "2px 8px", border: "1px solid var(--red)", borderRadius: 4, background: "var(--red-bg)", color: "var(--red)", cursor: "pointer", fontWeight: 600 }}
                                   onClick={async () => {
                                     if (!window.confirm(`Delete "${o.name}"?${members.length > 0 ? ` ${members.length} member(s) will be unassigned.` : ""}`)) return;
                                     try {
                                       const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` }, body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }) });
                                       const d = await r.json();
-                                      setPlanSaveMsg(d.ok ? `Deleted ${o.name}` : `Error: ${d.error}`);
+                                      setPlanSaveMsg(d.ok ? `✓ Deleted ${o.name}` : `Error: ${d.error}`);
                                     } catch { setPlanSaveMsg("Failed"); }
                                     setTimeout(fetchData, 1000);
                                   }}>
