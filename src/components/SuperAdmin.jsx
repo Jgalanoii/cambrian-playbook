@@ -1075,17 +1075,14 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             ? `Delete org "${o.name}"? ${members.length} member${members.length > 1 ? "s" : ""} will be moved to "No org" and lose access to shared sessions.`
                             : `Delete org "${o.name}"?`;
                           if (!window.confirm(msg)) return;
-                          // Unassign all members first
-                          if (members.length > 0) {
-                            for (const m of members) {
-                              await fetch(`${SB_URL}/rest/v1/users?id=eq.${m.id}`, {
-                                method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                                body: JSON.stringify({ org_id: null }),
-                              });
-                            }
-                          }
-                          await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${o.id}`, { method: "DELETE", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } });
-                          setPlanSaveMsg(`Deleted org ${o.name}${members.length > 0 ? ` (${members.length} members unassigned)` : ""}`);
+                          try {
+                            const r = await fetch("/api/admin-action", {
+                              method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                              body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }),
+                            });
+                            const d = await r.json();
+                            setPlanSaveMsg(d.ok ? `Deleted ${o.name}${members.length > 0 ? ` (${members.length} members unassigned)` : ""}` : `Error: ${d.error}`);
+                          } catch { setPlanSaveMsg("Failed to delete org"); }
                           setTimeout(fetchData, 1000);
                         }}
                           style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer" }}>

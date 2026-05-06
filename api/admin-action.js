@@ -104,6 +104,36 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: d.error_description || d.msg || "Failed to delete auth user" });
     }
 
+    if (action === "delete_org") {
+      const { orgId } = req.body || {};
+      if (!orgId) return res.status(400).json({ error: "orgId required" });
+
+      // 1. Unassign all members from this org
+      await fetch(`${SB_URL}/rest/v1/users?org_id=eq.${orgId}`, {
+        method: "PATCH",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ org_id: null }),
+      });
+
+      // 2. Delete pending invitations for this org
+      await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${orgId}`, {
+        method: "DELETE",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+      });
+
+      // 3. Delete the org
+      const delRes = await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}`, {
+        method: "DELETE",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+      });
+
+      if (delRes.ok) {
+        console.log(`[admin] Deleted org ${orgId}`);
+        return res.json({ ok: true, message: `Org deleted` });
+      }
+      return res.status(400).json({ error: "Failed to delete org" });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
   } catch (e) {
     return res.status(500).json({ error: e.message });
