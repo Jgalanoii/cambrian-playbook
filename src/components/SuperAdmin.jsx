@@ -845,13 +845,68 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                         </div>
                       </div>
 
-                      {/* Org details */}
+                      {/* Org details + plan management */}
                       {org && (
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10, fontSize: 11, color: "var(--ink-2)" }}>
-                          <span><strong>{org.name}</strong> · {org.plan}</span>
-                          <span>Runs: <strong>{org.run_count}</strong>/{org.run_limit}</span>
-                          {(org.max_run_limit || 0) > 0 && <span style={{ color: "var(--violet)" }}>Max: <strong>{org.max_run_count}</strong>/{org.max_run_limit}</span>}
-                          <span>{org.member_count} member{org.member_count !== 1 ? "s" : ""}</span>
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 8 }}>
+                            {/* Plan */}
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Plan</div>
+                              <select defaultValue={org.plan} onChange={async e => {
+                                const plan = e.target.value;
+                                const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 }, paid: {}, suspended: {} };
+                                const patch = { plan, ...(limits[plan] || {}) };
+                                await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+                                setPlanSaveMsg(`${org.name} → ${plan}${limits[plan]?.run_limit ? ` (${limits[plan].run_limit} runs)` : ""}`);
+                                setTimeout(() => setPlanSaveMsg(""), 3000);
+                              }}
+                                style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", fontWeight: 600,
+                                  background: org.plan === "paid" ? "var(--green-bg)" : org.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
+                                  color: org.plan === "paid" ? "var(--green)" : org.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>
+                                <option value="trial">Trial (3 runs)</option>
+                                <option value="starter">Starter (25 runs)</option>
+                                <option value="pro">Pro (100 runs)</option>
+                                <option value="team">Team (250 runs)</option>
+                                <option value="enterprise">Enterprise (1,000 runs)</option>
+                                <option value="paid">Paid (custom)</option>
+                                <option value="suspended">Suspended</option>
+                              </select>
+                            </div>
+                            {/* Run limit */}
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Run Limit</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700 }}>{org.run_count}</span>
+                                <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
+                                <input type="number" defaultValue={org.run_limit} style={{ width: 50, fontSize: 12, padding: "5px 6px", borderRadius: 6, border: "1px solid var(--line-0)", textAlign: "center" }}
+                                  onBlur={async e => { const v = Number(e.target.value); if (v === org.run_limit) return; await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ run_limit: v }) }); setPlanSaveMsg(`${org.name} run limit → ${v}`); setTimeout(() => setPlanSaveMsg(""), 3000); }}
+                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }} />
+                              </div>
+                            </div>
+                            {/* Max run limit */}
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--violet)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Max Runs</div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>{org.max_run_count || 0}</span>
+                                <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
+                                <input type="number" defaultValue={org.max_run_limit || 0} style={{ width: 50, fontSize: 12, padding: "5px 6px", borderRadius: 6, border: "1px solid var(--violet)", textAlign: "center", color: "var(--violet)" }}
+                                  onBlur={async e => { const v = Number(e.target.value); if (v === (org.max_run_limit || 0)) return; await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ max_run_limit: v }) }); setPlanSaveMsg(`${org.name} max run limit → ${v}`); setTimeout(() => setPlanSaveMsg(""), 3000); }}
+                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }} />
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "var(--ink-3)" }}>
+                            <span>{org.member_count} member{org.member_count !== 1 ? "s" : ""}</span>
+                            <span>·</span>
+                            <span>{org.name}</span>
+                            <button onClick={async () => {
+                              await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, { method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ run_count: 0, max_run_count: 0 }) });
+                              setPlanSaveMsg(`${org.name} runs reset to 0`); setTimeout(() => setPlanSaveMsg(""), 3000);
+                            }}
+                              style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer", marginLeft: "auto" }}>
+                              Reset Runs
+                            </button>
+                          </div>
                         </div>
                       )}
 
