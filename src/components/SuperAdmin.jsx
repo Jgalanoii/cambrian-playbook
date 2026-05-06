@@ -340,50 +340,110 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ OVERVIEW ═══ */}
           {tab === "overview" && (
             <div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
+              {/* Primary metrics */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 16 }}>
                 {[
-                  { label: "Total Users", value: s.total_users, color: "var(--navy)" },
+                  { label: "Users", value: s.total_users, color: "var(--navy)", click: () => setTab("users") },
                   { label: "Active Today", value: s.active_today, color: "var(--green)" },
                   { label: "Active This Week", value: s.active_this_week, color: "var(--amber)" },
-                  { label: "Total Sessions", value: s.total_sessions, color: "var(--ink-0)" },
+                  { label: "Sessions", value: s.total_sessions, color: "var(--ink-0)", click: () => setTab("sessions") },
+                  { label: "Runs Used", value: s.total_runs, color: "var(--tan-0)" },
+                  { label: "Cost", value: `$${(c.cost || 0).toFixed(2)}`, color: "var(--ink-0)", click: () => setTab("costs") },
                 ].map(m => (
-                  <div key={m.label} className="admin-metric">
-                    <div className="admin-metric-num" style={{ color: m.color }}>{m.value}</div>
-                    <div className="admin-metric-label">{m.label}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
-                {[
-                  { label: "Tokens Used", value: s.total_runs, color: "var(--ink-0)" },
-                  { label: "Max Tokens", value: s.total_max_runs, color: "var(--violet)" },
-                  { label: "Organizations", value: s.total_orgs, color: "var(--navy)" },
-                  { label: "Unique Sellers", value: s.unique_seller_urls, color: "var(--green)" },
-                  { label: "Milton Messages", value: s.total_milton_messages || 0, color: "var(--red)" },
-                  { label: "Guest API Calls", value: s.guest_api_calls || 0, color: "var(--ink-2)" },
-                ].map(m => (
-                  <div key={m.label} className="admin-metric">
+                  <div key={m.label} className="admin-metric" style={{ cursor: m.click ? "pointer" : "default" }} onClick={m.click}>
                     <div className="admin-metric-num" style={{ color: m.color }}>{m.value}</div>
                     <div className="admin-metric-label">{m.label}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Recent activity */}
-              <div className="admin-section-sub" style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", fontSize: 11, color: "var(--ink-2)", marginBottom: 8 }}>Recent Activity</div>
-              {data.recent_activity.slice(0, 15).map((a, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line-0)" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: (Date.now() - new Date(a.updated_at).getTime()) < 86400000 ? "var(--green)" : "var(--line-0)", flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {a.session_name}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      {a.user_name} &middot; {a.seller_url || "no URL"} &middot; {timeAgo(a.updated_at)}
-                    </div>
-                  </div>
+              {/* Quick insights */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+                {/* Attention items */}
+                <div style={{ background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 8 }}>Needs Attention</div>
+                  {(() => {
+                    const neverActive = (data.users || []).filter(u => !u.last_active).length;
+                    const atLimit = (data.orgs || []).filter(o => o.run_count >= o.run_limit && o.run_limit > 0).length;
+                    const personalOrgs = (data.orgs || []).filter(o => !o.seller_url && o.member_count <= 1).length;
+                    const items = [];
+                    if (neverActive > 0) items.push({ text: `${neverActive} users never active`, color: "var(--amber)", click: () => setTab("users") });
+                    if (atLimit > 0) items.push({ text: `${atLimit} orgs at run limit`, color: "var(--red)", click: () => setTab("orgs") });
+                    if (personalOrgs > 0) items.push({ text: `${personalOrgs} personal workspaces to clean up`, color: "var(--ink-2)", click: () => setTab("orgs") });
+                    if (s.guest_api_calls > 0) items.push({ text: `${s.guest_api_calls} guest API calls`, color: "var(--ink-3)", click: () => setTab("activity") });
+                    return items.length > 0 ? items.map((item, i) => (
+                      <div key={i} onClick={item.click} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0", cursor: "pointer", fontSize: 12 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: item.color, flexShrink: 0 }} />
+                        <span style={{ color: "var(--ink-1)" }}>{item.text}</span>
+                      </div>
+                    )) : <div style={{ fontSize: 12, color: "var(--ink-3)" }}>All clear</div>;
+                  })()}
                 </div>
-              ))}
+
+                {/* Pipeline funnel mini */}
+                <div style={{ background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 8 }}>Pipeline</div>
+                  {data.sessionFunnel && [
+                    { label: "ICP Built", value: data.sessionFunnel.with_icp, total: data.sessionFunnel.total, color: "var(--navy)" },
+                    { label: "Brief Generated", value: data.sessionFunnel.with_brief, total: data.sessionFunnel.total, color: "var(--green)" },
+                    { label: "Hypothesis", value: data.sessionFunnel.with_hypothesis, total: data.sessionFunnel.total, color: "var(--amber)" },
+                    { label: "Post-Call", value: data.sessionFunnel.with_post_call, total: data.sessionFunnel.total, color: "var(--violet)" },
+                  ].map((step, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0", fontSize: 12 }}>
+                      <span style={{ width: 70, color: "var(--ink-2)", fontSize: 11 }}>{step.label}</span>
+                      <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--bg-2)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 3, background: step.color, width: step.total > 0 ? `${Math.round(step.value / step.total * 100)}%` : "0%" }} />
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-1)", width: 30, textAlign: "right" }}>{step.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent activity — as a table, not a list */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 8 }}>Recent Activity</div>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Session</th>
+                    <th>User</th>
+                    <th>Researching</th>
+                    <th>Depth</th>
+                    <th>When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.recent_activity.slice(0, 15).map((a, i) => {
+                    const displayName = a.session_name === "Untitled" || a.session_name === "research-only"
+                      ? (a.selected_account || a.seller_url?.replace(/^https?:\/\//, "").replace(/\/$/, "") || "Quick Brief")
+                      : a.session_name;
+                    const depthDots = [a.hasICP, a.hasBrief, a.hasHypo, a.hasPostCall, a.hasSolutionFit];
+                    const depthLabels = ["I", "B", "H", "P", "S"];
+                    return (
+                      <tr key={i}>
+                        <td>
+                          <span style={{ fontWeight: 600, color: "var(--ink-0)" }}>{displayName}</span>
+                        </td>
+                        <td style={{ fontSize: 11, color: "var(--ink-2)" }}>{a.user_name}</td>
+                        <td style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                          {a.seller_url === "research-only" ? (a.selected_account || "Quick Brief") : (a.seller_url?.replace(/^https?:\/\//, "") || "—")}
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: 2 }}>
+                            {depthDots.map((filled, j) => (
+                              <span key={j} style={{
+                                width: 14, height: 14, borderRadius: 3, fontSize: 7, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+                                background: filled ? "var(--green)" : "var(--bg-2)", color: filled ? "var(--surface)" : "var(--ink-3)"
+                              }}>{depthLabels[j]}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>{timeAgo(a.updated_at)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
 
