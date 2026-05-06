@@ -772,103 +772,100 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {/* User cards */}
               {filteredUsers.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
                 const org = data.orgs.find(o => o.id === u.org_id);
+                const rc = u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)";
+                const rb = u.role === "admin" ? "var(--navy-bg)" : u.role === "manager" ? "var(--amber-bg)" : "var(--green-bg)";
+                const adminAction = async (action, extra = {}) => {
+                  try {
+                    const r = await fetch("/api/admin-action", {
+                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ action, email: u.email, userId: u.id, ...extra }),
+                    });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? d.message || `${action} done` : `Error: ${d.error}`);
+                  } catch { setPlanSaveMsg(`Failed: ${action}`); }
+                  setTimeout(() => setPlanSaveMsg(""), 4000);
+                };
+                const patchUser = async (fields, msg) => {
+                  await fetch(`${SB_URL}/rest/v1/users?id=eq.${u.id}`, {
+                    method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                    body: JSON.stringify(fields),
+                  });
+                  setPlanSaveMsg(msg); setTimeout(() => setPlanSaveMsg(""), 3000);
+                };
                 return (
-                  <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, padding: "14px 16px", marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "var(--surface)" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                      {/* Avatar */}
-                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
+                  <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "var(--surface)", overflow: "hidden" }}>
+                    {/* Header row — always visible */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: rc, color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
                         {(u.name || u.email || "").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "··"}
                       </div>
-
-                      {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-0)" }}>{u.name || u.email?.split("@")[0]}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-0)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          {u.name || u.email?.split("@")[0]}
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20, background: rb, color: rc }}>{u.role}</span>
                           {u.email === SUPERUSER_EMAIL && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "var(--violet-bg)", color: "var(--violet)" }}>SUPER</span>}
                         </div>
-                        <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 6 }}>{u.email}</div>
+                        <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{u.email}</div>
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--ink-3)", textAlign: "right", flexShrink: 0 }}>
+                        <div>{u.session_count} sessions</div>
+                        <div>Active {timeAgo(u.last_active)}</div>
+                      </div>
+                    </div>
 
-                        {/* Stats row */}
-                        <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--ink-2)", flexWrap: "wrap" }}>
-                          <span>{u.session_count} sessions</span>
-                          <span>Active {timeAgo(u.last_active)}</span>
-                          {u.milton_messages > 0 && <span style={{ color: "#cc2222" }}>{u.milton_messages} Milton msgs</span>}
-                          {u.seller_urls.length > 0 && <span>{u.seller_urls.length} seller URL{u.seller_urls.length > 1 ? "s" : ""}</span>}
+                    {/* Management panel */}
+                    <div style={{ borderTop: "1px solid var(--line-0)", padding: "10px 14px", background: "var(--bg-1)" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 10 }}>
+                        {/* Role */}
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Role</div>
+                          <select value={u.role || "rep"} onChange={e => patchUser({ role: e.target.value }, `${u.email} → ${e.target.value}`)}
+                            style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", background: rb, color: rc, fontWeight: 700 }}>
+                            <option value="rep">Rep</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        {/* Organization */}
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Organization</div>
+                          <select value={u.org_id || ""} onChange={e => patchUser({ org_id: e.target.value || null }, `${u.email} → ${e.target.value ? data.orgs.find(o => o.id === e.target.value)?.name : "no org"}`)}
+                            style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)" }}>
+                            <option value="">No org</option>
+                            {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
+                          </select>
+                        </div>
+                        {/* Name */}
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Display Name</div>
+                          <input defaultValue={u.name || ""} placeholder="Full name"
+                            onBlur={e => { const v = e.target.value.trim(); if (v !== (u.name || "")) patchUser({ name: v }, `Name → ${v}`); }}
+                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
+                            style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", boxSizing: "border-box" }} />
                         </div>
                       </div>
 
-                      {/* Actions */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
-                        {/* Role selector */}
-                        <select value={u.role || "rep"}
-                          onChange={async e => {
-                            const newRole = e.target.value;
-                            await fetch(`${SB_URL}/rest/v1/users?id=eq.${u.id}`, {
-                              method: "PATCH",
-                              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                              body: JSON.stringify({ role: newRole }),
-                            });
-                            setPlanSaveMsg(`${u.name || u.email} → ${newRole}`);
-                            setTimeout(() => setPlanSaveMsg(""), 3000);
-                          }}
-                          style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--line-0)", fontWeight: 600,
-                            background: u.role === "admin" ? "var(--navy-bg)" : u.role === "manager" ? "var(--amber-bg)" : "var(--green-bg)",
-                            color: u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)" }}>
-                          <option value="rep">Rep</option>
-                          <option value="manager">Manager</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                      {/* Org details */}
+                      {org && (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10, fontSize: 11, color: "var(--ink-2)" }}>
+                          <span><strong>{org.name}</strong> · {org.plan}</span>
+                          <span>Runs: <strong>{org.run_count}</strong>/{org.run_limit}</span>
+                          {(org.max_run_limit || 0) > 0 && <span style={{ color: "var(--violet)" }}>Max: <strong>{org.max_run_count}</strong>/{org.max_run_limit}</span>}
+                          <span>{org.member_count} member{org.member_count !== 1 ? "s" : ""}</span>
+                        </div>
+                      )}
 
-                        {/* Org assignment */}
-                        <select value={u.org_id || ""}
-                          onChange={async e => {
-                            const newOrgId = e.target.value || null;
-                            await fetch(`${SB_URL}/rest/v1/users?id=eq.${u.id}`, {
-                              method: "PATCH",
-                              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                              body: JSON.stringify({ org_id: newOrgId }),
-                            });
-                            setPlanSaveMsg(`${u.name || u.email} → org ${newOrgId ? data.orgs.find(o=>o.id===newOrgId)?.name || newOrgId : "none"}`);
-                            setTimeout(() => setPlanSaveMsg(""), 3000);
-                          }}
-                          style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, border: "1px solid var(--line-0)", maxWidth: 140, color: "var(--ink-2)" }}>
-                          <option value="">No org</option>
-                          {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
-                        </select>
-
-                        {/* Admin actions */}
-                        <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
-                          <button onClick={async () => {
-                            try {
-                              const r = await fetch("/api/admin-action", {
-                                method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                                body: JSON.stringify({ action: "reset_password", email: u.email }),
-                              });
-                              const d = await r.json();
-                              setPlanSaveMsg(d.ok ? `Password reset sent to ${u.email}` : `Error: ${d.error}`);
-                            } catch { setPlanSaveMsg("Failed to send reset"); }
-                            setTimeout(() => setPlanSaveMsg(""), 4000);
-                          }}
-                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-2)", cursor: "pointer", fontWeight: 600 }}
-                            title="Send password reset email">
-                            Reset PW
-                          </button>
-                          <button onClick={async () => {
-                            try {
-                              const r = await fetch("/api/admin-action", {
-                                method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                                body: JSON.stringify({ action: "resend_invite", email: u.email }),
-                              });
-                              const d = await r.json();
-                              setPlanSaveMsg(d.ok ? `Invite resent to ${u.email}` : `Error: ${d.error}`);
-                            } catch { setPlanSaveMsg("Failed to resend"); }
-                            setTimeout(() => setPlanSaveMsg(""), 4000);
-                          }}
-                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-2)", cursor: "pointer", fontWeight: 600 }}
-                            title="Resend signup/invite email">
-                            Resend
-                          </button>
-                          {u.email !== SUPERUSER_EMAIL && <button onClick={async () => {
+                      {/* Action buttons */}
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <button onClick={() => adminAction("reset_password")}
+                          style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-1)", cursor: "pointer", fontWeight: 600 }}>
+                          Send Password Reset
+                        </button>
+                        <button onClick={() => adminAction("resend_invite")}
+                          style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-1)", cursor: "pointer", fontWeight: 600 }}>
+                          Resend Invite Email
+                        </button>
+                        {u.email !== SUPERUSER_EMAIL && <button onClick={async () => {
                             if (!window.confirm(`Delete ${u.email}? This removes their auth account AND user record. They'll need to sign up again from scratch.`)) return;
                             try {
                               const r = await fetch("/api/admin-action", {
@@ -885,85 +882,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             title="Delete user account completely">
                             Delete
                           </button>}
-                        </div>
                       </div>
                     </div>
-
-                    {/* Org details (if assigned) */}
-                    {org && (
-                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line-0)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                        <div style={{ fontSize: 11, color: "var(--ink-2)" }}>
-                          <strong>{org.name}</strong> · {org.plan}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>Tokens:</span>
-                          <input type="number" value={org.run_count} readOnly
-                            style={{ width: 40, fontSize: 11, border: "none", background: "transparent", fontWeight: 700, textAlign: "center" }} />
-                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
-                          <input type="number" defaultValue={org.run_limit}
-                            onBlur={async e => {
-                              const val = Number(e.target.value);
-                              if (val === org.run_limit) return;
-                              await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
-                                method: "PATCH",
-                                headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                                body: JSON.stringify({ run_limit: val }),
-                              });
-                              setPlanSaveMsg(`${org.name} token limit → ${val}`);
-                              setTimeout(() => setPlanSaveMsg(""), 3000);
-                            }}
-                            style={{ width: 50, fontSize: 11, border: "1px solid var(--line-0)", borderRadius: 4, padding: "2px 4px", textAlign: "center" }} />
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ fontSize: 10, color: "var(--violet)" }}>Max:</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--violet)" }}>{org.max_run_count || 0}</span>
-                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
-                          <input type="number" defaultValue={org.max_run_limit}
-                            onBlur={async e => {
-                              const val = Number(e.target.value);
-                              if (val === org.max_run_limit) return;
-                              await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
-                                method: "PATCH",
-                                headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                                body: JSON.stringify({ max_run_limit: val }),
-                              });
-                              setPlanSaveMsg(`${org.name} max token limit → ${val}`);
-                              setTimeout(() => setPlanSaveMsg(""), 3000);
-                            }}
-                            style={{ width: 50, fontSize: 11, border: "1px solid var(--violet)", borderRadius: 4, padding: "2px 4px", textAlign: "center", color: "var(--violet)" }} />
-                        </div>
-                        {/* Reset tokens button */}
-                        <button onClick={async () => {
-                          await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
-                            method: "PATCH",
-                            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                            body: JSON.stringify({ run_count: 0, max_run_count: 0 }),
-                          });
-                          setPlanSaveMsg(`${org.name} tokens reset to 0`);
-                          setTimeout(() => setPlanSaveMsg(""), 3000);
-                        }}
-                          style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer" }}>
-                          Reset Tokens
-                        </button>
-                        {/* Plan selector */}
-                        <select defaultValue={org.plan}
-                          onChange={async e => {
-                            await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${org.id}`, {
-                              method: "PATCH",
-                              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                              body: JSON.stringify({ plan: e.target.value }),
-                            });
-                            setPlanSaveMsg(`${org.name} plan → ${e.target.value}`);
-                            setTimeout(() => setPlanSaveMsg(""), 3000);
-                          }}
-                          style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, border: "1px solid var(--line-0)" }}>
-                          <option value="trial">Trial</option>
-                          <option value="paid">Paid</option>
-                          <option value="enterprise">Enterprise</option>
-                          <option value="suspended">Suspended</option>
-                        </select>
-                      </div>
-                    )}
                   </div>
                 );
               })}
