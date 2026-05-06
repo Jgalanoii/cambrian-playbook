@@ -752,7 +752,10 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   <select id="sa-invite-org" defaultValue=""
                     style={{ fontSize: 11, padding: "6px 8px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}>
                     <option value="" disabled>Org...</option>
-                    {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                    {data.orgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                    {data.orgs.filter(o => !o.seller_url && o.member_count <= 1).length > 0 && <optgroup label="Personal">
+                      {data.orgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                    </optgroup>}
                   </select>
                   <select id="sa-invite-role" defaultValue="rep"
                     style={{ fontSize: 11, padding: "6px 8px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}>
@@ -843,7 +846,19 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                           <select value={u.org_id || ""} onChange={e => { patchUser({ org_id: e.target.value || null }, `✓ ${u.email} → ${e.target.value ? data.orgs.find(o => o.id === e.target.value)?.name : "no org"}`); setTimeout(fetchData, 500); }}
                             style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)" }}>
                             <option value="">No org</option>
-                            {data.orgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
+                            {/* Company orgs first (have seller_url or multiple members), then personal workspaces */}
+                            {(()=>{
+                              const company = data.orgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+                              const personal = data.orgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+                              return <>
+                                {company.length > 0 && <optgroup label="Companies">
+                                  {company.map(o => <option key={o.id} value={o.id}>{o.name}{o.seller_url ? ` · ${o.seller_url.replace(/^https?:\/\//,"")}` : ""} ({o.plan})</option>)}
+                                </optgroup>}
+                                {personal.length > 0 && <optgroup label="Personal Workspaces">
+                                  {personal.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
+                                </optgroup>}
+                              </>;
+                            })()}
                           </select>
                         </div>
                         <div style={{ flex: "1 1 140px" }}>
@@ -906,11 +921,16 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ ORGS ═══ */}
           {tab === "orgs" && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>
-                All Organizations {hasActiveFilters && <span style={{ fontWeight: 400, color: "var(--amber)" }}>({filteredOrgs.length} of {data.orgs.length})</span>}
+              {/* Summary */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 11, color: "var(--ink-3)" }}>
+                <span><strong style={{ color: "var(--ink-0)" }}>{filteredOrgs.filter(o => o.seller_url || o.member_count > 1).length}</strong> company orgs</span>
+                <span><strong style={{ color: "var(--ink-0)" }}>{filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1).length}</strong> personal workspaces</span>
+                {hasActiveFilters && <span style={{ color: "var(--amber)" }}>({filteredOrgs.length} of {data.orgs.length} shown)</span>}
               </div>
 
-              {filteredOrgs.sort((a, b) => (b.run_count || 0) - (a.run_count || 0)).map(o => {
+              {/* Company orgs */}
+              {(()=>{ const co = filteredOrgs.filter(o => o.seller_url || o.member_count > 1); return co.length > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Company Organizations ({co.length})</div>; })()}
+              {filteredOrgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => {
                 const members = data.users.filter(u => u.org_id === o.id);
                 const nonMembers = data.users.filter(u => u.org_id !== o.id);
                 const patchOrg = async (fields, msg) => {
@@ -1068,6 +1088,34 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                         </button>
                       </div>
                     </div>
+                  </div>
+                );
+              })}
+              {/* Personal workspaces */}
+              {(()=>{ const po = filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1); return po.length > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.4px", marginTop: 16, marginBottom: 6 }}>Personal Workspaces ({po.length}) <span style={{ fontWeight: 400, textTransform: "none" }}>— move users to a company org, then delete these</span></div>; })()}
+              {filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => {
+                const members = data.users.filter(u => u.org_id === o.id);
+                const isPersonal = true;
+                return (
+                  <div key={o.id} style={{ border: "1px dashed var(--line-2)", borderRadius: 10, marginBottom: 6, padding: "10px 14px", background: "var(--surface)", display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-1)" }}>{o.name}</div>
+                      <div style={{ fontSize: 10, color: "var(--ink-3)" }}>
+                        {members.length === 0 ? "Empty" : members.map(m => m.name || m.email?.split("@")[0]).join(", ")} · {o.plan} · {o.run_count}/{o.run_limit} runs
+                      </div>
+                    </div>
+                    <button onClick={async () => {
+                      if (!window.confirm(`Delete "${o.name}"?${members.length > 0 ? ` ${members.length} member(s) will be unassigned.` : ""}`)) return;
+                      try {
+                        const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` }, body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }) });
+                        const d = await r.json();
+                        setPlanSaveMsg(d.ok ? `✓ Deleted ${o.name}` : `Error: ${d.error}`);
+                      } catch { setPlanSaveMsg("Failed"); }
+                      setTimeout(fetchData, 1000);
+                    }}
+                      style={{ fontSize: 10, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer", flexShrink: 0 }}>
+                      Delete
+                    </button>
                   </div>
                 );
               })}
