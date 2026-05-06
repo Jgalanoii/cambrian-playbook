@@ -160,18 +160,24 @@ export default async function handler(req, res) {
       for (const k of allowed) { if (k in fields) patch[k] = fields[k]; }
       if (!Object.keys(patch).length) return res.status(400).json({ error: "No valid fields" });
 
+      // DB constraint only allows trial/paid/suspended — map tier names
+      if (patch.plan && !["trial", "paid", "suspended"].includes(patch.plan)) patch.plan = "paid";
+
       const r = await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}`, {
         method: "PATCH",
         headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
         body: JSON.stringify(patch),
       });
       if (r.ok) return res.json({ ok: true, message: `Updated org` });
-      return res.status(400).json({ error: "Failed to update org" });
+      const errData = await r.json().catch(() => ({}));
+      return res.status(400).json({ error: errData?.message || "Failed to update org" });
     }
 
     if (action === "create_org") {
       const { orgData } = req.body || {};
       if (!orgData?.name) return res.status(400).json({ error: "Org name required" });
+      // DB constraint only allows trial/paid/suspended — map tier names to 'paid'
+      if (orgData.plan && !["trial", "paid", "suspended"].includes(orgData.plan)) orgData.plan = "paid";
       const r = await fetch(`${SB_URL}/rest/v1/orgs`, {
         method: "POST",
         headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
