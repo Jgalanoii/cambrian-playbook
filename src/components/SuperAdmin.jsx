@@ -31,6 +31,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const isSuperuser = sbUser?.email === SUPERUSER_EMAIL;
 
   const [refreshing, setRefreshing] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null);
+
   const fetchData = (showSpinner) => {
     if (showSpinner) setLoading(true);
     else setRefreshing(true);
@@ -51,17 +53,25 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
     fetchData(true); // initial load shows spinner
   }, [sbToken]);
 
+  // Close action menu on click outside
+  useEffect(() => {
+    if (openMenu === null) return;
+    const handler = () => setOpenMenu(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [openMenu]);
+
   // Superuser check — after all hooks
   if (!isSuperuser) return null;
 
   if (loading) return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="admin-shell" style={{ alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: "var(--surface)", borderRadius: 16, padding: 40, fontSize: 14 }}>Loading analytics...</div>
     </div>
   );
 
   if (error) return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="admin-shell" style={{ alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: "var(--surface)", borderRadius: 16, padding: 40 }}>
         <div style={{ color: "var(--red)", marginBottom: 12 }}>Error: {error}</div>
         <button onClick={onClose} className="btn btn-secondary">Close</button>
@@ -155,99 +165,177 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
     } catch { setPlanSaveMsg("Error applying plan"); }
   };
 
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "sessions", label: `Sessions (${s.total_sessions})` },
-    { id: "users", label: `Users (${s.total_users})` },
-    { id: "orgs", label: `Orgs (${s.total_orgs})` },
-    { id: "costs", label: `Costs ($${(c.cost||0).toFixed(2)})` },
-    { id: "learnings", label: "Learnings" },
-    { id: "activity", label: "Activity" },
-    { id: "usage", label: "Usage" },
-    { id: "pricing", label: "Pricing" },
-    { id: "urls", label: `URLs (${s.unique_seller_urls})` },
+  // ── Sidebar nav config ──
+  const navGroups = [
+    {
+      items: [{ id: "overview", label: "Overview" }],
+    },
+    {
+      label: "PEOPLE",
+      items: [
+        { id: "users", label: "Members", count: s.total_users },
+        { id: "orgs", label: "Organizations", count: s.total_orgs },
+      ],
+    },
+    {
+      label: "ANALYTICS",
+      items: [
+        { id: "sessions", label: "Sessions", count: s.total_sessions },
+        { id: "costs", label: "Costs", count: `$${(c.cost || 0).toFixed(2)}` },
+        { id: "activity", label: "Activity" },
+      ],
+    },
+    {
+      label: "SYSTEM",
+      items: [
+        { id: "usage", label: "Usage" },
+        { id: "pricing", label: "Pricing" },
+        { id: "learnings", label: "Learnings" },
+        { id: "urls", label: "URLs", count: s.unique_seller_urls },
+      ],
+    },
   ];
 
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "var(--bg-0)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+  // ── Render filters per section ──
+  const renderFilters = () => {
+    const clearBtn = hasActiveFilters && (
+      <button onClick={() => { setDateRange("all"); setUserTypeFilter("all"); setRoleFilter(""); setPlanFilter(""); setSearchQuery(""); }}
+        style={{ fontSize: 10, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1.5px solid var(--amber)", background: "var(--surface)", color: "var(--amber)", cursor: "pointer", whiteSpace: "nowrap" }}>
+        Clear filters
+      </button>
+    );
 
-        {/* Header */}
-        <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--line-0)", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Admin Dashboard</div>
-            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "var(--violet-bg)", color: "var(--violet)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Superuser</span>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => fetchData(false)} disabled={refreshing} style={{ padding: "6px 12px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--ink-2)" }}>
-              {refreshing ? "Refreshing..." : "↻ Refresh"}
-            </button>
-            <button onClick={onClose} style={{ padding: "6px 16px", borderRadius: 8, border: "1.5px solid var(--ink-0)", background: "var(--ink-0)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--surface)" }}>
-              ← Back to App
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--line-0)", padding: "0 20px" }}>
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-                color: tab === t.id ? "var(--ink-0)" : "var(--ink-3)",
-                borderBottom: tab === t.id ? "2px solid var(--tan-0)" : "2px solid transparent" }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Global filter bar */}
-        <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--line-0)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", background: hasActiveFilters ? "var(--amber-bg)" : "var(--bg-1)" }}>
-          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users, orgs, URLs..."
-            style={{ flex: "1 1 160px", minWidth: 120, fontSize: 12, padding: "6px 10px", border: "1.5px solid var(--line-0)", borderRadius: 6, background: "var(--surface)" }} />
-          <select value={dateRange} onChange={e => setDateRange(e.target.value)}
-            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
-            <option value="all">All time</option>
-            <option value="today">Today</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-          </select>
-          <select value={userTypeFilter} onChange={e => setUserTypeFilter(e.target.value)}
-            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
-            <option value="all">All users</option>
-            <option value="authenticated">Authenticated</option>
-            <option value="guest">Guests only</option>
-          </select>
-          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
-            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
+    if (tab === "users") {
+      return (
+        <div className="admin-filters">
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search members..."
+            onKeyDown={e => e.stopPropagation()} />
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
             <option value="">Any role</option>
             <option value="admin">Admin</option>
             <option value="manager">Manager</option>
             <option value="rep">Rep</option>
           </select>
-          <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
-            style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, border: "1.5px solid var(--line-0)", fontWeight: 600, background: "var(--surface)" }}>
+          <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}>
             <option value="">Any plan</option>
             <option value="trial">Trial</option>
             <option value="paid">Paid</option>
             <option value="enterprise">Enterprise</option>
             <option value="suspended">Suspended</option>
           </select>
-          {hasActiveFilters && (
-            <button onClick={() => { setDateRange("all"); setUserTypeFilter("all"); setRoleFilter(""); setPlanFilter(""); setSearchQuery(""); }}
-              style={{ fontSize: 10, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1.5px solid var(--amber)", background: "var(--surface)", color: "var(--amber)", cursor: "pointer", whiteSpace: "nowrap" }}>
-              Clear filters
-            </button>
-          )}
-          {hasActiveFilters && (
-            <span style={{ fontSize: 10, color: "var(--amber)", fontWeight: 600 }}>
-              {filteredUsers.length} users · {filteredActivity.length} activities · {filteredOrgs.length} orgs
-            </span>
-          )}
+          {clearBtn}
+          {hasActiveFilters && <span style={{ fontSize: 10, color: "var(--amber)", fontWeight: 600 }}>{filteredUsers.length} of {data.users.length}</span>}
         </div>
+      );
+    }
+    if (tab === "orgs") {
+      return (
+        <div className="admin-filters">
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search organizations..."
+            onKeyDown={e => e.stopPropagation()} />
+          <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}>
+            <option value="">Any plan</option>
+            <option value="trial">Trial</option>
+            <option value="paid">Paid</option>
+            <option value="enterprise">Enterprise</option>
+            <option value="suspended">Suspended</option>
+          </select>
+          {clearBtn}
+          {hasActiveFilters && <span style={{ fontSize: 10, color: "var(--amber)", fontWeight: 600 }}>{filteredOrgs.length} of {data.orgs.length}</span>}
+        </div>
+      );
+    }
+    if (tab === "sessions" || tab === "activity") {
+      return (
+        <div className="admin-filters">
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search sessions..."
+            onKeyDown={e => e.stopPropagation()} />
+          <select value={dateRange} onChange={e => setDateRange(e.target.value)}>
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+          </select>
+          {clearBtn}
+          {hasActiveFilters && <span style={{ fontSize: 10, color: "var(--amber)", fontWeight: 600 }}>{filteredActivity.length} activities</span>}
+        </div>
+      );
+    }
+    if (tab === "costs") {
+      return (
+        <div className="admin-filters">
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search costs..."
+            onKeyDown={e => e.stopPropagation()} />
+          <select value={dateRange} onChange={e => setDateRange(e.target.value)}>
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+          </select>
+          <select value={userTypeFilter} onChange={e => setUserTypeFilter(e.target.value)}>
+            <option value="all">All users</option>
+            <option value="authenticated">Authenticated</option>
+            <option value="guest">Guests only</option>
+          </select>
+          {clearBtn}
+        </div>
+      );
+    }
+    if (tab === "urls") {
+      return (
+        <div className="admin-filters">
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search URLs..."
+            onKeyDown={e => e.stopPropagation()} />
+        </div>
+      );
+    }
+    return null;
+  };
 
-        {/* Content */}
-        <div style={{ flex: 1, overflow: "auto", padding: "20px 24px" }}>
+  return (
+    <div className="admin-shell">
+      {/* ── Header ── */}
+      <div className="admin-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Admin Dashboard</div>
+          <span className="admin-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)", fontSize: 9, letterSpacing: "0.5px", textTransform: "uppercase" }}>Superuser</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => fetchData(false)} disabled={refreshing}
+            style={{ padding: "6px 12px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--ink-2)" }}>
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
+          <button onClick={onClose}
+            style={{ padding: "6px 16px", borderRadius: 8, border: "1.5px solid var(--ink-0)", background: "var(--ink-0)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--surface)" }}>
+            &larr; Back to App
+          </button>
+        </div>
+      </div>
+
+      {/* ── Body: sidebar + content ── */}
+      <div className="admin-body">
+        {/* Sidebar */}
+        <nav className="admin-sidebar">
+          {navGroups.map((group, gi) => (
+            <div key={gi}>
+              {group.label && <div className="admin-sidebar-group">{group.label}</div>}
+              {group.items.map(item => (
+                <button key={item.id}
+                  className={`admin-sidebar-item${tab === item.id ? " active" : ""}`}
+                  onClick={() => setTab(item.id)}>
+                  {item.label}
+                  {item.count !== undefined && <span className="admin-sidebar-count">{item.count}</span>}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        {/* Main content */}
+        <main className="admin-content">
+          {renderFilters()}
 
           {/* ═══ OVERVIEW ═══ */}
           {tab === "overview" && (
@@ -259,9 +347,9 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   { label: "Active This Week", value: s.active_this_week, color: "var(--amber)" },
                   { label: "Total Sessions", value: s.total_sessions, color: "var(--ink-0)" },
                 ].map(m => (
-                  <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.label}</div>
+                  <div key={m.label} className="admin-metric">
+                    <div className="admin-metric-num" style={{ color: m.color }}>{m.value}</div>
+                    <div className="admin-metric-label">{m.label}</div>
                   </div>
                 ))}
               </div>
@@ -274,15 +362,15 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   { label: "Milton Messages", value: s.total_milton_messages || 0, color: "var(--red)" },
                   { label: "Guest API Calls", value: s.guest_api_calls || 0, color: "var(--ink-2)" },
                 ].map(m => (
-                  <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.label}</div>
+                  <div key={m.label} className="admin-metric">
+                    <div className="admin-metric-num" style={{ color: m.color }}>{m.value}</div>
+                    <div className="admin-metric-label">{m.label}</div>
                   </div>
                 ))}
               </div>
 
               {/* Recent activity */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Recent Activity</div>
+              <div className="admin-section-sub" style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", fontSize: 11, color: "var(--ink-2)", marginBottom: 8 }}>Recent Activity</div>
               {data.recent_activity.slice(0, 15).map((a, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line-0)" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: (Date.now() - new Date(a.updated_at).getTime()) < 86400000 ? "var(--green)" : "var(--line-0)", flexShrink: 0 }} />
@@ -291,7 +379,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       {a.session_name}
                     </div>
                     <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      {a.user_name} · {a.seller_url || "no URL"} · {timeAgo(a.updated_at)}
+                      {a.user_name} &middot; {a.seller_url || "no URL"} &middot; {timeAgo(a.updated_at)}
                     </div>
                   </div>
                 </div>
@@ -339,9 +427,9 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       { label: "Nurture", value: data.sessionFunnel.deal_routes?.nurture || 0, color: "var(--amber)" },
                       { label: "Disqualify", value: data.sessionFunnel.deal_routes?.disqualify || 0, color: "var(--red)" },
                     ].map(m => (
-                      <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
-                        <div style={{ fontSize: 9, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase" }}>{m.label}</div>
+                      <div key={m.label} className="admin-metric">
+                        <div className="admin-metric-num" style={{ color: m.color, fontSize: 20 }}>{m.value}</div>
+                        <div className="admin-metric-label">{m.label}</div>
                       </div>
                     ))}
                   </div>
@@ -385,28 +473,28 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       Uploaded Content ({allDocs.reduce((s,a) => s + (a.docs?.length||0) + (a.products?.length||0) + (a.proof_points?.length||0), 0)} items across {allDocs.length} sessions)
                     </div>
                     <div style={{ maxHeight: 300, overflow: "auto", border: "1px solid var(--line-0)", borderRadius: 8 }}>
-                      <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
+                      <table className="admin-table">
                         <thead>
-                          <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left", position: "sticky", top: 0, background: "var(--surface)" }}>
-                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Type</th>
-                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Name</th>
-                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Preview</th>
-                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>User</th>
-                            <th style={{ padding: "6px 8px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Session</th>
+                          <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Preview</th>
+                            <th>User</th>
+                            <th>Session</th>
                           </tr>
                         </thead>
                         <tbody>
                           {allDocs.flatMap(a => [
-                            ...(a.docs||[]).map((d,i) => ({ type: "📄 Doc", name: d.label, preview: d.contentPreview, user: a.user_name, session: a.session_name, key: `doc-${a.id}-${i}` })),
-                            ...(a.products||[]).map((p,i) => ({ type: "📦 Product", name: p.name, preview: p.description, user: a.user_name, session: a.session_name, key: `prod-${a.id}-${i}` })),
-                            ...(a.proof_points||[]).map((pp,i) => ({ type: `✓ ${pp.type}`, name: pp.label || pp.type, preview: pp.content, user: a.user_name, session: a.session_name, key: `pp-${a.id}-${i}` })),
+                            ...(a.docs||[]).map((d,i) => ({ type: "Doc", name: d.label, preview: d.contentPreview, user: a.user_name, session: a.session_name, key: `doc-${a.id}-${i}` })),
+                            ...(a.products||[]).map((p,i) => ({ type: "Product", name: p.name, preview: p.description, user: a.user_name, session: a.session_name, key: `prod-${a.id}-${i}` })),
+                            ...(a.proof_points||[]).map((pp,i) => ({ type: pp.type, name: pp.label || pp.type, preview: pp.content, user: a.user_name, session: a.session_name, key: `pp-${a.id}-${i}` })),
                           ]).map(row => (
-                            <tr key={row.key} style={{ borderBottom: "1px solid var(--line-1)" }}>
-                              <td style={{ padding: "5px 8px", whiteSpace: "nowrap", color: "var(--tan-0)", fontWeight: 600 }}>{row.type}</td>
-                              <td style={{ padding: "5px 8px", fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</td>
-                              <td style={{ padding: "5px 8px", color: "var(--ink-3)", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.preview || "—"}</td>
-                              <td style={{ padding: "5px 8px", color: "var(--ink-2)" }}>{row.user}</td>
-                              <td style={{ padding: "5px 8px", color: "var(--ink-3)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.session}</td>
+                            <tr key={row.key}>
+                              <td style={{ whiteSpace: "nowrap", color: "var(--tan-0)", fontWeight: 600 }}>{row.type}</td>
+                              <td style={{ fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</td>
+                              <td style={{ color: "var(--ink-3)", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.preview || "\u2014"}</td>
+                              <td style={{ color: "var(--ink-2)" }}>{row.user}</td>
+                              <td style={{ color: "var(--ink-3)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.session}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -421,16 +509,16 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 All Sessions {hasActiveFilters && <span style={{ fontWeight: 400, color: "var(--amber)" }}>({filteredActivity.length} of {data.recent_activity.length})</span>}
               </div>
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", minWidth: 700 }}>
+                <table className="admin-table" style={{ minWidth: 700 }}>
                   <thead>
-                    <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
-                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Session</th>
-                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>User</th>
-                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Seller</th>
-                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Depth</th>
-                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Accounts</th>
-                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Route</th>
-                      <th style={{ padding: "6px", fontSize: 9, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Updated</th>
+                    <tr>
+                      <th>Session</th>
+                      <th>User</th>
+                      <th>Seller</th>
+                      <th>Depth</th>
+                      <th>Accounts</th>
+                      <th>Route</th>
+                      <th>Updated</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -438,20 +526,20 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                       const depthDots = [a.hasICP, a.hasBrief, a.hasHypo, a.hasPostCall, a.hasSolutionFit];
                       const depthLabels = ["ICP", "Brief", "Hypo", "Post", "SA"];
                       return (
-                        <tr key={i} style={{ borderBottom: "1px solid var(--line-0)" }}>
-                          <td style={{ padding: "8px 6px" }}>
+                        <tr key={i}>
+                          <td>
                             <div style={{ fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.session_name}</div>
                             {a.selected_account && <div style={{ fontSize: 10, color: "var(--ink-3)" }}>Target: {a.selected_account}</div>}
                           </td>
-                          <td style={{ padding: "8px 6px" }}>
-                            <div style={{ fontWeight: 600, color: "var(--ink-0)" }}>{a.user_name?.split(" ")[0] || "—"}</div>
+                          <td>
+                            <div style={{ fontWeight: 600, color: "var(--ink-0)" }}>{a.user_name?.split(" ")[0] || "\u2014"}</div>
                             <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{a.user_role}</div>
                           </td>
-                          <td style={{ padding: "8px 6px" }}>
-                            <div style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink-1)" }}>{a.seller_url || "—"}</div>
-                            {a.products_count > 0 && <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{a.products_count} products · {a.docs_count} docs</div>}
+                          <td>
+                            <div style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--ink-1)" }}>{a.seller_url || "\u2014"}</div>
+                            {a.products_count > 0 && <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{a.products_count} products &middot; {a.docs_count} docs</div>}
                           </td>
-                          <td style={{ padding: "8px 6px" }}>
+                          <td>
                             <div style={{ display: "flex", gap: 2 }}>
                               {depthDots.map((filled, j) => (
                                 <span key={j} title={depthLabels[j]} style={{
@@ -462,21 +550,20 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             </div>
                             {a.gates_filled > 0 && <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 2 }}>{a.gates_filled}G {a.discovery_filled}D</div>}
                           </td>
-                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
-                            <div style={{ fontWeight: 700, color: "var(--ink-0)" }}>{a.companies_scored > 0 ? a.companies_scored : "—"}</div>
+                          <td style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, color: "var(--ink-0)" }}>{a.companies_scored > 0 ? a.companies_scored : "\u2014"}</div>
                             {a.companies_queued > 0 && <div style={{ fontSize: 9, color: "var(--ink-3)" }}>{a.companies_queued} queued</div>}
                           </td>
-                          <td style={{ padding: "8px 6px" }}>
+                          <td>
                             {a.deal_route ? (
-                              <span style={{
-                                fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 10,
+                              <span className="admin-badge" style={{
                                 background: a.deal_route === "FAST_TRACK" ? "var(--green-bg)" : a.deal_route === "NURTURE" ? "var(--amber-bg)" : "var(--red-bg)",
                                 color: a.deal_route === "FAST_TRACK" ? "var(--green)" : a.deal_route === "NURTURE" ? "var(--amber)" : "var(--red)",
                               }}>{a.deal_route.replace("_", " ")}</span>
-                            ) : <span style={{ fontSize: 10, color: "var(--ink-3)" }}>—</span>}
+                            ) : <span style={{ fontSize: 10, color: "var(--ink-3)" }}>{"\u2014"}</span>}
                             {a.deal_value && <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 2 }}>${Number(a.deal_value).toLocaleString()}</div>}
                           </td>
-                          <td style={{ padding: "8px 6px", fontSize: 10, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
+                          <td style={{ fontSize: 10, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
                             {timeAgo(a.updated_at)}
                             {a.milton_messages > 0 && <div style={{ fontSize: 9, color: "var(--red)" }}>{a.milton_messages} Milton</div>}
                           </td>
@@ -487,6 +574,537 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 </table>
               </div>
               {filteredActivity.length === 0 && <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: 20 }}>No sessions match the current filters.</div>}
+            </div>
+          )}
+
+          {/* ═══ MEMBERS (users tab) ═══ */}
+          {tab === "users" && (
+            <div>
+              {/* Invite form */}
+              <div className="admin-filters" style={{ background: "var(--bg-1)", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", whiteSpace: "nowrap" }}>Invite &rarr;</span>
+                <input id="sa-invite-email" placeholder="email@company.com" type="email"
+                  onKeyDown={e => e.stopPropagation()} />
+                <select id="sa-invite-org" defaultValue="">
+                  <option value="" disabled>Org...</option>
+                  {data.orgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  {data.orgs.filter(o => !o.seller_url && o.member_count <= 1).length > 0 && <optgroup label="Personal">
+                    {data.orgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  </optgroup>}
+                </select>
+                <select id="sa-invite-role" defaultValue="rep">
+                  <option value="rep">Rep</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button onClick={async () => {
+                  const email = document.getElementById("sa-invite-email")?.value?.trim();
+                  const orgId = document.getElementById("sa-invite-org")?.value;
+                  const role = document.getElementById("sa-invite-role")?.value || "rep";
+                  if (!email || !orgId) { setPlanSaveMsg("Email and org required"); setTimeout(() => setPlanSaveMsg(""), 3000); return; }
+                  try {
+                    const r = await fetch("/api/invite", {
+                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                      body: JSON.stringify({ email, role, orgId }),
+                    });
+                    const d = await r.json();
+                    setPlanSaveMsg(d.ok ? `Invited ${email} to org` : `Error: ${d.error}`);
+                    if (d.ok) document.getElementById("sa-invite-email").value = "";
+                  } catch { setPlanSaveMsg("Failed to invite"); }
+                  setTimeout(() => setPlanSaveMsg(""), 4000);
+                }}
+                  style={{ padding: "6px 14px", borderRadius: 6, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  Send Invite
+                </button>
+              </div>
+
+              {/* Members table */}
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Name / Email</th>
+                    <th>Role</th>
+                    <th>Organization</th>
+                    <th>Status</th>
+                    <th>Last Active</th>
+                    <th style={{ width: 50 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
+                    const adminAction = async (action, extra = {}) => {
+                      try {
+                        const r = await fetch("/api/admin-action", {
+                          method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                          body: JSON.stringify({ action, email: u.email, userId: u.id, ...extra }),
+                        });
+                        const d = await r.json();
+                        setPlanSaveMsg(d.ok ? d.message || `${action} done` : `Error: ${d.error}`);
+                      } catch { setPlanSaveMsg(`Failed: ${action}`); }
+                      setTimeout(() => setPlanSaveMsg(""), 4000);
+                    };
+                    const patchUser = async (fields, msg) => {
+                      try {
+                        const r = await fetch("/api/admin-action", {
+                          method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                          body: JSON.stringify({ action: "update_user", userId: u.id, email: u.email, fields }),
+                        });
+                        const d = await r.json();
+                        setPlanSaveMsg(d.ok ? msg : `Error: ${d.error}`);
+                      } catch { setPlanSaveMsg("Failed to save"); }
+                      setTimeout(() => setPlanSaveMsg(""), 3000);
+                      setTimeout(fetchData, 500);
+                    };
+
+                    const companyOrgs = data.orgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+                    const personalOrgs = data.orgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+
+                    return (
+                      <tr key={u.id} style={u.email === SUPERUSER_EMAIL ? { background: "var(--bg-1)" } : undefined}>
+                        <td>
+                          <div style={{ fontWeight: 600, color: "var(--ink-0)", display: "flex", alignItems: "center", gap: 6 }}>
+                            {u.name || u.email?.split("@")[0]}
+                            {u.email === SUPERUSER_EMAIL && <span className="admin-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)" }}>SUPER</span>}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{u.email}</div>
+                        </td>
+                        <td>
+                          <select value={u.role || "rep"} onChange={e => patchUser({ role: e.target.value }, `${u.email} \u2192 ${e.target.value}`)}>
+                            <option value="rep">Rep</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select value={u.org_id || ""} onChange={e => patchUser({ org_id: e.target.value || null }, `${u.email} \u2192 ${e.target.value ? data.orgs.find(o => o.id === e.target.value)?.name : "no org"}`)}>
+                            <option value="">No org</option>
+                            {companyOrgs.length > 0 && <optgroup label="Companies">
+                              {companyOrgs.map(o => <option key={o.id} value={o.id}>{o.name}{o.seller_url ? ` \u00b7 ${o.seller_url.replace(/^https?:\/\//, "")}` : ""} ({o.plan})</option>)}
+                            </optgroup>}
+                            {personalOrgs.length > 0 && <optgroup label="Personal Workspaces">
+                              {personalOrgs.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
+                            </optgroup>}
+                          </select>
+                        </td>
+                        <td>
+                          {u.last_active ? (
+                            <span className="admin-badge" style={{ background: "var(--green-bg)", color: "var(--green)" }}>Active</span>
+                          ) : (
+                            <span className="admin-badge" style={{ background: "var(--bg-2)", color: "var(--ink-3)" }}>Never active</span>
+                          )}
+                        </td>
+                        <td style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
+                          {u.last_active ? timeAgo(u.last_active) : "\u2014"}
+                        </td>
+                        <td style={{ position: "relative" }}>
+                          <button className="admin-dot-menu" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === u.id ? null : u.id); }}>
+                            &#x22EF;
+                          </button>
+                          {openMenu === u.id && (
+                            <div className="admin-action-menu" onClick={e => e.stopPropagation()}>
+                              <button className="admin-action-item" onClick={() => { adminAction("reset_password"); setOpenMenu(null); }}>
+                                Send Password Reset
+                              </button>
+                              <button className="admin-action-item" onClick={() => { adminAction("resend_invite"); setOpenMenu(null); }}>
+                                Resend Invite
+                              </button>
+                              {u.email !== SUPERUSER_EMAIL && (
+                                <button className="admin-action-item danger" onClick={async () => {
+                                  if (!window.confirm(`Delete ${u.email}? This removes their auth account AND user record. They'll need to sign up again from scratch.`)) return;
+                                  try {
+                                    const r = await fetch("/api/admin-action", {
+                                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                                      body: JSON.stringify({ action: "delete_user", userId: u.id, email: u.email }),
+                                    });
+                                    const d = await r.json();
+                                    setPlanSaveMsg(d.ok ? `Deleted ${u.email}` : `Error: ${d.error}`);
+                                    if (d.ok) setTimeout(fetchData, 1500);
+                                  } catch { setPlanSaveMsg("Failed to delete user"); }
+                                  setTimeout(() => setPlanSaveMsg(""), 4000);
+                                  setOpenMenu(null);
+                                }}>
+                                  Delete User
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {filteredUsers.length === 0 && <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: 20 }}>No members match the current filters.</div>}
+            </div>
+          )}
+
+          {/* ═══ ORGANIZATIONS ═══ */}
+          {tab === "orgs" && (
+            <div>
+              {/* ── Company Organizations ── */}
+              {(() => {
+                const companyOrgs = filteredOrgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+                return companyOrgs.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Company Organizations ({companyOrgs.length})</div>
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Plan</th>
+                          <th>Website</th>
+                          <th>Runs</th>
+                          <th>Members</th>
+                          <th style={{ width: 50 }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {companyOrgs.map(o => {
+                          const members = data.users.filter(u => u.org_id === o.id);
+                          const patchOrg = async (fields, msg) => {
+                            try {
+                              const r = await fetch("/api/admin-action", {
+                                method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                                body: JSON.stringify({ action: "update_org", orgId: o.id, email: "org", fields }),
+                              });
+                              const d = await r.json();
+                              setPlanSaveMsg(d.ok ? msg : `Error: ${d.error}`);
+                            } catch { setPlanSaveMsg("Failed to save"); }
+                            setTimeout(() => setPlanSaveMsg(""), 3000);
+                            setTimeout(fetchData, 500);
+                          };
+                          const menuKey = `org-${o.id}`;
+                          return (
+                            <tr key={o.id}>
+                              <td>
+                                <input defaultValue={o.name}
+                                  onBlur={e => { const v = e.target.value.trim(); if (v && v !== o.name) patchOrg({ name: v }, `Renamed to ${v}`); }}
+                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
+                                  style={{ border: "none", background: "transparent", fontWeight: 600, fontSize: 13, width: "100%", outline: "none", color: "var(--ink-0)" }} />
+                              </td>
+                              <td>
+                                <select defaultValue={o.plan} onChange={e => {
+                                  const plan = e.target.value;
+                                  const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 } };
+                                  patchOrg({ plan, ...(limits[plan] || {}) }, `${o.name} \u2192 ${plan}${limits[plan]?.run_limit ? ` (${limits[plan].run_limit} runs)` : ""}`);
+                                }}>
+                                  <option value="trial">Trial</option>
+                                  <option value="starter">Starter</option>
+                                  <option value="pro">Pro</option>
+                                  <option value="team">Team</option>
+                                  <option value="enterprise">Enterprise</option>
+                                  <option value="paid">Paid</option>
+                                  <option value="suspended">Suspended</option>
+                                </select>
+                              </td>
+                              <td>
+                                <input defaultValue={o.seller_url || ""} placeholder="https://..."
+                                  onBlur={e => { const v = e.target.value.trim(); if (v !== (o.seller_url || "")) patchOrg({ seller_url: v || null }, `Website \u2192 ${v || "cleared"}`); }}
+                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
+                                  style={{ border: "none", background: "transparent", fontSize: 11, width: "100%", outline: "none", color: "var(--ink-2)" }} />
+                              </td>
+                              <td style={{ whiteSpace: "nowrap" }}>
+                                <span style={{ fontWeight: 600 }}>{o.run_count}</span>
+                                <span style={{ color: "var(--ink-3)" }}>/{o.run_limit}</span>
+                                {o.run_count >= o.run_limit && <span style={{ color: "var(--red)", fontWeight: 700, marginLeft: 4 }}>LIMIT</span>}
+                              </td>
+                              <td style={{ textAlign: "center" }}>{members.length}</td>
+                              <td style={{ position: "relative" }}>
+                                <button className="admin-dot-menu" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === menuKey ? null : menuKey); }}>
+                                  &#x22EF;
+                                </button>
+                                {openMenu === menuKey && (
+                                  <div className="admin-action-menu" onClick={e => e.stopPropagation()}>
+                                    <button className="admin-action-item" onClick={() => { patchOrg({ run_count: 0, max_run_count: 0 }, `${o.name} runs reset to 0`); setOpenMenu(null); }}>
+                                      Reset Runs
+                                    </button>
+                                    <button className="admin-action-item danger" onClick={async () => {
+                                      const msg = members.length > 0
+                                        ? `Delete "${o.name}"? ${members.length} member${members.length > 1 ? "s" : ""} will be unassigned.`
+                                        : `Delete "${o.name}"?`;
+                                      if (!window.confirm(msg)) return;
+                                      try {
+                                        const r = await fetch("/api/admin-action", {
+                                          method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                                          body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }),
+                                        });
+                                        const d = await r.json();
+                                        setPlanSaveMsg(d.ok ? `Deleted ${o.name}` : `Error: ${d.error}`);
+                                      } catch { setPlanSaveMsg("Failed to delete org"); }
+                                      setTimeout(fetchData, 1000);
+                                      setOpenMenu(null);
+                                    }}>
+                                      Delete Org
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              {/* ── Personal Workspaces ── */}
+              {(() => {
+                const personalOrgs = filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+                return personalOrgs.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                      Personal Workspaces ({personalOrgs.length})
+                    </div>
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Member</th>
+                          <th>Plan</th>
+                          <th>Runs</th>
+                          <th style={{ width: 60 }}>Delete</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {personalOrgs.map(o => {
+                          const members = data.users.filter(u => u.org_id === o.id);
+                          return (
+                            <tr key={o.id}>
+                              <td style={{ fontWeight: 600, color: "var(--ink-1)" }}>{o.name}</td>
+                              <td style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                                {members.length === 0 ? "Empty" : members.map(m => m.name || m.email?.split("@")[0]).join(", ")}
+                              </td>
+                              <td>
+                                <span className="admin-badge" style={{
+                                  background: ["paid","starter","pro","team","enterprise"].includes(o.plan) ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
+                                  color: ["paid","starter","pro","team","enterprise"].includes(o.plan) ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)",
+                                }}>{o.plan}</span>
+                              </td>
+                              <td style={{ whiteSpace: "nowrap" }}>
+                                <span style={{ fontWeight: 600 }}>{o.run_count}</span>
+                                <span style={{ color: "var(--ink-3)" }}>/{o.run_limit}</span>
+                              </td>
+                              <td>
+                                <button className="admin-action-item danger" style={{ padding: "2px 8px", fontSize: 10, border: "1px solid var(--red)", borderRadius: 4, background: "var(--red-bg)" }}
+                                  onClick={async () => {
+                                    if (!window.confirm(`Delete "${o.name}"?${members.length > 0 ? ` ${members.length} member(s) will be unassigned.` : ""}`)) return;
+                                    try {
+                                      const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` }, body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }) });
+                                      const d = await r.json();
+                                      setPlanSaveMsg(d.ok ? `Deleted ${o.name}` : `Error: ${d.error}`);
+                                    } catch { setPlanSaveMsg("Failed"); }
+                                    setTimeout(fetchData, 1000);
+                                  }}>
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              {filteredOrgs.length === 0 && <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: 20 }}>No orgs match the current filters.</div>}
+            </div>
+          )}
+
+          {/* ═══ COSTS ═══ */}
+          {tab === "costs" && data.costs && (
+            <div>
+              {/* Summary cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
+                {[
+                  { label: "Total Cost", value: `$${c.cost?.toFixed(2)}`, color: "var(--ink-0)" },
+                  { label: "API Calls", value: c.api_calls?.toLocaleString(), color: "var(--navy)" },
+                  { label: "Input Tokens", value: `${(c.input_tokens / 1000).toFixed(0)}K`, color: "var(--green)" },
+                  { label: "Output Tokens", value: `${(c.output_tokens / 1000).toFixed(0)}K`, color: "var(--amber)" },
+                  { label: "Web Searches", value: c.web_searches, color: "var(--violet)" },
+                ].map(m => (
+                  <div key={m.label} className="admin-metric">
+                    <div className="admin-metric-num" style={{ color: m.color, fontSize: 22 }}>{m.value}</div>
+                    <div className="admin-metric-label">{m.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cost by user */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Cost by User</div>
+              <table className="admin-table" style={{ marginBottom: 20 }}>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Cost</th>
+                    <th>Calls</th>
+                    <th>Input</th>
+                    <th>Output</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCostsByUser.map((u, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{u.user_name}</div>
+                        {u.user_email && <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{u.user_email}</div>}
+                      </td>
+                      <td style={{ fontWeight: 700, color: "var(--ink-0)" }}>${u.cost.toFixed(3)}</td>
+                      <td>{u.calls}</td>
+                      <td style={{ fontSize: 11, color: "var(--ink-3)" }}>{(u.input / 1000).toFixed(1)}K</td>
+                      <td style={{ fontSize: 11, color: "var(--ink-3)" }}>{(u.output / 1000).toFixed(1)}K</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Cost by model */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Cost by Model</div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+                {(data.costs.by_model || []).map((m, i) => (
+                  <div key={i} className="admin-metric" style={{ minWidth: 180, textAlign: "left" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-0)", marginBottom: 4 }}>{m.model}</div>
+                    <div className="admin-metric-num" style={{ color: m.model.includes("opus") ? "var(--violet)" : "var(--green)", fontSize: 18 }}>${m.cost.toFixed(3)}</div>
+                    <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{m.calls} calls &middot; {(m.input / 1000).toFixed(0)}K in &middot; {(m.output / 1000).toFixed(0)}K out</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cost by day */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Daily Cost</div>
+              {filteredCostsByDay.slice(0, 30).map((d, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--line-0)" }}>
+                  <div style={{ fontSize: 12, color: "var(--ink-1)", width: 90, fontWeight: 600 }}>{d.day}</div>
+                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 4, background: "var(--green)", width: Math.min(100, c.cost > 0 ? (d.cost / c.cost * 100 * (data.costs.by_day || []).length) : 0) + "%" }} />
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, width: 60, textAlign: "right" }}>${d.cost.toFixed(3)}</div>
+                  <div style={{ fontSize: 10, color: "var(--ink-3)", width: 50, textAlign: "right" }}>{d.calls} calls</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ ACTIVITY ═══ */}
+          {tab === "activity" && (
+            <div>
+              {/* Guest activity summary */}
+              {data.guestActivity?.total_calls > 0 && (
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Guest Sessions (unauthenticated)</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 10 }}>
+                    <div className="admin-metric" style={{ background: "var(--surface)" }}>
+                      <div className="admin-metric-num" style={{ fontSize: 22 }}>{data.guestActivity.total_calls}</div>
+                      <div className="admin-metric-label">API Calls</div>
+                    </div>
+                    <div className="admin-metric" style={{ background: "var(--surface)" }}>
+                      <div className="admin-metric-num" style={{ color: "var(--amber)", fontSize: 22 }}>${data.guestActivity.total_cost?.toFixed(2) || "0.00"}</div>
+                      <div className="admin-metric-label">Cost</div>
+                    </div>
+                  </div>
+                  {data.guestActivity.by_endpoint?.length > 0 && (
+                    <div style={{ fontSize: 11, color: "var(--ink-2)", marginBottom: 6 }}>
+                      <strong>By endpoint:</strong> {data.guestActivity.by_endpoint.map(e => `${e.endpoint} (${e.count})`).join(" \u00b7 ")}
+                    </div>
+                  )}
+                  {data.guestActivity.by_day?.length > 0 && (
+                    <div style={{ fontSize: 11, color: "var(--ink-2)" }}>
+                      <strong>Recent days:</strong> {data.guestActivity.by_day.slice(0, 7).map(d => `${d.day.slice(5)} (${d.count})`).join(" \u00b7 ")}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Authenticated user activity */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+                Authenticated Activity {hasActiveFilters && <span style={{ fontWeight: 400, color: "var(--amber)" }}>({filteredActivity.length} of {data.recent_activity.length})</span>}
+              </div>
+              {filteredActivity.map((a, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--line-0)" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: (Date.now() - new Date(a.updated_at).getTime()) < 86400000 ? "var(--green)" : "var(--line-0)", flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{a.session_name}</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                      <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>{a.user_name}</span>
+                      {a.user_email && <span> ({a.user_email})</span>}
+                      {a.seller_url && <span> &middot; {a.seller_url}</span>}
+                      {a.milton_messages > 0 && <span style={{ color: "var(--red)" }}> &middot; {a.milton_messages} Milton msgs</span>}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>{timeAgo(a.updated_at)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ USAGE ═══ */}
+          {tab === "usage" && (
+            <div>
+              {/* Environment status */}
+              {data.environment && (
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Environment</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
+                    {[
+                      { label: "Guest Mode", value: data.environment.guest_mode, ok: data.environment.guest_mode === "disabled" },
+                      { label: "Environment", value: data.environment.environment, ok: data.environment.environment === "production" },
+                      { label: "JWT Secret", value: data.environment.jwt_secret_set ? "Set" : "MISSING", ok: data.environment.jwt_secret_set },
+                      { label: "API Key", value: data.environment.api_key_set ? "Set" : "MISSING", ok: data.environment.api_key_set },
+                    ].map(e => (
+                      <div key={e.label} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 8, background: e.ok ? "var(--green-bg)" : "var(--red-bg)", color: e.ok ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
+                        {e.label}: {e.value}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Per-org usage */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Usage by Organization</div>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Org</th>
+                    <th>Plan</th>
+                    <th>Members</th>
+                    <th>Tokens</th>
+                    <th>Max Tokens</th>
+                    <th>Seller URL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrgs.sort((a, b) => (b.run_count || 0) - (a.run_count || 0)).map(o => (
+                    <tr key={o.id}>
+                      <td style={{ fontWeight: 600 }}>{o.name}</td>
+                      <td>
+                        <span className="admin-badge" style={{
+                          background: o.plan === "paid" ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
+                          color: o.plan === "paid" ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)",
+                        }}>{o.plan}</span>
+                      </td>
+                      <td>{o.member_count}</td>
+                      <td>
+                        <span style={{ fontWeight: 600 }}>{o.run_count}</span>
+                        <span style={{ color: "var(--ink-3)" }}>/{o.run_limit}</span>
+                        {o.run_count >= o.run_limit && <span style={{ color: "var(--red)", fontWeight: 700, marginLeft: 4 }}>LIMIT</span>}
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: "var(--violet)" }}>{o.max_run_count}</span>
+                        <span style={{ color: "var(--ink-3)" }}>/{o.max_run_limit}</span>
+                      </td>
+                      <td style={{ fontSize: 11, color: "var(--ink-3)" }}>{o.seller_url || "\u2014"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Totals */}
+              <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px 16px", background: "var(--bg-1)", borderRadius: 10 }}>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>total tokens</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "var(--violet)" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max tokens</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_orgs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>orgs</span></div>
+              </div>
             </div>
           )}
 
@@ -511,15 +1129,15 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
               {/* Plan configuration table */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Plan Configuration</div>
-              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", marginBottom: 16 }}>
+              <table className="admin-table" style={{ marginBottom: 16 }}>
                 <thead>
-                  <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Plan</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Tokens/mo</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Max Tokens</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Price/mo</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Your Cost</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Margin</th>
+                  <tr>
+                    <th>Plan</th>
+                    <th>Tokens/mo</th>
+                    <th>Max Tokens</th>
+                    <th>Price/mo</th>
+                    <th>Your Cost</th>
+                    <th>Margin</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -527,30 +1145,30 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     const cost = plan.tokens * plan.costPerToken;
                     const margin = plan.price > 0 ? Math.round((1 - cost / plan.price) * 100) : -100;
                     return (
-                      <tr key={plan.id} style={{ borderBottom: "1px solid var(--line-0)" }}>
-                        <td style={{ padding: "8px 6px", fontWeight: 600 }}>
+                      <tr key={plan.id}>
+                        <td>
                           <input value={plan.name} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, name: e.target.value } : pl))}
                             style={{ border: "none", background: "transparent", fontWeight: 600, fontSize: 13, width: 100, outline: "none" }} />
                         </td>
-                        <td style={{ padding: "8px 6px" }}>
+                        <td>
                           <input type="number" value={plan.tokens} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, tokens: Number(e.target.value) } : pl))}
                             style={{ width: 60, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12 }} />
                         </td>
-                        <td style={{ padding: "8px 6px" }}>
+                        <td>
                           <input type="number" value={plan.maxTokens} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, maxTokens: Number(e.target.value) } : pl))}
                             style={{ width: 60, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12, color: "var(--violet)" }} />
                         </td>
-                        <td style={{ padding: "8px 6px" }}>
+                        <td>
                           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
                             <span style={{ fontSize: 11, color: "var(--ink-3)" }}>$</span>
                             <input type="number" value={plan.price} onChange={e => setPlans(p => p.map((pl, j) => j === i ? { ...pl, price: Number(e.target.value) } : pl))}
                               style={{ width: 70, border: "1px solid var(--line-0)", borderRadius: 4, padding: "3px 6px", fontSize: 12 }} />
                           </div>
                         </td>
-                        <td style={{ padding: "8px 6px", fontWeight: 600, color: "var(--ink-1)" }}>
+                        <td style={{ fontWeight: 600, color: "var(--ink-1)" }}>
                           ${cost.toFixed(0)}
                         </td>
-                        <td style={{ padding: "8px 6px" }}>
+                        <td>
                           <span style={{ fontWeight: 700, fontSize: 13, color: margin > 70 ? "var(--green)" : margin > 50 ? "var(--amber)" : margin > 0 ? "var(--red)" : "var(--red)" }}>
                             {plan.price > 0 ? `${margin}%` : "Free"}
                           </span>
@@ -589,7 +1207,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{o.name}</div>
                     <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      Current: {o.plan} · {o.run_count}/{o.run_limit} tokens · {o.max_run_count}/{o.max_run_limit} max
+                      Current: {o.plan} &middot; {o.run_count}/{o.run_limit} tokens &middot; {o.max_run_count}/{o.max_run_limit} max
                     </div>
                   </div>
                   <select defaultValue={o.plan}
@@ -599,7 +1217,6 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   </select>
                 </div>
               ))}
-              {planSaveMsg && <div style={{ marginTop: 8, fontSize: 12, color: "var(--green)", fontWeight: 600 }}>{planSaveMsg}</div>}
 
               {/* Revenue projections */}
               <div style={{ marginTop: 20, fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Revenue Projections</div>
@@ -634,17 +1251,17 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   { label: "Disqualify Rate", value: `${l.disqualifyRate || 0}%`, color: "var(--red)" },
                   { label: "Avg Gate Completion", value: `${l.avgGateCompletion || 0}%`, color: "var(--navy)" },
                 ].map(m => (
-                  <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
-                    <div style={{ fontSize: 9, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.label}</div>
+                  <div key={m.label} className="admin-metric">
+                    <div className="admin-metric-num" style={{ color: m.color, fontSize: 22 }}>{m.value}</div>
+                    <div className="admin-metric-label">{m.label}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Top edited ICP fields — what the AI gets wrong */}
+              {/* Top edited ICP fields */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
                 Most Corrected ICP Fields
-                <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6, color: "var(--ink-3)" }}>Fields users edit most often — signals where AI output needs improvement</span>
+                <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6, color: "var(--ink-3)" }}>Fields users edit most often -- signals where AI output needs improvement</span>
               </div>
               {(l.topEditedFields || []).length > 0 ? (
                 <div style={{ marginBottom: 20 }}>
@@ -677,7 +1294,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 ))}
               </div>
 
-              {/* Intel adjustments — what insider knowledge users are adding */}
+              {/* Intel adjustments */}
               {(l.intelAdjustments || []).length > 0 && (
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
@@ -688,615 +1305,12 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--line-0)", fontSize: 12 }}>
                       <span style={{ fontWeight: 600, color: "var(--ink-0)", minWidth: 120 }}>{adj.company}</span>
                       <span style={{ fontWeight: 700, color: adj.modifier > 0 ? "var(--green)" : "var(--red)", minWidth: 40 }}>{adj.modifier > 0 ? "+" : ""}{adj.modifier}</span>
-                      <span style={{ color: "var(--ink-3)", flex: 1 }}>{adj.reason || "—"}</span>
+                      <span style={{ color: "var(--ink-3)", flex: 1 }}>{adj.reason || "\u2014"}</span>
                       <span style={{ color: "var(--ink-3)", fontSize: 10 }}>{adj.user}</span>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ═══ COSTS ═══ */}
-          {tab === "costs" && data.costs && (
-            <div>
-              {/* Summary cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
-                {[
-                  { label: "Total Cost", value: `$${c.cost?.toFixed(2)}`, color: "var(--ink-0)" },
-                  { label: "API Calls", value: c.api_calls?.toLocaleString(), color: "var(--navy)" },
-                  { label: "Input Tokens", value: `${(c.input_tokens / 1000).toFixed(0)}K`, color: "var(--green)" },
-                  { label: "Output Tokens", value: `${(c.output_tokens / 1000).toFixed(0)}K`, color: "var(--amber)" },
-                  { label: "Web Searches", value: c.web_searches, color: "var(--violet)" },
-                ].map(m => (
-                  <div key={m.label} style={{ background: "var(--bg-1)", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: m.color, fontFamily: "Lora,serif" }}>{m.value}</div>
-                    <div style={{ fontSize: 9, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Cost by user */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Cost by User</div>
-              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", marginBottom: 20 }}>
-                <thead>
-                  <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
-                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>User</th>
-                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Cost</th>
-                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Calls</th>
-                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Input</th>
-                    <th style={{ padding: "6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Output</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCostsByUser.map((u, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid var(--line-0)" }}>
-                      <td style={{ padding: "6px" }}>
-                        <div style={{ fontWeight: 600 }}>{u.user_name}</div>
-                        {u.user_email && <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{u.user_email}</div>}
-                      </td>
-                      <td style={{ padding: "6px", fontWeight: 700, color: "var(--ink-0)" }}>${u.cost.toFixed(3)}</td>
-                      <td style={{ padding: "6px" }}>{u.calls}</td>
-                      <td style={{ padding: "6px", fontSize: 11, color: "var(--ink-3)" }}>{(u.input / 1000).toFixed(1)}K</td>
-                      <td style={{ padding: "6px", fontSize: 11, color: "var(--ink-3)" }}>{(u.output / 1000).toFixed(1)}K</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Cost by model */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Cost by Model</div>
-              <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-                {(data.costs.by_model || []).map((m, i) => (
-                  <div key={i} style={{ background: "var(--bg-1)", borderRadius: 8, padding: "10px 14px", minWidth: 180 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-0)", marginBottom: 4 }}>{m.model}</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: m.model.includes("opus") ? "var(--violet)" : "var(--green)", fontFamily: "Lora,serif" }}>${m.cost.toFixed(3)}</div>
-                    <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{m.calls} calls · {(m.input / 1000).toFixed(0)}K in · {(m.output / 1000).toFixed(0)}K out</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Cost by day */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Daily Cost</div>
-              {filteredCostsByDay.slice(0, 30).map((d, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--line-0)" }}>
-                  <div style={{ fontSize: 12, color: "var(--ink-1)", width: 90, fontWeight: 600 }}>{d.day}</div>
-                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 4, background: "var(--green)", width: Math.min(100, c.cost > 0 ? (d.cost / c.cost * 100 * (data.costs.by_day || []).length) : 0) + "%" }} />
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, width: 60, textAlign: "right" }}>${d.cost.toFixed(3)}</div>
-                  <div style={{ fontSize: 10, color: "var(--ink-3)", width: 50, textAlign: "right" }}>{d.calls} calls</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ═══ USERS ═══ */}
-          {tab === "users" && (
-            <div>
-              {/* Quick actions bar */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 11, color: "var(--ink-3)", display: "flex", alignItems: "center", gap: 4 }}>
-                  {hasActiveFilters ? `${filteredUsers.length} of ${data.users.length}` : data.users.length} users · {filteredOrgs.length} orgs
-                </div>
-              </div>
-              {planSaveMsg && <div style={{ fontSize: 12, color: "var(--green)", fontWeight: 600, marginBottom: 10, padding: "6px 12px", background: "var(--green-bg)", borderRadius: 8 }}>✓ {planSaveMsg}</div>}
-
-              {/* Invite to specific org */}
-              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", whiteSpace: "nowrap" }}>Invite →</span>
-                  <input id="sa-invite-email" placeholder="email@company.com" type="email"
-                    style={{ flex: "1 1 160px", fontSize: 12, padding: "6px 10px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}
-                    onKeyDown={e => e.stopPropagation()} />
-                  <select id="sa-invite-org" defaultValue=""
-                    style={{ fontSize: 11, padding: "6px 8px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}>
-                    <option value="" disabled>Org...</option>
-                    {data.orgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                    {data.orgs.filter(o => !o.seller_url && o.member_count <= 1).length > 0 && <optgroup label="Personal">
-                      {data.orgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                    </optgroup>}
-                  </select>
-                  <select id="sa-invite-role" defaultValue="rep"
-                    style={{ fontSize: 11, padding: "6px 8px", border: "1.5px solid var(--line-0)", borderRadius: 6 }}>
-                    <option value="rep">Rep</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <button onClick={async () => {
-                    const email = document.getElementById("sa-invite-email")?.value?.trim();
-                    const orgId = document.getElementById("sa-invite-org")?.value;
-                    const role = document.getElementById("sa-invite-role")?.value || "rep";
-                    if (!email || !orgId) { setPlanSaveMsg("Email and org required"); setTimeout(() => setPlanSaveMsg(""), 3000); return; }
-                    try {
-                      const r = await fetch("/api/invite", {
-                        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                        body: JSON.stringify({ email, role, orgId }),
-                      });
-                      const d = await r.json();
-                      setPlanSaveMsg(d.ok ? `Invited ${email} to org` : `Error: ${d.error}`);
-                      if (d.ok) document.getElementById("sa-invite-email").value = "";
-                    } catch { setPlanSaveMsg("Failed to invite"); }
-                    setTimeout(() => setPlanSaveMsg(""), 4000);
-                  }}
-                    style={{ padding: "6px 14px", borderRadius: 6, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Send Invite
-                  </button>
-                </div>
-              </div>
-
-              {/* User cards */}
-              {filteredUsers.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
-                const org = data.orgs.find(o => o.id === u.org_id);
-                const rc = u.role === "admin" ? "var(--navy)" : u.role === "manager" ? "var(--amber)" : "var(--green)";
-                const rb = u.role === "admin" ? "var(--navy-bg)" : u.role === "manager" ? "var(--amber-bg)" : "var(--green-bg)";
-                const adminAction = async (action, extra = {}) => {
-                  try {
-                    const r = await fetch("/api/admin-action", {
-                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                      body: JSON.stringify({ action, email: u.email, userId: u.id, ...extra }),
-                    });
-                    const d = await r.json();
-                    setPlanSaveMsg(d.ok ? d.message || `${action} done` : `Error: ${d.error}`);
-                  } catch { setPlanSaveMsg(`Failed: ${action}`); }
-                  setTimeout(() => setPlanSaveMsg(""), 4000);
-                };
-                const patchUser = async (fields, msg) => {
-                  try {
-                    const r = await fetch("/api/admin-action", {
-                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                      body: JSON.stringify({ action: "update_user", userId: u.id, email: u.email, fields }),
-                    });
-                    const d = await r.json();
-                    setPlanSaveMsg(d.ok ? msg : `Error: ${d.error}`);
-                  } catch { setPlanSaveMsg("Failed to save"); }
-                  setTimeout(() => setPlanSaveMsg(""), 3000);
-                  setTimeout(fetchData, 500);
-                };
-                return (
-                  <div key={u.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, marginBottom: 8, background: u.email === SUPERUSER_EMAIL ? "var(--bg-1)" : "var(--surface)", overflow: "hidden" }}>
-                    {/* Header row — always visible */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: rc, color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
-                        {(u.name || u.email || "").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "··"}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-0)", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          {u.name || u.email?.split("@")[0]}
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20, background: rb, color: rc }}>{u.role}</span>
-                          {u.email === SUPERUSER_EMAIL && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, background: "var(--violet-bg)", color: "var(--violet)" }}>SUPER</span>}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{u.email}</div>
-                      </div>
-                      <div style={{ fontSize: 10, color: "var(--ink-3)", textAlign: "right", flexShrink: 0 }}>
-                        <div>{u.session_count} sessions</div>
-                        <div>Active {timeAgo(u.last_active)}</div>
-                      </div>
-                    </div>
-
-                    {/* Management panel — user-level only (org settings live in Orgs tab) */}
-                    <div style={{ borderTop: "1px solid var(--line-0)", padding: "10px 14px", background: "var(--bg-1)" }}>
-                      <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-                        <div style={{ flex: "1 1 120px" }}>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Role</label>
-                          <select value={u.role || "rep"} onChange={e => { patchUser({ role: e.target.value }, `✓ ${u.email} → ${e.target.value}`); setTimeout(fetchData, 500); }}
-                            style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", background: rb, color: rc, fontWeight: 700 }}>
-                            <option value="rep">Rep</option>
-                            <option value="manager">Manager</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-                        <div style={{ flex: "1 1 180px" }}>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Organization</label>
-                          <select value={u.org_id || ""} onChange={e => { patchUser({ org_id: e.target.value || null }, `✓ ${u.email} → ${e.target.value ? data.orgs.find(o => o.id === e.target.value)?.name : "no org"}`); setTimeout(fetchData, 500); }}
-                            style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)" }}>
-                            <option value="">No org</option>
-                            {/* Company orgs first (have seller_url or multiple members), then personal workspaces */}
-                            {(()=>{
-                              const company = data.orgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
-                              const personal = data.orgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
-                              return <>
-                                {company.length > 0 && <optgroup label="Companies">
-                                  {company.map(o => <option key={o.id} value={o.id}>{o.name}{o.seller_url ? ` · ${o.seller_url.replace(/^https?:\/\//,"")}` : ""} ({o.plan})</option>)}
-                                </optgroup>}
-                                {personal.length > 0 && <optgroup label="Personal Workspaces">
-                                  {personal.map(o => <option key={o.id} value={o.id}>{o.name} ({o.plan})</option>)}
-                                </optgroup>}
-                              </>;
-                            })()}
-                          </select>
-                        </div>
-                        <div style={{ flex: "1 1 140px" }}>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Display Name</label>
-                          <input defaultValue={u.name || ""} placeholder="Full name"
-                            onBlur={e => { const v = e.target.value.trim(); if (v !== (u.name || "")) patchUser({ name: v }, `✓ Name → ${v}`); }}
-                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                            style={{ width: "100%", fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line-0)", boxSizing: "border-box" }} />
-                        </div>
-                      </div>
-
-                      {/* Org summary (read-only — manage in Orgs tab) */}
-                      {org && (
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11, color: "var(--ink-2)", marginBottom: 10, padding: "6px 10px", background: "var(--surface)", borderRadius: 6, flexWrap: "wrap" }}>
-                          <strong>{org.name}</strong>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20,
-                            background: ["paid","starter","pro","team","enterprise"].includes(org.plan) ? "var(--green-bg)" : org.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
-                            color: ["paid","starter","pro","team","enterprise"].includes(org.plan) ? "var(--green)" : org.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>{org.plan}</span>
-                          <span>{org.run_count}/{org.run_limit} runs</span>
-                          {(org.max_run_limit||0)>0 && <span style={{color:"var(--violet)"}}>{org.max_run_count||0}/{org.max_run_limit} max</span>}
-                          <button onClick={()=>setTab("orgs")} style={{marginLeft:"auto",fontSize:10,color:"var(--tan-0)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage org →</button>
-                        </div>
-                      )}
-
-                      {/* Action buttons */}
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        <button onClick={() => adminAction("reset_password")}
-                          style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-1)", cursor: "pointer", fontWeight: 600 }}>
-                          Send Password Reset
-                        </button>
-                        <button onClick={() => adminAction("resend_invite")}
-                          style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-1)", cursor: "pointer", fontWeight: 600 }}>
-                          Resend Invite Email
-                        </button>
-                        {u.email !== SUPERUSER_EMAIL && <button onClick={async () => {
-                            if (!window.confirm(`Delete ${u.email}? This removes their auth account AND user record. They'll need to sign up again from scratch.`)) return;
-                            try {
-                              const r = await fetch("/api/admin-action", {
-                                method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                                body: JSON.stringify({ action: "delete_user", userId: u.id, email: u.email }),
-                              });
-                              const d = await r.json();
-                              setPlanSaveMsg(d.ok ? `Deleted ${u.email}` : `Error: ${d.error}`);
-                              if (d.ok) setTimeout(fetchData, 1500);
-                            } catch { setPlanSaveMsg("Failed to delete user"); }
-                            setTimeout(() => setPlanSaveMsg(""), 4000);
-                          }}
-                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer", fontWeight: 600 }}
-                            title="Delete user account completely">
-                            Delete
-                          </button>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ═══ ORGS ═══ */}
-          {tab === "orgs" && (
-            <div>
-              {/* Summary */}
-              <div style={{ display: "flex", gap: 12, marginBottom: 12, fontSize: 11, color: "var(--ink-3)" }}>
-                <span><strong style={{ color: "var(--ink-0)" }}>{filteredOrgs.filter(o => o.seller_url || o.member_count > 1).length}</strong> company orgs</span>
-                <span><strong style={{ color: "var(--ink-0)" }}>{filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1).length}</strong> personal workspaces</span>
-                {hasActiveFilters && <span style={{ color: "var(--amber)" }}>({filteredOrgs.length} of {data.orgs.length} shown)</span>}
-              </div>
-
-              {/* Company orgs */}
-              {(()=>{ const co = filteredOrgs.filter(o => o.seller_url || o.member_count > 1); return co.length > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Company Organizations ({co.length})</div>; })()}
-              {filteredOrgs.filter(o => o.seller_url || o.member_count > 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => {
-                const members = data.users.filter(u => u.org_id === o.id);
-                const nonMembers = data.users.filter(u => u.org_id !== o.id);
-                const patchOrg = async (fields, msg) => {
-                  try {
-                    const r = await fetch("/api/admin-action", {
-                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                      body: JSON.stringify({ action: "update_org", orgId: o.id, email: "org", fields }),
-                    });
-                    const d = await r.json();
-                    setPlanSaveMsg(d.ok ? `✓ ${msg}` : `Error: ${d.error}`);
-                  } catch { setPlanSaveMsg("Failed to save"); }
-                  setTimeout(() => setPlanSaveMsg(""), 3000);
-                  setTimeout(fetchData, 500);
-                };
-                const moveUser = async (userId, userName) => {
-                  try {
-                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                      body: JSON.stringify({ action: "update_user", userId, email: userName, fields: { org_id: o.id } }) });
-                    const d = await r.json();
-                    setPlanSaveMsg(d.ok ? `✓ ${userName} added to ${o.name}` : `Error: ${d.error}`);
-                  } catch { setPlanSaveMsg("Failed"); }
-                  setTimeout(() => setPlanSaveMsg(""), 3000);
-                  setTimeout(fetchData, 500);
-                };
-                const removeUser = async (userId, userName) => {
-                  try {
-                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                      body: JSON.stringify({ action: "update_user", userId, email: userName, fields: { org_id: null } }) });
-                    const d = await r.json();
-                    setPlanSaveMsg(d.ok ? `✓ ${userName} removed from ${o.name}` : `Error: ${d.error}`);
-                  } catch { setPlanSaveMsg("Failed"); }
-                  setTimeout(() => setPlanSaveMsg(""), 3000);
-                  setTimeout(fetchData, 500);
-                };
-                const isPaid = ["paid","starter","pro","team","enterprise"].includes(o.plan);
-                return (
-                  <div key={o.id} style={{ border: "1.5px solid var(--line-0)", borderRadius: 10, marginBottom: 12, overflow: "hidden" }}>
-                    {/* ── Header ── */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", background: "var(--surface)" }}>
-                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--tan-0)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
-                        {(o.name || "O").charAt(0).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink-0)" }}>{o.name}</div>
-                        <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{o.seller_url || "No company website set"}</div>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-                          background: isPaid ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
-                          color: isPaid ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>{o.plan}</span>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginTop: 4 }}>{o.run_count} / {o.run_limit} runs</div>
-                      </div>
-                    </div>
-
-                    {/* ── Settings ── */}
-                    <div style={{ borderTop: "1px solid var(--line-0)", padding: "14px 16px", background: "var(--bg-1)" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Org Settings</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                        <div>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Company Name</label>
-                          <input defaultValue={o.name} onBlur={e => { const v = e.target.value.trim(); if (v && v !== o.name) patchOrg({ name: v }, `Renamed to ${v}`); }}
-                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                            style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", boxSizing: "border-box" }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Plan & Limits</label>
-                          <select defaultValue={o.plan} onChange={e => {
-                            const plan = e.target.value;
-                            const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 } };
-                            patchOrg({ plan, ...(limits[plan] || {}) }, `${o.name} → ${plan}${limits[plan]?.run_limit ? ` (${limits[plan].run_limit} runs)` : ""}`);
-                          }}
-                            style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", fontWeight: 600 }}>
-                            <option value="trial">Trial — 3 runs/mo</option>
-                            <option value="starter">Starter — 25 runs/mo ($99)</option>
-                            <option value="pro">Pro — 100 runs/mo ($349)</option>
-                            <option value="team">Team — 250 runs/mo ($799)</option>
-                            <option value="enterprise">Enterprise — 1,000 runs/mo ($2,500)</option>
-                            <option value="paid">Paid — custom limits</option>
-                            <option value="suspended">Suspended</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-                        <div>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Company Website</label>
-                          <input defaultValue={o.seller_url || ""} placeholder="https://company.com" onBlur={e => { const v = e.target.value.trim(); if (v !== (o.seller_url || "")) patchOrg({ seller_url: v || null }, `Website → ${v || "cleared"}`); }}
-                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                            style={{ width: "100%", fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", boxSizing: "border-box" }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Run Limit (override)</label>
-                          <input type="number" defaultValue={o.run_limit} onBlur={e => { const v = Number(e.target.value); if (v !== o.run_limit) patchOrg({ run_limit: v }, `Run limit → ${v}`); }}
-                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                            style={{ width: "100%", fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", boxSizing: "border-box", textAlign: "center" }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--violet)", display: "block", marginBottom: 2 }}>Max Run Limit</label>
-                          <input type="number" defaultValue={o.max_run_limit || 0} onBlur={e => { const v = Number(e.target.value); if (v !== (o.max_run_limit || 0)) patchOrg({ max_run_limit: v }, `Max limit → ${v}`); }}
-                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                            style={{ width: "100%", fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--violet)", boxSizing: "border-box", textAlign: "center", color: "var(--violet)" }} />
-                        </div>
-                      </div>
-
-                      {/* ── Members ── */}
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
-                        Members ({members.length})
-                      </div>
-                      {members.length === 0 && <div style={{ fontSize: 12, color: "var(--ink-3)", fontStyle: "italic", marginBottom: 8 }}>No members in this org</div>}
-                      {members.map(m => (
-                        <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--line-1)" }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-0)", flex: 1 }}>{m.name || m.email?.split("@")[0]}</span>
-                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>{m.email}</span>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20,
-                            background: m.role === "admin" ? "var(--navy-bg)" : m.role === "manager" ? "var(--amber-bg)" : "var(--green-bg)",
-                            color: m.role === "admin" ? "var(--navy)" : m.role === "manager" ? "var(--amber)" : "var(--green)" }}>{m.role}</span>
-                          <button onClick={() => removeUser(m.id, m.name || m.email)} title="Remove from this org"
-                            style={{ fontSize: 9, color: "var(--red)", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: "2px 4px" }}>✕</button>
-                        </div>
-                      ))}
-
-                      {/* Add member */}
-                      <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center" }}>
-                        <select id={`add-member-${o.id}`} defaultValue=""
-                          style={{ flex: 1, fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--line-0)", color: "var(--ink-2)" }}>
-                          <option value="" disabled>Add a user to this org...</option>
-                          {nonMembers.map(u => <option key={u.id} value={u.id}>{u.name || u.email?.split("@")[0]} ({u.email})</option>)}
-                        </select>
-                        <button onClick={() => {
-                          const sel = document.getElementById(`add-member-${o.id}`);
-                          const uid = sel?.value;
-                          if (!uid) return;
-                          const u = data.users.find(x => x.id === uid);
-                          moveUser(uid, u?.name || u?.email || uid);
-                          sel.value = "";
-                        }}
-                          style={{ fontSize: 10, padding: "5px 12px", borderRadius: 6, background: "var(--ink-0)", color: "var(--surface)", border: "none", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
-                          Add
-                        </button>
-                      </div>
-
-                      {/* ── Actions ── */}
-                      <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--line-0)" }}>
-                        <button onClick={() => patchOrg({ run_count: 0, max_run_count: 0 }, `${o.name} runs reset to 0`)}
-                          style={{ fontSize: 10, fontWeight: 600, padding: "4px 12px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer" }}>
-                          Reset Runs
-                        </button>
-                        <button onClick={async () => {
-                          const msg = members.length > 0
-                            ? `Delete "${o.name}"? ${members.length} member${members.length > 1 ? "s" : ""} will be unassigned.`
-                            : `Delete "${o.name}"?`;
-                          if (!window.confirm(msg)) return;
-                          try {
-                            const r = await fetch("/api/admin-action", {
-                              method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                              body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }),
-                            });
-                            const d = await r.json();
-                            setPlanSaveMsg(d.ok ? `✓ Deleted ${o.name}` : `Error: ${d.error}`);
-                          } catch { setPlanSaveMsg("Failed to delete org"); }
-                          setTimeout(fetchData, 1000);
-                        }}
-                          style={{ fontSize: 10, fontWeight: 600, padding: "4px 12px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer" }}>
-                          Delete Org
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {/* Personal workspaces */}
-              {(()=>{ const po = filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1); return po.length > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.4px", marginTop: 16, marginBottom: 6 }}>Personal Workspaces ({po.length}) <span style={{ fontWeight: 400, textTransform: "none" }}>— move users to a company org, then delete these</span></div>; })()}
-              {filteredOrgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||"")).map(o => {
-                const members = data.users.filter(u => u.org_id === o.id);
-                const isPersonal = true;
-                return (
-                  <div key={o.id} style={{ border: "1px dashed var(--line-2)", borderRadius: 10, marginBottom: 6, padding: "10px 14px", background: "var(--surface)", display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-1)" }}>{o.name}</div>
-                      <div style={{ fontSize: 10, color: "var(--ink-3)" }}>
-                        {members.length === 0 ? "Empty" : members.map(m => m.name || m.email?.split("@")[0]).join(", ")} · {o.plan} · {o.run_count}/{o.run_limit} runs
-                      </div>
-                    </div>
-                    <button onClick={async () => {
-                      if (!window.confirm(`Delete "${o.name}"?${members.length > 0 ? ` ${members.length} member(s) will be unassigned.` : ""}`)) return;
-                      try {
-                        const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` }, body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }) });
-                        const d = await r.json();
-                        setPlanSaveMsg(d.ok ? `✓ Deleted ${o.name}` : `Error: ${d.error}`);
-                      } catch { setPlanSaveMsg("Failed"); }
-                      setTimeout(fetchData, 1000);
-                    }}
-                      style={{ fontSize: 10, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer", flexShrink: 0 }}>
-                      Delete
-                    </button>
-                  </div>
-                );
-              })}
-              {filteredOrgs.length === 0 && <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: 20 }}>No orgs match the current filters.</div>}
-            </div>
-          )}
-
-          {/* ═══ ACTIVITY ═══ */}
-          {tab === "activity" && (
-            <div>
-              {/* Guest activity summary */}
-              {data.guestActivity?.total_calls > 0 && (
-                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Guest Sessions (unauthenticated)</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 10 }}>
-                    <div style={{ background: "var(--surface)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: "var(--ink-0)", fontFamily: "Lora,serif" }}>{data.guestActivity.total_calls}</div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase" }}>API Calls</div>
-                    </div>
-                    <div style={{ background: "var(--surface)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: "var(--amber)", fontFamily: "Lora,serif" }}>${data.guestActivity.total_cost?.toFixed(2) || "0.00"}</div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase" }}>Cost</div>
-                    </div>
-                  </div>
-                  {data.guestActivity.by_endpoint?.length > 0 && (
-                    <div style={{ fontSize: 11, color: "var(--ink-2)", marginBottom: 6 }}>
-                      <strong>By endpoint:</strong> {data.guestActivity.by_endpoint.map(e => `${e.endpoint} (${e.count})`).join(" · ")}
-                    </div>
-                  )}
-                  {data.guestActivity.by_day?.length > 0 && (
-                    <div style={{ fontSize: 11, color: "var(--ink-2)" }}>
-                      <strong>Recent days:</strong> {data.guestActivity.by_day.slice(0, 7).map(d => `${d.day.slice(5)} (${d.count})`).join(" · ")}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Authenticated user activity */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
-                Authenticated Activity {hasActiveFilters && <span style={{ fontWeight: 400, color: "var(--amber)" }}>({filteredActivity.length} of {data.recent_activity.length})</span>}
-              </div>
-              {filteredActivity.map((a, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--line-0)" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: (Date.now() - new Date(a.updated_at).getTime()) < 86400000 ? "var(--green)" : "var(--line-0)", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{a.session_name}</div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>{a.user_name}</span>
-                      {a.user_email && <span> ({a.user_email})</span>}
-                      {a.seller_url && <span> · {a.seller_url}</span>}
-                      {a.milton_messages > 0 && <span style={{ color: "var(--red)" }}> · {a.milton_messages} Milton msgs</span>}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>{timeAgo(a.updated_at)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ═══ USAGE ═══ */}
-          {tab === "usage" && (
-            <div>
-              {/* Environment status */}
-              {data.environment && (
-                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Environment</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
-                    {[
-                      { label: "Guest Mode", value: data.environment.guest_mode, ok: data.environment.guest_mode === "disabled" },
-                      { label: "Environment", value: data.environment.environment, ok: data.environment.environment === "production" },
-                      { label: "JWT Secret", value: data.environment.jwt_secret_set ? "Set" : "MISSING", ok: data.environment.jwt_secret_set },
-                      { label: "API Key", value: data.environment.api_key_set ? "Set" : "MISSING", ok: data.environment.api_key_set },
-                    ].map(e => (
-                      <div key={e.label} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 8, background: e.ok ? "var(--green-bg)" : "var(--red-bg)", color: e.ok ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
-                        {e.label}: {e.value}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Per-org usage */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Usage by Organization</div>
-              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "2px solid var(--line-0)", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Org</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Plan</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Members</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Tokens</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Max Tokens</th>
-                    <th style={{ padding: "8px 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Seller URL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrgs.sort((a, b) => (b.run_count || 0) - (a.run_count || 0)).map(o => (
-                    <tr key={o.id} style={{ borderBottom: "1px solid var(--line-0)" }}>
-                      <td style={{ padding: "8px 6px", fontWeight: 600 }}>{o.name}</td>
-                      <td style={{ padding: "8px 6px" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10,
-                          background: o.plan === "paid" ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
-                          color: o.plan === "paid" ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>
-                          {o.plan}
-                        </span>
-                      </td>
-                      <td style={{ padding: "8px 6px" }}>{o.member_count}</td>
-                      <td style={{ padding: "8px 6px" }}>
-                        <span style={{ fontWeight: 600 }}>{o.run_count}</span>
-                        <span style={{ color: "var(--ink-3)" }}>/{o.run_limit}</span>
-                        {o.run_count >= o.run_limit && <span style={{ color: "var(--red)", fontWeight: 700, marginLeft: 4 }}>LIMIT</span>}
-                      </td>
-                      <td style={{ padding: "8px 6px" }}>
-                        <span style={{ fontWeight: 600, color: "var(--violet)" }}>{o.max_run_count}</span>
-                        <span style={{ color: "var(--ink-3)" }}>/{o.max_run_limit}</span>
-                      </td>
-                      <td style={{ padding: "8px 6px", fontSize: 11, color: "var(--ink-3)" }}>{o.seller_url || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Totals */}
-              <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px 16px", background: "var(--bg-1)", borderRadius: 10 }}>
-                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>total tokens</span></div>
-                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "var(--violet)" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max tokens</span></div>
-                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_orgs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>orgs</span></div>
-              </div>
             </div>
           )}
 
@@ -1313,15 +1327,18 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   <div key={i} style={{ padding: "8px 12px", background: "var(--bg-1)", borderRadius: 8, marginBottom: 6 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-0)" }}>{url}</div>
                     <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      {sessionCount} session{sessionCount !== 1 ? "s" : ""} · {users.join(", ")}
+                      {sessionCount} session{sessionCount !== 1 ? "s" : ""} &middot; {users.join(", ")}
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </main>
       </div>
+
+      {/* Toast */}
+      {planSaveMsg && <div className="admin-toast">{planSaveMsg}</div>}
     </div>
   );
 }
