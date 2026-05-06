@@ -967,115 +967,146 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
               {filteredOrgs.sort((a, b) => (b.run_count || 0) - (a.run_count || 0)).map(o => {
                 const members = data.users.filter(u => u.org_id === o.id);
+                const nonMembers = data.users.filter(u => u.org_id !== o.id);
                 const patchOrg = async (fields, msg) => {
                   await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${o.id}`, {
                     method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
                     body: JSON.stringify(fields),
                   });
-                  setPlanSaveMsg(msg); setTimeout(() => setPlanSaveMsg(""), 3000);
+                  setPlanSaveMsg(`✓ ${msg}`); setTimeout(() => setPlanSaveMsg(""), 3000);
                 };
+                const moveUser = async (userId, userName) => {
+                  await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
+                    method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                    body: JSON.stringify({ org_id: o.id }),
+                  });
+                  setPlanSaveMsg(`✓ ${userName} added to ${o.name}`); setTimeout(() => setPlanSaveMsg(""), 3000);
+                  setTimeout(fetchData, 500);
+                };
+                const removeUser = async (userId, userName) => {
+                  await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
+                    method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                    body: JSON.stringify({ org_id: null }),
+                  });
+                  setPlanSaveMsg(`✓ ${userName} removed from ${o.name}`); setTimeout(() => setPlanSaveMsg(""), 3000);
+                  setTimeout(fetchData, 500);
+                };
+                const isPaid = ["paid","starter","pro","team","enterprise"].includes(o.plan);
                 return (
-                  <div key={o.id} style={{ border: "1px solid var(--line-0)", borderRadius: 10, marginBottom: 8, overflow: "hidden" }}>
-                    {/* Header */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--tan-0)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
+                  <div key={o.id} style={{ border: "1.5px solid var(--line-0)", borderRadius: 10, marginBottom: 12, overflow: "hidden" }}>
+                    {/* ── Header ── */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", background: "var(--surface)" }}>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--tan-0)", color: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, fontFamily: "Lora,serif", flexShrink: 0 }}>
                         {(o.name || "O").charAt(0).toUpperCase()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-0)" }}>{o.name}</div>
-                        <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                          {members.length} member{members.length !== 1 ? "s" : ""} · {o.seller_url || "no seller URL"}
-                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink-0)" }}>{o.name}</div>
+                        <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{o.seller_url || "No company website set"}</div>
                       </div>
-                      <div style={{ fontSize: 10, color: "var(--ink-3)", textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 12, color: "var(--ink-0)" }}>{o.run_count}/{o.run_limit} runs</div>
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10,
-                          background: o.plan === "paid" || o.plan === "starter" || o.plan === "pro" || o.plan === "team" || o.plan === "enterprise" ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
-                          color: o.plan === "paid" || o.plan === "starter" || o.plan === "pro" || o.plan === "team" || o.plan === "enterprise" ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>{o.plan}</span>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+                          background: isPaid ? "var(--green-bg)" : o.plan === "suspended" ? "var(--red-bg)" : "var(--amber-bg)",
+                          color: isPaid ? "var(--green)" : o.plan === "suspended" ? "var(--red)" : "var(--amber)" }}>{o.plan}</span>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginTop: 4 }}>{o.run_count} / {o.run_limit} runs</div>
                       </div>
                     </div>
 
-                    {/* Management panel */}
-                    <div style={{ borderTop: "1px solid var(--line-0)", padding: "10px 14px", background: "var(--bg-1)" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 8 }}>
-                        {/* Org name */}
+                    {/* ── Settings ── */}
+                    <div style={{ borderTop: "1px solid var(--line-0)", padding: "14px 16px", background: "var(--bg-1)" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Org Settings</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
                         <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Org Name</div>
-                          <input defaultValue={o.name} onBlur={e => { const v = e.target.value.trim(); if (v && v !== o.name) patchOrg({ name: v }, `Renamed → ${v}`); }}
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Company Name</label>
+                          <input defaultValue={o.name} onBlur={e => { const v = e.target.value.trim(); if (v && v !== o.name) patchOrg({ name: v }, `Renamed to ${v}`); }}
                             onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                            style={{ width: "100%", fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--line-0)", boxSizing: "border-box" }} />
+                            style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", boxSizing: "border-box" }} />
                         </div>
-                        {/* Plan */}
                         <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Plan</div>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Plan & Limits</label>
                           <select defaultValue={o.plan} onChange={e => {
                             const plan = e.target.value;
                             const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 } };
-                            patchOrg({ plan, ...(limits[plan] || {}) }, `${o.name} → ${plan}`);
+                            patchOrg({ plan, ...(limits[plan] || {}) }, `${o.name} → ${plan}${limits[plan]?.run_limit ? ` (${limits[plan].run_limit} runs)` : ""}`);
                           }}
-                            style={{ width: "100%", fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--line-0)", fontWeight: 600 }}>
-                            <option value="trial">Trial (3)</option>
-                            <option value="starter">Starter (25)</option>
-                            <option value="pro">Pro (100)</option>
-                            <option value="team">Team (250)</option>
-                            <option value="enterprise">Enterprise (1K)</option>
-                            <option value="paid">Paid (custom)</option>
+                            style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", fontWeight: 600 }}>
+                            <option value="trial">Trial — 3 runs/mo</option>
+                            <option value="starter">Starter — 25 runs/mo ($99)</option>
+                            <option value="pro">Pro — 100 runs/mo ($349)</option>
+                            <option value="team">Team — 250 runs/mo ($799)</option>
+                            <option value="enterprise">Enterprise — 1,000 runs/mo ($2,500)</option>
+                            <option value="paid">Paid — custom limits</option>
                             <option value="suspended">Suspended</option>
                           </select>
                         </div>
-                        {/* Run limit */}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
                         <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Runs</div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700 }}>{o.run_count}</span>
-                            <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
-                            <input type="number" defaultValue={o.run_limit} style={{ width: 50, fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--line-0)", textAlign: "center" }}
-                              onBlur={e => { const v = Number(e.target.value); if (v !== o.run_limit) patchOrg({ run_limit: v }, `${o.name} run limit → ${v}`); }}
-                              onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }} />
-                          </div>
-                        </div>
-                        {/* Max runs */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--violet)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Max Runs</div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>{o.max_run_count || 0}</span>
-                            <span style={{ fontSize: 10, color: "var(--ink-3)" }}>/</span>
-                            <input type="number" defaultValue={o.max_run_limit || 0} style={{ width: 50, fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--violet)", textAlign: "center", color: "var(--violet)" }}
-                              onBlur={e => { const v = Number(e.target.value); if (v !== (o.max_run_limit || 0)) patchOrg({ max_run_limit: v }, `${o.name} max → ${v}`); }}
-                              onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }} />
-                          </div>
-                        </div>
-                        {/* Seller URL */}
-                        <div style={{ gridColumn: "1 / -1" }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 3 }}>Seller URL</div>
-                          <input defaultValue={o.seller_url || ""} placeholder="https://..." onBlur={e => { const v = e.target.value.trim(); if (v !== (o.seller_url || "")) patchOrg({ seller_url: v || null }, `${o.name} URL → ${v || "cleared"}`); }}
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Company Website</label>
+                          <input defaultValue={o.seller_url || ""} placeholder="https://company.com" onBlur={e => { const v = e.target.value.trim(); if (v !== (o.seller_url || "")) patchOrg({ seller_url: v || null }, `Website → ${v || "cleared"}`); }}
                             onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
-                            style={{ width: "100%", fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--line-0)", boxSizing: "border-box" }} />
+                            style={{ width: "100%", fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", boxSizing: "border-box" }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", display: "block", marginBottom: 2 }}>Run Limit (override)</label>
+                          <input type="number" defaultValue={o.run_limit} onBlur={e => { const v = Number(e.target.value); if (v !== o.run_limit) patchOrg({ run_limit: v }, `Run limit → ${v}`); }}
+                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
+                            style={{ width: "100%", fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--line-0)", boxSizing: "border-box", textAlign: "center" }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 10, fontWeight: 600, color: "var(--violet)", display: "block", marginBottom: 2 }}>Max Run Limit</label>
+                          <input type="number" defaultValue={o.max_run_limit || 0} onBlur={e => { const v = Number(e.target.value); if (v !== (o.max_run_limit || 0)) patchOrg({ max_run_limit: v }, `Max limit → ${v}`); }}
+                            onKeyDown={e => { if (e.key === "Enter") e.target.blur(); e.stopPropagation(); }}
+                            style={{ width: "100%", fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "1.5px solid var(--violet)", boxSizing: "border-box", textAlign: "center", color: "var(--violet)" }} />
                         </div>
                       </div>
 
-                      {/* Members list */}
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase" }}>Members:</span>
-                        {members.length === 0 && <span style={{ fontSize: 11, color: "var(--ink-3)", fontStyle: "italic" }}>No members</span>}
-                        {members.map(m => (
-                          <span key={m.id} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: m.role === "admin" ? "var(--navy-bg)" : m.role === "manager" ? "var(--amber-bg)" : "var(--green-bg)",
-                            color: m.role === "admin" ? "var(--navy)" : m.role === "manager" ? "var(--amber)" : "var(--green)", fontWeight: 600 }}>
-                            {m.name || m.email?.split("@")[0]} ({m.role})
-                          </span>
-                        ))}
+                      {/* ── Members ── */}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
+                        Members ({members.length})
+                      </div>
+                      {members.length === 0 && <div style={{ fontSize: 12, color: "var(--ink-3)", fontStyle: "italic", marginBottom: 8 }}>No members in this org</div>}
+                      {members.map(m => (
+                        <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--line-1)" }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-0)", flex: 1 }}>{m.name || m.email?.split("@")[0]}</span>
+                          <span style={{ fontSize: 10, color: "var(--ink-3)" }}>{m.email}</span>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20,
+                            background: m.role === "admin" ? "var(--navy-bg)" : m.role === "manager" ? "var(--amber-bg)" : "var(--green-bg)",
+                            color: m.role === "admin" ? "var(--navy)" : m.role === "manager" ? "var(--amber)" : "var(--green)" }}>{m.role}</span>
+                          <button onClick={() => removeUser(m.id, m.name || m.email)} title="Remove from this org"
+                            style={{ fontSize: 9, color: "var(--red)", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: "2px 4px" }}>✕</button>
+                        </div>
+                      ))}
+
+                      {/* Add member */}
+                      <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center" }}>
+                        <select id={`add-member-${o.id}`} defaultValue=""
+                          style={{ flex: 1, fontSize: 11, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--line-0)", color: "var(--ink-2)" }}>
+                          <option value="" disabled>Add a user to this org...</option>
+                          {nonMembers.map(u => <option key={u.id} value={u.id}>{u.name || u.email?.split("@")[0]} ({u.email})</option>)}
+                        </select>
+                        <button onClick={() => {
+                          const sel = document.getElementById(`add-member-${o.id}`);
+                          const uid = sel?.value;
+                          if (!uid) return;
+                          const u = data.users.find(x => x.id === uid);
+                          moveUser(uid, u?.name || u?.email || uid);
+                          sel.value = "";
+                        }}
+                          style={{ fontSize: 10, padding: "5px 12px", borderRadius: 6, background: "var(--ink-0)", color: "var(--surface)", border: "none", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          Add
+                        </button>
                       </div>
 
-                      {/* Actions */}
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => patchOrg({ run_count: 0, max_run_count: 0 }, `${o.name} runs reset`)}
-                          style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer" }}>
+                      {/* ── Actions ── */}
+                      <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--line-0)" }}>
+                        <button onClick={() => patchOrg({ run_count: 0, max_run_count: 0 }, `${o.name} runs reset to 0`)}
+                          style={{ fontSize: 10, fontWeight: 600, padding: "4px 12px", borderRadius: 6, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer" }}>
                           Reset Runs
                         </button>
                         <button onClick={async () => {
                           const msg = members.length > 0
-                            ? `Delete org "${o.name}"? ${members.length} member${members.length > 1 ? "s" : ""} will be moved to "No org" and lose access to shared sessions.`
-                            : `Delete org "${o.name}"?`;
+                            ? `Delete "${o.name}"? ${members.length} member${members.length > 1 ? "s" : ""} will be unassigned.`
+                            : `Delete "${o.name}"?`;
                           if (!window.confirm(msg)) return;
                           try {
                             const r = await fetch("/api/admin-action", {
@@ -1083,12 +1114,12 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                               body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }),
                             });
                             const d = await r.json();
-                            setPlanSaveMsg(d.ok ? `Deleted ${o.name}${members.length > 0 ? ` (${members.length} members unassigned)` : ""}` : `Error: ${d.error}`);
+                            setPlanSaveMsg(d.ok ? `✓ Deleted ${o.name}` : `Error: ${d.error}`);
                           } catch { setPlanSaveMsg("Failed to delete org"); }
                           setTimeout(fetchData, 1000);
                         }}
-                          style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer" }}>
-                          Delete Org{members.length > 0 ? ` (${members.length} members)` : ""}
+                          style={{ fontSize: 10, fontWeight: 600, padding: "4px 12px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer" }}>
+                          Delete Org
                         </button>
                       </div>
                     </div>
