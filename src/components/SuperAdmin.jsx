@@ -30,8 +30,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [searchQuery, setSearchQuery] = useState("");
   const isSuperuser = sbUser?.email === SUPERUSER_EMAIL;
 
-  useEffect(() => {
-    if (!isSuperuser) return;
+  const fetchData = () => {
     setLoading(true);
     fetch("/api/admin", {
       headers: { Authorization: `Bearer ${sbToken}` },
@@ -39,10 +38,15 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
       .then(r => r.json())
       .then(d => {
         if (d.error) setError(d.error);
-        else setData(d);
+        else { setData(d); setError(""); }
       })
       .catch(() => setError("Failed to load"))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!isSuperuser) return;
+    fetchData();
   }, [sbToken]);
 
   // Superuser check — after all hooks
@@ -163,17 +167,23 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   ];
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "90%", maxWidth: 900, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "var(--bg-0)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Header */}
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-0)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--ink-0)" }}>Superuser Dashboard</div>
-            <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Real-time engagement analytics</div>
+        <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--line-0)", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Admin Dashboard</div>
+            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "var(--violet-bg)", color: "var(--violet)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Superuser</span>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "var(--ink-2)" }}>&times;</button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={fetchData} disabled={loading} style={{ padding: "6px 12px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--ink-2)" }}>
+              {loading ? "Loading..." : "↻ Refresh"}
+            </button>
+            <button onClick={onClose} style={{ padding: "6px 16px", borderRadius: 8, border: "1.5px solid var(--ink-0)", background: "var(--ink-0)", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "var(--surface)" }}>
+              ← Back to App
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -235,7 +245,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+        <div style={{ flex: 1, overflow: "auto", padding: "20px 24px" }}>
 
           {/* ═══ OVERVIEW ═══ */}
           {tab === "overview" && (
@@ -930,7 +940,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                               });
                               const d = await r.json();
                               setPlanSaveMsg(d.ok ? `Deleted ${u.email}` : `Error: ${d.error}`);
-                              if (d.ok) setTimeout(() => window.location.reload(), 1500);
+                              if (d.ok) setTimeout(fetchData, 1500);
                             } catch { setPlanSaveMsg("Failed to delete user"); }
                             setTimeout(() => setPlanSaveMsg(""), 4000);
                           }}
@@ -1064,7 +1074,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                           if (!window.confirm(`Delete org "${o.name}"? This org has no members.`)) return;
                           await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${o.id}`, { method: "DELETE", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } });
                           setPlanSaveMsg(`Deleted org ${o.name}`);
-                          setTimeout(() => window.location.reload(), 1500);
+                          setTimeout(fetchData, 1500);
                         }}
                           style={{ fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer" }}>
                           Delete Org
