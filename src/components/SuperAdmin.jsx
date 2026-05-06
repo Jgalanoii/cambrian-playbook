@@ -828,6 +828,23 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             title="Resend signup/invite email">
                             Resend
                           </button>
+                          {u.email !== SUPERUSER_EMAIL && <button onClick={async () => {
+                            if (!window.confirm(`Delete ${u.email}? This removes their auth account AND user record. They'll need to sign up again from scratch.`)) return;
+                            try {
+                              const r = await fetch("/api/admin-action", {
+                                method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                                body: JSON.stringify({ action: "delete_user", userId: u.id, email: u.email }),
+                              });
+                              const d = await r.json();
+                              setPlanSaveMsg(d.ok ? `Deleted ${u.email}` : `Error: ${d.error}`);
+                              if (d.ok) setTimeout(() => window.location.reload(), 1500);
+                            } catch { setPlanSaveMsg("Failed to delete user"); }
+                            setTimeout(() => setPlanSaveMsg(""), 4000);
+                          }}
+                            style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer", fontWeight: 600 }}
+                            title="Delete user account completely">
+                            Delete
+                          </button>}
                         </div>
                       </div>
                     </div>

@@ -77,6 +77,33 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: d.error_description || d.msg || "Failed to resend invite" });
     }
 
+    if (action === "delete_user") {
+      const { userId } = req.body || {};
+      if (!userId) return res.status(400).json({ error: "userId required" });
+
+      // 1. Delete from public.users table
+      await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: "DELETE",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+      });
+
+      // 2. Delete from Supabase Auth (auth.users)
+      const authRes = await fetch(`${SB_URL}/auth/v1/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: {
+          apikey: SB_KEY,
+          Authorization: `Bearer ${SB_KEY}`,
+        },
+      });
+
+      if (authRes.ok || authRes.status === 404) {
+        console.log(`[admin] Deleted user ${userId} (${email})`);
+        return res.json({ ok: true, message: `Deleted ${email}` });
+      }
+      const d = await authRes.json();
+      return res.status(400).json({ error: d.error_description || d.msg || "Failed to delete auth user" });
+    }
+
     return res.status(400).json({ error: `Unknown action: ${action}` });
   } catch (e) {
     return res.status(500).json({ error: e.message });
