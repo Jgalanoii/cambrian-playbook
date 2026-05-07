@@ -367,6 +367,7 @@ export default async function handler(req, res) {
       recent_activity: recentActivity,
       seller_urls: allSellerUrls,
       costs,
+      dbCosts: dbCosts || null, // server-side aggregated costs (exact, no row limit)
       learnings,
       sessionFunnel,
       guestActivity,

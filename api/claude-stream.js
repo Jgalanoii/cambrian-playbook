@@ -104,14 +104,21 @@ export default async function handler(req, res) {
     const startUsage = msgStart ? JSON.parse(msgStart[1]) : {};
     const deltaUsage = msgDelta ? JSON.parse(msgDelta[1]) : {};
     const modelMatch = streamedText.match(/"model"\s*:\s*"([^"]+)"/);
-    const inputTokens = (startUsage.input_tokens || 0) + (startUsage.cache_creation_input_tokens || 0) + (startUsage.cache_read_input_tokens || 0);
+    const cacheReadTokens = startUsage.cache_read_input_tokens || 0;
+    const cacheCreationTokens = startUsage.cache_creation_input_tokens || 0;
+    const inputTokens = (startUsage.input_tokens || 0) + cacheCreationTokens + cacheReadTokens;
     const outputTokens = deltaUsage.output_tokens || startUsage.output_tokens || 0;
+    // Count web search results in streamed content
+    const webSearchCount = (streamedText.match(/"web_search_tool_result"/g) || []).length;
     if (inputTokens || outputTokens) {
       logTokenUsage({
         userId,
         orgId: usageOrgId,
         model: modelMatch?.[1] || body.model,
         inputTokens, outputTokens,
+        cacheReadTokens,
+        cacheCreationTokens,
+        webSearches: webSearchCount,
         endpoint: "claude-stream",
       });
     }

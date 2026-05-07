@@ -92,6 +92,8 @@ export default async function handler(req, res) {
       model: data.model || body.model,
       inputTokens: (data.usage.input_tokens || 0) + (data.usage.cache_creation_input_tokens || 0) + (data.usage.cache_read_input_tokens || 0),
       outputTokens: data.usage.output_tokens || 0,
+      cacheReadTokens: data.usage.cache_read_input_tokens || 0,
+      cacheCreationTokens: data.usage.cache_creation_input_tokens || 0,
       webSearches,
       endpoint: "claude",
     });
