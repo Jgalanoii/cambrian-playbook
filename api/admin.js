@@ -9,12 +9,14 @@ const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 const SUPERUSER_EMAIL = process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com";
 
-async function sbFetch(path) {
+async function sbFetch(path, maxRows = 10000) {
+  // Supabase REST API defaults to 1000 rows. Use Range header for more.
   const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
     headers: {
       apikey: SB_KEY,
       Authorization: `Bearer ${SB_KEY}`,
       "Content-Type": "application/json",
+      Range: `0-${maxRows - 1}`,
     },
   });
   return r.json();
@@ -65,7 +67,7 @@ export default async function handler(req, res) {
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
       sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=2000"),
-      sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc&limit=50000"),
+      sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc", 50000),
       sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=2000"),
     ]);
 
@@ -197,12 +199,17 @@ export default async function handler(req, res) {
     const allSellerUrls = [...new Set((sessions || []).map(s => s.seller_url).filter(Boolean))];
 
     // ── Cost tracking from api_usage_log ──
+    // Prices per 1M tokens (Anthropic published rates, May 2026)
+    // Note: input_tokens includes cache_read + cache_creation which are
+    // cheaper in practice (90% discount on cache reads). These costs
+    // represent a ceiling; actual costs are ~20-40% lower due to caching.
     const PRICING = {
       "claude-haiku-4-5-20251001": { input: 0.80, output: 4.00 },
       "claude-sonnet-4-5": { input: 3.00, output: 15.00 },
       "claude-sonnet-4-5-20250929": { input: 3.00, output: 15.00 },
       "claude-opus-4-6-20250514": { input: 15.00, output: 75.00 },
     };
+    const WEB_SEARCH_COST = 0.01; // $0.01 per web search invocation
     const DEFAULT_PRICING = { input: 1.00, output: 5.00 };
 
     const costByUser = {};
@@ -219,7 +226,9 @@ export default async function handler(req, res) {
       if (!log.model || !log.input_tokens && !log.output_tokens) return;
       if (["admin-dashboard", "enterprise-inquiry", "cron-monthly-reset"].includes(log.model)) return;
       const pricing = PRICING[log.model] || DEFAULT_PRICING;
-      const cost = (log.input_tokens * pricing.input + log.output_tokens * pricing.output) / 1_000_000;
+      const tokenCost = (log.input_tokens * pricing.input + log.output_tokens * pricing.output) / 1_000_000;
+      const searchCost = (log.web_searches || 0) * WEB_SEARCH_COST;
+      const cost = tokenCost + searchCost;
       totalCost += cost;
       totalInputTokens += log.input_tokens || 0;
       totalOutputTokens += log.output_tokens || 0;
