@@ -469,6 +469,16 @@ let _maxMode = false;
 function setCambrianMaxMode(on) { _maxMode = !!on; }
 function activeModel() { return _maxMode ? OPUS : HAIKU; }
 
+// Tracking context — set before brief generation, read by claudeFetch/streamAI
+let _trackingCtx = {};
+function setTrackingContext(targetCompany, sellerUrl, briefType) {
+  _trackingCtx = {};
+  if (targetCompany) _trackingCtx["x-target-company"] = targetCompany.slice(0, 200);
+  if (sellerUrl && sellerUrl !== "research-only") _trackingCtx["x-seller-url"] = sellerUrl.slice(0, 200);
+  _trackingCtx["x-brief-type"] = briefType || "brief";
+}
+function clearTrackingContext() { _trackingCtx = {}; }
+
 // ── VERTICAL PLAYBOOK MATCHER ────────────────────────────────────────────
 // Matches vertical playbooks for BOTH the seller and the target prospect.
 // Seller verticals tell you HOW to sell (your methodology, compliance, USPs).
@@ -779,7 +789,7 @@ async function claudeFetch(body, { retries = 3, extraHeaders = {} } = {}) {
     try {
       const r = await fetch("/api/claude", {
         method: "POST",
-        headers: { ...authHeaders(), ...extraHeaders },
+        headers: { ...authHeaders(), ..._trackingCtx, ...extraHeaders },
         body: JSON.stringify(body),
       });
       // Handle 402 (usage limit) — surface to caller, don't retry
@@ -819,7 +829,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
   for (let attempt = 0; attempt < 3; attempt++) {
     response = await fetch('/api/claude-stream', {
       method: 'POST',
-      headers: authHeaders(),
+      headers: { ...authHeaders(), ..._trackingCtx },
       body: JSON.stringify({
         model: activeModel(),
         max_tokens: maxTok,
@@ -1126,6 +1136,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const co  = sanitizeForPrompt(member.company);
   const url = member.company_url || co;
   const safeSellerUrl = sanitizeForPrompt(sellerUrl);
+  // Set tracking context for all API calls during this brief generation
+  setTrackingContext(member.company, sellerUrl, sellerUrl === "research-only" ? "quick-brief" : "full-brief");
 
   const activeProductUrls = productUrls.filter(u=>u.url.trim()).map(u=>sanitizeForPrompt(u.url.trim()));
   const sellerCtx = sellerDocs.length>0

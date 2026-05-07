@@ -1,5 +1,5 @@
 import { guard, MODEL_FALLBACK, checkGuestLimit, incrementGuestUsage, getGuestRemaining } from "./_guard.js";
-import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage } from "./_usage.js";
+import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage, extractTrackingContext } from "./_usage.js";
 
 const ANTHROPIC_HEADERS = {
   "Content-Type": "application/json",
@@ -86,6 +86,7 @@ export default async function handler(req, res) {
   if (response.status >= 200 && response.status < 300 && data.usage) {
     const userId = extractUserId(req);
     const webSearches = (data.content || []).filter(b => b.type === "web_search_tool_result").length;
+    const tracking = extractTrackingContext(req);
     logTokenUsage({
       userId,
       orgId: usageOrgId,
@@ -96,6 +97,7 @@ export default async function handler(req, res) {
       cacheCreationTokens: data.usage.cache_creation_input_tokens || 0,
       webSearches,
       endpoint: "claude",
+      ...tracking,
     });
   }
 

@@ -699,6 +699,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     <th>Organization</th>
                     <th>Status</th>
                     <th>Last Active</th>
+                    <th>Researched</th>
                     <th style={{ width: 50 }}>Actions</th>
                   </tr>
                 </thead>
@@ -767,6 +768,21 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                         </td>
                         <td style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
                           {u.last_active ? timeAgo(u.last_active) : "\u2014"}
+                        </td>
+                        <td style={{ fontSize: 10 }}>
+                          {(() => {
+                            const userCompanies = (data.usage || []).filter(x => x.user_id === u.id && x.target_company);
+                            if (!userCompanies.length) return <span style={{ color: "var(--ink-3)" }}>—</span>;
+                            const unique = [...new Set(userCompanies.map(x => x.target_company))];
+                            return (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                                {unique.slice(0, 5).map((co, j) => (
+                                  <span key={j} style={{ background: "var(--navy-bg)", color: "var(--navy)", padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 600 }}>{co}</span>
+                                ))}
+                                {unique.length > 5 && <span style={{ color: "var(--ink-3)", fontSize: 9 }}>+{unique.length - 5}</span>}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td style={{ position: "relative" }}>
                           <button className="admin-dot-menu" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === u.id ? null : u.id); }}>
@@ -1174,6 +1190,65 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   )}
                 </div>
               )}
+
+              {/* Companies Researched — detailed per-request tracking */}
+              {(() => {
+                const usageWithCompany = (data.usage || []).filter(u => u.target_company);
+                if (!usageWithCompany.length) return null;
+                // Group by target company
+                const byCompany = {};
+                usageWithCompany.forEach(u => {
+                  const co = u.target_company;
+                  if (!byCompany[co]) byCompany[co] = { company: co, calls: 0, tokens: 0, cost: 0, users: new Set(), sellerUrls: new Set(), briefTypes: new Set(), lastUsed: u.created_at };
+                  byCompany[co].calls++;
+                  const inp = (u.input_tokens || 0); const out = (u.output_tokens || 0);
+                  byCompany[co].tokens += inp + out;
+                  // Approximate cost (Haiku pricing)
+                  byCompany[co].cost += (inp * 1.0 + out * 5.0) / 1_000_000;
+                  if (u.user_id) byCompany[co].users.add(u.user_id);
+                  if (u.seller_url) byCompany[co].sellerUrls.add(u.seller_url);
+                  if (u.brief_type) byCompany[co].briefTypes.add(u.brief_type);
+                  if (new Date(u.created_at) > new Date(byCompany[co].lastUsed)) byCompany[co].lastUsed = u.created_at;
+                });
+                const sorted = Object.values(byCompany).sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed));
+                const userMap = {};
+                (data.users || []).forEach(u => { userMap[u.id] = u.name || u.email || u.id; });
+                return (
+                  <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>
+                      Companies Researched ({sorted.length})
+                    </div>
+                    <div className="tbl-wrap" style={{ maxHeight: 400, overflow: "auto" }}>
+                      <table className="admin-table" style={{ fontSize: 11 }}>
+                        <thead><tr>
+                          <th>Company</th>
+                          <th>Briefs</th>
+                          <th>Tokens</th>
+                          <th>Cost</th>
+                          <th>Researchers</th>
+                          <th>Seller Org</th>
+                          <th>Type</th>
+                          <th>Last</th>
+                        </tr></thead>
+                        <tbody>
+                          {sorted.slice(0, 100).map((c, i) => (
+                            <tr key={i}>
+                              <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{c.company}</td>
+                              <td>{c.calls}</td>
+                              <td>{c.tokens > 1000 ? Math.round(c.tokens / 1000) + "K" : c.tokens}</td>
+                              <td style={{ color: "var(--amber)" }}>${c.cost.toFixed(2)}</td>
+                              <td>{[...c.users].map(uid => userMap[uid] || uid.slice(0, 8)).join(", ")}</td>
+                              <td style={{ fontSize: 10, color: "var(--ink-2)" }}>{[...c.sellerUrls].join(", ") || "—"}</td>
+                              <td><span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 4, background: [...c.briefTypes].includes("full-brief") ? "var(--green-bg)" : "var(--navy-bg)", color: [...c.briefTypes].includes("full-brief") ? "var(--green)" : "var(--navy)", fontWeight: 600 }}>{[...c.briefTypes].join(", ") || "—"}</span></td>
+                              <td style={{ fontSize: 10, color: "var(--ink-3)", whiteSpace: "nowrap" }}>{timeAgo(c.lastUsed)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Authenticated user activity */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>

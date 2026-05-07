@@ -13,8 +13,23 @@ const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 /** Log API token usage for cost tracking. Fire-and-forget. */
-export function logTokenUsage({ userId, orgId, model, inputTokens, outputTokens, cacheReadTokens = 0, cacheCreationTokens = 0, webSearches = 0, endpoint = "claude" }) {
+export function logTokenUsage({ userId, orgId, model, inputTokens, outputTokens, cacheReadTokens = 0, cacheCreationTokens = 0, webSearches = 0, endpoint = "claude", targetCompany = null, sellerUrl = null, briefType = null }) {
   if (!SB_URL || !SB_KEY) return;
+  const row = {
+    user_id: userId || null,
+    org_id: orgId || null,
+    model: model || "unknown",
+    input_tokens: inputTokens || 0,
+    output_tokens: outputTokens || 0,
+    cache_read_tokens: cacheReadTokens || 0,
+    cache_creation_tokens: cacheCreationTokens || 0,
+    web_searches: webSearches || 0,
+    endpoint,
+  };
+  // Add tracking detail fields (columns added in migration 016)
+  if (targetCompany) row.target_company = targetCompany.slice(0, 200);
+  if (sellerUrl) row.seller_url = sellerUrl.slice(0, 200);
+  if (briefType) row.brief_type = briefType.slice(0, 50);
   fetch(`${SB_URL}/rest/v1/api_usage_log`, {
     method: "POST",
     headers: {
@@ -22,18 +37,17 @@ export function logTokenUsage({ userId, orgId, model, inputTokens, outputTokens,
       Authorization: `Bearer ${SB_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      user_id: userId || null,
-      org_id: orgId || null,
-      model: model || "unknown",
-      input_tokens: inputTokens || 0,
-      output_tokens: outputTokens || 0,
-      cache_read_tokens: cacheReadTokens || 0,
-      cache_creation_tokens: cacheCreationTokens || 0,
-      web_searches: webSearches || 0,
-      endpoint,
-    }),
+    body: JSON.stringify(row),
   }).catch(() => {}); // fire-and-forget
+}
+
+/** Extract tracking context from request headers (set by client) */
+export function extractTrackingContext(req) {
+  return {
+    targetCompany: req.headers["x-target-company"] || null,
+    sellerUrl: req.headers["x-seller-url"] || null,
+    briefType: req.headers["x-brief-type"] || null,
+  };
 }
 
 function sbFetch(path, method = "GET", body = null) {

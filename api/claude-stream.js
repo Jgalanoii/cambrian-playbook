@@ -1,5 +1,5 @@
 import { guard, MODEL_FALLBACK, checkGuestLimit, incrementGuestUsage, getGuestRemaining } from "./_guard.js";
-import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage } from "./_usage.js";
+import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage, extractTrackingContext } from "./_usage.js";
 
 export const config = { maxDuration: 120 };
 
@@ -111,6 +111,7 @@ export default async function handler(req, res) {
     // Count web search results in streamed content
     const webSearchCount = (streamedText.match(/"web_search_tool_result"/g) || []).length;
     if (inputTokens || outputTokens) {
+      const tracking = extractTrackingContext(req);
       logTokenUsage({
         userId,
         orgId: usageOrgId,
@@ -120,6 +121,7 @@ export default async function handler(req, res) {
         cacheCreationTokens,
         webSearches: webSearchCount,
         endpoint: "claude-stream",
+        ...tracking,
       });
     }
   } catch {} // best-effort — don't fail the stream
