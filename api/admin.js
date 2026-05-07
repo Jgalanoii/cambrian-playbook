@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
       sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=2000"),
-      sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc&limit=10000"),
+      sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc&limit=50000"),
       sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=2000"),
     ]);
 
@@ -215,6 +215,9 @@ export default async function handler(req, res) {
     let totalApiCalls = 0;
 
     (usageLogs || []).forEach(log => {
+      // Skip non-API entries (admin actions, contact form, cron, etc.)
+      if (!log.model || !log.input_tokens && !log.output_tokens) return;
+      if (["admin-dashboard", "enterprise-inquiry", "cron-monthly-reset"].includes(log.model)) return;
       const pricing = PRICING[log.model] || DEFAULT_PRICING;
       const cost = (log.input_tokens * pricing.input + log.output_tokens * pricing.output) / 1_000_000;
       totalCost += cost;
