@@ -4,9 +4,8 @@ import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import { sbAuth, sbGetUser, sbSessions, sbStoreTokens, sbRestoreSession, sbRefreshSession, sbClearTokens, sbSetTokenCallback } from "./lib/supabase.js";
 import { fetchOrgContext, sbPatch } from "./lib/org.js";
-import OrgPanel from "./components/OrgPanel.jsx";
 import SuperAdmin from "./components/SuperAdmin.jsx";
-import ReportPanel from "./components/ReportPanel.jsx";
+import UserDashboard from "./components/UserDashboard.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
 
 // ── PRODUCTION CONSOLE GUARD ─────────────────────────────────────────────
@@ -3154,7 +3153,7 @@ export default function App(){
   const[intelModalTarget,setIntelModalTarget]=useState(null); // company name for open modal
   const[orgPanelOpen,setOrgPanelOpen]=useState(false); // org settings/team drawer
   const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
-  const[reportPanelOpen,setReportPanelOpen]=useState(false); // org-level reports
+  // reportPanelOpen removed — consolidated into UserDashboard (orgPanelOpen)
   const[moreMenuOpen,setMoreMenuOpen]=useState(false); // header overflow menu
   const[quickBriefInput,setQuickBriefInput]=useState(""); // a la carte brief company name
   const[favorites,setFavorites]=useState([]); // [{id, type, label, content, company, step, timestamp}]
@@ -4749,7 +4748,7 @@ ${isOpen
       if (tag === "input" || tag === "textarea" || tag === "select") return;
       if (el?.isContentEditable) return;
       // Skip if any overlay/panel/modal is open or in-call step active
-      if (orgPanelOpen || showSessions || cmdOpen || chatOpen || favPanelOpen || resourcesOpen || contactOpen || dqModalTarget || intelModalTarget || confirmModal || upgradeOpen || reportPanelOpen || superAdminOpen || moreMenuOpen) return;
+      if (orgPanelOpen || showSessions || cmdOpen || chatOpen || favPanelOpen || resourcesOpen || contactOpen || dqModalTarget || intelModalTarget || confirmModal || upgradeOpen || superAdminOpen || moreMenuOpen) return;
       // Cmd-S — save session
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -6521,15 +6520,10 @@ ${isOpen
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
                       <span style={{width:20,textAlign:"center"}}>★</span> Favorites{favorites.length?` (${favorites.length})`:""}
                     </button>
-                    {sbUser&&orgCtx&&<button onClick={()=>{loadSessions();setReportPanelOpen(true);setMoreMenuOpen(false);}}
+                    {sbUser&&orgCtx&&<button onClick={()=>{loadSessions();setOrgPanelOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>📊</span> Reports
-                    </button>}
-                    {orgCtx&&<button onClick={()=>{setOrgPanelOpen(true);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>👥</span> My Company
+                      <span style={{width:20,textAlign:"center"}}>📊</span> My Dashboard
                     </button>}
                     <button onClick={()=>{setContactOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
@@ -10598,7 +10592,7 @@ ${isOpen
       {/* Token usage badge — visible to all org members, hidden in print */}
       {orgCtx && (
         <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:"var(--r-md)",padding:"8px 14px",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",fontSize:12,cursor:"pointer"}}
-          onClick={()=>{loadSessions();setReportPanelOpen(true);}}>
+          onClick={()=>{loadSessions();setOrgPanelOpen(true);}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{display:"flex",flexDirection:"column",gap:4,flex:1}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
@@ -10668,13 +10662,12 @@ ${isOpen
         </>
       )}
 
-      {/* Org settings / team panel */}
+      {/* User dashboard (replaces OrgPanel + ReportPanel) */}
       {orgPanelOpen && orgCtx && (
-        <OrgPanel orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} onClose={()=>setOrgPanelOpen(false)} />
+        <UserDashboard orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} savedSessions={savedSessions} onClose={()=>setOrgPanelOpen(false)} />
       )}
 
       {/* Superuser analytics */}
-      {/* Org-level reports */}
       {/* Favorites panel */}
       {favPanelOpen && (
         <>
@@ -10725,9 +10718,7 @@ ${isOpen
         </>
       )}
 
-      {reportPanelOpen && orgCtx && (
-        <ReportPanel orgCtx={orgCtx} savedSessions={savedSessions} sbUser={sbUser} onClose={()=>setReportPanelOpen(false)} />
-      )}
+      {/* ReportPanel removed — consolidated into UserDashboard */}
 
       {superAdminOpen && (
         <SuperAdmin sbUser={sbUser} sbToken={sbToken} onClose={()=>setSuperAdminOpen(false)} />
