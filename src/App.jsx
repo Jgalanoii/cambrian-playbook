@@ -198,6 +198,8 @@ const COHORT_COLORS = ["#8B6F47","#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#C8753
 
 
 const BLANK_BRIEF = {
+  tldr:null, // {topFinding, topOpportunity, topRisk} — above-the-fold summary
+  fiveQuestions:null, // [{question,rationale,source}] — 5 account-specific discovery questions
   elevatorPitch:"",
   companySnapshot:"",sellerSnapshot:"",
   revenue:"",publicPrivate:"",employeeCount:"",headquarters:"",founded:"",website:"",linkedIn:"",
@@ -1318,7 +1320,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n`+
     `STABILITY: Anchor your analysis in verifiable, durable facts — not interpretive commentary. Revenue, headcount, HQ, founding year, named initiatives, public statements, and executive names are stable. Avoid subjective framing that could change between runs.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
-    `{"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
+    `{"tldr":{"topFinding":"The single most important thing a seller needs to know about ${co} RIGHT NOW — a specific fact, metric, or recent move that changes how you'd approach them. One sentence, cite the source.","topOpportunity":"The single biggest reason to engage ${co} right now — a specific gap, initiative, or timing window. One sentence.","topRisk":"The single biggest risk or obstacle to selling into ${co} right now — a competitive incumbent, budget freeze, leadership change, or regulatory constraint. One sentence."},`+
+    `"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
     `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
@@ -1496,6 +1499,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeStrategy = (r3) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), strategy:false}};
+    if (r3?.tldr?.topFinding) next.tldr = r3.tldr;
     if (r3?.elevatorPitch) next.elevatorPitch = r3.elevatorPitch;
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
@@ -5113,7 +5117,7 @@ ${isOpen
     // product-specific questions — NOT generic ones. Wait for allDone so all
     // mergers (including p4 solutions) have applied to the brief state.
     allDone.then(() => {
-      console.log("[brief] allDone resolved — triggering discovery questions");
+      console.log("[brief] allDone resolved — triggering discovery questions + 5 Questions");
       setBrief(current => {
         if (current?._error) setBriefError(current._error);
         return current;
@@ -5124,6 +5128,37 @@ ${isOpen
             const prodCount = (current.solutionMapping||[]).filter(s=>s?.product).length;
             console.log("[brief] Firing generateDiscoveryQs with", prodCount, "products, snapshot:", (current.companySnapshot||"").slice(0,50));
             Promise.resolve().then(() => generateDiscoveryQs(current, member));
+
+            // Generate 5 in-brief Questions to Ask — lightweight call using brief findings
+            if (!current.fiveQuestions) {
+              const co = member.company;
+              const briefContext = [
+                current.companySnapshot ? `Company: ${current.companySnapshot.slice(0,300)}` : "",
+                current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0,300)}` : "",
+                current.openingAngle ? `Opening: ${current.openingAngle}` : "",
+                (current.recentHeadlines||[]).slice(0,3).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean).join("; "),
+                current.fundingProfile ? `Funding: ${current.fundingProfile.slice(0,200)}` : "",
+                (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
+              ].filter(Boolean).join("\n");
+
+              callAI(
+                `You are a senior sales strategist. Based on the research below about ${co}, generate exactly 5 discovery questions a seller should ask in their first conversation.\n\n`+
+                `RESEARCH FINDINGS:\n${briefContext}\n\n`+
+                `RULES:\n`+
+                `- Each question must reference a SPECIFIC finding from the research above (cite it)\n`+
+                `- Questions must be open-ended (no yes/no)\n`+
+                `- Sequence from rapport-building (Q1) to insight-revealing (Q5)\n`+
+                `- Design to surface unspoken priorities, budget signals, or competitive dynamics\n`+
+                `- Be conversational — these should feel natural to say out loud\n`+
+                `- NEVER invent facts not present in the research\n\n`+
+                `Return ONLY raw JSON: {"fiveQuestions":[{"question":"...","rationale":"Why this question matters — one sentence","source":"Which finding from the research this references"}]}`,
+                { maxTokens: 1200 }
+              ).then(r => {
+                if (r?.fiveQuestions?.length) {
+                  setBrief(prev => prev ? {...prev, fiveQuestions: r.fiveQuestions} : prev);
+                }
+              }).catch(() => {});
+            }
           } else {
             console.warn("[brief] allDone: current is null — skipping discovery");
           }
@@ -9062,6 +9097,42 @@ ${isOpen
                   );
                 })()}
 
+                {/* TL;DR card — above the fold, first thing users see */}
+                {brief.tldr?.topFinding && (
+                  <div style={{
+                    background:"var(--surface)",border:"2px solid var(--tan-0)",borderRadius:"var(--r-lg)",
+                    padding:"18px 22px",marginBottom:14,boxShadow:"0 2px 8px rgba(139,111,71,0.1)"
+                  }}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>
+                      Quick Take — {selectedAccount?.company || "This Account"}
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                        <span style={{background:"var(--navy)",color:"var(--surface)",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0,marginTop:1}}>FINDING</span>
+                        <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.tldr.topFinding}</div>
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                        <span style={{background:"var(--green)",color:"var(--surface)",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0,marginTop:1}}>OPPORTUNITY</span>
+                        <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.tldr.topOpportunity}</div>
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                        <span style={{background:"var(--red)",color:"var(--surface)",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0,marginTop:1}}>RISK</span>
+                        <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.tldr.topRisk}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {brief._loadingSections?.strategy && !brief.tldr && (
+                  <div style={{background:"var(--surface)",border:"2px solid var(--tan-2)",borderRadius:"var(--r-lg)",padding:"18px 22px",marginBottom:14}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Quick Take</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      <div className="skeleton" style={{width:"90%",height:14,borderRadius:4}}/>
+                      <div className="skeleton" style={{width:"80%",height:14,borderRadius:4}}/>
+                      <div className="skeleton" style={{width:"85%",height:14,borderRadius:4}}/>
+                    </div>
+                  </div>
+                )}
+
                 {/* First-brief guidance — contextual callout for new users */}
                 {brief && !brief._loadingSections?.overview && !brief._loadingSections?.executives && !briefError && !brief._error && (
                   (() => {
@@ -9993,26 +10064,100 @@ ${isOpen
               </>
             )}
 
-            {/* Post-brief upsell — research-only users see soft prompt to set up seller context */}
-            {brief && sellerUrl === "research-only" && !brief._loadingSections?.overview && (
-              <div style={{background:"var(--green-bg)",border:"2px solid var(--green)",borderRadius:"var(--r-lg)",padding:"20px 24px",marginTop:16,marginBottom:16}}>
-                <div style={{fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:6,fontFamily:"Lora,serif"}}>
-                  Want tailored pitches and coaching for {selectedAccount?.company || "this company"}?
-                </div>
-                <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.7,marginBottom:14}}>
-                  Set up your company profile to unlock <strong>elevator pitches</strong>, <strong>solution mapping</strong> (how your products solve their pain), <strong>call prep with a structured hypothesis</strong>, and <strong>live coaching with Milton</strong>. Same deep research — personalized to what you sell.
-                </div>
-                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                  <button className="btn btn-green" onClick={()=>{setSellerUrl("");setSessionMode("full");setStep(0);}}
-                    style={{padding:"10px 20px",fontSize:13,fontWeight:700}}>
-                    Set Up My Company →
+            {/* 5 Questions to Ask — account-specific discovery questions from brief findings */}
+            {(brief?.fiveQuestions?.length > 0 || brief?._loadingSections?.strategy) && (
+              <div className="bb">
+                <div className="bb-hdr" onClick={()=>toggleBB("fiveq")}>
+                  <div className="bb-icon" style={{fontSize:10}}>❓</div>
+                  <div style={{flex:1}}>
+                    <div className="bb-title">5 Questions to Ask</div>
+                    <div className="bb-sub">Account-specific questions grounded in the research above — take these into your first conversation</div>
+                  </div>
+                  <button onClick={e=>{
+                    e.stopPropagation();
+                    if (brief?.fiveQuestions?.length) {
+                      const text = brief.fiveQuestions.map((q,i) => `${i+1}. ${q.question}\n   Why: ${q.rationale}\n   Source: ${q.source}`).join("\n\n");
+                      navigator.clipboard?.writeText(text);
+                    }
+                  }} style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--tan-2)",background:"var(--bg-1)",color:"var(--ink-1)",cursor:"pointer",whiteSpace:"nowrap",marginRight:8}}>
+                    Copy All
                   </button>
-                  <button className="btn btn-secondary" onClick={()=>{setQuickBriefInput("");setStep(0);}}
-                    style={{padding:"10px 20px",fontSize:13}}>
-                    Research Another Company
-                  </button>
+                  {bbChevron("fiveq")}
                 </div>
+                <div className={`bb-body-wrap ${bbIsOpen("fiveq")?"":"collapsed"}`}><div className="bb-body">
+                  {brief?.fiveQuestions?.length > 0 ? (
+                    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                      {brief.fiveQuestions.map((q,i) => (
+                        <div key={i} style={{padding:"12px 14px",background:i===0?"var(--green-bg)":"var(--bg-0)",border:`1px solid ${i===0?"var(--green)":"var(--line-0)"}`,borderRadius:8}}>
+                          <div style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:6}}>
+                            <span style={{background:i===0?"var(--green)":"var(--ink-0)",color:"var(--surface)",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</span>
+                            <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>"{q.question}"</div>
+                          </div>
+                          <div style={{marginLeft:30,fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>
+                            <strong>Why:</strong> {q.rationale}
+                          </div>
+                          {q.source && (
+                            <div style={{marginLeft:30,marginTop:2,fontSize:11,color:"var(--ink-3)"}}>
+                              Source: {q.source}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:8,padding:12}}>
+                      <div style={{fontSize:13,color:"var(--ink-3)"}}>Building your questions from brief findings...</div>
+                      {[1,2,3].map(i => <div key={i} className="skeleton" style={{width:`${90-i*5}%`,height:14,borderRadius:4}}/>)}
+                    </div>
+                  )}
+                </div></div>
               </div>
+            )}
+
+            {/* Post-brief actions — next steps for all brief types */}
+            {brief && !brief._loadingSections?.overview && (
+              <>
+                {/* Research-only upsell to Full Session */}
+                {sellerUrl === "research-only" && (
+                  <div style={{background:"var(--green-bg)",border:"2px solid var(--green)",borderRadius:"var(--r-lg)",padding:"20px 24px",marginTop:16,marginBottom:12}}>
+                    <div style={{fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:6,fontFamily:"Lora,serif"}}>
+                      Want tailored pitches and coaching for {selectedAccount?.company || "this company"}?
+                    </div>
+                    <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.7,marginBottom:14}}>
+                      Set up your company profile to unlock <strong>elevator pitches</strong>, <strong>solution mapping</strong> (how your products solve their pain), <strong>call prep with a structured hypothesis</strong>, and <strong>live coaching with Milton</strong>. Same deep research — personalized to what you sell.
+                    </div>
+                    <button className="btn btn-green" onClick={()=>{setSellerUrl("");setSessionMode("full");setStep(0);}}
+                      style={{padding:"10px 20px",fontSize:13,fontWeight:700}}>
+                      Set Up My Company →
+                    </button>
+                  </div>
+                )}
+
+                {/* Research another company — on ALL briefs */}
+                <div style={{background:"var(--bg-0)",border:"1.5px solid var(--line-0)",borderRadius:"var(--r-md)",padding:"16px 20px",marginTop:8,marginBottom:16}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>Research another company</div>
+                  <div style={{display:"flex",gap:8}}>
+                    <input type="text" placeholder="Company name" value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
+                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()){
+                        if(sellerUrl==="research-only"){launchQuickBrief();}else{
+                          const m={company:quickBriefInput.trim(),company_url:"",ind:"",employees:"",publicPrivate:""};
+                          pickAccount(m);
+                        }
+                      }e.stopPropagation();}}
+                      style={{flex:1,fontSize:13,padding:"8px 12px",border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)"}}/>
+                    <button className="btn" onClick={()=>{
+                      if(!quickBriefInput.trim())return;
+                      if(sellerUrl==="research-only"){launchQuickBrief();}else{
+                        const m={company:quickBriefInput.trim(),company_url:"",ind:"",employees:"",publicPrivate:""};
+                        pickAccount(m);
+                      }
+                    }} disabled={!quickBriefInput.trim()}
+                      style={{padding:"8px 16px",background:"var(--ink-0)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
+                      Build Brief →
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
             {!briefLoading&&!brief&&(
