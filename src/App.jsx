@@ -2183,8 +2183,15 @@ function PasswordGate({ onAuth }) {
       }
     }
 
-    // Check for custom invitation token in URL query (?token=xxx)
+    // Check for referral code in URL (?ref=xxx)
     const params = new URLSearchParams(window.location.search);
+    const refCode = params.get("ref");
+    if (refCode) {
+      sessionStorage.setItem("pending_referral_code", refCode);
+      window.history.replaceState({}, "", window.location.pathname + (params.get("token") ? `?token=${params.get("token")}` : ""));
+    }
+
+    // Check for custom invitation token in URL query (?token=xxx)
     const invToken = params.get("token");
     if (invToken) {
       sessionStorage.setItem("pending_invite_token", invToken);
@@ -5021,6 +5028,13 @@ ${isOpen
     setBriefStatus("");
     // Refresh org context from server to get authoritative token count
     refreshOrgCtx();
+    // Process referral reward on first brief completion
+    if (sbToken) {
+      fetch("/api/referral", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+        body: JSON.stringify({ action: "process_reward" }) })
+        .then(r => r.json()).then(d => { if (d.rewarded) { refreshOrgCtx(); setChatMessages(prev => [...prev, { role: "assistant", content: "Nice — your referral just earned the person who invited you a bonus run. Pay it forward: share your own referral link from the My Company panel." }]); } })
+        .catch(() => {});
+    }
 
     // Wire each section's merger to fire as it resolves.
     // Also track timing so we can warn if calls are taking too long.
@@ -6140,6 +6154,14 @@ ${isOpen
       } catch (e) { console.warn("Invite acceptance failed:", e.message); }
     }
     if(u?.id) fetchOrgContext(u.id,tok).then(org=>{ if(org) setOrgCtx(org); });
+    // Process pending referral code
+    const pendingRef = sessionStorage.getItem("pending_referral_code");
+    if (pendingRef && tok) {
+      fetch("/api/referral", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ action: "set_referrer", referralCode: pendingRef }) })
+        .then(r => r.json()).then(d => { if (d.ok) sessionStorage.removeItem("pending_referral_code"); })
+        .catch(() => {});
+    }
     // Restore guest work if user just signed up after guest mode
     try {
       const guestState = localStorage.getItem("cambrian_guest_state");

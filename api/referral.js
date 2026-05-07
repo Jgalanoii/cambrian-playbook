@@ -1,0 +1,127 @@
+// api/referral.js
+//
+// Handles referral reward processing. Called after a referred user's
+// first brief completion. Awards +1 run to the referrer's org (capped
+// at 5 bonus runs per month).
+
+import { verifyJwt, decodeJwtPayload, isAllowedOrigin } from "./_guard.js";
+
+const SB_URL = process.env.VITE_SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+async function sbFetch(path, method = "GET", body = null) {
+  const headers = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" };
+  if (method === "POST") headers.Prefer = "return=representation";
+  if (method === "PATCH") headers.Prefer = "return=minimal";
+  return fetch(`${SB_URL}/rest/v1/${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined }).then(r => r.json());
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).end();
+
+  const origin = req.headers.origin || req.headers.referer || "";
+  if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "Origin not allowed" });
+
+  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  const authToken = (req.headers.authorization || "").slice(7);
+  const payload = decodeJwtPayload(authToken);
+  if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
+
+  const { action } = req.body || {};
+
+  // GET: return the current user's referral code and stats
+  if (action === "get_referral_info") {
+    const users = await sbFetch(`users?id=eq.${payload.sub}&select=referral_code,referred_by,referral_rewarded,org_id`);
+    const user = users?.[0];
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Count how many people this user has referred
+    const referred = await sbFetch(`users?referred_by=eq.${user.referral_code}&select=id,referral_rewarded`);
+    const referralCount = (referred || []).length;
+    const rewardedCount = (referred || []).filter(r => r.referral_rewarded).length;
+
+    // Get org bonus info
+    let bonusRuns = 0, bonusCap = 5;
+    if (user.org_id) {
+      const orgs = await sbFetch(`orgs?id=eq.${user.org_id}&select=referral_bonus_runs,referral_bonus_cap`);
+      if (orgs?.[0]) { bonusRuns = orgs[0].referral_bonus_runs || 0; bonusCap = orgs[0].referral_bonus_cap || 5; }
+    }
+
+    return res.json({
+      ok: true,
+      referral_code: user.referral_code,
+      referral_link: `https://www.cambriancatalyst.ai?ref=${user.referral_code}`,
+      total_referred: referralCount,
+      total_rewarded: rewardedCount,
+      bonus_runs_this_month: bonusRuns,
+      bonus_cap: bonusCap,
+    });
+  }
+
+  // POST: store referral code on signup
+  if (action === "set_referrer") {
+    const { referralCode } = req.body || {};
+    if (!referralCode) return res.status(400).json({ error: "Referral code required" });
+
+    // Verify the referral code exists and isn't the user's own
+    const referrers = await sbFetch(`users?referral_code=eq.${referralCode}&select=id`);
+    if (!referrers?.length) return res.json({ ok: false, message: "Invalid referral code" });
+    if (referrers[0].id === payload.sub) return res.json({ ok: false, message: "Can't refer yourself" });
+
+    // Set referred_by on the current user
+    await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}`, {
+      method: "PATCH",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ referred_by: referralCode }),
+    });
+
+    return res.json({ ok: true, message: "Referral tracked" });
+  }
+
+  // POST: process reward after first brief completion
+  if (action === "process_reward") {
+    // Check if this user was referred and hasn't been rewarded yet
+    const users = await sbFetch(`users?id=eq.${payload.sub}&select=referred_by,referral_rewarded`);
+    const user = users?.[0];
+    if (!user?.referred_by || user.referral_rewarded) return res.json({ ok: true, message: "No reward to process" });
+
+    // Find the referrer
+    const referrers = await sbFetch(`users?referral_code=eq.${user.referred_by}&select=id,org_id`);
+    const referrer = referrers?.[0];
+    if (!referrer?.org_id) return res.json({ ok: true, message: "Referrer not found or has no org" });
+
+    // Check cap
+    const orgs = await sbFetch(`orgs?id=eq.${referrer.org_id}&select=referral_bonus_runs,referral_bonus_cap,run_limit`);
+    const org = orgs?.[0];
+    if (!org) return res.json({ ok: true, message: "Referrer org not found" });
+    if ((org.referral_bonus_runs || 0) >= (org.referral_bonus_cap || 5)) {
+      // Mark as rewarded even if cap hit (so we don't keep checking)
+      await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}`, {
+        method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ referral_rewarded: true }),
+      });
+      return res.json({ ok: true, message: "Referrer at bonus cap" });
+    }
+
+    // Award +1 run to the referrer's org
+    await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${referrer.org_id}`, {
+      method: "PATCH",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({
+        run_limit: org.run_limit + 1,
+        referral_bonus_runs: (org.referral_bonus_runs || 0) + 1,
+      }),
+    });
+
+    // Mark this user as rewarded
+    await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}`, {
+      method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ referral_rewarded: true }),
+    });
+
+    console.log(`[referral] +1 run to org ${referrer.org_id} from user ${payload.sub} (referred by ${user.referred_by})`);
+    return res.json({ ok: true, message: "Referral reward granted!", rewarded: true });
+  }
+
+  return res.status(400).json({ error: "Unknown action" });
+}

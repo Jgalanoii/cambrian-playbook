@@ -6,6 +6,34 @@ import React, { useState, useEffect } from "react";
 import { fetchOrgMembers, fetchOrgInvitations, sbPatch, sbRpc } from "../lib/org.js";
 import { timeAgo } from "../lib/utils.js";
 
+function ReferralWidget({ sbToken }) {
+  const [info, setInfo] = useState(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!sbToken) return;
+    fetch("/api/referral", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+      body: JSON.stringify({ action: "get_referral_info" }) })
+      .then(r => r.json()).then(d => { if (d.ok) setInfo(d); }).catch(() => {});
+  }, [sbToken]);
+  if (!info) return <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Loading referral info...</div>;
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+        <input readOnly value={info.referral_link} style={{ flex: 1, fontSize: 11, padding: "6px 10px", border: "1.5px solid var(--line-0)", borderRadius: 6, background: "var(--bg-1)", color: "var(--ink-1)" }} />
+        <button onClick={() => { navigator.clipboard.writeText(info.referral_link); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          style={{ padding: "6px 12px", borderRadius: 6, border: "1.5px solid var(--tan-0)", background: copied ? "var(--green-bg)" : "var(--surface)", color: copied ? "var(--green)" : "var(--tan-0)", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+          {copied ? "✓ Copied" : "Copy Link"}
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--ink-2)" }}>
+        <span><strong style={{ color: "var(--ink-0)" }}>{info.total_referred}</strong> referred</span>
+        <span><strong style={{ color: "var(--green)" }}>{info.total_rewarded}</strong> earned runs</span>
+        <span><strong style={{ color: "var(--tan-0)" }}>{info.bonus_runs_this_month}</strong>/{info.bonus_cap} bonus this month</span>
+      </div>
+    </div>
+  );
+}
+
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -654,6 +682,15 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                 <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>
                   {orgCtx?.run_limit || 5} runs/month · {(orgCtx?.max_run_limit || 0) > 0 ? `${orgCtx.max_run_limit} Max runs` : "Max not included"}
                 </div>
+              </div>
+
+              {/* Refer & Earn */}
+              <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Refer & Earn</div>
+                <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 8 }}>
+                  Share your referral link. When someone signs up and runs their first brief, your org gets <strong>+1 bonus run</strong> (up to 5/month).
+                </div>
+                <ReferralWidget sbToken={sbToken} />
               </div>
 
               <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.6, borderTop: "1px solid var(--line-0)", paddingTop: 12 }}>
