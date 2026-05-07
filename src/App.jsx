@@ -1163,8 +1163,15 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // that don't need the seller proof pack, scoring heuristics, or deal context.
   // baseFull is for seller-mapping calls (p3, p4) that need everything.
   // This cuts ~1,500 input tokens off p1 and p5, making them resolve ~40% faster.
+  // IDENTITY ANCHOR: when a URL is available, use it as the primary identifier
+  // to prevent cross-company contamination in briefs.
+  const identityAnchor = url && url !== co
+    ? `IDENTITY ANCHOR: Research ONLY the company at https://${url}. The company name "${co}" may be shared by multiple entities — use the website ${url} as the definitive identifier. Every fact in this brief must be about the company that operates ${url}. If you find conflicting information about different companies with similar names, ONLY use information about the entity at ${url}.\n\n`
+    : `IDENTITY: Research the company "${co}". If multiple companies share this name, focus on the most prominent/well-known entity. Do NOT mix facts from different companies.\n\n`;
+
   const baseLight =
-    `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\n`+
+    `Sales brief about TARGET PROSPECT "${co}"${url && url !== co ? ` (${url})` : ""} for seller at ${sellerUrl}.\n`+
+    identityAnchor +
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
@@ -4972,6 +4979,95 @@ ${isOpen
     }
   };
 
+  // ── URL DETECTION — extract domain from user input ──────────────────────
+  function extractCompanyUrl(input) {
+    const trimmed = input.trim().toLowerCase();
+    // If it looks like a URL or domain (has dots and no spaces), extract the domain
+    if (/^(https?:\/\/)?[a-z0-9]([a-z0-9-]*\.)+[a-z]{2,}(\/.*)?$/i.test(trimmed) && !trimmed.includes(" ")) {
+      const domain = trimmed.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+      return domain;
+    }
+    return "";
+  }
+
+  function extractCompanyName(input) {
+    const trimmed = input.trim();
+    const domain = extractCompanyUrl(trimmed);
+    if (domain) {
+      // Turn "archway.com" into "Archway" as display name
+      return domain.split(".")[0].charAt(0).toUpperCase() + domain.split(".")[0].slice(1);
+    }
+    return trimmed;
+  }
+
+  // ── COMPANY VERIFICATION — confirm identity before brief generation ─────
+  // Prevents mixed-company briefs by verifying the exact entity before
+  // launching the full 6-phase pipeline. Uses a quick web search to confirm.
+  const [disambigOptions, setDisambigOptions] = useState(null);
+  const [disambigLoading, setDisambigLoading] = useState(false);
+
+  const verifyAndLaunch = async (input, overrideSellerUrl) => {
+    const co = input.trim();
+    if (!co) return;
+    const domain = extractCompanyUrl(co);
+    const displayName = extractCompanyName(co);
+
+    // If user provided a URL/domain, skip disambiguation — the URL is the anchor
+    if (domain) {
+      const member = { company: displayName, company_url: domain, ind: "", employees: "", publicPrivate: "" };
+      if (!sellerUrl) setSellerUrl("research-only");
+      pickAccount(member, overrideSellerUrl || "research-only");
+      return;
+    }
+
+    // Name only — run a quick verification to confirm identity
+    setDisambigLoading(true);
+    try {
+      const result = await claudeFetch({
+        model: activeModel(),
+        max_tokens: 800,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+        messages: [{ role: "user", content:
+          `I need to identify the exact company a user means by "${co}". Search the web and return the top 1-3 matches.\n\n` +
+          `RULES:\n- Each match must be a REAL, currently operating company\n- Include the company's primary website domain\n- Include a one-line description\n- If there's only one clear match, return just that one\n- If the name is ambiguous (multiple companies with similar names), return up to 3 options\n\n` +
+          `Return ONLY raw JSON: {"matches":[{"name":"Exact Company Name","domain":"company.com","description":"One line — what they do, HQ, industry"}]}`
+        }],
+      });
+
+      const matches = result?.matches;
+      if (!matches?.length) {
+        // No matches found — launch anyway with name only
+        const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
+        if (!sellerUrl) setSellerUrl("research-only");
+        pickAccount(member, overrideSellerUrl || "research-only");
+      } else if (matches.length === 1) {
+        // Single match — launch directly
+        const m = matches[0];
+        const member = { company: m.name, company_url: m.domain || "", ind: "", employees: "", publicPrivate: "" };
+        if (!sellerUrl) setSellerUrl("research-only");
+        pickAccount(member, overrideSellerUrl || "research-only");
+      } else {
+        // Multiple matches — show disambiguation UI
+        setDisambigOptions({ matches, input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
+      }
+    } catch (e) {
+      console.warn("[verify] Company verification failed, launching with name only:", e.message);
+      const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
+      if (!sellerUrl) setSellerUrl("research-only");
+      pickAccount(member, overrideSellerUrl || "research-only");
+    } finally {
+      setDisambigLoading(false);
+    }
+  };
+
+  const selectDisambigOption = (match) => {
+    const member = { company: match.name, company_url: match.domain || "", ind: "", employees: "", publicPrivate: "" };
+    const overrideSellerUrl = disambigOptions?.overrideSellerUrl || "research-only";
+    setDisambigOptions(null);
+    if (!sellerUrl) setSellerUrl("research-only");
+    pickAccount(member, overrideSellerUrl);
+  };
+
   // ── A LA CARTE QUICK BRIEF — uses the FULL generateBrief pipeline ──────
   // Same 6-phase parallel engine as a full session brief, just without
   // seller-specific framing. Produces comprehensive output: overview,
@@ -4979,11 +5075,7 @@ ${isOpen
   const launchQuickBrief = () => {
     const co = quickBriefInput.trim();
     if (!co) return;
-    const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
-    // Set seller URL synchronously before pickAccount reads it
-    if (!sellerUrl) setSellerUrl("research-only");
-    // Pass override URL directly — state update won't be ready this render cycle
-    pickAccount(member, "research-only");
+    verifyAndLaunch(co, "research-only");
   };
 
   const pickAccount = async (member, overrideSellerUrl) => {
@@ -6278,6 +6370,42 @@ ${isOpen
 
   return(
     <>
+      {/* Company disambiguation overlay */}
+      {disambigOptions && (
+        <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+          onClick={()=>setDisambigOptions(null)}>
+          <div style={{background:"var(--surface)",borderRadius:12,padding:"24px 28px",maxWidth:500,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.2)"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",marginBottom:4,fontFamily:"Lora,serif"}}>Which company did you mean?</div>
+            <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:16}}>
+              We found {disambigOptions.matches.length} companies matching "{disambigOptions.input}" — pick the right one for an accurate brief.
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {disambigOptions.matches.map((m, i) => (
+                <button key={i} onClick={() => selectDisambigOption(m)}
+                  style={{display:"flex",alignItems:"flex-start",gap:12,padding:"14px 16px",borderRadius:10,border:"2px solid var(--line-0)",
+                    background:"var(--surface)",cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--green)";e.currentTarget.style.background="var(--green-bg)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--line-0)";e.currentTarget.style.background="var(--surface)";}}>
+                  <div style={{width:36,height:36,borderRadius:8,background:"var(--navy-bg)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+                    {m.name?.charAt(0) || "?"}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{m.name}</div>
+                    {m.domain && <div style={{fontSize:11,color:"var(--navy)",fontWeight:600}}>{m.domain}</div>}
+                    {m.description && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5,marginTop:2}}>{m.description}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button onClick={()=>setDisambigOptions(null)}
+              style={{marginTop:14,fontSize:12,color:"var(--ink-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Command palette overlay */}
       {cmdOpen && <CommandPalette commands={cmdCommands} onClose={()=>setCmdOpen(false)}/>}
 
@@ -6783,18 +6911,18 @@ ${isOpen
                   <div style={{marginBottom:8}}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>Research any company — deep intel in under 30 seconds</div>
                     <div style={{display:"flex",gap:8}}>
-                      <input type="text" placeholder="Company name (e.g. Acme Corp, Nike, Salesforce)"
+                      <input type="text" placeholder="Company name or website (e.g. Acme Corp, nike.com)"
                         autoFocus
                         value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
-                        onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()){setSessionMode("quick");launchQuickBrief();}e.stopPropagation();}}
+                        onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()&&!disambigLoading){setSessionMode("quick");launchQuickBrief();}e.stopPropagation();}}
                         style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--green)",borderRadius:8,background:"var(--surface)"}}/>
                       <button className="btn" onClick={()=>{setSessionMode("quick");launchQuickBrief();}}
-                        disabled={!quickBriefInput.trim()}
-                        style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
-                        Build Brief →
+                        disabled={!quickBriefInput.trim()||disambigLoading}
+                        style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()&&!disambigLoading?1:0.5}}>
+                        {disambigLoading ? "Verifying..." : "Build Brief →"}
                       </button>
                     </div>
-                    <div style={{fontSize:10,color:"var(--ink-3)",marginTop:6}}>Uses 1 run · Executives, strategy, sentiment, news, open roles, competitive landscape</div>
+                    <div style={{fontSize:10,color:"var(--ink-3)",marginTop:6}}>Uses 1 run · Paste a URL for best accuracy, or type a name and we'll verify the company</div>
                   </div>
                   <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6,borderTop:"1px solid var(--green)",paddingTop:8,marginTop:4,opacity:0.8}}>
                     Want tailored solution mapping, elevator pitches, and coaching? Use <strong>Full Sales Session</strong> below — enter your website to build an ICP and import targets.
@@ -6865,18 +6993,18 @@ ${isOpen
                     Research any company — executives, strategy, news, and sentiment. Create a free account to unlock full sessions with ICP scoring, solution mapping, hypothesis, coaching, and more.
                   </div>
                   <div style={{display:"flex",gap:8}}>
-                    <input type="text" placeholder="Company name (e.g. Acme Corp, Nike, Salesforce)"
+                    <input type="text" placeholder="Company name or website (e.g. Acme Corp, nike.com)"
                       autoFocus
                       value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
-                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();e.stopPropagation();}}
+                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()&&!disambigLoading) launchQuickBrief();e.stopPropagation();}}
                       style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--navy)",borderRadius:8,background:"var(--surface)"}}/>
                     <button className="btn" onClick={launchQuickBrief}
-                      disabled={!quickBriefInput.trim()}
-                      style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--navy)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
-                      Build Brief →
+                      disabled={!quickBriefInput.trim()||disambigLoading}
+                      style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--navy)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()&&!disambigLoading?1:0.5}}>
+                      {disambigLoading ? "Verifying..." : "Build Brief →"}
                     </button>
                   </div>
-                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 of 2 guest previews · Executives, strategy, sentiment, news, competitive landscape</div>
+                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 of 2 guest previews · Paste a URL for best accuracy, or type a name</div>
                 </div>
               ) : (
                 /* For authenticated users: Full Session toggle (Quick Brief is already in the welcome card above) */
@@ -10149,23 +10277,17 @@ ${isOpen
                 <div style={{background:"var(--bg-0)",border:"1.5px solid var(--line-0)",borderRadius:"var(--r-md)",padding:"16px 20px",marginTop:8,marginBottom:16}}>
                   <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>Research another company</div>
                   <div style={{display:"flex",gap:8}}>
-                    <input type="text" placeholder="Company name" value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
-                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()){
-                        if(sellerUrl==="research-only"){launchQuickBrief();}else{
-                          const m={company:quickBriefInput.trim(),company_url:"",ind:"",employees:"",publicPrivate:""};
-                          pickAccount(m);
-                        }
+                    <input type="text" placeholder="Company name or website" value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
+                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()&&!disambigLoading){
+                        verifyAndLaunch(quickBriefInput.trim(), sellerUrl==="research-only"?"research-only":undefined);
                       }e.stopPropagation();}}
                       style={{flex:1,fontSize:13,padding:"8px 12px",border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)"}}/>
                     <button className="btn" onClick={()=>{
-                      if(!quickBriefInput.trim())return;
-                      if(sellerUrl==="research-only"){launchQuickBrief();}else{
-                        const m={company:quickBriefInput.trim(),company_url:"",ind:"",employees:"",publicPrivate:""};
-                        pickAccount(m);
-                      }
-                    }} disabled={!quickBriefInput.trim()}
-                      style={{padding:"8px 16px",background:"var(--ink-0)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
-                      Build Brief →
+                      if(!quickBriefInput.trim()||disambigLoading)return;
+                      verifyAndLaunch(quickBriefInput.trim(), sellerUrl==="research-only"?"research-only":undefined);
+                    }} disabled={!quickBriefInput.trim()||disambigLoading}
+                      style={{padding:"8px 16px",background:"var(--ink-0)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",opacity:quickBriefInput.trim()&&!disambigLoading?1:0.5}}>
+                      {disambigLoading ? "Verifying..." : "Build Brief →"}
                     </button>
                   </div>
                 </div>
