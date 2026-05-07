@@ -18,7 +18,7 @@ async function callAnthropic(body) {
 }
 
 export default async function handler(req, res) {
-  const body = guard(req, res, { stream: true });
+  const body = await guard(req, res, { stream: true });
   if (!body) return;
 
   // Guest usage limit — 3 calls total

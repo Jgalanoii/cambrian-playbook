@@ -7,7 +7,8 @@ import { checkRateLimit, isAllowedOrigin, verifyJwt, decodeJwtPayload } from "./
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
-const SUPERUSER_EMAIL = process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com";
+const SUPERUSER_EMAIL = process.env.SUPERUSER_EMAIL;
+if (!SUPERUSER_EMAIL) console.warn("[admin] SUPERUSER_EMAIL not set — all admin access will be rejected");
 
 async function sbFetch(path, maxRows = 10000) {
   // Supabase REST API defaults to 1000 rows. Use Range header for more.
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
   }
 
   // Verify JWT and check superuser — uses consolidated JWT from _guard.js
-  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  if (!await verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
   // Look up the caller's email — must match superuser
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);
   const callerEmail = userRes?.[0]?.email;
-  if (callerEmail !== SUPERUSER_EMAIL) {
+  if (!SUPERUSER_EMAIL || callerEmail !== SUPERUSER_EMAIL) {
     return res.status(403).json({ error: "Forbidden" });
   }
 

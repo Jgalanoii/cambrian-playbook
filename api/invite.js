@@ -57,7 +57,7 @@ export default async function handler(req, res) {
   }
 
   // Verify caller identity — use consolidated JWT verification from _guard.js
-  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  if (!await verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
   // Verify the caller is an admin of their org (or superuser for cross-org invites)
   const users = await sbFetch(`users?id=eq.${payload.sub}&select=org_id,role,email`);
   const caller = users?.[0];
-  const isSuperuser = caller?.email === (process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com");
+  const isSuperuser = process.env.SUPERUSER_EMAIL && caller?.email === process.env.SUPERUSER_EMAIL;
 
   // Superuser can specify any orgId; regular admins use their own org
   const targetOrgId = (isSuperuser && overrideOrgId) ? overrideOrgId : caller?.org_id;

@@ -7,7 +7,8 @@ import { isAllowedOrigin, verifyJwt, decodeJwtPayload, checkRateLimit } from "./
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
-const SUPERUSER_EMAIL = process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com";
+const SUPERUSER_EMAIL = process.env.SUPERUSER_EMAIL;
+if (!SUPERUSER_EMAIL) console.warn("[admin-action] SUPERUSER_EMAIL not set — all admin actions will be rejected");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
   if (!checkRateLimit(ip)) return res.status(429).json({ error: "Too many requests" });
 
   // Verify JWT
-  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  if (!await verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub || !UUID_RE.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
@@ -49,7 +50,7 @@ export default async function handler(req, res) {
   // Verify superuser
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);
   const callerEmail = userRes?.[0]?.email;
-  if (callerEmail !== SUPERUSER_EMAIL) return res.status(403).json({ error: "Forbidden" });
+  if (!SUPERUSER_EMAIL || callerEmail !== SUPERUSER_EMAIL) return res.status(403).json({ error: "Forbidden" });
 
   const { action, email } = req.body || {};
   if (!email) return res.status(400).json({ error: "Email required" });

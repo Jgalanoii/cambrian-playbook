@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   if (!checkRateLimit(ip)) return res.status(429).json({ error: "Too many requests" });
 
   // Auth
-  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  if (!await verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
@@ -62,7 +62,10 @@ export default async function handler(req, res) {
     const users = await userRes.json();
     userEmail = users?.[0]?.email || "";
     orgId = users?.[0]?.org_id || "";
-  } catch {}
+  } catch (e) {
+    console.error("[checkout] User lookup failed:", e.message);
+    return res.status(500).json({ error: "User lookup failed" });
+  }
 
   try {
     // Create Stripe Checkout session

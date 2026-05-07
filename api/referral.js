@@ -31,7 +31,7 @@ export default async function handler(req, res) {
            || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
   if (!checkRateLimit(ip)) return res.status(429).json({ error: "Too many requests" });
 
-  if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
+  if (!await verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub || !UUID_RE.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });

@@ -38,7 +38,7 @@ import { MEDICAL_PAYMENTS_INJECTION, MEDICAL_PAYMENTS_SCORING, MEDICAL_PAYMENTS_
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== "GET") { res.status(405).end(); return; }
 
   // Origin check — only allow requests from known domains
@@ -59,7 +59,7 @@ export default function handler(req, res) {
     return;
   }
 
-  if (!verifyJwt(req)) {
+  if (!await verifyJwt(req)) {
     res.status(401).json({ error: "authentication required" });
     return;
   }

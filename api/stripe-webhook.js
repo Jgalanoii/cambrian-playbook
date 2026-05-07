@@ -13,6 +13,10 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 
+// Idempotency — prevent duplicate processing on Stripe retries
+const processedSessions = new Set();
+const DEDUP_MAX = 500;
+
 // Plan config — same as checkout.js
 const PLAN_LIMITS = {
   starter:    { run_limit: 25,   max_run_limit: 5 },
@@ -125,9 +129,30 @@ export default async function handler(req, res) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        const orgId = session.metadata?.org_id;
+        // Idempotency — skip if already processed (Stripe retries)
+        if (processedSessions.has(session.id)) {
+          console.log(`[stripe] Duplicate session ${session.id} — skipping`);
+          break;
+        }
+        processedSessions.add(session.id);
+        if (processedSessions.size > DEDUP_MAX) {
+          const first = processedSessions.values().next().value;
+          processedSessions.delete(first);
+        }
+        // Server-side org_id lookup from user_id — don't trust metadata for org_id
+        const userId = session.metadata?.user_id;
         const planId = session.metadata?.plan_id;
-        console.log(`[stripe] Checkout completed: org=${orgId}, plan=${planId}`);
+        let orgId = null;
+        if (userId && SB_URL && SB_KEY) {
+          try {
+            const r = await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}&select=org_id`, {
+              headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+            });
+            const users = await r.json();
+            orgId = users?.[0]?.org_id || null;
+          } catch (e) { console.error("[stripe] Org lookup failed:", e.message); }
+        }
+        console.log(`[stripe] Checkout completed: user=${userId}, org=${orgId}, plan=${planId}`);
         await updateOrg(orgId, planId);
         break;
       }
