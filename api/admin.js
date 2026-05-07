@@ -63,12 +63,14 @@ export default async function handler(req, res) {
     } catch {} // Best-effort audit — don't block the response
 
     // Fetch all data in parallel
-    const [users, orgs, sessions, usageLogs, guestLogs] = await Promise.all([
+    const [users, orgs, sessions, usageLogs, guestLogs, dbCosts] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
       sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=2000"),
       sbFetch("api_usage_log?select=user_id,model,input_tokens,output_tokens,web_searches,created_at&order=created_at.desc", 50000),
       sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=2000"),
+      // Server-side cost aggregation (bypasses row limits)
+      fetch(`${SB_URL}/rest/v1/rpc/get_cost_summary`, { method: "POST", headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" }, body: "{}" }).then(r => r.json()).catch(() => null),
     ]);
 
     // Build user activity map
