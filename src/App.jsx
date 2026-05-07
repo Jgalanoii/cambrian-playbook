@@ -1929,7 +1929,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
         {messages.length === 0 && (
           <div style={{textAlign:"center",padding:"32px 12px",color:"var(--ink-3)",fontSize:13,lineHeight:1.6}}>
             <div style={{fontSize:28,marginBottom:8}}>💬</div>
-            Hey, I'm Milton. Ask me anything about your accounts, your brief, competitive positioning, or call strategy. I've got your full session context — as long as you promise not to touch my stapler.
+            Hey, I'm Milton — your AI sales coach. I've got context on everything you do here. Try me: "What should I know before calling [company]?" or "Help me handle the pricing objection." I'll get smarter the more we work together. Just don't touch my stapler.
           </div>
         )}
         {messages.map((msg, i) => (
@@ -2502,10 +2502,10 @@ function PasswordGate({ onAuth }) {
           {[
             {icon:"🔍",title:"Company Intelligence",desc:"Real-time research across company overview, financials, competitive positioning, M&A signals, and hiring trends. Not a Wikipedia summary — live, actionable intel."},
             {icon:"👥",title:"Executive Profiles",desc:"Leadership backgrounds, career trajectories, compensation context, and communication angles. Know who you're talking to before you dial."},
-            {icon:"🎯",title:"Solution Mapping",desc:"Your products mapped to their specific pain points with Challenger-style teaching insights, JOLT indecision removers, and named customer proof."},
-            {icon:"📊",title:"ICP Fit Scoring",desc:"Three-dimensional fit scoring calibrated across 15+ industry verticals. Know which accounts deserve your time — and which don't."},
-            {icon:"🧪",title:"RIVER Hypothesis",desc:"Structured pre-call strategy across Reality, Impact, Vision, Entry Points, and Route. Dual discovery tracks for sales and solution architecture."},
-            {icon:"🎙",title:"In-Call Coaching",desc:"Live confidence scoring, gate-based qualification, and Milton — your AI sales coach with full session context and zero patience for mediocrity."},
+            {icon:"🎯",title:"How You Help",desc:"Your products mapped to their specific pain points — with teaching insights that reframe how they think, proof from named customers, and measurable outcomes."},
+            {icon:"📊",title:"Best-Match Scoring",desc:"Every company scored across 15+ industry verticals so you know which accounts deserve your time — and which don't. No more guessing."},
+            {icon:"🧪",title:"Call Prep & Hypothesis",desc:"Walk into every call with a structured plan — what you know, what to ask, how to open, and when to push. Dual tracks for sales qualification and solution discovery."},
+            {icon:"🎙",title:"AI Coaching with Milton",desc:"Live confidence scoring, structured qualification, and Milton — your AI sales coach with full session context and zero patience for mediocrity."},
           ].map(f=>(
             <div key={f.title} style={{background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"20px 18px"}}>
               <div style={{fontSize:24,marginBottom:8}}>{f.icon}</div>
@@ -2536,7 +2536,7 @@ function PasswordGate({ onAuth }) {
             <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:10,padding:"20px 18px"}}>
               <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:8}}>After Cambrian</div>
               <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.8}}>
-                {["15-minute deep brief with 9 phases of intelligence","Tailored hypothesis with Challenger insights and proof points","RIVER framework structures every conversation","Prospects say \"you clearly understand our business\"","Buying committee mapped before the first call","CRM note, follow-up email, and deal routing in one click"].map(t=>(
+                {["Deep research brief in under 30 seconds — not hours","Tailored pitch with teaching insights and proof from your customers","Structured call prep so every conversation has a plan","Prospects say \"you clearly understand our business\"","Buying committee mapped before the first call","CRM note, follow-up email, and deal routing in one click"].map(t=>(
                   <div key={t} style={{display:"flex",gap:8,marginBottom:4}}><span style={{color:"var(--green)",flexShrink:0}}>✓</span>{t}</div>
                 ))}
               </div>
@@ -2904,7 +2904,7 @@ function ExportMenu({ onPDF, onCSV, label = "Export", style = {}, locked = false
         <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "var(--surface)", border: "1.5px solid var(--line-0)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 180, overflow: "hidden" }}>
           {locked ? (
             <div style={{ padding: "12px 14px", fontSize: 12, color: "var(--ink-2)", lineHeight: 1.5 }}>
-              Export is available on paid plans. <strong style={{ color: "var(--ink-0)" }}>Upgrade to export</strong> your briefs, ICP, and account data.
+              Export is available starting at <strong style={{ color: "var(--ink-0)" }}>Starter ($99/mo)</strong>. Save briefs as PDF, export account data to CSV, and share research with your team.
             </div>
           ) : (<>
           <button onClick={() => { onPDF(); setOpen(false); }}
@@ -5950,7 +5950,7 @@ ${isOpen
   }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
-  const STEPS=["Session","ICP & RFPs","Import","Accounts","Account Review","Brief","Hypothesis","In-Call","Post-Call","Solution Fit"];
+  const STEPS=["Start","Define Your Buyer","Add Companies","Best Matches","Account Review","Research Brief","Call Prep","Live Call","Post-Call","How You Help"];
   const chatContextLabel = selectedAccount?.company
     ? `${STEPS[step]} · ${selectedAccount.company}`
     : STEPS[step];
@@ -6236,8 +6236,9 @@ ${isOpen
 
       {/* Chat assistant — floating toggle + slide-out panel (authenticated users only) */}
       {!chatOpen && sbUser && (
-        <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Ask Milton">
-          💬
+        <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Ask Milton — your AI sales coach"
+          style={{display:"flex",alignItems:"center",gap:6,padding:"10px 14px",borderRadius:20,fontSize:13,fontWeight:600}}>
+          💬 <span style={{fontSize:11,display:step===0?"inline":"none"}}>Ask Milton</span>
         </button>
       )}
       {chatOpen && (
@@ -6443,11 +6444,16 @@ ${isOpen
           <div style={{display:"flex",flexDirection:"column",gap:2}}>
             <div className="logo">Cambrian <span>Catalyst</span></div>
             <div style={{fontSize:9,letterSpacing:"0.7px",color:"var(--ink-3)",fontWeight:700,textTransform:"uppercase"}}>
-              Reality · Impact · Vision · Entry · Route
+              Sales Intelligence Platform
             </div>
           </div>
+          {/* Stepper: hidden on welcome screen (step 0) and in Quick Brief mode.
+              Shows only relevant steps once a Full Session is active. */}
+          {(step > 0 || (sessionMode==="full" && sellerUrl)) && (
           <div className="stepper" aria-label="Workflow progress">
             {STEPS.map((s,i)=>{
+              // In Quick Brief mode (research-only), only show step 0 and step 5 (brief)
+              if (sellerUrl === "research-only" && i !== 0 && i !== 5) return null;
               const canNav = (()=>{
                 if(i===step) return false;
                 if(i===0) return true;
@@ -6466,7 +6472,7 @@ ${isOpen
               const railState = step>i ? "done" : step===i ? "active" : "";
               return(
                 <React.Fragment key={i}>
-                  {i>0 && <div className={`step-rail ${railState}`} aria-hidden="true"/>}
+                  {i>0 && !(sellerUrl === "research-only" && i !== 5) && <div className={`step-rail ${railState}`} aria-hidden="true"/>}
                   <button
                     type="button"
                     className={`step-item ${state}`}
@@ -6481,6 +6487,7 @@ ${isOpen
               );
             })}
           </div>
+          )}
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
 
@@ -6660,32 +6667,27 @@ ${isOpen
           </>
         )}
 
-        {/* SESSION BAR */}
+        {/* SESSION BAR — plain-English status */}
         {step>0&&sellerUrl&&(
           <div className="session-bar">
-            <span>Selling org:</span><span className="session-url">{sellerUrl}</span>
-            {products.filter(p=>p.name.trim()).length>0&&(
-              <span style={{fontSize:10,color:"var(--tan-0)",fontWeight:600}}>
-                {products.filter(p=>p.name.trim()).length} product{products.filter(p=>p.name.trim()).length>1?"s":""} loaded
-              </span>
-            )}
-            {productPageUrl&&(
-            <span style={{fontSize:10,color:"var(--tan-0)",display:"flex",alignItems:"center",gap:4}}>
-              🔗 {productPageUrl.replace(/^https?:\/\//,"").slice(0,30)}
-            </span>
-          )}
-          {sellerDocs.length>0&&(
-              <>{sellerDocs.map((d,i)=>(
-                <div key={i} className="session-doc-chip">📄 {d.label}</div>
-              ))}</>
+            {sellerUrl !== "research-only" ? (
+              <>
+                <span>Selling for</span><span className="session-url">{orgCtx?.name || sellerUrl}</span>
+                {products.filter(p=>p.name.trim()).length>0&&(
+                  <span style={{fontSize:10,color:"var(--tan-0)",fontWeight:600}}>
+                    {products.filter(p=>p.name.trim()).length} product{products.filter(p=>p.name.trim()).length>1?"s":""} loaded
+                  </span>
+                )}
+              </>
+            ) : (
+              <span style={{fontSize:10,color:"var(--navy)",fontWeight:600}}>Quick Research Mode</span>
             )}
             {sellerICP?.icp?.industries?.length>0&&(
               <span style={{fontSize:10,color:"var(--purple)",fontWeight:600,background:"var(--purple-bg)",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px"}}>
-                ICP: {sellerICP.icp.industries.slice(0,2).join(", ")}
+                Target: {sellerICP.icp.industries.slice(0,2).join(", ")}
               </span>
             )}
-            {selectedCohort&&<><span>·</span><span>Cohort: <strong>{selectedCohort.name}</strong></span></>}
-            {selectedAccount&&<><span>·</span><span>Account: <strong>{selectedAccount.company}</strong></span></>}
+            {selectedAccount&&<><span>·</span><span>Researching: <strong>{selectedAccount.company}</strong></span></>}
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               {lastSaved()&&(
                 <span style={{fontSize:9,color:"#aaa",fontStyle:"italic"}}>
@@ -6799,7 +6801,7 @@ ${isOpen
               )}
 
               <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
-                {[["⚡","Brief in minutes, not hours"],["🎯","15+ proven frameworks"],["🔍","Live research, not cached"],["📋","Structured hypothesis"],["🎙","Coaching with Milton"]].map(([icon,label])=>(
+                {[["⚡","Deep brief in 30 seconds"],["🎯","Know their pain before the call"],["🔍","Live research, not stale data"],["📋","Walk in with a plan"],["🎙","AI coaching with Milton"]].map(([icon,label])=>(
                   <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"var(--ink-3)"}}>
                     <span style={{fontSize:14}}>{icon}</span><span>{label}</span>
                   </div>
@@ -7305,11 +7307,11 @@ ${isOpen
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:12}}>
               <div>
                 <div className="page-title" style={{margin:0}}>
-                  {icpTab==="icp"?"Your Ideal Customer Profile":"RFP Intelligence"}
+                  {icpTab==="icp"?"Who's Your Ideal Buyer?":"RFP Intelligence"}
                 </div>
                 <div className="page-sub" style={{marginBottom:0}}>
                   {icpTab==="icp"
-                    ? <>Built from <strong>{sellerUrl}</strong> — review and edit before scoring accounts.
+                    ? <>Built from <strong>{sellerUrl}</strong> — review and edit before we find your best-fit companies.
                         {sellerICP?._confidence && (
                           <span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,
                             background:sellerICP._confidence==="high"?"var(--green-bg)":sellerICP._confidence==="medium"?"var(--amber-bg)":"var(--red-bg)",
@@ -8131,8 +8133,8 @@ ${isOpen
         {/* ── STEP 2: IMPORT ── */}
         {step===2&&(
           <div className="page">
-            <div className="page-title">Add Your Accounts</div>
-            <div className="page-sub">Upload a CRM export, or type in companies directly — great for conferences, warm intros, or quick meeting prep.</div>
+            <div className="page-title">Add Companies to Research</div>
+            <div className="page-sub">Upload a CRM export, or type in companies directly — great for conferences, warm intros, or quick meeting prep. We'll score how well each one fits your ideal buyer profile.</div>
 
             {/* Mode switcher */}
             <div style={{display:"flex",gap:0,marginBottom:24,background:"var(--tan-3)",borderRadius:10,padding:3,width:"fit-content"}}>
@@ -8460,8 +8462,8 @@ ${isOpen
         {/* ── STEP 2: TARGET ACCOUNT REVIEW ── */}
         {step===3&&(
           <div className="page">
-            <div className="page-title">Target Account Review</div>
-            <div className="page-sub">All {rows.length} accounts ranked by fit. Click any account to start research — or scroll down for cohort analysis.</div>
+            <div className="page-title">Your Best Matches</div>
+            <div className="page-sub">All {rows.length} companies ranked by how well they fit your buyer profile. Click any company to build a deep research brief.</div>
 
             {/* ICP changed since last scoring — suggest re-score */}
             {icpLastEditTime > 0 && lastScoreTime > 0 && icpLastEditTime > lastScoreTime && Object.keys(fitScores).length > 0 && (
@@ -9010,7 +9012,7 @@ ${isOpen
                     <div style={{display:"flex",gap:8,marginTop:sellerUrl==="research-only"?0:20,flexWrap:"wrap",flex:sellerUrl==="research-only"?1:undefined,justifyContent:sellerUrl==="research-only"?"flex-end":undefined}}>
                       <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                       <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
-                      {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>}
+                      {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
                     </div>
                   </div>
                 </div>
@@ -9059,6 +9061,29 @@ ${isOpen
                     </div>
                   );
                 })()}
+
+                {/* First-brief guidance — contextual callout for new users */}
+                {brief && !brief._loadingSections?.overview && !brief._loadingSections?.executives && !briefError && !brief._error && (
+                  (() => {
+                    // Show guidance only once per session — dismissed on click
+                    const key = "cambrian_brief_guided";
+                    const dismissed = sessionStorage.getItem(key);
+                    if (dismissed) return null;
+                    return (
+                      <div style={{background:"var(--bg-1)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"14px 18px",marginBottom:14,position:"relative"}}>
+                        <button onClick={()=>{sessionStorage.setItem(key,"1");setBrief(prev=>({...prev}));}}
+                          style={{position:"absolute",top:8,right:12,background:"none",border:"none",fontSize:14,color:"var(--ink-3)",cursor:"pointer"}} title="Dismiss">×</button>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>
+                          Your brief on {selectedAccount?.company || "this company"} is ready.
+                        </div>
+                        <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.7}}>
+                          Every field below is editable — click anything to refine it with your own knowledge. The research is the starting point; <strong>your judgment makes it great</strong>.
+                          {sellerUrl === "research-only" && " This is a Quick Brief — set up your company below to unlock elevator pitches, solution mapping, and call coaching."}
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
 
                 {/* Elevator Pitch — 45-second spoken pitch (hidden for Quick Brief / research-only) */}
                 {sellerUrl && sellerUrl !== "research-only" && (brief.elevatorPitch || brief._loadingSections?.strategy) && (
@@ -9434,7 +9459,7 @@ ${isOpen
                   <div className="bb-hdr" onClick={()=>toggleBB("solutions")}>
                     <div className="bb-icon">↑</div>
                     <div>
-                      <div className="bb-title">Solution Mapping</div>
+                      <div className="bb-title">How You Help</div>
                       <div className="bb-sub">{brief.sellerSnapshot||`Your products mapped to ${selectedAccount?.company}`}</div>
                     </div>
                     {bbChevron("solutions")}
@@ -9963,15 +9988,37 @@ ${isOpen
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
                   <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
-                  <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Review Hypothesis →</button>
+                  <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>
                 </div>
               </>
             )}
 
+            {/* Post-brief upsell — research-only users see soft prompt to set up seller context */}
+            {brief && sellerUrl === "research-only" && !brief._loadingSections?.overview && (
+              <div style={{background:"var(--green-bg)",border:"2px solid var(--green)",borderRadius:"var(--r-lg)",padding:"20px 24px",marginTop:16,marginBottom:16}}>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:6,fontFamily:"Lora,serif"}}>
+                  Want tailored pitches and coaching for {selectedAccount?.company || "this company"}?
+                </div>
+                <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.7,marginBottom:14}}>
+                  Set up your company profile to unlock <strong>elevator pitches</strong>, <strong>solution mapping</strong> (how your products solve their pain), <strong>call prep with a structured hypothesis</strong>, and <strong>live coaching with Milton</strong>. Same deep research — personalized to what you sell.
+                </div>
+                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                  <button className="btn btn-green" onClick={()=>{setSellerUrl("");setSessionMode("full");setStep(0);}}
+                    style={{padding:"10px 20px",fontSize:13,fontWeight:700}}>
+                    Set Up My Company →
+                  </button>
+                  <button className="btn btn-secondary" onClick={()=>{setQuickBriefInput("");setStep(0);}}
+                    style={{padding:"10px 20px",fontSize:13}}>
+                    Research Another Company
+                  </button>
+                </div>
+              </div>
+            )}
+
             {!briefLoading&&!brief&&(
               <div style={{textAlign:"center",padding:"48px 20px",color:"#bbb"}}>
-                <div style={{fontSize:13,marginBottom:14}}>Select an account to generate a RIVER brief.</div>
-                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(4)}>← Select Account</button>
+                <div style={{fontSize:13,marginBottom:14}}>Select a company to build a research brief.</div>
+                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(4)}>← Select Company</button>
               </div>
             )}
           </div>
