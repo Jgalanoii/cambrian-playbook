@@ -662,7 +662,7 @@ function getRealEstateInjection(sellerICP, targetIndustry) {
 }
 
 // ── BANKING KNOWLEDGE INJECTION ─────────────────────────────────────────
-const BANKING_KW = ["banking", "bank ", "credit union", "lending", "loan origination", "deposit", "private equity", "venture capital", "private credit", "hedge fund", "asset management", "wealth management", "family office", "broker-dealer", "investment bank", "capital markets", "insurance company", "insurer", "stablecoin", "g-sib", "regional bank", "community bank", "bnpl", "consumer credit"];
+const BANKING_KW = ["banking", "bank ", "credit union", "lending", "loan origination", "deposit", "private equity", "venture capital", "private credit", "hedge fund", "asset management", "wealth management", "family office", "broker-dealer", "investment bank", "capital markets", "insurance company", "insurer", "stablecoin", "g-sib", "regional bank", "community bank", "bnpl", "consumer credit", "genius act", "crypto custody", "debit interchange", "durbin", "regulation ii", "fednow", "real-time payment", "rtp network", "treasury management", "payment rail", "genius act", "tokenized deposit", "digital asset", "occ interpretive"];
 function getBankingInjection(sellerICP, targetIndustry) {
   if (!KL_BANKING) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
