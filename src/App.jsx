@@ -9175,20 +9175,19 @@ ${isOpen
                     </button>
                   </div>
                 )}
-                {/* Action bar */}
-                <div className="card">
-                  <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-                    {sellerUrl!=="research-only"&&(
-                      <div style={{flex:1,minWidth:200}}>
-                        <div className="field-label" style={{marginBottom:5}}>Primary Contact Role <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional)</span></div>
-                        <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}/>
-                      </div>
-                    )}
-                    <div style={{display:"flex",gap:8,marginTop:sellerUrl==="research-only"?0:20,flexWrap:"wrap",flex:sellerUrl==="research-only"?1:undefined,justifyContent:sellerUrl==="research-only"?"flex-end":undefined}}>
-                      <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
-                      <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
-                      {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
+                {/* Action bar — compact inline, no big card wrapper */}
+                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
+                  {sellerUrl!=="research-only"&&(
+                    <div style={{flex:1,minWidth:200}}>
+                      <div className="field-label" style={{marginBottom:4,fontSize:10}}>Primary Contact Role <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,marginLeft:4}}>(optional)</span></div>
+                      <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}
+                        style={{fontSize:13,padding:"7px 10px"}}/>
                     </div>
+                  )}
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginLeft:sellerUrl==="research-only"?"auto":undefined}}>
+                    <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
+                    <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                    {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
                   </div>
                 </div>
 
