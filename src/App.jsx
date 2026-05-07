@@ -2106,10 +2106,10 @@ function BriefLoader({ company, status }) {
 
 // ── PRICING TIERS (shared by landing page + upgrade modal) ───────────────────
 const PRICING_TIERS = [
-  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",maxRuns:"5 Max runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"],priceId:"price_1TTsKW1ukA5Jsm7o41o7K39i"},
-  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",maxRuns:"20 Max runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true,priceId:"price_1TTsKH1ukA5Jsm7oKosAgD2i"},
-  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",maxRuns:"50 Max runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"],priceId:"price_1TTsK31ukA5Jsm7odTEg1faZ"},
-  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",maxRuns:"200 Max runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"],priceId:"price_1TTsJr1ukA5Jsm7oFWPVRXWW"},
+  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",maxRuns:"5 Max runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"],priceId:"price_1TTsJr1ukA5Jsm7oFWPVRXWW"},
+  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",maxRuns:"20 Max runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true,priceId:"price_1TTsK31ukA5Jsm7odTEg1faZ"},
+  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",maxRuns:"50 Max runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"],priceId:"price_1TTsKH1ukA5Jsm7oKosAgD2i"},
+  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",maxRuns:"200 Max runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"],priceId:"price_1TTsKW1ukA5Jsm7o41o7K39i"},
 ];
 
 // ── AUTH / PASSWORD GATE ──────────────────────────────────────────────────────
