@@ -82,6 +82,9 @@ let KL_BAAS_DISCOVERY = "";
 let KL_CHARITABLE = ""; // Charitable giving / DAFs / charity gift cards
 let KL_CHARITABLE_SCORING = null;
 let KL_CHARITABLE_DISCOVERY = "";
+let KL_MEDICAL_PAYMENTS = ""; // Medical & healthcare payments (flex cards, SNAP/EBT, FIM)
+let KL_MEDICAL_PAYMENTS_SCORING = null;
+let KL_MEDICAL_PAYMENTS_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -146,6 +149,9 @@ async function fetchKnowledgeLayer() {
     KL_CHARITABLE = d.charitableGiving || "";
     KL_CHARITABLE_SCORING = d.charitableGivingScoring || null;
     KL_CHARITABLE_DISCOVERY = d.charitableGivingDiscovery || "";
+    KL_MEDICAL_PAYMENTS = d.medicalPayments || "";
+    KL_MEDICAL_PAYMENTS_SCORING = d.medicalPaymentsScoring || null;
+    KL_MEDICAL_PAYMENTS_DISCOVERY = d.medicalPaymentsDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -734,6 +740,16 @@ function getCharitableInjection(sellerICP, targetIndustry) {
   if (!text) return "";
   if (CHARITABLE_KW.filter(kw => text.includes(kw)).length < 1) return "";
   return "\n" + KL_CHARITABLE;
+}
+
+// ── MEDICAL & HEALTHCARE PAYMENTS INJECTION ────────────────────────────
+const MEDICAL_PAYMENTS_KW = ["flex card", "supplemental benefit", "medicare advantage", "ssbci", "otc benefit", "snap", "ebt", "food as medicine", "food-as-medicine", "nutrition incentive", "gusnip", "produce prescription", "filtered-spend", "basket-level", "nationsbenefit", "solutran", "soda health", "healthy benefits", "d-snp", "dual eligible", "medicaid 1115", "medically tailored", "hsa", "fsa", "benefit card", "health plan administration", "tpa", "third-party administrator", "pbm", "pharmacy benefit", "healthequity", "wex health", "incomm healthcare", "lifestyle spending account", "lsa", "star rating", "quality bonus", "iias", "sigis", "cobra", "hra", "cafeteria plan", "social prescribing", "preventive care incentive"];
+function getMedicalPaymentsInjection(sellerICP, targetIndustry) {
+  if (!KL_MEDICAL_PAYMENTS) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (MEDICAL_PAYMENTS_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_MEDICAL_PAYMENTS;
 }
 
 // ── INVESTOR INTELLIGENCE INJECTION ─────────────────────────────────────
@@ -3780,6 +3796,11 @@ ${scaleGuidance}
           ? `\nCHARITABLE GIVING/DAF VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_CHARITABLE_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_CHARITABLE_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_MEDICAL_PAYMENTS_SCORING && getMedicalPaymentsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nMEDICAL/HEALTHCARE PAYMENTS VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_MEDICAL_PAYMENTS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_MEDICAL_PAYMENTS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -5306,6 +5327,7 @@ ${isOpen
       (KL_BAAS_DISCOVERY && getBaasInjection(sellerICP, member?.ind) ? KL_BAAS_DISCOVERY + "\n" : "") +
       (KL_CHARITABLE_DISCOVERY && getCharitableInjection(sellerICP, member?.ind) ? KL_CHARITABLE_DISCOVERY + "\n" : "") +
       (KL_INVESTOR_DISCOVERY && getInvestorInjection(sellerICP, member?.ind) ? KL_INVESTOR_DISCOVERY + "\n" : "") +
+      (KL_MEDICAL_PAYMENTS_DISCOVERY && getMedicalPaymentsInjection(sellerICP, member?.ind) ? KL_MEDICAL_PAYMENTS_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

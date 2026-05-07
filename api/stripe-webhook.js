@@ -6,7 +6,7 @@
 // - customer.subscription.updated (plan changes)
 // - customer.subscription.deleted (cancellation)
 
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
@@ -31,7 +31,9 @@ async function getRawBody(req) {
 }
 
 function verifyStripeSignature(rawBody, signature) {
-  if (!STRIPE_WEBHOOK_SECRET) return true; // Skip in dev
+  // Fail closed — reject if webhook secret is not configured
+  if (!STRIPE_WEBHOOK_SECRET) return false;
+  if (!signature) return false;
   const elements = signature.split(",").reduce((acc, part) => {
     const [key, val] = part.split("=");
     acc[key] = val;
@@ -41,12 +43,20 @@ function verifyStripeSignature(rawBody, signature) {
   const expectedSig = elements.v1;
   if (!timestamp || !expectedSig) return false;
 
+  // Reject replayed events older than 5 minutes
+  const timestampAge = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10);
+  if (isNaN(timestampAge) || timestampAge > 300 || timestampAge < -60) return false;
+
   const payload = `${timestamp}.${rawBody}`;
   const computed = createHmac("sha256", STRIPE_WEBHOOK_SECRET)
     .update(payload)
     .digest("hex");
 
-  return computed === expectedSig;
+  // Timing-safe comparison to prevent timing attacks
+  if (computed.length !== expectedSig.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(computed, "utf8"), Buffer.from(expectedSig, "utf8"));
+  } catch { return false; }
 }
 
 async function updateOrg(orgId, planId) {

@@ -32,16 +32,40 @@ PAYMENT ECONOMICS:
 
 PAYFAC & EMBEDDED PAYMENTS: PayFac holds one master MID, onboards sub-merchants, takes liability. PayFac captures 3-6x the economics of an ISO residual. Becoming a full PayFac costs ~$500K-$1M setup + $50M+ volume to break even. PayFac-as-a-Service (Stripe Connect, Adyen for Platforms, Finix, Rainforest) is the default for vertical SaaS — platform brands the experience, partner handles compliance/settlement.
 
+PAYMENT RAILS & INSTANT PAYMENTS (Q2 2026 REFRESH — Federal Reserve data):
+- Fed Biennial Report (Dec 2025): 100.7B debit and general-use prepaid card transactions valued at $4.7T in 2023; 4.6% annual growth, below the 7.8% volume / 9.5% value pace from 2009-2021. Interchange totaled $34.12B (3.9% annual growth since 2021). Canonical Fed source for stored-value/prepaid unit economics.
+- Prepaid debit cards grew 20.6% per year by value from 2018-2021 (highest of any card type), reaching $0.61T — still only 6.5% of total card payment value. Growth decelerating in volume but interchange revenue holding.
+- FedNow at Two Years (July 2025): 1,400+ participants (up from 900 a year earlier); transaction limit raised to $10M as of Sept 2025. Use cases: instant payroll, auto-loan disbursements, digital wallet defunding, insurance payouts, merchant refunds.
+- Two-rail strategy (RTP + FedNow) is the new default for treasury and payments product roadmaps. ~85% of U.S. banks/credit unions still have not adopted any instant-payment solution — addressable greenfield.
+- 73% of surveyed businesses report using instant payments (Citizens 2025). RTP at 481 banks/CUs reaching 65% of U.S. checking accounts.
+- 91% of businesses still using paper checks; checks remain the most fraud-affected payment type (AFP 2025). FedNow fraud rates materially below ACH/wire/check.
+- Consumer baseline: 48 payments per month per consumer in 2024; cash stable at ~7/month; credit and debit remain top two instruments (Fed 2025 Diary of Consumer Payment Choice).
+- Use case maturation order: payroll → loan disbursements → wallet funding → insurance payouts → bill pay/RFP.
+
 KEY REGULATORY:
 - Durbin Amendment (2010): Caps debit interchange for $10B+ issuers at ~$0.22/txn; mandates dual-network routing. Exempt issuers (<$10B) and three-party networks (AmEx, Discover) not capped.
 - Credit Card Competition Act (CCCA, reintroduced Jan 2026): Would require $100B+ issuers to enable 2+ unaffiliated networks on every credit card. Bipartisan support + presidential endorsement but has stalled legislatively. Structural threat to Visa/MC credit interchange.
 - GENIUS Act (signed Jul 2025): First U.S. federal stablecoin framework. OCC NPRM Feb 2026. Stablecoins projected ~3% of USD payments in 2026, 10% by 2031.
+- PACE Act (introduced June 2025): Would expand fintech access to FedACH and FedNow rails. Fed "skinny account" proposal (Dec 2025) is the active 2026 regulatory file.
 
 RECENT MARKET EVENTS (Nov 2025 - Apr 2026):
 - Global Payments + Worldpay closed Jan 2026 ($24.25B) — largest pure-play merchant acquiring deal ever. GP divested Issuer Solutions to FIS for $13.5B. Combined: ~6M merchant locations, ~$3.7T volume, ~94B txns.
 - Capital One + Discover: Debit migration to Discover Network complete Q1 2026. Credit card origination on Discover began Feb 2026. Cap One now a vertically integrated triopoly member (issuer + closed-loop network + bank). Brex acquisition closed Apr 2026.
 - Fiserv/Clover crisis: Stock down ~73% from peak. Class action over force-migration of ~200K merchants. Clover GPV growth collapsed. Cautionary tale: aggressive pricing + lock-in fails when Stripe/Toast/Square exist.
 - Agentic commerce: Visa Intelligent Commerce (100+ partners, live production), Mastercard Agent Pay (agentic tokens with scoped credentials), Stripe Shared Payment Tokens. Networks embedding as trust layer for AI agent transactions.
+
+CROSS-BORDER PAYMENTS & STABLECOIN REGULATORY (Q2 2026 REFRESH — BIS/CPMI/FSB):
+BIS 2025 Annual Report: stablecoins perform poorly against the three tests for serving as monetary mainstay (singleness, elasticity, integrity) — BIS's clearest "stablecoins are not money" framing. Tokenisation, by contrast, can "improve the old" (smoothing payment frictions) and "enable the new" (programmable settlement). Use this dual framing — tokenisation favorable / stablecoins guarded — for any client touching stablecoins or tokenized deposits.
+
+BIS Papers No. 167: ~$8T annually in DeFi-mediated illicit cross-border payments (Cerutti, Chen & Hengge 2024). Stablecoin frameworks across jurisdictions remain "slower and uneven" — regulatory arbitrage opportunities. G20 cross-border payments program (2020-present) now operationalizing specific proposals. PayPal's stablecoin for remittances is canonical real-world use case.
+
+BIS Papers No. 159 (2024 CBDC Survey): 91% of 93 central banks (85) exploring retail and/or wholesale CBDCs. Over 1 in 3 accelerated CBDC work due to stablecoin developments. Wholesale CBDC at more advanced stages than retail. CBDCs are preparing infrastructure for post-stablecoin world, not competing immediately.
+
+CPMI 2025-2027 work program: programmable settlement (escrow, DVP, instant FX). G20 roadmap continues: longer FPS operating hours, FPS interlinkages, harmonized ISO 20022 data standards, persistent identifiers, programmatic sanctions screening — now table stakes for cross-border payments infrastructure clients.
+
+IMF Stablecoins Paper (2025): stablecoins still require intermediaries (wallet providers, exchanges, validators) adding end-to-end costs. On/off-ramp and FX settlement costs must be factored in — counterweight against simplistic "stablecoins are cheaper" framing.
+
+Operator pattern: tokenization of deposits is the favored direction; stablecoins tolerated where regulated; CBDC infrastructure being prepared. For any client with cross-border flows, payment routing intelligence (fee/FX/SLA/risk arbitrage in real time) is now the functional differentiator — not the rail itself.
 
 STRUCTURAL THESIS: Software is eating payments distribution. ~85% of merchants choose payments with their software. ISO direct-sales is a shrinking channel. Vertical SaaS + embedded payments is the durable model. Anything enabling vertical SaaS (PFaaS, fraud/risk, compliance, embedded lending, rewards/incentives layered into software) is structurally favored.
 `;

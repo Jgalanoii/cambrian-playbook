@@ -51,11 +51,22 @@ BUILDER RELATIONSHIPS:
 - NVR (Ryan Homes) uses asset-light lot-option model — different buying behavior than D.R. Horton's land-heavy approach.
 - BTR developers want larger contiguous parcels (20-80+ acres), renter-demand submarkets, density-friendly zoning.
 
-CAPITAL & INVESTMENT:
-- Blackstone is largest global CRE owner. Other major allocators: Brookfield, Starwood, KKR, Apollo, Carlyle.
+CAPITAL & INVESTMENT (Q2 2026 REFRESH):
+- Blackstone invested $42B of equity in real estate since early 2024, Q4 2025 deal screening activity up >25% YoY. Blackstone $2.3B Alexander & Baldwin acquisition (Hawaii commercial REIT) — privatization streak is dominant 2026 structural pattern.
+- Brookfield ($1T+ AUM) positioning aggressively across housing, logistics, data centers, hospitality. Announced Oct 2025 acquisition of remaining ~26% interest in Oaktree. Key voices: Bruce Flatt (CEO), Lowell Baron (Real Estate CEO).
+- Real estate values fell 22% over two years ending 2024, only 7% above trough as of late 2025 — Blackstone framing as one of most attractive entry points in years.
+- $957B in CRE loans matured in 2025 — nearly triple the 20-year average. CMBS delinquency 7.29% (~6x bank-loan rates). Office vacancy hit record 19.6% in Q1 2025. The "extend and pretend" lender posture from 2023-2024 is now ending — forced sales increasing.
+- Multifamily transactions grew 39.5% YoY in 2025; Q1 2025 absorption more than doubled to 82,500 units. 2025 vacancy ending at 4.9%, rent growth 2.6% (CBRE). Sun Belt and Mountain regions adding ~20% to inventory in three years.
+- Construction costs up 50% over last five years. New starts in logistics and rental housing down ~2/3 — major supply tailwind for existing assets.
+- Data center REIT outlier: P/FFO multiples expanding to 25-40x as AI power demand drives construction. Blackstone Infrastructure consortium acquired TXNM Energy at 1.8x rate base (~$11.5B) — representative AI-power-demand deal. AI infrastructure is now a discrete CRE sub-asset class.
+- 2021-2022-vintage inexperienced multifamily buyers are the source of highest-quality distressed-acquisition opportunities.
+- NBER WP 31970 (Bidder, Krainer, Shapiro): CRE loans ~25% of average bank assets (~$2.7T at start of 2022 tightening). Anchor academic citation for any CRE bank-exposure framing.
+- SOFR moved 530 bps from 0.05% (Jan 2022) to 5.35% (Jan 2024); borrowing costs roughly 40% off their wides (Jon Gray, Blackstone). Barrero, Bloom & Davis demonstrate persistence of elevated remote work — structural argument for sustained office-demand erosion.
+- Other major allocators: Brookfield, Starwood, KKR, Apollo, Carlyle, Franklin Templeton (acquired Apera Oct 2025).
 - BTR institutional capital: Blackstone, Carlyle, Cerberus, AMH, Invitation Homes, Pretium/Progress.
 - REITs by sector: Industrial (Prologis), Multifamily (Equity Residential, Greystar), Retail (Simon), Office (BXP).
 - Data center: Equinix, Digital Realty, QTS (Blackstone), CyrusOne (KKR).
+- Voices to track: Jon Gray (Blackstone president — most-cited CRE recovery voice), Manus Clancy (Trepp — CMBS delinquency), CBRE Econometric Advisors, PIMCO real estate research, NAIOP.
 `;
 
 export const REAL_ESTATE_SCORING_CONTEXT = {

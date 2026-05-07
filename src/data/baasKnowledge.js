@@ -28,6 +28,10 @@ ECONOMICS: Setup $50K-500K+. Monthly per-account $1-5. Card interchange share 80
 
 COMPLIANCE: BSA/AML (FinCEN), KYC/CDD, OFAC, UDAAP. Serious program: $500K-$5M annually + CCO + BSA officer + 3-15+ AML analysts. Consent orders cite: inadequate transaction monitoring, weak third-party risk oversight, staffing gaps. "Compliance debt" (start minimal, catch up later) is the common failure path.
 
+REGULATORY SCHOLARSHIP (Q2 2026 REFRESH): Remolina (2025, SMU School of Law, SSRN 5434476) distinguishes BaaS from open banking and embedded finance, maps EU/UK/US/Singapore/China regulatory models, proposes framework centered on licensing, liability clarity, resilience, prudential standards, and systemic safeguards — the citation backbone for post-Synapse BaaS framing. Yale Journal of International Affairs (Jan 2026) frames the "weakest-link problem" in fragmented BaaS chains, cites Dallas Fed and FSB on middleware concentration as a too-interconnected-to-fail issue. Sumsub (Mar 2026) notes Monzo's £21.1M FCA fine in 2025, Blue Ridge/Synapse OCC compliance expectations, and EMI/ECB licensing differences. American Banker (Dec 2024) covers Treasury Prime code-escrow practice and Celent equilibrium framing.
+
+POST-SYNAPSE CODIFIED EXPECTATIONS: Direct-to-bank API models are displacing generalist middleware as the dominant resilience pattern. Sub-ledger reconciliation and FBO account transparency are de facto compliance expectations even where not formally codified. Deposit segregation language is now table stakes in any sponsor-bank deck. The three-party model (Fintech ← Middleware ← Sponsor) is structurally disfavored; two-party direct and vertical SaaS embedded are the growth architectures.
+
 2026 TRENDS: Market bifurcating — well-capitalized fintechs with compliance maturity growing with top sponsors; under-resourced programs struggling/exiting. Vertical SaaS embedded expanding. Direct sponsor relationships gaining share. Regulatory bar raised permanently. Sponsor consolidation continuing; new entrants rare.
 `;
 

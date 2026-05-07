@@ -3,11 +3,13 @@
 // Superuser admin actions: password reset, resend invite, etc.
 // POST with admin JWT + action payload.
 
-import { isAllowedOrigin, verifyJwt, decodeJwtPayload } from "./_guard.js";
+import { isAllowedOrigin, verifyJwt, decodeJwtPayload, checkRateLimit } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 const SUPERUSER_EMAIL = process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function sbFetch(path, method = "GET", body = null) {
   const headers = {
@@ -31,11 +33,18 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || req.headers.referer || "";
   if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "Origin not allowed" });
 
+  // Rate limiting
+  const xff = req.headers["x-forwarded-for"];
+  const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
+           || (xff ? xff.split(",").pop().trim() : "")
+           || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
+  if (!checkRateLimit(ip)) return res.status(429).json({ error: "Too many requests" });
+
   // Verify JWT
   if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
-  if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
+  if (!payload?.sub || !UUID_RE.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
 
   // Verify superuser
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);
@@ -191,6 +200,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: `Unknown action: ${action}` });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error("[admin-action] Error:", e.message);
+    return res.status(500).json({ error: "Internal error" });
   }
 }

@@ -37,11 +37,20 @@ export default async function handler(req, res) {
   if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
-  if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
+  if (!payload?.sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
 
-  const { priceId, planId } = req.body || {};
-  if (!priceId || !planId) return res.status(400).json({ error: "priceId and planId required" });
-  if (!PLAN_LIMITS[planId]) return res.status(400).json({ error: "Invalid plan" });
+  // Server-side priceId→planId binding — prevents plan manipulation
+  const PRICE_TO_PLAN = {
+    [process.env.STRIPE_PRICE_STARTER]:    "starter",
+    [process.env.STRIPE_PRICE_PRO]:        "pro",
+    [process.env.STRIPE_PRICE_TEAM]:       "team",
+    [process.env.STRIPE_PRICE_ENTERPRISE]: "enterprise",
+  };
+
+  const { priceId } = req.body || {};
+  if (!priceId) return res.status(400).json({ error: "priceId required" });
+  const planId = PRICE_TO_PLAN[priceId];
+  if (!planId || !PLAN_LIMITS[planId]) return res.status(400).json({ error: "Invalid price" });
 
   // Get user email and org
   let userEmail = "";

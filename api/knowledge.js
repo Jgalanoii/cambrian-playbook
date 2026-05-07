@@ -33,6 +33,7 @@ import { QSR_INJECTION, QSR_SCORING, QSR_DISCOVERY } from "../src/data/qsrKnowle
 import { INVESTOR_INTELLIGENCE_INJECTION, INVESTOR_INTELLIGENCE_DISCOVERY } from "../src/data/investorIntelligenceKnowledge.js";
 import { BAAS_INJECTION, BAAS_SCORING, BAAS_DISCOVERY } from "../src/data/baasKnowledge.js";
 import { CHARITABLE_GIVING_INJECTION, CHARITABLE_GIVING_SCORING, CHARITABLE_GIVING_DISCOVERY } from "../src/data/charitableGivingKnowledge.js";
+import { MEDICAL_PAYMENTS_INJECTION, MEDICAL_PAYMENTS_SCORING, MEDICAL_PAYMENTS_DISCOVERY } from "../src/data/medicalPaymentsKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 }
@@ -212,5 +213,9 @@ export default function handler(req, res) {
     charitableGiving: CHARITABLE_GIVING_INJECTION,
     charitableGivingScoring: CHARITABLE_GIVING_SCORING,
     charitableGivingDiscovery: CHARITABLE_GIVING_DISCOVERY,
+    // Medical & healthcare payments (flex cards, SNAP/EBT, food-as-medicine, filtered-spend)
+    medicalPayments: MEDICAL_PAYMENTS_INJECTION,
+    medicalPaymentsScoring: MEDICAL_PAYMENTS_SCORING,
+    medicalPaymentsDiscovery: MEDICAL_PAYMENTS_DISCOVERY,
   });
 }

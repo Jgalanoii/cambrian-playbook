@@ -43,7 +43,7 @@ export default async function handler(req, res) {
   if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
-  if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
+  if (!payload?.sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
 
   // Look up the caller's email — must match superuser
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);

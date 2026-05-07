@@ -10,14 +10,25 @@
 export const B2B_SALES_INJECTION = `
 B2B SALES & VALUE CREATION CONTEXT (cross-cutting — apply to ALL B2B prospects):
 
-PIPELINE ARCHITECTURE: Sequential stages (Awareness → Interest → Consideration → Evaluation → Negotiation → Close). Pipeline coverage 3-5x quota is leading indicator. Deal progression shaped by: ICP fit at entry, discovery rigor, champion presence, buying committee alignment (5-11 stakeholders in enterprise).
+BUYING GROUP DYNAMICS (Q2 2026 REFRESH — credentialed research):
+- 74% of buying teams demonstrate "unhealthy conflict" during the buying decision process (Gartner May 2025, n=632 B2B buyers). Buying groups that reach consensus are 2.5x more likely to report a high-quality deal.
+- 61% of B2B buyers prefer an overall rep-free buying experience; 73% actively avoid vendors that send irrelevant outreach (Gartner June 2025).
+- 92% of buyers start with at least one vendor in mind; 41% have a single preferred vendor before formal evaluation begins (Forrester 2024 Buyers Journey, n=11,352).
+- 86% of B2B purchases stall at some point; 81% of buyers report dissatisfaction with their chosen provider post-purchase (Forrester State of Business Buying 2024).
+- Buyers spend ~17% of total purchase journey time interacting with all potential vendors combined. Initial seller contact occurs at ~57% through the purchase process (Gartner Future of Sales 2025).
+- 53% of B2B customer loyalty derives from the sales experience itself — outranks brand, product/service delivery, and value-to-price ratio (Dixon & Adamson, The Challenger Sale, with CEB/Gartner replications 2016 and 2019).
+- Buying groups span 5-16 people across as many as 4 functions; up to 22 in healthcare.
+- The "champion" model is necessary but no longer sufficient. Insight-led reframing remains the highest-ROI seller behavior, particularly because 41-57% of buyers have already formed preferences before any seller contact.
+- Gen AI estimated to add $0.8T-$1.2T incremental productivity in sales and marketing (McKinsey 2024). 19% of B2B decision-makers actively implementing gen AI use cases; another 23% in process (McKinsey Global B2B Pulse, n=3,942 across 34 sectors).
+
+PIPELINE ARCHITECTURE: Sequential stages (Awareness → Interest → Consideration → Evaluation → Negotiation → Close). Pipeline coverage 3-5x quota is leading indicator. Deal progression shaped by: ICP fit at entry, discovery rigor, champion presence, buying committee consensus (not just alignment). The 17% total-vendor-time stat is the strongest argument against high-frequency outbound: most contact time is wasted because buyers have already narrowed.
 
 VALUE CREATION: Three layers — product value (what it does), process value (discipline it enables), outcome value (measurable end-state). Most selling confuses these. Value hypotheses: "[Customer] could [outcome] worth $[X], by [mechanism], using [solution]." Companies undercapture 20-40% by pricing on competitor benchmarks rather than buyer value.
 
 SALES ORG DESIGN: SDRs own prospecting/qualification (activity quotas). AEs own discovery through close (bookings/ARR quotas). CSMs own adoption/expansion (NRR quotas). Comp plans incentivize behavior: bookings-based → aggressive discounting; ARR-based → healthier outcomes. Productivity = pipeline coverage × stage conversion × cycle time × win rate × quota attainment distribution.
 
 MOTION DIFFERENCES:
-- Enterprise (>$100K ACV): 8-15 stakeholders, 9-18 months, value-based selling + business cases. Land-small beats transformation pitch.
+- Enterprise (>$100K ACV): 8-16 stakeholders, 9-18 months, value-based selling + business cases. Land-small beats transformation pitch. Consensus-building is the critical skill — 74% of teams have unhealthy conflict.
 - Mid-market ($20-100K): 4-9 months, champion development critical, clear ROI required.
 - SMB ($5-20K): PLG or inside sales, 4-12 weeks, self-serve viable.
 Each has different CAC tolerances and payback requirements.

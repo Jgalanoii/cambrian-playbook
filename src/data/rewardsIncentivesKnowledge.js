@@ -42,14 +42,36 @@ COMPLIANCE (critical — Cambrian knows this cold):
 - KYC/AML/OFAC: required for larger payouts; cross-border sanctions screening
 - Fraud: identity verification, bot detection critical especially in research payouts
 
+CAPITAL & M&A (Q2 2026 REFRESH): The GTCR/Blackhawk Network deal at $4-5B (in advanced talks per July 2025 Private Equity Wire) is the defining transaction. If completed at $5B+, it represents a meaningful return on Silver Lake/P2's original $3.5B 2018 take-private. BHN has made 19 acquisitions to date (average ~$132M per Tracxn), most recent was Tango Card (Jan 2024). BHN's network: 1,000+ brands, 244,000+ retail locations. Comparable peers weighing strategic alternatives: Green Dot, Paysafe, AvidXchange. Adjacent strategic acquirers: Fiserv, Brookfield Private Credit, and increasingly QSR/franchise PE firms (Roark, Inspire Brands) integrating loyalty as a unit-economics defense. Key investor voices: FTV Capital's Chris Winship (former Tango Card lead), Silver Lake/P2 leadership for Blackhawk exit dynamics, GTCR's payments team.
+
+LOYALTY RESEARCH (Q2 2026 REFRESH — peer-reviewed):
+- 74% of loyalty members disengage silently within the first two months (Antavo 2026, 3,000 professionals / 10,000 consumers / 500M platform interactions) — THE activation cliff stat. The design problem is activation, not enrollment.
+- Birthday rewards have NO positive CLV effect — recipients had materially lower average CLV ($72) vs control ($125) in study of 210,657 MUJI members (Nishio & Hoshino 2024). Strong citation against unexamined "personalized gesture" tactics.
+- Experiential rewards drive greater self-connection than material rewards; even small experiential rewards produce effects comparable to large material ones (ScienceDirect Aug 2025). Loyalty market projected to reach $155.22B globally by 2029.
+- Non-monetary elements (events, recognition, exclusive services) sustain loyalty at program termination; monetary savings have no significant loyalty effect (Melnyk & Bijmolt, foundational, cited heavily through 2025).
+- 90% of consumers willing to switch brands for better rewards (Engage People / Wise Marketer 2025). 78% would engage more if "Pay with Points" available at checkout.
+- 92% enrolled in at least one program but only 28% feel "very" satisfied (EY 2025). 73% find loyalty programs too complicated; 54% unaware which programs they belong to (Bond Brand Loyalty / arXiv 2512.00738).
+- Program owner ROI: 92.7% measuring ROI report positive return; average 5.3x. Owner satisfaction 83% in 2026 vs 50.6% in 2022 (Antavo).
+
 2026 TRENDS:
 - API-first delivery is table stakes (Tango, Tremendous, Giftbit all sell embedded APIs)
 - Embedded rewards in vertical SaaS is fastest-growing motion (Toast, ServiceTitan adding reward features)
 - Choice-based delivery ("recipient picks from menu") has won over single-brand
 - Global/cross-border: 100+ countries with local-currency redemption now table stakes
 - Consolidation: BHN acquired Tango (2022), Rybbon (2022); PE appetite high
+- OBBBA charitable deduction floor (0.5% AGI for itemizers, effective 2026) reshapes donor-incentive intersection
+- Federal interchange fee debate live: Fed Dec 2025 biennial report (100.7B debit/prepaid transactions, $4.7T, $34.12B interchange)
+- Prepaid debit card growth decelerating in volume (down from 9.6% to ~4-5% annually) but interchange revenue holding
 
-CAMBRIAN'S EDGE: Joe's BHN background provides operator-level credibility. Every conversation starts from mutual recognition. This is the #1 vertical by domain expertise × addressable opportunity × competitive differentiation.
+INCENTIVE COMPENSATION RESEARCH (Q2 2026 REFRESH — replaces dated Shaffer & Arkes 2009 anchor):
+- Cash is most efficient at increasing response rates (RR 1.25) vs vouchers (RR 1.19) vs lotteries (RR 1.12) — Wang et al. 2023 meta-analysis, 46 RCTs, 109,648 participants, 14 countries. Directly contradicts conventional wisdom in some loyalty-adjacent industries.
+- Conditional incentives are more cost-effective than unconditional; unconditional have largest absolute effect (Imperial College / Elliott et al. 2025, JMIR).
+- Raising incentives mid-field has materially larger effects on previous non-respondents than respondents (Cabrera-Alvarez & Lynn 2025, UK Understanding Society panel RCT — cleanest 2025 result on conditional escalation).
+- Average survey response rates climbed from 48% (2005) to 68% (2020) — Holtom, Baruch, Aguinis & Ballinger 2022, Human Relations, 1,014 surveys. Canonical reference for response-rate norms.
+- ESOMAR 37 (2025 edition) now explicitly addresses participant validation, fraud prevention, and incentive changes mid-fielding. AAPOR endorses ISO Standard 20252 (200+ certified research orgs worldwide).
+- Operator implication: the Antavo 74% disengagement cliff + Wang meta-analysis together make a tight case for redesigning loyalty-program activation around frontloaded conditional incentives.
+
+CAMBRIAN'S EDGE: Joe's BHN background provides operator-level credibility. Every conversation starts from mutual recognition. This is the #1 vertical by domain expertise × addressable opportunity × competitive differentiation. The empirical record now clearly favors experiential and identity-affirming rewards over generic monetary discounts on long-run CLV. Month-2 retention, not enrollment, is the milestone.
 `;
 
 export const REWARDS_INCENTIVES_SCORING = {

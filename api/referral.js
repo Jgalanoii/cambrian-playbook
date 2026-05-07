@@ -4,10 +4,12 @@
 // first brief completion. Awards +1 run to the referrer's org (capped
 // at 5 bonus runs per month).
 
-import { verifyJwt, decodeJwtPayload, isAllowedOrigin } from "./_guard.js";
+import { verifyJwt, decodeJwtPayload, isAllowedOrigin, checkRateLimit } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const REFERRAL_CODE_RE = /^[a-zA-Z0-9_-]{4,32}$/;
 
 async function sbFetch(path, method = "GET", body = null) {
   const headers = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" };
@@ -22,10 +24,17 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || req.headers.referer || "";
   if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "Origin not allowed" });
 
+  // Rate limiting
+  const xff = req.headers["x-forwarded-for"];
+  const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
+           || (xff ? xff.split(",").pop().trim() : "")
+           || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
+  if (!checkRateLimit(ip)) return res.status(429).json({ error: "Too many requests" });
+
   if (!verifyJwt(req)) return res.status(401).json({ error: "Authentication required" });
   const authToken = (req.headers.authorization || "").slice(7);
   const payload = decodeJwtPayload(authToken);
-  if (!payload?.sub) return res.status(401).json({ error: "Authentication required" });
+  if (!payload?.sub || !UUID_RE.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
 
   const { action } = req.body || {};
 
@@ -61,10 +70,10 @@ export default async function handler(req, res) {
   // POST: store referral code on signup
   if (action === "set_referrer") {
     const { referralCode } = req.body || {};
-    if (!referralCode) return res.status(400).json({ error: "Referral code required" });
+    if (!referralCode || !REFERRAL_CODE_RE.test(referralCode)) return res.status(400).json({ error: "Referral code required" });
 
     // Verify the referral code exists and isn't the user's own
-    const referrers = await sbFetch(`users?referral_code=eq.${referralCode}&select=id`);
+    const referrers = await sbFetch(`users?referral_code=eq.${encodeURIComponent(referralCode)}&select=id`);
     if (!referrers?.length) return res.json({ ok: false, message: "Invalid referral code" });
     if (referrers[0].id === payload.sub) return res.json({ ok: false, message: "Can't refer yourself" });
 
@@ -103,6 +112,17 @@ export default async function handler(req, res) {
       return res.json({ ok: true, message: "Referrer at bonus cap" });
     }
 
+    // Mark as rewarded FIRST (atomic flag) to prevent race-condition double-award.
+    // Use If-Match header pattern: only patch if referral_rewarded is still false.
+    const markRes = await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}&referral_rewarded=eq.false`, {
+      method: "PATCH",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify({ referral_rewarded: true }),
+    });
+    const marked = await markRes.json();
+    // If no rows updated, another request already claimed this reward
+    if (!marked?.length) return res.json({ ok: true, message: "Already processed" });
+
     // Award +1 run to the referrer's org
     await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${referrer.org_id}`, {
       method: "PATCH",
@@ -111,12 +131,6 @@ export default async function handler(req, res) {
         run_limit: org.run_limit + 1,
         referral_bonus_runs: (org.referral_bonus_runs || 0) + 1,
       }),
-    });
-
-    // Mark this user as rewarded
-    await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}`, {
-      method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ referral_rewarded: true }),
     });
 
     console.log(`[referral] +1 run to org ${referrer.org_id} from user ${payload.sub} (referred by ${user.referred_by})`);
