@@ -181,7 +181,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
       label: "ANALYTICS",
       items: [
         { id: "sessions", label: "Sessions", count: s.total_sessions },
-        { id: "costs", label: "Costs", count: `$${(c.cost || 0).toFixed(2)}` },
+        { id: "costs", label: "API Costs", count: `$${(c.cost || 0).toFixed(2)}` },
         { id: "activity", label: "Activity" },
       ],
     },
@@ -1052,14 +1052,18 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ COSTS ═══ */}
           {tab === "costs" && data.costs && (
             <div>
+              <div className="admin-section-title">API Costs (Anthropic)</div>
+              <div className="admin-section-sub">Direct costs to serve — token usage, web searches, and model costs. These are COGS on the P&L. Ceiling estimate — actual costs are ~20-40% lower due to prompt caching.</div>
+
               {/* Summary cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
                 {[
-                  { label: "Total Cost", value: `$${c.cost?.toFixed(2)}`, color: "var(--ink-0)" },
+                  { label: "Total API Cost", value: `$${c.cost?.toFixed(2)}`, color: "var(--red)" },
                   { label: "API Calls", value: c.api_calls?.toLocaleString(), color: "var(--navy)" },
-                  { label: "Input Tokens", value: `${(c.input_tokens / 1000).toFixed(0)}K`, color: "var(--green)" },
-                  { label: "Output Tokens", value: `${(c.output_tokens / 1000).toFixed(0)}K`, color: "var(--amber)" },
+                  { label: "Input Tokens", value: `${(c.input_tokens / 1000).toFixed(0)}K`, color: "var(--ink-1)" },
+                  { label: "Output Tokens", value: `${(c.output_tokens / 1000).toFixed(0)}K`, color: "var(--ink-1)" },
                   { label: "Web Searches", value: c.web_searches, color: "var(--violet)" },
+                  { label: "Est. Actual (w/ cache)", value: `$${(c.cost * 0.7)?.toFixed(2)}`, color: "var(--green)" },
                 ].map(m => (
                   <div key={m.label} className="admin-metric">
                     <div className="admin-metric-num" style={{ color: m.color, fontSize: 22 }}>{m.value}</div>
