@@ -310,6 +310,13 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
           <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>
             {orgCtx?.name || "Your Organization"}
           </div>
+          <span className="admin-badge" style={{
+            background: isAdmin ? "var(--navy-bg)" : isManager ? "var(--amber-bg)" : "var(--green-bg)",
+            color: isAdmin ? "var(--navy)" : isManager ? "var(--amber)" : "var(--green)",
+            fontSize: 9, letterSpacing: "0.5px", textTransform: "uppercase",
+          }}>
+            {isAdmin ? "Admin" : isManager ? "Manager" : "Rep"}
+          </span>
           {orgCtx?.plan && (
             <span className="admin-badge" style={{
               background: orgCtx.plan === "paid" ? "var(--green-bg)" : "var(--amber-bg)",

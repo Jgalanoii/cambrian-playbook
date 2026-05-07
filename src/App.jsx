@@ -6542,7 +6542,7 @@ ${isOpen
                         <button onClick={()=>{setSuperAdminOpen(true);setMoreMenuOpen(false);}}
                           style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--violet)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                           onMouseEnter={e=>e.currentTarget.style.background="var(--violet-bg)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                          <span style={{width:20,textAlign:"center"}}>⚙</span> Admin Dashboard
+                          <span style={{width:20,textAlign:"center"}}>⚙</span> Super Admin
                         </button>
                       </>
                     )}

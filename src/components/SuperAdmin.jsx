@@ -311,7 +311,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
       {/* ── Header ── */}
       <div className="admin-header">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Admin Dashboard</div>
+          <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Super Admin</div>
           <span className="admin-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)", fontSize: 9, letterSpacing: "0.5px", textTransform: "uppercase" }}>Superuser</span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
