@@ -2580,7 +2580,7 @@ function PasswordGate({ onAuth }) {
             ))}
           </div>
           <div style={{textAlign:"center",marginTop:16,fontSize:13,color:"var(--ink-2)"}}>
-            Need custom volume, SSO, or invoice billing? <a href="mailto:info@cambriancatalyst.com?subject=Enterprise%20Inquiry" style={{color:"var(--tan-0)",fontWeight:600,textDecoration:"none"}}>Let's talk →</a>
+            Need custom volume, SSO, or invoice billing? <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",fontWeight:600,textDecoration:"none"}}>info@cambriancatalyst.com</a>
           </div>
         </div>
       </div>
@@ -3136,6 +3136,8 @@ export default function App(){
   const[icpDeltaLoading,setIcpDeltaLoading]=useState(false);
   const[orgCtx,setOrgCtx]=useState(null); // {id, name, run_count, run_limit, plan, userRole, ...}
   const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
+  const[contactFormOpen,setContactFormOpen]=useState(false);
+  const[contactFormMsg,setContactFormMsg]=useState("");
   const exportLocked = !sbUser || orgCtx?.plan === "trial"; // guests + trial users can't export
 
   // Fit scoring weights (user-adjustable, default 40/30/30)
@@ -10878,16 +10880,86 @@ ${isOpen
 
             {/* Enterprise / Invoice */}
             <div style={{padding:"16px 24px",borderTop:"1px solid var(--line-0)",background:"var(--bg-1)"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                <div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>Enterprise or need an invoice?</div>
-                  <div style={{fontSize:12,color:"var(--ink-2)"}}>Custom volume, SSO, dedicated onboarding, and NET-30 invoicing for procurement teams.</div>
+              {!contactFormOpen ? (
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>Enterprise or need an invoice?</div>
+                    <div style={{fontSize:12,color:"var(--ink-2)"}}>Custom volume, SSO, dedicated onboarding, and NET-30 invoicing for procurement teams.</div>
+                  </div>
+                  <button onClick={()=>{setContactFormOpen(true);setContactFormMsg("");}}
+                    style={{padding:"10px 20px",borderRadius:8,border:"1.5px solid var(--ink-0)",background:"var(--surface)",color:"var(--ink-0)",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"DM Sans,sans-serif"}}>
+                    Request Invoice / Enterprise
+                  </button>
                 </div>
-                <a href={`mailto:info@cambriancatalyst.com?subject=Enterprise / Invoice Request&body=Hi,%0A%0AI'd like to discuss enterprise pricing or request an invoice for procurement.%0A%0ACompany: %0AEstimated users: %0AContact: ${encodeURIComponent(sbUser?.email||"")}%0A%0APlease send me:%0A☐ Enterprise pricing details%0A☐ Invoice for purchase order processing%0A☐ Security/compliance documentation%0A☐ SOC 2 readiness information`}
-                  style={{display:"inline-block",padding:"10px 20px",borderRadius:8,border:"1.5px solid var(--ink-0)",background:"var(--surface)",color:"var(--ink-0)",fontSize:12,fontWeight:700,textDecoration:"none",fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
-                  Request Invoice / Enterprise
-                </a>
-              </div>
+              ) : contactFormMsg ? (
+                <div style={{textAlign:"center",padding:"12px 0"}}>
+                  <div style={{fontSize:20,marginBottom:8}}>✓</div>
+                  <div style={{fontSize:14,fontWeight:600,color:"var(--green)",marginBottom:4}}>Inquiry submitted</div>
+                  <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>{contactFormMsg}</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:10}}>Tell us what you need</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                    <div>
+                      <label style={{fontSize:10,fontWeight:600,color:"var(--ink-3)",display:"block",marginBottom:2}}>Your Name *</label>
+                      <input id="cf-name" defaultValue={sbUser?.user_metadata?.full_name||sbUser?.user_metadata?.first_name||""} placeholder="Full name"
+                        style={{width:"100%",fontSize:13,padding:"8px 10px",border:"1.5px solid var(--line-0)",borderRadius:6,boxSizing:"border-box"}} onKeyDown={e=>e.stopPropagation()} />
+                    </div>
+                    <div>
+                      <label style={{fontSize:10,fontWeight:600,color:"var(--ink-3)",display:"block",marginBottom:2}}>Email *</label>
+                      <input id="cf-email" defaultValue={sbUser?.email||""} placeholder="you@company.com" type="email"
+                        style={{width:"100%",fontSize:13,padding:"8px 10px",border:"1.5px solid var(--line-0)",borderRadius:6,boxSizing:"border-box"}} onKeyDown={e=>e.stopPropagation()} />
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                    <div>
+                      <label style={{fontSize:10,fontWeight:600,color:"var(--ink-3)",display:"block",marginBottom:2}}>Company Name *</label>
+                      <input id="cf-company" defaultValue={orgCtx?.name||""} placeholder="Acme Corp"
+                        style={{width:"100%",fontSize:13,padding:"8px 10px",border:"1.5px solid var(--line-0)",borderRadius:6,boxSizing:"border-box"}} onKeyDown={e=>e.stopPropagation()} />
+                    </div>
+                    <div>
+                      <label style={{fontSize:10,fontWeight:600,color:"var(--ink-3)",display:"block",marginBottom:2}}>I'm interested in</label>
+                      <select id="cf-interest" defaultValue="enterprise"
+                        style={{width:"100%",fontSize:13,padding:"8px 10px",border:"1.5px solid var(--line-0)",borderRadius:6}}>
+                        <option value="enterprise">Enterprise pricing</option>
+                        <option value="invoice">Invoice / PO for procurement</option>
+                        <option value="security">Security & compliance docs</option>
+                        <option value="demo">Product demo</option>
+                        <option value="other">Something else</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{marginBottom:10}}>
+                    <label style={{fontSize:10,fontWeight:600,color:"var(--ink-3)",display:"block",marginBottom:2}}>Anything else? (optional)</label>
+                    <textarea id="cf-message" placeholder="Number of users, specific requirements, timeline..." rows={2}
+                      style={{width:"100%",fontSize:13,padding:"8px 10px",border:"1.5px solid var(--line-0)",borderRadius:6,boxSizing:"border-box",fontFamily:"inherit",resize:"vertical"}} onKeyDown={e=>e.stopPropagation()} />
+                  </div>
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                    <button onClick={()=>setContactFormOpen(false)}
+                      style={{padding:"8px 16px",borderRadius:6,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer",color:"var(--ink-2)"}}>
+                      Cancel
+                    </button>
+                    <button onClick={async()=>{
+                      const name=document.getElementById("cf-name")?.value?.trim();
+                      const email=document.getElementById("cf-email")?.value?.trim();
+                      const company=document.getElementById("cf-company")?.value?.trim();
+                      const interest=document.getElementById("cf-interest")?.value;
+                      const message=document.getElementById("cf-message")?.value?.trim();
+                      if(!name||!email||!company){alert("Please fill in name, email, and company.");return;}
+                      try{
+                        const r=await fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,company,interest,message})});
+                        const d=await r.json();
+                        if(d.ok){setContactFormMsg(d.message);}
+                        else{alert(d.error||"Failed to submit");}
+                      }catch{alert("Network error — please try again.");}
+                    }}
+                      style={{padding:"8px 20px",borderRadius:6,background:"var(--ink-0)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      Submit Inquiry
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Close */}
