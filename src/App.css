@@ -435,6 +435,15 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .pulse-line { height: 9px; background: var(--line-1); border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 0%{opacity:1}50%{opacity:0.35}100%{opacity:1} }
 
+/* Brief section fade-in — sections appear smoothly as each micro-call resolves */
+@keyframes briefFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.bb { animation: briefFadeIn 0.35s ease-out both; }
+.bb:nth-child(2) { animation-delay: 0.05s; }
+.bb:nth-child(3) { animation-delay: 0.1s; }
+.bb:nth-child(4) { animation-delay: 0.15s; }
+.bb:nth-child(5) { animation-delay: 0.2s; }
+.bb:nth-child(6) { animation-delay: 0.25s; }
+
 /* ── IN-CALL ─────────────────────────────────────────── */
 .incall-wrap { max-width: 1200px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
 @media (max-width: 1024px) { .incall-wrap { max-width: 940px; } }
@@ -745,9 +754,18 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
   .step-label { display: none; }
   .step-rail { min-width: 16px; }
 
-  /* Stack two-column grids */
-  .bb-body [style*="gridTemplateColumns: \"1fr 1fr\""],
-  .bb-body [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  /* Stack all inline two-column grids in brief sections */
+  .bb-body [style*="gridTemplateColumns"],
+  .bb-body [style*="grid-template-columns"],
+  .bb-body > div[style*="grid"] { grid-template-columns: 1fr !important; }
+
+  /* Executive cards: single column */
+  .bb-body[style*="auto-fill"] { grid-template-columns: 1fr !important; }
+
+  /* Brief welcome quick-brief input: stack on mobile */
+  .quick-brief-row { flex-direction: column !important; }
+  .quick-brief-row input { width: 100% !important; }
+  .quick-brief-row button { width: 100% !important; }
 
   /* In-call: stack side-by-side layout */
   .call-layout { flex-direction: column !important; height: auto !important; }

@@ -6720,19 +6720,35 @@ ${isOpen
               <div style={{textAlign:"center",marginBottom:10}}>
                 <span style={{display:"inline-block",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
-              {/* Welcome card for authenticated users */}
+              {/* Welcome card for authenticated users — Quick Brief is now the hero */}
               {sbUser && (
-                <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:"var(--r-md)",padding:"16px 20px",marginBottom:20,textAlign:"left"}}>
+                <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:"var(--r-md)",padding:"20px 22px",marginBottom:20,textAlign:"left"}}>
                   <div style={{fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:4}}>
                     Welcome back{sbUser.user_metadata?.first_name ? `, ${sbUser.user_metadata.first_name}` : ""}. Let's make someone's day.
                   </div>
-                  <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6,marginBottom:8}}>
-                    You have <strong>{Math.max(0,(orgCtx?.run_limit||3)-(orgCtx?.run_count||0))}</strong> of <strong>{orgCtx?.run_limit||3}</strong> runs this month. Every run makes you sharper — and your prospect's experience better.
+                  <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6,marginBottom:12}}>
+                    You have <strong>{Math.max(0,(orgCtx?.run_limit||3)-(orgCtx?.run_count||0))}</strong> of <strong>{orgCtx?.run_limit||3}</strong> runs this month.
                     {orgCtx?.plan==="trial" && " Upgrade anytime for more."}
                   </div>
-                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6}}>
-                    <strong>How it works:</strong> Enter your website → build your ICP → import targets → generate deep briefs → build a RIVER hypothesis → coach through live calls.
-                    {sessionMode==="quick" && " Or use Quick Brief to research any company instantly."}
+                  {/* Quick Brief input — always visible for authenticated users */}
+                  <div style={{marginBottom:8}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>Research any company — deep intel in under 30 seconds</div>
+                    <div style={{display:"flex",gap:8}}>
+                      <input type="text" placeholder="Company name (e.g. Acme Corp, Nike, Salesforce)"
+                        autoFocus
+                        value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()){setSessionMode("quick");launchQuickBrief();}e.stopPropagation();}}
+                        style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--green)",borderRadius:8,background:"var(--surface)"}}/>
+                      <button className="btn" onClick={()=>{setSessionMode("quick");launchQuickBrief();}}
+                        disabled={!quickBriefInput.trim()}
+                        style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()?1:0.5}}>
+                        Build Brief →
+                      </button>
+                    </div>
+                    <div style={{fontSize:10,color:"var(--ink-3)",marginTop:6}}>Uses 1 run · Executives, strategy, sentiment, news, open roles, competitive landscape</div>
+                  </div>
+                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6,borderTop:"1px solid var(--green)",paddingTop:8,marginTop:4,opacity:0.8}}>
+                    Want tailored solution mapping, elevator pitches, and coaching? Use <strong>Full Sales Session</strong> below — enter your website to build an ICP and import targets.
                   </div>
                 </div>
               )}
@@ -6740,9 +6756,9 @@ ${isOpen
               {/* Company setup prompt — show when org has no seller_url */}
               {sbUser && orgCtx && !orgCtx.seller_url && (
                 <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:"var(--r-md)",padding:"14px 18px",marginBottom:16}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--amber)",marginBottom:6}}>Set up your selling organization</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--amber)",marginBottom:6}}>Add your company to unlock tailored briefs</div>
                   <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6,marginBottom:10}}>
-                    Your organization in Cambrian represents <strong>the company you sell for</strong> — not your personal account. Adding your company website connects your team, pre-fills sessions, and helps new teammates join automatically.
+                    Adding the company you sell for unlocks <strong>solution mapping, elevator pitches, and sales coaching</strong> personalized to your products and proof points. Quick Briefs work without this — but Full Sessions need to know who's selling.
                   </div>
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                     <input id="setup-org-url" placeholder="yourcompany.com" defaultValue={orgCtx.seller_url||""}
@@ -6796,44 +6812,14 @@ ${isOpen
                     <span style={{fontSize:20}}>🔍</span>
                     <span style={{fontSize:14,fontWeight:700,color:"var(--navy)"}}>Quick Brief — Guest Preview</span>
                   </div>
-                  <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>
+                  <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5,marginBottom:12}}>
                     Research any company — executives, strategy, news, and sentiment. Create a free account to unlock full sessions with ICP scoring, solution mapping, hypothesis, coaching, and more.
                   </div>
-                </div>
-              ) : (
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-                  <div onClick={()=>setSessionMode("full")}
-                    style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
-                      border:sessionMode==="full"?"2px solid var(--green)":"2px solid var(--line-0)",
-                      background:sessionMode==="full"?"var(--green-bg)":"var(--surface)",
-                      transform:sessionMode==="full"?"translateY(-2px)":"none",
-                      boxShadow:sessionMode==="full"?"0 4px 12px rgba(46,107,46,0.12)":"none"}}>
-                    <div style={{fontSize:20,marginBottom:6}}>🎯</div>
-                    <div style={{fontSize:14,fontWeight:700,color:sessionMode==="full"?"var(--green)":"var(--ink-2)",marginBottom:4}}>Full Sales Session</div>
-                    <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate tailored briefs with solution mapping, and prepare for calls.</div>
-                  </div>
-                  <div onClick={()=>setSessionMode("quick")}
-                    style={{padding:"16px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",
-                      border:sessionMode==="quick"?"2px solid var(--navy)":"2px solid var(--line-0)",
-                      background:sessionMode==="quick"?"var(--navy-bg)":"var(--surface)",
-                      transform:sessionMode==="quick"?"translateY(-2px)":"none",
-                      boxShadow:sessionMode==="quick"?"0 4px 12px rgba(27,58,107,0.12)":"none"}}>
-                    <div style={{fontSize:20,marginBottom:6}}>🔍</div>
-                    <div style={{fontSize:14,fontWeight:700,color:sessionMode==="quick"?"var(--navy)":"var(--ink-2)",marginBottom:4}}>Quick Brief</div>
-                    <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Deep research on any company — no seller context needed. Executives, strategy, news, hiring signals, and sentiment.</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Brief mode */}
-              {sessionMode==="quick"&&(
-                <div style={{background:"var(--navy-bg)",borderRadius:10,padding:"16px 18px",marginBottom:16,border:"2px solid var(--navy)"}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:8}}>Research any company</div>
                   <div style={{display:"flex",gap:8}}>
-                    <input id="quick-brief-input" type="text" placeholder="Company name (e.g. Acme Corp, Nike, Salesforce)"
+                    <input type="text" placeholder="Company name (e.g. Acme Corp, Nike, Salesforce)"
                       autoFocus
                       value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
-                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();}}
+                      onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()) launchQuickBrief();e.stopPropagation();}}
                       style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--navy)",borderRadius:8,background:"var(--surface)"}}/>
                     <button className="btn" onClick={launchQuickBrief}
                       disabled={!quickBriefInput.trim()}
@@ -6841,7 +6827,22 @@ ${isOpen
                       Build Brief →
                     </button>
                   </div>
-                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 run · Full brief: executives, strategy, sentiment, news, open roles, competitive landscape</div>
+                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 of 2 guest previews · Executives, strategy, sentiment, news, competitive landscape</div>
+                </div>
+              ) : (
+                /* For authenticated users: Full Session toggle (Quick Brief is already in the welcome card above) */
+                <div onClick={()=>setSessionMode(sessionMode==="full"?"quick":"full")}
+                  style={{padding:"14px 18px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",marginBottom:20,
+                    border:sessionMode==="full"?"2px solid var(--green)":"2px solid var(--line-0)",
+                    background:sessionMode==="full"?"var(--green-bg)":"var(--surface)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:18}}>🎯</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:700,color:sessionMode==="full"?"var(--green)":"var(--ink-2)"}}>Full Sales Session</div>
+                      <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate briefs with solution mapping and coaching. {sessionMode!=="full"&&"Click to expand."}</div>
+                    </div>
+                    <span style={{fontSize:12,color:"var(--ink-3)",transform:sessionMode==="full"?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▼</span>
+                  </div>
                 </div>
               )}
 
@@ -8985,11 +8986,11 @@ ${isOpen
             {/* Brief content — renders as soon as brief is set (not null) */}
             {brief&&(
               <>
-                {briefError&&(
+                {(briefError || brief._error) && (
                   <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:8}}>⚠ Research encountered an issue</div>
                     <div style={{fontSize:12,color:"#7A2020",lineHeight:1.6,marginBottom:10}}>
-                      Some sections may be incomplete. This won't count against your runs — retry for free.
+                      {brief._error || "Some sections may be incomplete."} This won't count against your runs — retry for free.
                     </div>
                     <button onClick={()=>{setBriefError("");pickAccount(selectedAccount,null,true);}}
                       style={{padding:"8px 16px",borderRadius:8,background:"var(--red)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer"}}>
@@ -9223,7 +9224,13 @@ ${isOpen
                       ))
                       : brief._loadingSections?.executives
                         ? <div style={{fontSize:13,color:"var(--ink-3)",padding:12}}>Searching for executive team...</div>
-                        : <div style={{fontSize:13,color:"var(--ink-3)",padding:12}}>Executive data not available — click Regenerate to retry.</div>
+                        : <div style={{fontSize:13,color:"var(--ink-3)",padding:12,textAlign:"center"}}>
+                            Executive data not available.
+                            <button onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}
+                              style={{marginLeft:8,fontSize:12,fontWeight:600,padding:"4px 12px",borderRadius:6,border:"1px solid var(--tan-2)",background:"var(--bg-1)",color:"var(--ink-1)",cursor:"pointer"}}>
+                              Retry
+                            </button>
+                          </div>
                     }
                   </div>
                 </div>
