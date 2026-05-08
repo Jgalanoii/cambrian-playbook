@@ -32,6 +32,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
   const [refreshing, setRefreshing] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
+  const [expandedSession, setExpandedSession] = useState(null);
 
   const fetchData = (showSpinner) => {
     if (showSpinner) setLoading(true);
@@ -597,11 +598,16 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     {filteredActivity.map((a, i) => {
                       const depthDots = [a.hasICP, a.hasBrief, a.hasHypo, a.hasPostCall, a.hasSolutionFit];
                       const depthLabels = ["ICP", "Brief", "Hypo", "Post", "SA"];
+                      const isExpanded = expandedSession === a.id;
                       return (
-                        <tr key={i}>
+                        <React.Fragment key={i}>
+                        <tr onClick={() => setExpandedSession(isExpanded ? null : a.id)} style={{ cursor: "pointer", background: isExpanded ? "var(--green-bg)" : undefined }}>
                           <td>
-                            <div style={{ fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.session_name}</div>
-                            {a.selected_account && <div style={{ fontSize: 10, color: "var(--ink-3)" }}>Target: {a.selected_account}</div>}
+                            <div style={{ fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <span style={{ fontSize: 10, marginRight: 4, transition: "transform 0.2s", display: "inline-block", transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                              {a.session_name}
+                            </div>
+                            {a.selected_account && <div style={{ fontSize: 10, color: "var(--ink-3)", marginLeft: 14 }}>Target: {a.selected_account}</div>}
                           </td>
                           <td>
                             <div style={{ fontWeight: 600, color: "var(--ink-0)" }}>{a.user_name?.split(" ")[0] || "\u2014"}</div>
@@ -640,6 +646,156 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             {a.milton_messages > 0 && <div style={{ fontSize: 9, color: "var(--red)" }}>{a.milton_messages} Milton</div>}
                           </td>
                         </tr>
+                        {/* ── EXPANDED SESSION DETAIL ── */}
+                        {isExpanded && (
+                          <tr><td colSpan={7} style={{ padding: 0, background: "var(--bg-0)" }}>
+                            <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 12 }}>
+                              {/* Left column — Brief Intel */}
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Brief Intelligence</div>
+                                {a.brief_tldr?.topFinding && (
+                                  <div style={{ background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--tan-0)", marginBottom: 6 }}>QUICK TAKE</div>
+                                    <div style={{ fontSize: 11, color: "var(--ink-0)", lineHeight: 1.5, marginBottom: 4 }}><strong>Finding:</strong> {a.brief_tldr.topFinding}</div>
+                                    <div style={{ fontSize: 11, color: "var(--ink-0)", lineHeight: 1.5, marginBottom: 4 }}><strong>Opportunity:</strong> {a.brief_tldr.topOpportunity}</div>
+                                    <div style={{ fontSize: 11, color: "var(--ink-0)", lineHeight: 1.5 }}><strong>Risk:</strong> {a.brief_tldr.topRisk}</div>
+                                  </div>
+                                )}
+                                {a.brief_snapshot && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", marginBottom: 3 }}>COMPANY SNAPSHOT</div>
+                                    <div style={{ fontSize: 11, color: "var(--ink-1)", lineHeight: 1.6 }}>{a.brief_snapshot}</div>
+                                  </div>
+                                )}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+                                  {[
+                                    ["Revenue", a.brief_revenue],
+                                    ["Employees", a.brief_employees],
+                                    ["HQ", a.brief_hq],
+                                    ["Ownership", a.brief_ownership],
+                                  ].filter(([,v]) => v).map(([label, val]) => (
+                                    <div key={label} style={{ fontSize: 11 }}><strong style={{ color: "var(--ink-2)" }}>{label}:</strong> <span style={{ color: "var(--ink-0)" }}>{val}</span></div>
+                                  ))}
+                                </div>
+                                {a.brief_funding && (
+                                  <div style={{ fontSize: 11, color: "var(--ink-1)", lineHeight: 1.5, marginBottom: 10 }}>
+                                    <strong style={{ color: "var(--ink-2)" }}>Funding:</strong> {a.brief_funding}
+                                  </div>
+                                )}
+                                {a.brief_executives?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", marginBottom: 4 }}>EXECUTIVES ({a.brief_executives.length})</div>
+                                    {a.brief_executives.map((e, j) => (
+                                      <div key={j} style={{ fontSize: 11, color: "var(--ink-0)", marginBottom: 2 }}><strong>{e.name}</strong> — {e.title}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {a.brief_headlines?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", marginBottom: 4 }}>HEADLINES ({a.brief_headlines.length})</div>
+                                    {a.brief_headlines.map((h, j) => (
+                                      <div key={j} style={{ fontSize: 11, color: "var(--ink-1)", lineHeight: 1.5, marginBottom: 3, paddingLeft: 8, borderLeft: "2px solid var(--tan-2)" }}>{h}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {a.brief_strategic_theme && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", marginBottom: 3 }}>STRATEGIC THEME</div>
+                                    <div style={{ fontSize: 11, color: "var(--ink-1)", lineHeight: 1.6, fontStyle: "italic" }}>{a.brief_strategic_theme}</div>
+                                  </div>
+                                )}
+                                {a.brief_opening_angle && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", marginBottom: 3 }}>OPENING ANGLE</div>
+                                    <div style={{ fontSize: 11, color: "var(--ink-0)", lineHeight: 1.6 }}>{a.brief_opening_angle}</div>
+                                  </div>
+                                )}
+                                {a.brief_five_questions?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", marginBottom: 4 }}>5 QUESTIONS TO ASK</div>
+                                    {a.brief_five_questions.map((q, j) => (
+                                      <div key={j} style={{ fontSize: 11, color: "var(--ink-0)", lineHeight: 1.5, marginBottom: 4, paddingLeft: 8, borderLeft: "2px solid var(--green)" }}>
+                                        <strong>{j + 1}.</strong> {q.question}
+                                        {q.rationale && <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 1 }}>Why: {q.rationale}</div>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Right column — ICP, Hypothesis, Docs, Fit Scores */}
+                              <div>
+                                {(a.icp_industries?.length > 0 || a.icp_personas?.length > 0) && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>ICP Configuration</div>
+                                    {a.icp_industries?.length > 0 && <div style={{ fontSize: 11, marginBottom: 4 }}><strong style={{ color: "var(--ink-2)" }}>Industries:</strong> {a.icp_industries.join(", ")}</div>}
+                                    {a.icp_personas?.length > 0 && <div style={{ fontSize: 11, marginBottom: 4 }}><strong style={{ color: "var(--ink-2)" }}>Personas:</strong> {a.icp_personas.join(", ")}</div>}
+                                    {a.icp_company_sizes?.length > 0 && <div style={{ fontSize: 11, marginBottom: 4 }}><strong style={{ color: "var(--ink-2)" }}>Company sizes:</strong> {a.icp_company_sizes.join(", ")}</div>}
+                                    {a.icp_edits > 0 && <div style={{ fontSize: 11, color: "var(--green)" }}>{a.icp_edits} manual edits applied</div>}
+                                  </div>
+                                )}
+                                {a.hypothesis_reality && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Call Prep Hypothesis</div>
+                                    {["reality", "impact", "vision", "entry", "route"].map(stage => {
+                                      const val = a[`hypothesis_${stage}`];
+                                      if (!val) return null;
+                                      return <div key={stage} style={{ fontSize: 11, color: "var(--ink-1)", lineHeight: 1.5, marginBottom: 6 }}><strong style={{ color: "var(--ink-0)", textTransform: "uppercase" }}>{stage}:</strong> {val.slice(0, 200)}{val.length > 200 ? "..." : ""}</div>;
+                                    })}
+                                  </div>
+                                )}
+                                {a.docs?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Uploaded Documents ({a.docs.length})</div>
+                                    {a.docs.map((d, j) => (
+                                      <div key={j} style={{ background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 6, padding: "8px 10px", marginBottom: 6 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-0)" }}>{d.label}</div>
+                                        <div style={{ fontSize: 10, color: "var(--ink-3)", lineHeight: 1.5, marginTop: 2 }}>{d.contentPreview || "No preview"}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {a.products?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Products ({a.products.length})</div>
+                                    {a.products.map((p, j) => (
+                                      <div key={j} style={{ fontSize: 11, marginBottom: 3 }}><strong style={{ color: "var(--ink-0)" }}>{p.name}</strong>{p.description ? ` — ${p.description}` : ""}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {a.fit_scores?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Fit Scores ({a.fit_scores.length} companies)</div>
+                                    <div style={{ maxHeight: 200, overflow: "auto" }}>
+                                      {a.fit_scores.map((f, j) => (
+                                        <div key={j} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, marginBottom: 3 }}>
+                                          <span style={{ fontWeight: 700, color: f.score >= 70 ? "var(--green)" : f.score >= 40 ? "var(--amber)" : "var(--red)", minWidth: 30 }}>{f.score || "—"}</span>
+                                          <span style={{ fontWeight: 600, color: "var(--ink-0)" }}>{f.company}</span>
+                                          {f.reason && <span style={{ color: "var(--ink-3)", fontSize: 10, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.reason}</span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {a.brief_competitors?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>COMPETITORS</div>
+                                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                      {a.brief_competitors.map((c, j) => <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "var(--red-bg)", color: "var(--red)", fontWeight: 600 }}>{c}</span>)}
+                                    </div>
+                                  </div>
+                                )}
+                                {a.brief_elevator_pitch && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>ELEVATOR PITCH</div>
+                                    <div style={{ fontSize: 11, color: "var(--ink-0)", lineHeight: 1.6, fontStyle: "italic", background: "var(--green-bg)", border: "1px solid var(--green)", borderRadius: 6, padding: "8px 10px" }}>"{a.brief_elevator_pitch}"</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td></tr>
+                        )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>

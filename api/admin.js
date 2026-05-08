@@ -195,6 +195,34 @@ export default async function handler(req, res) {
         docs: (d.sellerDocs || []).map(doc => ({ label: doc.label || "Untitled", contentPreview: (doc.content || "").slice(0, 200) })),
         products: (d.products || []).filter(p => p?.name?.trim()).map(p => ({ name: p.name, description: (p.description || "").slice(0, 100) })),
         proof_points: (d.sellerProofPoints || []).map(pp => ({ type: pp.type || "unknown", label: pp.label || "", content: (pp.content || "").slice(0, 150) })),
+        // Brief detail (for expanded session view)
+        brief_snapshot: d.brief?.companySnapshot || null,
+        brief_tldr: d.brief?.tldr || null,
+        brief_revenue: d.brief?.revenue || null,
+        brief_employees: d.brief?.employeeCount || null,
+        brief_hq: d.brief?.headquarters || null,
+        brief_ownership: d.brief?.publicPrivate || null,
+        brief_funding: d.brief?.fundingProfile || null,
+        brief_elevator_pitch: d.brief?.elevatorPitch || null,
+        brief_strategic_theme: d.brief?.strategicTheme || null,
+        brief_opening_angle: d.brief?.openingAngle || null,
+        brief_executives: (d.brief?.keyExecutives || []).filter(e => e?.name).map(e => ({ name: e.name, title: e.title })),
+        brief_headlines: (d.brief?.recentHeadlines || []).slice(0, 5).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean),
+        brief_five_questions: d.brief?.fiveQuestions || null,
+        brief_competitors: d.brief?.competitors || [],
+        // ICP detail
+        icp_industries: d.sellerICP?.icp?.industries || [],
+        icp_personas: d.sellerICP?.icp?.personas || [],
+        icp_company_sizes: d.sellerICP?.icp?.companySizes || [],
+        icp_edits: (d.icpEdits || []).length,
+        // Hypothesis text
+        hypothesis_reality: d.riverHypo?.reality || null,
+        hypothesis_impact: d.riverHypo?.impact || null,
+        hypothesis_vision: d.riverHypo?.vision || null,
+        hypothesis_entry: d.riverHypo?.entryPoints || null,
+        hypothesis_route: d.riverHypo?.route || null,
+        // Fit scores for all companies
+        fit_scores: Object.entries(d.fitScores || {}).slice(0, 20).map(([co, s]) => ({ company: co, score: s?.score || s?.dim1, reason: (s?.reason || "").slice(0, 100) })),
       };
     });
 
