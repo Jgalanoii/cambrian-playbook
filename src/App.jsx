@@ -3434,19 +3434,42 @@ export default function App(){
         resolve({ name, label: guessLabel(name), content: text, ext });
         return;
       }
-      // Fallback: try reading as text (won't work well but won't crash)
     }
 
-    // CSV files: read as text directly (already works)
+    // PDF files: extract text using pdf.js
+    if (ext === "pdf") {
+      try {
+        const pdfjsLib = await import("pdfjs-dist/build/pdf.mjs");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise;
+        let fullText = "";
+        const maxPages = Math.min(pdf.numPages, 30); // cap at 30 pages
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const tc = await page.getTextContent();
+          const pageText = tc.items.map(item => item.str).join(" ");
+          fullText += pageText + "\n";
+        }
+        const content = fullText.replace(/\s+/g, " ").trim().slice(0, 12000);
+        resolve({ name, label: guessLabel(name), content: content || "[PDF had no extractable text]", ext });
+        return;
+      } catch (e) {
+        console.warn("[readDocFile] PDF extraction failed:", e.message);
+        resolve({ name, label: guessLabel(name), content: "[PDF text extraction failed — try uploading as .txt or .docx]", ext });
+        return;
+      }
+    }
+
+    // Text-based files: read as text directly
     const reader = new FileReader();
     reader.onload = e => {
       let content = "";
       try{
         content = e.target.result || "";
-        // Strip null bytes and obvious binary garbage; keep printable ASCII + common unicode
         content = content.replace(/[\x00-\x08\x0b\x0e-\x1f\x7f-\x9f]/g,"")
           .replace(/[^\x09\x0a\x0d\x20-\uFFFF]/g,"")
-          .slice(0, 12000); // cap at 12K chars per doc to manage token budget
+          .slice(0, 12000);
       }catch(e){content="";}
       resolve({name, label:guessLabel(name), content, ext});
     };
@@ -6952,7 +6975,7 @@ ${isOpen
                 </span>
               )}
               <label style={{fontSize:10,color:"var(--tan-0)",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-                <input type="file" accept=".docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
+                <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
               {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
@@ -7285,7 +7308,7 @@ ${isOpen
                     <div className="doc-upload-hint" style={{marginTop:3}}>PDF, DOCX, XLSX, CSV, TXT, MD — up to 6 files</div>
                   </div>
                   <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();docRef.current.click();}}>Add Files</button>
-                  <input ref={docRef} type="file" accept=".docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}}
+                  <input ref={docRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}}
                     onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 </div>
 
