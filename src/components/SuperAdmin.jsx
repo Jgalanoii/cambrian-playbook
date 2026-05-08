@@ -767,6 +767,20 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                     ))}
                                   </div>
                                 )}
+                                {a.account_docs?.length > 0 && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Account Intel ({a.account_docs.length})</div>
+                                    {a.account_docs.map((d, j) => (
+                                      <div key={j} style={{ background: "var(--navy-bg)", border: "1px solid var(--navy)", borderRadius: 6, padding: "10px 12px", marginBottom: 6 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--navy)" }}>{d.label}</span>
+                                          {d.charCount > 0 && <span style={{ fontSize: 9, color: "var(--ink-3)", background: "var(--bg-2)", borderRadius: 4, padding: "1px 5px" }}>{d.charCount > 1000 ? Math.round(d.charCount / 1000) + "K chars" : d.charCount + " chars"}</span>}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: "var(--ink-1)", lineHeight: 1.6, maxHeight: 120, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{d.contentPreview || "No preview"}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                                 {a.fit_scores?.length > 0 && (
                                   <div style={{ marginBottom: 10 }}>
                                     <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Fit Scores ({a.fit_scores.length} companies)</div>

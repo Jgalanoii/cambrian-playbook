@@ -206,6 +206,12 @@ export default async function handler(req, res) {
         }),
         products: (d.products || []).filter(p => p?.name?.trim()).map(p => ({ name: p.name, description: (p.description || "").slice(0, 100) })),
         proof_points: (d.sellerProofPoints || []).map(pp => ({ type: pp.type || "unknown", label: pp.label || "", content: (pp.content || "").slice(0, 150) })),
+        account_docs: (d.accountDocs || []).map(doc => {
+          const raw = doc.content || "";
+          const isBinary = raw.startsWith("%PDF") || /[\x00-\x08\x0E-\x1F]/.test(raw.slice(0, 100));
+          const cleanText = isBinary ? "" : raw.replace(/[\x00-\x1F\x7F-\x9F]/g, " ").replace(/\s+/g, " ").trim();
+          return { label: doc.label || "Untitled", contentPreview: cleanText ? cleanText.slice(0, 400) : "[Binary file]", charCount: raw.length, isBinary };
+        }),
         // Brief detail (for expanded session view)
         brief_snapshot: d.brief?.companySnapshot || null,
         brief_tldr: d.brief?.tldr || null,

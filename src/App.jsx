@@ -1156,7 +1156,7 @@ function buildUserEditContext(edits, userEdits) {
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
 // wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
-function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null, icpEdits=[]){
+function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null, icpEdits=[], accountDocs=[]){
   const co  = sanitizeForPrompt(member.company);
   const url = member.company_url || co;
   const safeSellerUrl = sanitizeForPrompt(sellerUrl);
@@ -1221,7 +1221,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
-    `STABILITY: For the same company, your output should be stable across runs. Use established facts (revenue, HQ, founding year, executive names) not ephemeral observations. Anchor every claim in verifiable data, not interpretive commentary that could vary between runs. If multiple descriptions are equally valid, prefer the most specific and factual one.\n\n`;
+    `STABILITY: For the same company, your output should be stable across runs. Use established facts (revenue, HQ, founding year, executive names) not ephemeral observations. Anchor every claim in verifiable data, not interpretive commentary that could vary between runs. If multiple descriptions are equally valid, prefer the most specific and factual one.\n\n`+
+    // Account-specific intel docs (RFPs, requirements, discovery Qs, meeting notes)
+    (accountDocs.length > 0
+      ? `TARGET-SPECIFIC INTEL (uploaded by the user — these are documents FROM or ABOUT ${co}. Treat as high-priority context. Address their specific requirements, questions, and priorities throughout the brief):\n` +
+        accountDocs.map(d => sanitizeForPrompt(d.label) + ": " + sanitizeForPrompt(d.content.slice(0, 800))).join("\n") + "\n\n"
+      : "");
 
   const verticalCtx = getVerticalInjection(sellerICP, member.ind);
   const paymentsCtx = getPaymentsInjection(sellerICP, member.ind);
@@ -3350,6 +3355,7 @@ export default function App(){
   const[postLoading,setPostLoading]=useState(false);
   const[copied,setCopied]=useState("");
   const[sellerDocs,setSellerDocs]=useState([]); // [{name, label, content}]
+  const[accountDocs,setAccountDocs]=useState([]); // [{name, label, content}] — target-company intel (RFPs, requirements, meeting notes, discovery Qs)
   const[docDrag,setDocDrag]=useState(false);
   const[products,setProducts]=useState([]); // [{id, name, description, category}]
   const[prodDocDrag,setProdDocDrag]=useState(false);
@@ -4812,7 +4818,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({step,sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
+  const getSessionSnap=()=>({step,sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),accountDocs:accountDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -4856,6 +4862,7 @@ ${isOpen
     if(d.disqualified) setDisqualified(d.disqualified);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
+    if(d.accountDocs?.length) setAccountDocs(d.accountDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
     if(d.sellerICP) setSellerICP(d.sellerICP);
     if(d.products?.length) setProducts(d.products);
@@ -5267,6 +5274,8 @@ ${isOpen
       setUpgradeOpen(true);
       return;
     }
+    // Clear account docs only when switching to a different company (not on regenerate)
+    if (selectedAccount?.company !== member.company) setAccountDocs([]);
     setSelectedAccount(member);
     setBriefLoading(true);
     setLastBriefTime(Date.now());
@@ -5318,7 +5327,8 @@ ${isOpen
         sellerICP,
         { execs: cachedExecs, brief: cachedBrief },
         onStream,
-        icpEdits
+        icpEdits,
+        accountDocs
       );
       skeleton = result.skeleton;
       mergers = result.mergers;
@@ -9373,6 +9383,40 @@ ${isOpen
                     <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                     {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
                   </div>
+                </div>
+
+                {/* Account Intel — upload RFPs, requirements, discovery Qs, meeting notes about this specific company */}
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                  <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,color:"var(--ink-2)",cursor:"pointer",padding:"5px 12px",borderRadius:6,border:"1px dashed var(--line-0)",background:"var(--bg-0)"}}>
+                    <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple style={{display:"none"}}
+                      onChange={async e=>{
+                        const files = Array.from(e.target.files).slice(0, 6);
+                        const results = await Promise.all(files.map(readDocFile));
+                        setAccountDocs(prev => {
+                          const existing = new Set(prev.map(d => d.name));
+                          const fresh = results.filter(r => !existing.has(r.name) && r.content.trim().length > 10);
+                          return [...prev, ...fresh].slice(0, 6);
+                        });
+                        e.target.value = "";
+                      }}/>
+                    📎 Add account intel
+                  </label>
+                  <span style={{fontSize:10,color:"var(--ink-3)"}}>RFPs, requirements, discovery questions, meeting notes, screenshots — anything about {selectedAccount?.company || "this company"}</span>
+                  {accountDocs.length > 0 && (
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                      {accountDocs.map((d, i) => (
+                        <span key={i} style={{fontSize:10,padding:"2px 8px",borderRadius:4,background:"var(--navy-bg)",color:"var(--navy)",fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                          {d.label}
+                          <button onClick={()=>setAccountDocs(prev=>prev.filter((_,j)=>j!==i))}
+                            style={{background:"none",border:"none",cursor:"pointer",color:"var(--ink-3)",fontSize:12,padding:0,lineHeight:1}}>×</button>
+                        </span>
+                      ))}
+                      <button onClick={()=>{if(window.confirm("Re-run the brief with these docs included?"))pickAccount(selectedAccount);}}
+                        style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:4,border:"1px solid var(--green)",background:"var(--green-bg)",color:"var(--green)",cursor:"pointer"}}>
+                        ↻ Re-run with intel
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Live progress — shows while micro-calls are still streaming. Auto-hides
