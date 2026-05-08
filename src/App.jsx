@@ -85,6 +85,8 @@ let KL_CHARITABLE_DISCOVERY = "";
 let KL_MEDICAL_PAYMENTS = ""; // Medical & healthcare payments (flex cards, SNAP/EBT, FIM)
 let KL_MEDICAL_PAYMENTS_SCORING = null;
 let KL_MEDICAL_PAYMENTS_DISCOVERY = "";
+let KL_SMB_MIDMARKET = ""; // SMB & mid-market cross-cutting (buying patterns by size)
+let KL_SMB_MIDMARKET_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -152,6 +154,8 @@ async function fetchKnowledgeLayer() {
     KL_MEDICAL_PAYMENTS = d.medicalPayments || "";
     KL_MEDICAL_PAYMENTS_SCORING = d.medicalPaymentsScoring || null;
     KL_MEDICAL_PAYMENTS_DISCOVERY = d.medicalPaymentsDiscovery || "";
+    KL_SMB_MIDMARKET = d.smbMidmarket || "";
+    KL_SMB_MIDMARKET_DISCOVERY = d.smbMidmarketDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -764,6 +768,26 @@ function getMedicalPaymentsInjection(sellerICP, targetIndustry) {
   return "\n" + KL_MEDICAL_PAYMENTS;
 }
 
+// ── SMB & MID-MARKET INJECTION (size-based, not keyword-based) ─────────
+// Triggers for any account under ~2,500 employees or when employee count
+// suggests non-enterprise. Also triggers on SMB/mid-market keywords.
+const SMB_MIDMARKET_KW = ["smb", "small business", "mid-market", "midmarket", "middle market", "owner-operator", "family-owned", "family owned", "founder-led", "bootstrapped", "series a", "series b", "seed stage"];
+function getSmbMidmarketInjection(sellerICP, targetIndustry, member) {
+  if (!KL_SMB_MIDMARKET) return "";
+  // Check by employee count if available
+  const emp = member?.employees || "";
+  const empNum = parseFloat(String(emp).replace(/[^0-9.]/g, ""));
+  if (!isNaN(empNum) && empNum > 0 && empNum < 2500) return "\n" + KL_SMB_MIDMARKET;
+  // Check by keywords
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (text && SMB_MIDMARKET_KW.some(kw => text.includes(kw))) return "\n" + KL_SMB_MIDMARKET;
+  // Default: inject for all non-enterprise accounts (most accounts are SMB/mid-market)
+  // Only skip if we have strong enterprise signals
+  if (emp && !isNaN(empNum) && empNum >= 2500) return "";
+  // When we don't know the size, inject anyway — it's useful context and won't hurt enterprise briefs
+  return "\n" + KL_SMB_MIDMARKET;
+}
+
 // ── INVESTOR INTELLIGENCE INJECTION ─────────────────────────────────────
 const INVESTOR_KW = ["private equity", "venture capital", "pe-backed", "vc-backed", "portfolio company", "portco", "family office", "limited partner", "operating partner", "pe fund", "vc fund", "growth equity", "buyout"];
 function getInvestorInjection(sellerICP, targetIndustry) {
@@ -1196,6 +1220,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getInvestorInjection(sellerICP, member.ind) +
     getBaasInjection(sellerICP, member.ind) +
     getCharitableInjection(sellerICP, member.ind) +
+    getSmbMidmarketInjection(sellerICP, member.ind, member) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -5467,6 +5492,7 @@ ${isOpen
       (KL_CHARITABLE_DISCOVERY && getCharitableInjection(sellerICP, member?.ind) ? KL_CHARITABLE_DISCOVERY + "\n" : "") +
       (KL_INVESTOR_DISCOVERY && getInvestorInjection(sellerICP, member?.ind) ? KL_INVESTOR_DISCOVERY + "\n" : "") +
       (KL_MEDICAL_PAYMENTS_DISCOVERY && getMedicalPaymentsInjection(sellerICP, member?.ind) ? KL_MEDICAL_PAYMENTS_DISCOVERY + "\n" : "") +
+      (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
