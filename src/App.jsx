@@ -1187,6 +1187,27 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // that don't need the seller proof pack, scoring heuristics, or deal context.
   // baseFull is for seller-mapping calls (p3, p4) that need everything.
   // This cuts ~1,500 input tokens off p1 and p5, making them resolve ~40% faster.
+  // APOLLO ENRICHMENT GROUNDING: when enrichment data is available, inject
+  // verified firmographics so the model doesn't guess basic facts.
+  const enrichment = member._enrichment?.organization;
+  const enrichedPeople = member._enrichment?.people || [];
+  const enrichmentCtx = enrichment ? `\nVERIFIED COMPANY DATA (from Apollo.io — use these facts as ground truth, do NOT contradict them):\n` +
+    (enrichment.name ? `Company name: ${enrichment.name}\n` : "") +
+    (enrichment.description ? `Description: ${enrichment.description}\n` : "") +
+    (enrichment.employeeCount ? `Employees: ${enrichment.employeeCount}\n` : "") +
+    (enrichment.revenue ? `Revenue: ${enrichment.revenue}\n` : "") +
+    (enrichment.industry ? `Industry: ${enrichment.industry}${enrichment.subIndustry ? ` / ${enrichment.subIndustry}` : ""}\n` : "") +
+    (enrichment.headquarters ? `HQ: ${enrichment.headquarters}\n` : "") +
+    (enrichment.founded ? `Founded: ${enrichment.founded}\n` : "") +
+    (enrichment.publiclyTraded ? `Publicly traded: ${enrichment.publiclyTraded}\n` : "") +
+    (enrichment.fundingTotal ? `Total funding: ${enrichment.fundingTotal}\n` : "") +
+    (enrichment.latestFundingRound ? `Latest funding: ${enrichment.latestFundingRound}${enrichment.latestFundingAmount ? ` ($${enrichment.latestFundingAmount})` : ""}${enrichment.latestFundingDate ? ` (${enrichment.latestFundingDate})` : ""}\n` : "") +
+    (enrichment.technologies?.length ? `Tech stack: ${enrichment.technologies.slice(0, 15).join(", ")}\n` : "") +
+    (enrichment.linkedIn ? `LinkedIn: ${enrichment.linkedIn}\n` : "") +
+    (enrichedPeople.length ? `\nKEY PEOPLE (verified from Apollo — use these names and titles as ground truth):\n` +
+      enrichedPeople.slice(0, 8).map(p => `- ${p.name}, ${p.title}${p.department ? ` (${p.department})` : ""}${p.linkedIn ? ` — ${p.linkedIn}` : ""}`).join("\n") + "\n" : "") +
+    "\n" : "";
+
   // IDENTITY ANCHOR: when a URL is available, use it as the primary identifier
   // to prevent cross-company contamination in briefs.
   const identityAnchor = url && url !== co
@@ -1196,6 +1217,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const baseLight =
     `Sales brief about TARGET PROSPECT "${co}"${url && url !== co ? ` (${url})` : ""} for seller at ${sellerUrl}.\n`+
     identityAnchor +
+    enrichmentCtx +
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
@@ -5025,6 +5047,23 @@ ${isOpen
     return trimmed;
   }
 
+  // ── APOLLO ENRICHMENT — ground briefs with verified firmographic data ────
+  const enrichmentCacheRef = useRef({}); // domain → Apollo enrichment result
+
+  async function fetchEnrichment(domain) {
+    if (!domain) return null;
+    if (enrichmentCacheRef.current[domain]) return enrichmentCacheRef.current[domain];
+    try {
+      const r = await fetch(`/api/enrich?domain=${encodeURIComponent(domain)}`, {
+        headers: authHeaders(),
+      });
+      if (!r.ok) return null;
+      const data = await r.json();
+      enrichmentCacheRef.current[domain] = data;
+      return data;
+    } catch { return null; }
+  }
+
   // ── COMPANY VERIFICATION — confirm identity before brief generation ─────
   // Prevents mixed-company briefs by verifying the exact entity before
   // launching the full 6-phase pipeline. Uses a quick web search to confirm.
@@ -5039,7 +5078,24 @@ ${isOpen
 
     // If user provided a URL/domain, skip disambiguation — the URL is the anchor
     if (domain) {
-      const member = { company: displayName, company_url: domain, ind: "", employees: "", publicPrivate: "" };
+      // Enrich with Apollo in background — don't block brief launch
+      const enrichPromise = fetchEnrichment(domain);
+      let member = { company: displayName, company_url: domain, ind: "", employees: "", publicPrivate: "" };
+      // Try to get enrichment data quickly (500ms timeout), fall through if slow
+      try {
+        const enriched = await Promise.race([enrichPromise, new Promise(r => setTimeout(() => r(null), 500))]);
+        if (enriched?.organization) {
+          const o = enriched.organization;
+          member = {
+            ...member,
+            company: o.name || member.company,
+            ind: o.industry || "",
+            employees: o.employeeCount ? String(o.employeeCount) : "",
+            publicPrivate: o.publiclyTraded || "Private",
+            _enrichment: enriched, // pass full enrichment to generateBrief
+          };
+        }
+      } catch {}
       if (!sellerUrl) setSellerUrl("research-only");
       pickAccount(member, overrideSellerUrl || "research-only");
       return;
