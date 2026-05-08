@@ -37,15 +37,13 @@ export default async function handler(req, res) {
     res.setHeader("x-guest-remaining", String(remaining));
   }
 
-  // Usage limit enforcement for billable runs.
-  // x-billable-run: "1" = standard run (Haiku)
-  // x-billable-max: "1" = Max run (Opus) — also counts as a standard run
-  const isBillable = req.headers["x-billable-run"] === "1";
+  // Usage limit enforcement — ALWAYS check for authenticated users.
+  // Server determines billability, not client headers (prevents billing bypass).
   const isBillableMax = req.headers["x-billable-max"] === "1";
   let usageOrgId = null;
   let isMaxRun = false;
 
-  if (isBillable || isBillableMax) {
+  if (!req._isGuest) {
     const userId = extractUserId(req);
     if (userId) {
       const usage = await checkOrgUsage(userId, { isMax: isBillableMax });

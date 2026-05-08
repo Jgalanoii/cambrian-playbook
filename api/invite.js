@@ -69,7 +69,7 @@ export default async function handler(req, res) {
   // Verify the caller is an admin of their org (or superuser for cross-org invites)
   const users = await sbFetch(`users?id=eq.${payload.sub}&select=org_id,role,email`);
   const caller = users?.[0];
-  const isSuperuser = process.env.SUPERUSER_EMAIL && caller?.email === process.env.SUPERUSER_EMAIL;
+  const isSuperuser = process.env.SUPERUSER_EMAIL && caller?.email?.toLowerCase() === process.env.SUPERUSER_EMAIL.toLowerCase();
 
   // Superuser can specify any orgId; regular admins use their own org
   const targetOrgId = (isSuperuser && overrideOrgId) ? overrideOrgId : caller?.org_id;

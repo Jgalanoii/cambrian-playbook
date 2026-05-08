@@ -77,8 +77,12 @@ export default async function handler(req, res) {
     if (!referrers?.length) return res.json({ ok: false, message: "Invalid referral code" });
     if (referrers[0].id === payload.sub) return res.json({ ok: false, message: "Can't refer yourself" });
 
-    // Set referred_by on the current user
-    await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}`, {
+    // Check if user already has a referrer — don't allow overwriting
+    const currentUser = await sbFetch(`users?id=eq.${payload.sub}&select=referred_by`);
+    if (currentUser?.[0]?.referred_by) return res.json({ ok: true, message: "Referral already recorded" });
+
+    // Set referred_by on the current user (only if not already set)
+    await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}&referred_by=is.null`, {
       method: "PATCH",
       headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify({ referred_by: referralCode }),

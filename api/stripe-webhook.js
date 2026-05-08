@@ -159,11 +159,22 @@ export default async function handler(req, res) {
 
       case "customer.subscription.updated": {
         const sub = event.data.object;
-        const orgId = sub.metadata?.org_id;
         const planId = sub.metadata?.plan_id;
-        if (sub.status === "active" && orgId && planId) {
-          console.log(`[stripe] Subscription updated: org=${orgId}, plan=${planId}`);
-          await updateOrg(orgId, planId);
+        // Server-side org_id lookup — don't trust metadata
+        const subUserId = sub.metadata?.user_id;
+        let subOrgId = null;
+        if (subUserId && SB_URL && SB_KEY) {
+          try {
+            const r = await fetch(`${SB_URL}/rest/v1/users?id=eq.${subUserId}&select=org_id`, {
+              headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+            });
+            const users = await r.json();
+            subOrgId = users?.[0]?.org_id || null;
+          } catch (e) { console.error("[stripe] Sub update org lookup failed:", e.message); }
+        }
+        if (sub.status === "active" && subOrgId && planId) {
+          console.log(`[stripe] Subscription updated: user=${subUserId}, org=${subOrgId}, plan=${planId}`);
+          await updateOrg(subOrgId, planId);
         }
         break;
       }

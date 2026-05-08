@@ -267,7 +267,8 @@ function sanitizeTools(tools) {
   const clean = tools
     .filter(t => t && typeof t === "object" && ALLOWED_TOOL_TYPES.has(t.type))
     .map(t => ({
-      ...t,
+      type: t.type,
+      name: typeof t.name === "string" ? t.name : undefined,
       max_uses: Math.min(Number(t.max_uses) || 1, MAX_TOOL_USES),
     }));
   return clean.length ? clean : undefined;

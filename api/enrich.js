@@ -186,6 +186,7 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     const { action, person_id } = req.body || {};
     if (action !== "reveal" || !person_id) return res.status(400).json({ error: "action=reveal and person_id required" });
+    if (typeof person_id !== "string" || !/^[a-zA-Z0-9_-]{1,64}$/.test(person_id)) return res.status(400).json({ error: "Invalid person_id format" });
 
     const person = await enrichPerson(person_id).catch(() => null);
     if (!person) return res.status(404).json({ error: "Person not found or enrichment failed" });

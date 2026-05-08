@@ -50,10 +50,13 @@ export default async function handler(req, res) {
   // Verify superuser
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);
   const callerEmail = userRes?.[0]?.email;
-  if (!SUPERUSER_EMAIL || callerEmail !== SUPERUSER_EMAIL) return res.status(403).json({ error: "Forbidden" });
+  if (!SUPERUSER_EMAIL || callerEmail?.toLowerCase() !== SUPERUSER_EMAIL.toLowerCase()) return res.status(403).json({ error: "Forbidden" });
 
-  const { action, email } = req.body || {};
+  const { action, email, userId, orgId } = req.body || {};
   if (!email) return res.status(400).json({ error: "Email required" });
+  // Validate any userId/orgId from request body to prevent PostgREST injection
+  if (userId && !UUID_RE.test(userId)) return res.status(400).json({ error: "Invalid userId format" });
+  if (orgId && !UUID_RE.test(orgId)) return res.status(400).json({ error: "Invalid orgId format" });
 
   try {
     if (action === "reset_password") {

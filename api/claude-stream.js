@@ -38,13 +38,12 @@ export default async function handler(req, res) {
     res.setHeader("x-guest-remaining", String(remaining));
   }
 
-  // Usage limit enforcement — same as api/claude.js
-  const isBillable = req.headers["x-billable-run"] === "1";
+  // Usage limit enforcement — ALWAYS check for authenticated users.
   const isBillableMax = req.headers["x-billable-max"] === "1";
   let usageOrgId = null;
   let isMaxRun = false;
 
-  if (isBillable || isBillableMax) {
+  if (!req._isGuest) {
     const userId = extractUserId(req);
     if (userId) {
       const usage = await checkOrgUsage(userId, { isMax: isBillableMax });

@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   // Look up the caller's email — must match superuser
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);
   const callerEmail = userRes?.[0]?.email;
-  if (!SUPERUSER_EMAIL || callerEmail !== SUPERUSER_EMAIL) {
+  if (!SUPERUSER_EMAIL || callerEmail?.toLowerCase() !== SUPERUSER_EMAIL.toLowerCase()) {
     return res.status(403).json({ error: "Forbidden" });
   }
 

@@ -187,8 +187,8 @@ export async function checkOrgUsage(userId, { isMax = false } = {}) {
       return { allowed: true, org_id: orgId, run_count: org.run_count, run_limit: org.run_limit, max_run_count: org.max_run_count, max_run_limit: org.max_run_limit };
     }
   } catch (e) {
-    console.warn("[usage] check failed:", e.message);
-    return { allowed: true };
+    console.error("[usage] check failed — BLOCKING (fail-closed):", e.message);
+    return { allowed: false, reason: "service_error", message: "Usage check temporarily unavailable. Please try again in a moment." };
   }
 }
 

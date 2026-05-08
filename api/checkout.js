@@ -40,15 +40,14 @@ export default async function handler(req, res) {
   if (!payload?.sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
 
   // Server-side priceId→planId binding — prevents plan manipulation
-  const PRICE_TO_PLAN = {
-    [process.env.STRIPE_PRICE_STARTER]:    "starter",
-    [process.env.STRIPE_PRICE_PRO]:        "pro",
-    [process.env.STRIPE_PRICE_TEAM]:       "team",
-    [process.env.STRIPE_PRICE_ENTERPRISE]: "enterprise",
-  };
+  const PRICE_TO_PLAN = {};
+  if (process.env.STRIPE_PRICE_STARTER) PRICE_TO_PLAN[process.env.STRIPE_PRICE_STARTER] = "starter";
+  if (process.env.STRIPE_PRICE_PRO) PRICE_TO_PLAN[process.env.STRIPE_PRICE_PRO] = "pro";
+  if (process.env.STRIPE_PRICE_TEAM) PRICE_TO_PLAN[process.env.STRIPE_PRICE_TEAM] = "team";
+  if (process.env.STRIPE_PRICE_ENTERPRISE) PRICE_TO_PLAN[process.env.STRIPE_PRICE_ENTERPRISE] = "enterprise";
 
   const { priceId } = req.body || {};
-  if (!priceId) return res.status(400).json({ error: "priceId required" });
+  if (!priceId || typeof priceId !== "string") return res.status(400).json({ error: "priceId required" });
   const planId = PRICE_TO_PLAN[priceId];
   if (!planId || !PLAN_LIMITS[planId]) return res.status(400).json({ error: "Invalid price" });
 
