@@ -1070,12 +1070,12 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   }
   if (sellerDocs.length) {
     out.push(`\nUploaded proof documents (case studies, datasheets — quote when relevant):`);
-    sellerDocs.forEach(d => out.push(`  • ${s(d.label)}: ${s((d.content || "").slice(0, 300))}${d.content && d.content.length > 300 ? "…" : ""}`));
+    sellerDocs.forEach(d => out.push(`  • ${s(d.label)}: ${s((d.content || "").slice(0, 800))}${d.content && d.content.length > 800 ? "…" : ""}`));
   }
   const namedProducts = (products || []).filter(p => p?.name?.trim());
   if (namedProducts.length) {
     out.push(`\nSeller's product catalog (use these EXACT names — do NOT invent products):`);
-    namedProducts.forEach(p => out.push(`  • ${s(p.name)}${p.description ? " — " + s(p.description.slice(0, 120)) : ""}`));
+    namedProducts.forEach(p => out.push(`  • ${s(p.name)}${p.description ? " — " + s(p.description.slice(0, 300)) : ""}`));
   }
 
   // Manually-entered proof points (case studies, ROI metrics, awards, etc.)
@@ -5438,16 +5438,35 @@ ${isOpen
                 (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
               ].filter(Boolean).join("\n");
 
+              // Build seller context for question generation
+              const sellerCtxForQs = sellerUrl && sellerUrl !== "research-only"
+                ? `\nSELLER CONTEXT (the user sells for ${sellerUrl}):\n` +
+                  (sellerICP?.sellerDescription ? `What they sell: ${sellerICP.sellerDescription}\n` : "") +
+                  (sellerICP?.marketCategory ? `Category: ${sellerICP.marketCategory}\n` : "") +
+                  ((sellerICP?.icp?.uniqueDifferentiators||[]).filter(Boolean).length ? `Differentiators: ${sellerICP.icp.uniqueDifferentiators.filter(Boolean).join("; ")}\n` : "") +
+                  (products.filter(p=>p.name?.trim()).length ? `Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")}\n` : "") +
+                  ((sellerICP?.icp?.customerExamples||[]).filter(Boolean).length ? `Named customers: ${sellerICP.icp.customerExamples.filter(Boolean).join(", ")}\n` : "") +
+                  `\nQuestions should uncover whether ${co} has needs that align with what this seller offers. Don't mention the seller's products by name — instead, probe for the PAIN POINTS and PRIORITIES that the seller's products address.\n`
+                : "";
+              // Include account docs if available
+              const acctDocsForQs = accountDocs.length > 0
+                ? `\nTARGET-SPECIFIC INTEL (requirements, RFPs, meeting notes from ${co}):\n` +
+                  accountDocs.map(d => `${d.label}: ${d.content.slice(0, 400)}`).join("\n") +
+                  `\nAddress their specific stated requirements and questions in your discovery.\n`
+                : "";
               callAI(
                 `You are a senior sales strategist. Based on the research below about ${co}, generate exactly 5 discovery questions a seller should ask in their first conversation.\n\n`+
                 `RESEARCH FINDINGS:\n${briefContext}\n\n`+
+                sellerCtxForQs +
+                acctDocsForQs +
                 `RULES:\n`+
                 `- Each question must reference a SPECIFIC finding from the research above (cite it)\n`+
                 `- Questions must be open-ended (no yes/no)\n`+
                 `- Sequence from rapport-building (Q1) to insight-revealing (Q5)\n`+
                 `- Design to surface unspoken priorities, budget signals, or competitive dynamics\n`+
                 `- Be conversational — these should feel natural to say out loud\n`+
-                `- NEVER invent facts not present in the research\n\n`+
+                `- NEVER invent facts not present in the research\n`+
+                `- NEVER mention the seller's products by name — probe for pain, not pitch\n\n`+
                 `Return ONLY raw JSON: {"fiveQuestions":[{"question":"...","rationale":"Why this question matters — one sentence","source":"Which finding from the research this references"}]}`,
                 { maxTokens: 1200 }
               ).then(r => {
@@ -9399,9 +9418,9 @@ ${isOpen
                         });
                         e.target.value = "";
                       }}/>
-                    📎 Add account intel
+                    📎 Add target intel
                   </label>
-                  <span style={{fontSize:10,color:"var(--ink-3)"}}>RFPs, requirements, discovery questions, meeting notes, screenshots — anything about {selectedAccount?.company || "this company"}</span>
+                  <span style={{fontSize:10,color:"var(--ink-3)"}}>Have an RFP, requirements doc, meeting notes, or prior research on {selectedAccount?.company || "this company"}? Drop it here.</span>
                   {accountDocs.length > 0 && (
                     <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                       {accountDocs.map((d, i) => (
