@@ -3423,6 +3423,69 @@ export default function App(){
     }
   };
 
+  // Extract text from Office XML ZIP files (docx, pptx)
+  const readOfficeXmlAsText = async (file, ext) => {
+    try {
+      const { unzipSync } = await import("https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js");
+      const data = new Uint8Array(await file.arrayBuffer());
+      const unzipped = unzipSync(data);
+      const decoder = new TextDecoder();
+      let text = "";
+
+      if (ext === "docx") {
+        // Word: main content is in word/document.xml
+        const docXml = unzipped["word/document.xml"] ? decoder.decode(unzipped["word/document.xml"]) : "";
+        // Extract text from <w:t> tags
+        text = [...docXml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map(m => m[1]).join(" ");
+        // Preserve paragraph breaks
+        text = text.replace(/\s{3,}/g, "\n\n").trim();
+      } else if (ext === "pptx") {
+        // PowerPoint: slides are in ppt/slides/slide1.xml, slide2.xml, etc.
+        const slideFiles = Object.keys(unzipped).filter(k => /^ppt\/slides\/slide\d+\.xml$/.test(k)).sort();
+        for (const sf of slideFiles.slice(0, 50)) {
+          const slideXml = decoder.decode(unzipped[sf]);
+          const slideText = [...slideXml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m => m[1]).join(" ");
+          if (slideText.trim()) text += `[Slide ${sf.match(/slide(\d+)/)?.[1] || ""}] ${slideText.trim()}\n`;
+        }
+      }
+      return text.trim().slice(0, 12000) || null;
+    } catch (e) {
+      console.warn(`[readOfficeXml] ${ext} parse failed:`, e.message);
+      return null;
+    }
+  };
+
+  // Extract text from images using Claude Vision API
+  const readImageAsText = async (file) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(new Uint8Array(arrayBuffer).reduce((s, b) => s + String.fromCharCode(b), ""));
+      const mimeType = file.type || (file.name.endsWith(".png") ? "image/png" : "image/jpeg");
+
+      const r = await fetch("/api/claude", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 2000,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mimeType, data: base64 } },
+              { type: "text", text: "Extract ALL text and data from this image. If it's a screenshot of a document, spreadsheet, chart, presentation, or dashboard, transcribe everything visible. If it's a diagram or chart, describe the data and labels. Return the extracted content as plain text — no commentary, just the content." }
+            ]
+          }],
+        }),
+      });
+      const data = await r.json();
+      const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+      return text.trim().slice(0, 12000) || null;
+    } catch (e) {
+      console.warn("[readImage] Vision extraction failed:", e.message);
+      return null;
+    }
+  };
+
   const readDocFile = file => new Promise(async resolve=>{
     const name = file.name;
     const ext = name.split(".").pop().toLowerCase();
@@ -3430,10 +3493,7 @@ export default function App(){
     // Excel files: parse the ZIP structure to extract cell text
     if (ext === "xlsx" || ext === "xls") {
       const text = await readXlsxAsText(file);
-      if (text) {
-        resolve({ name, label: guessLabel(name), content: text, ext });
-        return;
-      }
+      if (text) { resolve({ name, label: guessLabel(name), content: text, ext }); return; }
     }
 
     // PDF files: extract text using pdf.js
@@ -3444,24 +3504,43 @@ export default function App(){
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise;
         let fullText = "";
-        const maxPages = Math.min(pdf.numPages, 30); // cap at 30 pages
+        const maxPages = Math.min(pdf.numPages, 30);
         for (let i = 1; i <= maxPages; i++) {
           const page = await pdf.getPage(i);
           const tc = await page.getTextContent();
-          const pageText = tc.items.map(item => item.str).join(" ");
-          fullText += pageText + "\n";
+          fullText += tc.items.map(item => item.str).join(" ") + "\n";
         }
         const content = fullText.replace(/\s+/g, " ").trim().slice(0, 12000);
         resolve({ name, label: guessLabel(name), content: content || "[PDF had no extractable text]", ext });
         return;
       } catch (e) {
         console.warn("[readDocFile] PDF extraction failed:", e.message);
-        resolve({ name, label: guessLabel(name), content: "[PDF text extraction failed — try uploading as .txt or .docx]", ext });
+        resolve({ name, label: guessLabel(name), content: "[PDF extraction failed]", ext });
         return;
       }
     }
 
-    // Text-based files: read as text directly
+    // Word documents (.docx): extract from ZIP XML structure
+    if (ext === "docx") {
+      const text = await readOfficeXmlAsText(file, "docx");
+      if (text) { resolve({ name, label: guessLabel(name), content: text, ext }); return; }
+    }
+
+    // PowerPoint (.pptx): extract slide text from ZIP XML structure
+    if (ext === "pptx") {
+      const text = await readOfficeXmlAsText(file, "pptx");
+      if (text) { resolve({ name, label: guessLabel(name), content: text, ext }); return; }
+    }
+
+    // Images (.png, .jpg, .jpeg, .webp, .gif, .bmp): use Claude Vision for OCR
+    if (["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "tif"].includes(ext)) {
+      const text = await readImageAsText(file);
+      if (text) { resolve({ name, label: guessLabel(name), content: text, ext }); return; }
+      resolve({ name, label: guessLabel(name), content: "[Image — could not extract text]", ext });
+      return;
+    }
+
+    // Text-based files (.txt, .md, .csv, .doc, etc.): read as text directly
     const reader = new FileReader();
     reader.onload = e => {
       let content = "";
@@ -6975,7 +7054,7 @@ ${isOpen
                 </span>
               )}
               <label style={{fontSize:10,color:"var(--tan-0)",fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-                <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
+                <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
               {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
@@ -7308,7 +7387,7 @@ ${isOpen
                     <div className="doc-upload-hint" style={{marginTop:3}}>PDF, DOCX, XLSX, CSV, TXT, MD — up to 6 files</div>
                   </div>
                   <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();docRef.current.click();}}>Add Files</button>
-                  <input ref={docRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls" multiple style={{display:"none"}}
+                  <input ref={docRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple style={{display:"none"}}
                     onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 </div>
 
@@ -7506,7 +7585,7 @@ ${isOpen
                     <div className="doc-upload-hint">Upload a product overview, solution brief, or pricing sheet — Cambrian extracts each product automatically</div>
                   </div>
                   <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();prodDocRef.current.click();}}>Upload</button>
-                  <input ref={prodDocRef} type="file" accept=".docx,.doc,.txt,.md,.csv" multiple style={{display:"none"}}
+                  <input ref={prodDocRef} type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple style={{display:"none"}}
                     onChange={e=>{Array.from(e.target.files).forEach(parseProductDoc);e.target.value="";}}/>
                 </div>
 
