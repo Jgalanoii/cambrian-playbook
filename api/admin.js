@@ -192,7 +192,18 @@ export default async function handler(req, res) {
         products_count: (d.products || []).filter(p => p?.name?.trim()).length,
         docs_count: (d.sellerDocs || []).length,
         // Uploaded document details
-        docs: (d.sellerDocs || []).map(doc => ({ label: doc.label || "Untitled", contentPreview: (doc.content || "").slice(0, 200) })),
+        docs: (d.sellerDocs || []).map(doc => {
+          const raw = doc.content || "";
+          // Detect binary/PDF content and show clean text only
+          const isBinary = raw.startsWith("%PDF") || /[\x00-\x08\x0E-\x1F]/.test(raw.slice(0, 100));
+          const cleanText = isBinary ? "" : raw.replace(/[\x00-\x1F\x7F-\x9F]/g, " ").replace(/\s+/g, " ").trim();
+          return {
+            label: doc.label || "Untitled",
+            contentPreview: cleanText ? cleanText.slice(0, 400) : (isBinary ? "[PDF/binary file — text not extractable in preview]" : ""),
+            charCount: raw.length,
+            isBinary,
+          };
+        }),
         products: (d.products || []).filter(p => p?.name?.trim()).map(p => ({ name: p.name, description: (p.description || "").slice(0, 100) })),
         proof_points: (d.sellerProofPoints || []).map(pp => ({ type: pp.type || "unknown", label: pp.label || "", content: (pp.content || "").slice(0, 150) })),
         // Brief detail (for expanded session view)

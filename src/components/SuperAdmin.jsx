@@ -565,7 +565,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                             <tr key={row.key}>
                               <td style={{ whiteSpace: "nowrap", color: "var(--tan-0)", fontWeight: 600 }}>{row.type}</td>
                               <td style={{ fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</td>
-                              <td style={{ color: "var(--ink-3)", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.preview || "\u2014"}</td>
+                              <td style={{ color: row.preview?.startsWith("[PDF") ? "var(--amber)" : "var(--ink-3)", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.preview || "\u2014"}</td>
                               <td style={{ color: "var(--ink-2)" }}>{row.user}</td>
                               <td style={{ color: "var(--ink-3)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.session}</td>
                             </tr>
@@ -748,9 +748,13 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                   <div style={{ marginBottom: 10 }}>
                                     <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Uploaded Documents ({a.docs.length})</div>
                                     {a.docs.map((d, j) => (
-                                      <div key={j} style={{ background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 6, padding: "8px 10px", marginBottom: 6 }}>
-                                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-0)" }}>{d.label}</div>
-                                        <div style={{ fontSize: 10, color: "var(--ink-3)", lineHeight: 1.5, marginTop: 2 }}>{d.contentPreview || "No preview"}</div>
+                                      <div key={j} style={{ background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 6, padding: "10px 12px", marginBottom: 6 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-0)" }}>{d.label}</span>
+                                          {d.charCount > 0 && <span style={{ fontSize: 9, color: "var(--ink-3)", background: "var(--bg-2)", borderRadius: 4, padding: "1px 5px" }}>{d.charCount > 1000 ? Math.round(d.charCount / 1000) + "K chars" : d.charCount + " chars"}</span>}
+                                          {d.isBinary && <span style={{ fontSize: 9, color: "var(--amber)", background: "var(--amber-bg)", borderRadius: 4, padding: "1px 5px" }}>PDF/Binary</span>}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: d.isBinary ? "var(--ink-3)" : "var(--ink-1)", lineHeight: 1.6, maxHeight: 120, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{d.contentPreview || "No preview available"}</div>
                                       </div>
                                     ))}
                                   </div>
