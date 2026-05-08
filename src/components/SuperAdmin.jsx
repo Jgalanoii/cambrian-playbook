@@ -1,7 +1,7 @@
 // src/components/SuperAdmin.jsx — Superuser engagement dashboard
 // Locked to superuser email only. Shows engagement metrics across all users.
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { timeAgo } from "../lib/utils.js";
 
 const SUPERUSER_EMAIL = "itsjoegalano@gmail.com";
