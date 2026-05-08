@@ -679,13 +679,17 @@ function getRealEstateInjection(sellerICP, targetIndustry) {
 
 // ── BANKING KNOWLEDGE INJECTION ─────────────────────────────────────────
 const BANKING_KW = ["banking", "bank ", "credit union", "lending", "loan origination", "deposit", "private equity", "venture capital", "private credit", "hedge fund", "asset management", "wealth management", "family office", "broker-dealer", "investment bank", "capital markets", "insurance company", "insurer", "stablecoin", "g-sib", "regional bank", "community bank", "bnpl", "consumer credit", "genius act", "crypto custody", "debit interchange", "durbin", "regulation ii", "fednow", "real-time payment", "rtp network", "treasury management", "payment rail", "genius act", "tokenized deposit", "digital asset", "occ interpretive"];
+const BANKING_CORE_KW = ["banking", "bank ", "credit union", "community bank", "regional bank", "g-sib", "stablecoin", "genius act", "crypto custody", "fednow", "rtp network", "debit interchange"];
 function getBankingInjection(sellerICP, targetIndustry) {
   if (!KL_BANKING) return "";
   const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
   if (!text) return "";
-  const hits = BANKING_KW.filter(kw => text.includes(kw));
-  if (hits.length < 2) return ""; // Need 2+ matches like Payments — keyword list is broad
-  return "\n" + KL_BANKING;
+  // Core banking terms trigger with 1 match; broader financial terms need 2
+  const coreHits = BANKING_CORE_KW.filter(kw => text.includes(kw));
+  if (coreHits.length >= 1) return "\n" + KL_BANKING;
+  const allHits = BANKING_KW.filter(kw => text.includes(kw));
+  if (allHits.length >= 2) return "\n" + KL_BANKING;
+  return "";
 }
 
 // ── HEALTHCARE SAAS KNOWLEDGE INJECTION ─────────────────────────────────
@@ -3982,6 +3986,12 @@ ${scaleGuidance}
           ? `\nMEDICAL/HEALTHCARE PAYMENTS VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_MEDICAL_PAYMENTS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_MEDICAL_PAYMENTS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
+          ? `\nSMB/MID-MARKET CALIBRATION: Adjust scoring by company size. SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Score higher when company size matches seller's sweet spot.\n`
+          : "") +
+        (getInvestorInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nINVESTOR/PE/VC CALIBRATION: PE-backed companies have 3-5yr hold timelines creating urgency. Operating partners influence tooling decisions. VC-backed companies prioritize growth rate over profitability. Frame fit through EBITDA impact for PE, NRR/ARR for VC, multi-decade value for family office.\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
