@@ -4640,8 +4640,9 @@ ${isOpen
     setUserEdits(prev => [...prev, edit]);
     // Show toast
     const label = field.replace(/([A-Z])/g, " $1").replace(/^./, s=>s.toUpperCase()).trim();
-    setEditToast(`${source === "brief" ? "Brief" : source === "intel" ? "Intel" : source === "hypothesis" ? "Hypothesis" : ""}${company ? ` · ${company}` : ""}: ${label} updated`);
-    setTimeout(() => setEditToast(""), 4000);
+    const sourceLabel = source === "brief" ? "Brief" : source === "intel" ? "Intel" : source === "hypothesis" ? "Call Prep" : source === "icp" ? "Buyer Profile" : "";
+    setEditToast(`${sourceLabel}${company ? ` · ${company}` : ""}: ${label} updated — your edit improves all downstream output`);
+    setTimeout(() => setEditToast(""), 5000);
   };
 
   // ── ICP EDIT TRACKING ──────────────────────────────────────────────────────
@@ -9397,7 +9398,12 @@ ${isOpen
                         style={{fontSize:13,padding:"7px 10px"}}/>
                     </div>
                   )}
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginLeft:sellerUrl==="research-only"?"auto":undefined}}>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginLeft:sellerUrl==="research-only"?"auto":undefined,alignItems:"center"}}>
+                    {userEdits.filter(e => e.company === selectedAccount?.company).length > 0 && (
+                      <span style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:10,background:"var(--green-bg)",color:"var(--green)",border:"1px solid #2E6B2E33"}}>
+                        {userEdits.filter(e => e.company === selectedAccount?.company).length} edit{userEdits.filter(e => e.company === selectedAccount?.company).length > 1 ? "s" : ""} tracked
+                      </span>
+                    )}
                     <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                     <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                     {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
@@ -9534,7 +9540,7 @@ ${isOpen
                           Your brief on {selectedAccount?.company || "this company"} is ready.
                         </div>
                         <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.7}}>
-                          Every field below is editable — click anything to refine it with your own knowledge. The research is the starting point; <strong>your judgment makes it great</strong>.
+                          Every field below is editable — <strong>click anything to correct or add detail</strong>. Your edits are tracked and fed into call prep, discovery questions, and coaching. The more you refine, the smarter every downstream output gets.
                           {sellerUrl === "research-only" && " This is a Quick Brief — set up your company below to unlock elevator pitches, solution mapping, and call coaching."}
                         </div>
                       </div>
@@ -9591,7 +9597,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr" onClick={()=>toggleBB("overview")}>
                     <div className="bb-icon">◎</div>
-                    <div style={{flex:1}}><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to refine — your judgment + our research</div></div>
+                    <div style={{flex:1}}><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to edit — your corrections sharpen the call prep, questions, and coaching</div></div>
                     <StarButton id={`overview-${selectedAccount?.company}`} type="Brief" label="Company Overview" content={brief?.companySnapshot} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/>
                     {bbChevron("overview")}
                   </div>
@@ -9685,7 +9691,7 @@ ${isOpen
                 <div className="bb">
                   <div className="bb-hdr">
                     <div className="bb-icon" style={{fontSize:10}}>👤</div>
-                    <div><div className="bb-title">Key Executives</div><div className="bb-sub">{brief._loadingSections?.executives ? "Searching..." : "Executive Perspectives — click to edit"}</div></div>
+                    <div><div className="bb-title">Key Executives</div><div className="bb-sub">{brief._loadingSections?.executives ? "Searching..." : "Know someone here? Edit names and angles — your corrections carry forward"}</div></div>
                   </div>
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                     {(brief.keyExecutives||[]).filter(e=>e?.name).length > 0
