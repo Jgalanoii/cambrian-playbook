@@ -1422,7 +1422,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
     `"onlineSentiment":"2-3 sentences synthesizing what employees, press, and the market say about ${co} as a COMPANY TO SELL INTO. Focus on: employee morale (Glassdoor themes), leadership reputation, workplace culture signals, press narrative, and brand health. This is NOT about their product quality vs competitors — it's about what a seller needs to know before calling.",`+
-    `"glassdoorRating":"Glassdoor employer rating as number e.g. 3.8 — EVERY company with employees has Glassdoor reviews, search for it. Empty string ONLY if genuinely not on Glassdoor.",`+
+    `"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — search Glassdoor for this company. Return the number only (e.g. '3.8'). Empty string if not found or not on Glassdoor. Do NOT return text like 'Not found' — numbers only or empty string.",`+
     `"g2Rating":"G2 rating as number e.g. 4.2 — only for software/SaaS companies, empty string otherwise",`+
     `"npsSignal":"Consumer brand health signals when relevant (brand loyalty, market share trajectory, customer satisfaction trends). Useful context for understanding the company's position, not for comparing their products to competitors.",`+
     `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found or not applicable",`+
@@ -1513,7 +1513,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `PRIORITY ORDER:\n`+
         `1. Press releases and company announcements from the last 12 months — these are HIGHEST VALUE\n`+
         `2. News coverage: M&A, leadership changes, funding, strategic moves (last 18 months only)\n`+
-        `3. Ratings and sentiment: ALWAYS search Glassdoor (employer reviews), plus G2 (if software), Trustpilot, Amazon reviews (if consumer products) for "${co}"\n`+
+        `3. Ratings and sentiment: ALWAYS include a search specifically for "${co} Glassdoor rating" or "${co} site:glassdoor.com" — employer review ratings are critical. Also search G2 (if software), Trustpilot, Amazon reviews (if consumer products)\n`+
         `4. Growth signals or buying indicators (last 12 months only)\n`+
         `5. Workforce and culture profile\n`+
         `Return ONLY raw JSON (start with {):\n`+
@@ -3227,6 +3227,24 @@ export default function App(){
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
   const[sellerStage,setSellerStage]=useState(""); // Bootstrapped/Series A/B/C/D+/PE-Backed/Public
+
+  // Clear all seller-dependent state when seller URL changes (consultant workflow)
+  const prevSellerUrlRef = useRef("");
+  useEffect(() => {
+    if (!sellerUrl || sellerUrl === "research-only") return;
+    if (prevSellerUrlRef.current && prevSellerUrlRef.current !== sellerUrl && prevSellerUrlRef.current !== "research-only") {
+      console.log(`[seller] URL changed from "${prevSellerUrlRef.current}" to "${sellerUrl}" — clearing cached seller context`);
+      setSellerICP(null);
+      setSellerDocs([]);
+      setProducts([{id:Date.now(),name:"",description:"",category:""}]);
+      setSellerProofPoints([]);
+      setSellerExclusions([]);
+      setProductUrls([{id:Date.now(),url:""}]);
+      setIcpEdits([]);
+      setUserEdits([]);
+    }
+    prevSellerUrlRef.current = sellerUrl;
+  }, [sellerUrl]);
   // Structured ICP targeting preferences — selected by user on Session page.
   // Each field is a string (selected value) or empty string (no preference).
   // Structured ICP targeting. segment=single select, others=multi-select arrays.
@@ -3781,11 +3799,28 @@ ${scaleGuidance}
       // Parse — tool use returns text + tool_result blocks; find JSON via anchor
       const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
       let parsed = null;
+      // Try multiple key names — LLM sometimes uses "targets", "companies", or "results" instead of "accounts"
+      const keyAttempts = ["accounts", "targets", "companies", "results"];
       for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
-        parsed = extractJsonWithKey(textBlocks[i], "accounts");
+        for (const key of keyAttempts) {
+          parsed = extractJsonWithKey(textBlocks[i], key);
+          if (parsed) {
+            // Normalize to .accounts regardless of which key matched
+            if (!parsed.accounts && parsed[key]) parsed.accounts = parsed[key];
+            break;
+          }
+        }
+        // Last resort: try to find any JSON array in the response
+        if (!parsed && textBlocks[i]) {
+          try {
+            const arrMatch = textBlocks[i].match(/\[\s*\{[\s\S]*?"company"[\s\S]*?\}\s*\]/);
+            if (arrMatch) parsed = { accounts: JSON.parse(arrMatch[0]) };
+          } catch {}
+        }
       }
       if (!parsed?.accounts?.length) {
-        setTargetGenError("Couldn't parse generated targets — try again.");
+        console.warn("[generateTargets] Parse failed. Raw response:", textBlocks.join("\n").slice(0, 500));
+        setTargetGenError("Couldn't parse generated targets — try again. If this persists, try a different industry or company size.");
         setTargetGenLoading(false);
         return;
       }
@@ -5918,7 +5953,15 @@ ${isOpen
   // Frameworks: Rajput (biz→digital), McSweeney (stakeholder alignment),
   // Richards/Ford (architecture attributes), Fowler (integration patterns)
   const buildSolutionFit = async() => {
-    if(!brief||!postCall) return;
+    if(!brief) {
+      console.warn("[solutionFit] No brief — cannot generate SA review");
+      setSolutionFit({ saRecommendation: "No brief available. Generate a brief first, then run the SA review." });
+      return;
+    }
+    if(!postCall) {
+      console.warn("[solutionFit] No post-call data — running with available data");
+      // Don't block — proceed with whatever data we have (brief, notes, gate answers, discovery)
+    }
     setSolutionFitLoading(true);
 
     // Check what discovery data is missing and warn the user
@@ -5989,7 +6032,7 @@ ${isOpen
       `"discoveryGaps":["Specific info the rep needs to capture on the next call to strengthen this assessment"],`+
       `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`;
 
-    // Stream solution fit for progressive rendering
+    // Stream solution fit for progressive rendering — increased token budget for complex JSON
     const result = await streamAI(prompt, (partial) => {
       try {
         const last = partial.lastIndexOf('}');
@@ -5998,14 +6041,21 @@ ${isOpen
           if (parsed.dmiacStage) setSolutionFit(parsed);
         }
       } catch { /* partial JSON */ }
-    }, 3000);
+    }, 4500);
 
-    setSolutionFit(result||{
-      confirmedSolutions:[],revisedSolutions:[],architectureGaps:[],
-      implementationRoadmap:"Unable to generate — review discovery notes and try again.",
-      integrationComplexity:"Unknown",successMetrics:[],
-      saRecommendation:"Insufficient discovery data captured.",
-    });
+    if (result) {
+      console.log("[solutionFit] Generated:", Object.keys(result).length, "fields");
+      setSolutionFit(result);
+    } else {
+      console.warn("[solutionFit] streamAI returned null — showing failure state");
+      setSolutionFit({
+        confirmedSolutions:[],revisedSolutions:[],architectureGaps:[],
+        implementationRoadmap:"Unable to generate — this usually means the AI response was truncated or the call had insufficient discovery data.",
+        integrationComplexity:"Unknown",successMetrics:[],
+        discoveryGaps:["Re-run the SA review after adding more call notes or discovery responses"],
+        saRecommendation:"The SA review could not generate results. Common causes: (1) call notes were too brief, (2) discovery fields were mostly empty, (3) the response was truncated. Add more detail to your call notes and discovery captures, then click Regenerate.",
+      });
+    }
     setSolutionFitLoading(false);
   };
 
@@ -10963,8 +11013,8 @@ ${isOpen
             {/* Header */}
             <div className="incall-header">
               <div>
-                <div className="incall-title">🎙 In-Call Navigator · {selectedAccount?.company}</div>
-                <div className="incall-meta">{contactRole||selectedAccount?.ind} · {selectedCohort?.name} · RIVER Framework</div>
+                <div className="incall-title">🎙 Live Discovery · {selectedAccount?.company}</div>
+                <div className="incall-meta">{contactRole||selectedAccount?.ind} · {selectedCohort?.name} · RIVER Discovery Framework</div>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
@@ -11132,6 +11182,28 @@ ${isOpen
                           )}
                         </div>
                       ))}
+                    </div>
+
+                    {/* Advance to next stage / End call button */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
+                      <button className="btn btn-secondary btn-sm" disabled={si===0}
+                        onClick={()=>setActiveRiver(si-1)}
+                        style={{opacity:si===0?0.3:1}}>
+                        ← {si > 0 ? RIVER_STAGES[si-1].label : ""}
+                      </button>
+                      <div style={{fontSize:11,color:"var(--ink-3)"}}>
+                        Stage {si+1} of {RIVER_STAGES.length} · {stage.label}
+                      </div>
+                      {si < RIVER_STAGES.length - 1 ? (
+                        <button className="btn btn-green btn-sm"
+                          onClick={()=>setActiveRiver(si+1)}>
+                          {RIVER_STAGES[si+1].label} →
+                        </button>
+                      ) : (
+                        <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
+                          {postLoading ? "Routing..." : "End Call & Route Deal →"}
+                        </button>
+                      )}
                     </div>
 
                   </div>
