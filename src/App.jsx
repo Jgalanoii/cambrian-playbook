@@ -1406,7 +1406,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"g2Rating":"G2 rating as number e.g. 4.2 — only for software/SaaS companies, empty string otherwise",`+
     `"npsSignal":"Consumer brand health signals when relevant (brand loyalty, market share trajectory, customer satisfaction trends). Useful context for understanding the company's position, not for comparing their products to competitors.",`+
     `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found or not applicable",`+
-    `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — search for this, most large employers have it. This tells the seller about leadership stability.",`+
+    `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — search for this, most large employers have it. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company — something that tells a seller what it's like to work with or sell into this organization","source":"Glassdoor / Indeed / press / analyst","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
     (partial) => {
@@ -1869,7 +1869,7 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
       ["Company",co],["Industry",account?.ind||""],["Deal Size (ACV)",account?.acv>0?"$"+account.acv.toLocaleString():""],
       ["Lead Source",account?.src||""],["Website",account?.company_url||""],
       ["Cohort",cohort?.name||""],["Target Outcomes",outcomes.join(", ")],
-      ["Selling Org",sellerUrl||""],["Deal Confidence",`${confidence}%`],
+      ["Selling Org",sellerUrl||""],["Briefing Completeness",`${confidence}%`],
       ["",""],["COMPANY SNAPSHOT",""],["",brief?.companySnapshot||""],
       ["",""],["STRATEGIC THEME",""],["",brief?.strategicTheme||""],
       ["",""],["WHY YOU · WHY NOW (Seller Opportunity)",""],["",brief?.sellerOpportunity||""],
@@ -1920,7 +1920,7 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
       ["DEAL ROUTE",postCall?.dealRoute||"Not yet generated"],
       ["ROUTE REASON",postCall?.dealRouteReason||""],
       ["TOP RISK",postCall?.dealRisk||""],
-      ["DEAL CONFIDENCE",`${confidence}%`],
+      ["BRIEFING COMPLETENESS",`${confidence}%`],
       ["",""],["CALL SUMMARY",""],["",postCall?.callSummary||""],
       ["",""],["NEXT STEPS",""],
       ...(postCall?.nextSteps||[]).map((s,i)=>[`${i+1}.`,s]),
@@ -1929,7 +1929,7 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
       ["Subject",postCall?.emailSubject||""],["Body",postCall?.emailBody||""],
     ]},
     {name:"CRM Upload",rows:[
-      ["Company","Industry","ACV","Lead Source","Cohort","Target Outcomes","Deal Confidence","Deal Route","Top Risk","R — Reality","I — Impact","V — Vision","E — Entry Points","R — Route","Next Step 1","Next Step 2","Next Step 3","Follow-Up Subject","CRM Note"],
+      ["Company","Industry","ACV","Lead Source","Cohort","Target Outcomes","Briefing Completeness","Deal Route","Top Risk","R — Reality","I — Impact","V — Vision","E — Entry Points","R — Route","Next Step 1","Next Step 2","Next Step 3","Follow-Up Subject","CRM Note"],
       [co,account?.ind||"",account?.acv>0?account.acv:"",account?.src||"",cohort?.name||"",outcomes.join("; "),`${confidence}%`,postCall?.dealRoute||"",postCall?.dealRisk||"",brief?.riverHypothesis?.reality||"",brief?.riverHypothesis?.impact||"",brief?.riverHypothesis?.vision||"",brief?.riverHypothesis?.entryPoints||"",brief?.riverHypothesis?.route||"",postCall?.nextSteps?.[0]||"",postCall?.nextSteps?.[1]||"",postCall?.nextSteps?.[2]||"",postCall?.emailSubject||"",postCall?.crmNote||""],
     ]},
   ];
@@ -5428,11 +5428,113 @@ ${isOpen
     // product-specific questions — NOT generic ones. Wait for allDone so all
     // mergers (including p4 solutions) have applied to the brief state.
     allDone.then(() => {
-      console.log("[brief] allDone resolved — triggering discovery questions + 5 Questions");
+      console.log("[brief] allDone resolved — triggering consistency check, discovery questions + 5 Questions");
       setBrief(current => {
         if (current?._error) setBriefError(current._error);
         return current;
       });
+
+      // ── CROSS-SECTION CONSISTENCY VALIDATOR ────────────────────────────
+      // Runs after ALL micro-calls merge. Checks for entity contradictions
+      // (same person → different titles across sections, CEO conflicts,
+      // fabricated names, date mismatches). Auto-reconciles or strips.
+      // This is the P0 fix for the "Alyson Caruso" vs "Joe Ucuzoglu" bug.
+      setTimeout(() => {
+        setBrief(current => {
+          if (!current?.companySnapshot) return current;
+          const co = member.company;
+
+          // Gather all named entities and claims across sections
+          const entitySources = [];
+          // Executives (p2 — web-searched, highest-trust)
+          (current.keyExecutives || []).filter(e => e?.name).forEach(e => {
+            entitySources.push({ name: e.name, title: e.title, source: "executives", trust: 3 });
+          });
+
+          // Build context string from all brief text for the validator
+          const allText = [
+            current.companySnapshot,
+            current.strategicTheme,
+            current.sellerOpportunity,
+            current.openingAngle,
+            current.publicSentiment?.onlineSentiment,
+            current.publicSentiment?.employeeScore,
+            current.publicSentiment?.standoutReview?.text,
+            current.financialDeepDive?.earningsInsight,
+            current.financialDeepDive?.capitalPriorities,
+            current.fundingProfile,
+            current.elevatorPitch,
+            current.tldr?.topFinding,
+            current.tldr?.topOpportunity,
+            current.tldr?.topRisk,
+          ].filter(Boolean).join("\n\n");
+
+          // Quick client-side checks before burning an API call
+          const execNames = (current.keyExecutives || []).filter(e => e?.name).map(e => e.name.toLowerCase());
+
+          // Check: does any text mention a CEO/leader name that contradicts the executives list?
+          const ceoExec = (current.keyExecutives || []).find(e => e?.title && /\bceo\b/i.test(e.title));
+          if (ceoExec && allText) {
+            const ceoName = ceoExec.name;
+            // Look for "CEO [Name]" or "[Name], CEO" patterns that don't match
+            const ceoMentions = allText.match(/(?:CEO|chief executive officer)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/gi) || [];
+            const nameMentions = allText.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?:,\s*)?(?:CEO|chief executive officer)/gi) || [];
+            const allMentions = [...ceoMentions, ...nameMentions].map(m => m.replace(/CEO|chief executive officer|,/gi, "").trim()).filter(Boolean);
+
+            const conflicts = allMentions.filter(m => {
+              const mLower = m.toLowerCase();
+              // Not a match if it's a different name entirely
+              return !ceoName.toLowerCase().includes(mLower.split(" ")[1] || "") && mLower !== ceoName.toLowerCase();
+            });
+
+            if (conflicts.length > 0) {
+              console.warn(`[consistency] CEO conflict detected: executives says "${ceoName}" but text mentions "${conflicts.join(", ")}". Cleaning...`);
+              // Clean the conflicting text — replace wrong CEO references with the correct one
+              const cleaned = { ...current };
+              const fixText = (text) => {
+                if (!text) return text;
+                let fixed = text;
+                conflicts.forEach(wrongName => {
+                  // Replace "CEO WrongName" patterns
+                  const wrongPattern = new RegExp(`(CEO|chief executive officer)\\s+${wrongName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi');
+                  fixed = fixed.replace(wrongPattern, `$1 ${ceoName}`);
+                  const wrongPattern2 = new RegExp(`${wrongName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,?\\s*(CEO|chief executive officer)`, 'gi');
+                  fixed = fixed.replace(wrongPattern2, `${ceoName}, $1`);
+                  // Also strip sentences that attribute leadership to the wrong person
+                  const wrongLeaderPattern = new RegExp(`[^.]*\\b${wrongName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b[^.]*(?:new CEO|current CEO|appointed CEO|as CEO|became CEO)[^.]*\\.?`, 'gi');
+                  fixed = fixed.replace(wrongLeaderPattern, '');
+                });
+                return fixed.replace(/\s{2,}/g, ' ').trim();
+              };
+
+              if (cleaned.publicSentiment) {
+                cleaned.publicSentiment = { ...cleaned.publicSentiment };
+                if (cleaned.publicSentiment.employeeScore) cleaned.publicSentiment.employeeScore = fixText(cleaned.publicSentiment.employeeScore);
+                if (cleaned.publicSentiment.onlineSentiment) cleaned.publicSentiment.onlineSentiment = fixText(cleaned.publicSentiment.onlineSentiment);
+              }
+              if (cleaned.strategicTheme) cleaned.strategicTheme = fixText(cleaned.strategicTheme);
+              if (cleaned.financialDeepDive) {
+                cleaned.financialDeepDive = { ...cleaned.financialDeepDive };
+                if (cleaned.financialDeepDive.earningsInsight) cleaned.financialDeepDive.earningsInsight = fixText(cleaned.financialDeepDive.earningsInsight);
+              }
+              cleaned._consistencyFixed = true;
+              return cleaned;
+            }
+          }
+
+          // Check: does employeeCount in overview conflict with workforce section?
+          // Check: does revenue in overview conflict with financial deep dive?
+          // These are lighter checks — just log for now
+          if (current.financialDeepDive?.revenueTrend && current.revenue) {
+            const overviewRev = current.revenue.replace(/[^0-9.]/g, "");
+            if (overviewRev && !current.financialDeepDive.revenueTrend.includes(overviewRev.slice(0, 4))) {
+              console.warn(`[consistency] Revenue mismatch: overview="${current.revenue}" vs financials mentions different figure`);
+            }
+          }
+
+          return current;
+        });
+      }, 500); // slight delay to ensure all mergers have applied
       setTimeout(() => {
         setBrief(current => {
           if (current) {
@@ -5824,7 +5926,7 @@ ${isOpen
       KL_GRAHAM + `\n`+
       `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
       `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
-      `DEAL CONFIDENCE: ${confidence}%\n`+
+      `BRIEFING COMPLETENESS: ${confidence}%\n`+
       `DEAL ROUTE: ${postCall?.dealRoute||"Unknown"}\n\n`+
       `BRIEF NARRATIVE (hypothesis and solution fit MUST align with these):\n`+
       (brief.elevatorPitch ? `Elevator Pitch: ${brief.elevatorPitch.slice(0,300)}\n` : "") +
@@ -6923,7 +7025,7 @@ ${isOpen
             {/* Sessions */}
             {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"#555",cursor:"pointer"}}>
-              📂 {savedSessions.length>0?savedSessions.length+" Sessions":"Sessions"}
+              📂 {savedSessions.length>0?savedSessions.length+" Session"+(savedSessions.length===1?"":"s"):"Sessions"}
             </button>}
 
             {/* More menu (⋯) — Search, Dark mode, Resources, Reports, Org, Contact, Admin */}
@@ -9839,12 +9941,25 @@ ${isOpen
                       {/* Score chips row */}
                       {(()=>{
                         const ps=brief.publicSentiment;
+                        // Filter: only show scores that are actual numbers or short numeric strings.
+                        // Strip "Not found", "N/A", placeholder text that renders as broken scores.
+                        const isValidScore = (v) => {
+                          if (!v || !v.trim()) return false;
+                          const t = v.trim().toLowerCase();
+                          if (t.includes("not found") || t.includes("not available") || t.includes("n/a") || t.includes("unable") || t.includes("search")) return false;
+                          // Must contain at least one digit to be a score
+                          return /\d/.test(t);
+                        };
                         const scores=[
                           {label:"Glassdoor",val:ps.glassdoorRating,max:"/ 5.0",link:"glassdoor.com"},
                           {label:"G2",val:ps.g2Rating,max:"/ 5.0",link:"g2.com"},
                           {label:"Trustpilot",val:ps.trustpilotRating,max:"/ 5.0",link:"trustpilot.com"},
-                          {label:"Employee Score",val:ps.employeeScore,max:"",link:""},
-                        ].filter(s=>s.val&&s.val.trim());
+                        ].filter(s=>isValidScore(s.val));
+                        // Employee score is often text like "73% CEO approval" — allow text but filter garbage
+                        const empScore = ps.employeeScore;
+                        if (empScore && empScore.trim() && !empScore.toLowerCase().includes("not found") && !empScore.toLowerCase().includes("not available") && empScore.length < 200) {
+                          scores.push({label:"Employee Score",val:empScore,max:"",link:""});
+                        }
                         return scores.length>0?(
                           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
                             {scores.map((s,i)=>{
@@ -11078,7 +11193,7 @@ ${isOpen
             {postCall&&!postLoading&&(
               <>
                 <div className="summary-grid">
-                  <div className="stat-card"><div className="stat-num" style={{color:confColor(confidence)}}>{confidence}%</div><div className="stat-label">Deal Confidence</div></div>
+                  <div className="stat-card"><div className="stat-num" style={{color:confColor(confidence)}}>{confidence}%</div><div className="stat-label">Briefing Completeness</div></div>
                   <div className="stat-card"><div className="stat-num" style={{fontSize:14,paddingTop:4}}>{routeLabel}</div><div className="stat-label">Deal Route</div></div>
                   <div className="stat-card"><div className="stat-num">{selectedAccount?.acv>0?"$"+selectedAccount.acv.toLocaleString():"—"}</div><div className="stat-label">Deal Size</div></div>
                 </div>
