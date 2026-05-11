@@ -1407,7 +1407,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `TEACHING ANGLE: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption about their industry"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
     `SOCIAL PROOF: Name a SPECIFIC similar company as proof. Lead with a precise stat or insight.\n`+
     `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n`+
-    `STABILITY: Anchor your analysis in verifiable, durable facts — not interpretive commentary. Revenue, headcount, HQ, founding year, named initiatives, public statements, and executive names are stable. Avoid subjective framing that could change between runs.\n\n`+
+    `STABILITY: Anchor your analysis in verifiable, durable facts — not interpretive commentary. Revenue, headcount, HQ, founding year, named initiatives, public statements, and executive names are stable. Avoid subjective framing that could change between runs.\n`+
+    `GROUNDING RULES (learned from audit — CRITICAL):\n`+
+    `- Do NOT invent executive names. If you're unsure who the CEO is, describe the role without naming anyone. "The CEO" not "CEO Jane Doe."\n`+
+    `- Do NOT fabricate statistics about the seller (customer counts, revenue, market share). Only cite numbers from the proof pack above.\n`+
+    `- Do NOT suggest use cases that require capabilities in the seller's exclusion list.\n`+
+    `- Do NOT attribute direct quotes to executives unless you have a verifiable source. Paraphrase instead.\n`+
+    `- Every claim must be grounded in either (a) web search results, (b) the seller proof pack, or (c) well-established training knowledge for major companies. If none apply, omit the claim.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
     `{"tldr":{"topFinding":"The single most important thing a seller needs to know about ${co} RIGHT NOW — a specific fact, metric, or recent move that changes how you'd approach them. One sentence, cite the source.","topOpportunity":"The single biggest reason to engage ${co} right now — a specific gap, initiative, or timing window. One sentence.","topRisk":"The single biggest risk or obstacle to selling into ${co} right now — a competitive incumbent, budget freeze, leadership change, or regulatory constraint. One sentence."},`+
     `"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
@@ -1456,6 +1462,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `- processMaturity: assess ${co}'s operational maturity (Define/Measure/Analyze/Improve/Control) based on their industry and size.\n`+
         `CRITICAL: Do NOT return empty objects. Every field except solutionMapping must have substantive content.\n`
       : `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`)+
+    `CAPABILITY GUARD: ONLY suggest use cases that the seller's products ACTUALLY do. If the seller's exclusion list says they don't do something (e.g. payroll, benefits admin, hiring bonuses), do NOT suggest it as a use case — even if it would logically fit the target. OMIT the use case entirely. A rep who pitches something their company doesn't do loses credibility and the deal.\n`+
     `For each solution: (1) which seller PRODUCT (use exact name from catalog above), (2) what job-to-be-done it performs for ${co}, (3) what differentiator from the proof pack justifies "why us", (4) what NAMED CUSTOMER from the proof pack is similar evidence (or "[no analogue customer in our list — verify with seller]" if none fit), (5) what measurable outcome we'd target.\n`+
     `{"solutionMapping":[`+
     `{"product":"EXACT product name from seller catalog",`+
@@ -1502,11 +1509,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `- Search 1: "${co}" news OR press release OR announcement last 12 months\n`+
         `- Search 2: "${co}" site:prnewswire.com OR site:businesswire.com OR site:globenewswire.com 2025 OR 2026\n`+
         `Press releases reveal: product launches, partnerships, executive hires, funding, expansions, awards, and strategic priorities the company chose to publicize.\n\n`+
+        `RECENCY RULE: ONLY include events, headlines, or signals from the last 18 months. If a source is older than 18 months, REJECT it — do not include it as "recent." Include the date or year in every headline.\n\n`+
         `PRIORITY ORDER:\n`+
         `1. Press releases and company announcements from the last 12 months — these are HIGHEST VALUE\n`+
-        `2. News coverage: M&A, leadership changes, funding, strategic moves\n`+
+        `2. News coverage: M&A, leadership changes, funding, strategic moves (last 18 months only)\n`+
         `3. Ratings and sentiment: ALWAYS search Glassdoor (employer reviews), plus G2 (if software), Trustpilot, Amazon reviews (if consumer products) for "${co}"\n`+
-        `4. Growth signals or buying indicators\n`+
+        `4. Growth signals or buying indicators (last 12 months only)\n`+
         `5. Workforce and culture profile\n`+
         `Return ONLY raw JSON (start with {):\n`+
         `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters","type":"press_release or news or review"},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""}],`+
@@ -5690,8 +5698,8 @@ ${isOpen
     const prompt =
       proofPack +
       "You are a senior sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
-      "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting. Cite named customers from the proof pack above whenever you claim 'we've done this before.' Use unique differentiators from the proof pack to justify 'why us.'\n" +
-      "ACCURACY: NEVER invent facts about the prospect or the seller. No fabricated revenue, partnerships, acquisitions, Glassdoor scores, funding rounds, product names, or statistics. Every factual claim must be grounded in the proof pack, brief data, or verifiable training knowledge. If uncertain, omit or mark '[Verify]'. A wrong fact in a talk track destroys the entire deal.\n" +
+      "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting. Cite named customers from the proof pack above whenever you claim 'we've done this before.' Use unique differentiators from the proof pack to justify 'why us.' NEVER suggest use cases in the seller's exclusion list.\n" +
+      "ACCURACY: NEVER invent facts about the prospect or the seller. No fabricated revenue, partnerships, acquisitions, Glassdoor scores, funding rounds, product names, or statistics. Every factual claim must be grounded in the proof pack, brief data, or verifiable training knowledge. If uncertain, OMIT — do not mark '[Verify]' or surface uncertainty. A wrong fact in a talk track destroys the entire deal. NEVER attribute direct quotes to executives without a verifiable source — paraphrase instead.\n" +
       "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
       "BUYER EXPERIENCE (Gartner): Buyers spend 17% of time with vendors. The rep who wins: already knows their industry, challenges their thinking, shows proof from similar companies, makes the next step obvious and small.\n" +
       KL_NEGOTIATIONS + "\n" +
@@ -9576,6 +9584,26 @@ ${isOpen
                         {userEdits.filter(e => e.company === selectedAccount?.company).length} edit{userEdits.filter(e => e.company === selectedAccount?.company).length > 1 ? "s" : ""} tracked
                       </span>
                     )}
+                    <button onClick={()=>{
+                      const co = selectedAccount?.company || "Company";
+                      const lines = [
+                        `Sales Brief — ${co}`,
+                        brief.tldr?.topFinding ? `\nQUICK TAKE:\n• Finding: ${brief.tldr.topFinding}\n• Opportunity: ${brief.tldr.topOpportunity}\n• Risk: ${brief.tldr.topRisk}` : "",
+                        brief.companySnapshot ? `\nOVERVIEW: ${brief.companySnapshot}` : "",
+                        brief.revenue ? `Revenue: ${brief.revenue}` : "", brief.employeeCount ? `Employees: ${brief.employeeCount}` : "",
+                        brief.strategicTheme ? `\nSTRATEGY: ${brief.strategicTheme}` : "",
+                        brief.openingAngle ? `\nOPENING ANGLE: ${brief.openingAngle}` : "",
+                        brief.elevatorPitch ? `\nELEVATOR PITCH: "${brief.elevatorPitch}"` : "",
+                        (brief.keyExecutives||[]).filter(e=>e?.name).length > 0 ? `\nKEY EXECUTIVES:\n${(brief.keyExecutives||[]).filter(e=>e?.name).map(e=>`• ${e.name}, ${e.title}`).join("\n")}` : "",
+                        (brief.fiveQuestions||[]).length > 0 ? `\n5 QUESTIONS TO ASK:\n${brief.fiveQuestions.map((q,i)=>`${i+1}. ${q.question}`).join("\n")}` : "",
+                        `\n— Generated by Cambrian Catalyst (cambriancatalyst.ai)`,
+                      ].filter(Boolean).join("\n");
+                      navigator.clipboard?.writeText(lines);
+                      setEditToast("Brief copied to clipboard — paste anywhere");
+                    }}
+                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)",color:"#555",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                      📋 Copy Brief
+                    </button>
                     <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                     <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                     {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
@@ -11788,7 +11816,7 @@ ${isOpen
 
       {/* Print-only footer — appears on every printed page */}
       <div className="print-footer" style={{display:"none"}}>
-        <span className="pf-brand">Cambrian <span>Catalyst</span></span> · © 2026 Cambrian Catalyst LLC · Seattle, WA · Confidential · Powered by proprietary sales intelligence — verify company-specific facts before use
+        <span className="pf-brand">Cambrian <span>Catalyst</span></span> · © 2026 Cambrian Catalyst LLC · Confidential
       </div>
     </>
   );
