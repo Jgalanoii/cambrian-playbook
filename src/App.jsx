@@ -1089,6 +1089,16 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
     validProofs.forEach(p => out.push(`  • [${p.type}] ${p.content}`));
   }
 
+  // Seller exclusions — things the seller does NOT do (prevents capability mismatches)
+  const exclusions = (sellerICP?.icp?.sellerExclusions || []).filter(Boolean);
+  if (exclusions.length) {
+    out.push(`\n═══ SELLER DOES NOT DO — HARD EXCLUSIONS ═══`);
+    out.push(`The following capabilities, products, or services are OUTSIDE the seller's scope.`);
+    out.push(`Do NOT suggest, recommend, or imply the seller can do any of these:`);
+    exclusions.forEach(ex => out.push(`  ✗ ${s(ex)}`));
+    out.push(`If a use case requires any excluded capability, OMIT that use case entirely from the brief. Do not suggest workarounds or adjacent positioning for excluded capabilities.`);
+  }
+
   out.push(`\n═══ HOW TO USE THIS PROOF ═══`);
   out.push(`When you propose a solution, recommendation, talk track, or claim:`);
   out.push(`1. Cite a SPECIFIC named customer from the list above whenever you claim "we've done this before." Never invent customer names.`);
@@ -1096,10 +1106,11 @@ function buildSellerProofPack({ sellerICP, sellerDocs = [], products = [], selle
   out.push(`3. Frame outcomes using the success factors above — concrete, measurable, the customer's language.`);
   out.push(`4. Quote from uploaded docs verbatim when they contain a relevant proof point or quantified outcome.`);
   out.push(`5. Use ONLY products from the catalog above — do NOT invent product names.`);
-  out.push(`6. If you cannot ground a claim in the proof above, flag it as "[unsupported — verify with seller]" rather than asserting it as fact.`);
+  out.push(`6. If you cannot ground a claim in the proof above, OMIT the claim entirely. Do NOT surface uncertainty inline — a brief should only contain claims the rep can confidently state. Unverified claims belong in a separate internal checklist, not the deliverable.`);
   out.push(`7. The customer should feel deeply understood, that the seller knows the BEST solution, and that this is a deal where everyone wins with measurable outcomes.`);
   out.push(`8. NEVER INVENT STATISTICS ABOUT THE SELLER. Do not fabricate customer counts, revenue numbers, market share, network size, retailer counts, or any other quantitative claim about the selling organization. Only cite numbers that appear in the proof points, uploaded docs, or ICP above. If you don't have a verified number, describe the capability qualitatively ("extensive retail network" not "500K+ retailers"). Making up stats destroys rep credibility.`);
   out.push(`9. NEVER INVENT FACTS ABOUT THE TARGET COMPANY. Do not fabricate revenue, employee counts, executives, products, partnerships, or acquisitions. Use training knowledge confidently for well-known companies. For genuinely unknown facts, use an empty string — do NOT write "[Verify]" or placeholder text. A rep who cites a wrong fact in a sales call loses credibility instantly.`);
+  out.push(`10. NEVER attribute direct quotes to named executives unless you found the quote in web search results with a verifiable source. If no source URL exists, paraphrase instead ("Deloitte leadership has emphasized resilience" not "CEO said '...'"). Fabricated quotes are the single highest-risk hallucination category.`);
 
   // Append user corrections — these override any conflicting AI inference
   const editCtx = buildUserEditContext(icpEdits, userEdits);
@@ -1218,8 +1229,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ? `IDENTITY ANCHOR: Research ONLY the company at https://${url}. The company name "${co}" may be shared by multiple entities — use the website ${url} as the definitive identifier. Every fact in this brief must be about the company that operates ${url}. If you find conflicting information about different companies with similar names, ONLY use information about the entity at ${url}.\n\n`
     : `IDENTITY: Research the company "${co}". If multiple companies share this name, focus on the most prominent/well-known entity. Do NOT mix facts from different companies.\n\n`;
 
+  // Canonical seller name — use consistently across all sections
+  const canonicalSellerName = sellerICP?.sellerName || sellerUrl || "the seller";
   const baseLight =
-    `Sales brief about TARGET PROSPECT "${co}"${url && url !== co ? ` (${url})` : ""} for seller at ${sellerUrl}.\n`+
+    `Sales brief about TARGET PROSPECT "${co}"${url && url !== co ? ` (${url})` : ""} for seller "${canonicalSellerName}"${sellerUrl !== canonicalSellerName ? ` (${sellerUrl})` : ""}.\n`+
+    `SELLER NAME CONSISTENCY: Always refer to the selling organization as "${canonicalSellerName}" — not "${sellerUrl}" or any other variation. Use this exact name in every section.\n`+
     identityAnchor +
     enrichmentCtx +
     `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
@@ -3218,6 +3232,13 @@ export default function App(){
   });
   const[sellerLinkedIn,setSellerLinkedIn]=useState(""); // personal LinkedIn URL
   const[sellerProofPoints,setSellerProofPoints]=useState([]); // [{type:"Case Study"|"ROI Metric"|..., content:"text"}]
+  const[sellerExclusions,setSellerExclusions]=useState([]); // ["payroll", "hiring bonuses", ...] — things the seller does NOT do
+  // Sync exclusions into ICP object so buildSellerProofPack can read them
+  useEffect(() => {
+    if (sellerICP?.icp && sellerExclusions.length > 0) {
+      setSellerICP(prev => prev?.icp ? { ...prev, icp: { ...prev.icp, sellerExclusions } } : prev);
+    }
+  }, [sellerExclusions.length]);
   const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
   const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
   const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
@@ -4832,7 +4853,7 @@ ${isOpen
   };
 
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
-  const getSessionSnap=()=>({step,sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),accountDocs:accountDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
+  const getSessionSnap=()=>({step,sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),accountDocs:accountDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,sellerExclusions,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
@@ -4875,6 +4896,7 @@ ${isOpen
     if(d.intelAdjustments) setIntelAdjustments(d.intelAdjustments);
     if(d.disqualified) setDisqualified(d.disqualified);
     if(d.sellerProofPoints?.length) setSellerProofPoints(d.sellerProofPoints);
+    if(d.sellerExclusions?.length) setSellerExclusions(d.sellerExclusions);
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.accountDocs?.length) setAccountDocs(d.accountDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
@@ -7008,7 +7030,7 @@ ${isOpen
                 border:cambrianMax?"2px solid var(--violet)":"1.5px solid var(--line-0)",
                 background:cambrianMax?"linear-gradient(135deg,var(--violet),#6D28D9)":"var(--surface)",
                 color:cambrianMax?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
-              {cambrianMax?"⚡ MAX":`⚡ Max${orgCtx?.max_run_limit?` ${orgCtx.max_run_count||0}/${orgCtx.max_run_limit}`:""}`}
+              {cambrianMax?"⚡ MAX ON":`⚡ Max${orgCtx?.max_run_limit?` ${orgCtx.max_run_count||0}/${orgCtx.max_run_limit}`:""}`}
             </button>
 
             {/* Save */}
@@ -7598,6 +7620,41 @@ ${isOpen
                     <span>{sellerProofPoints.filter(p=>p.content.trim()).length} proof point{sellerProofPoints.filter(p=>p.content.trim()).length>1?"s":""} loaded — these will be cited verbatim in briefs, hypotheses, and talk tracks.</span>
                   </div>
                 )}
+              </div>
+
+              {/* Seller Exclusions — what we do NOT do */}
+              <div className="field-row">
+                <div className="field-label" style={{marginBottom:4}}>
+                  What We Do NOT Do
+                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(critical for accuracy)</span>
+                </div>
+                <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6,marginBottom:8}}>
+                  List capabilities, products, or services that are <strong>outside your scope</strong>. The brief will never suggest these as use cases — prevents embarrassing capability mismatches in front of prospects.
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                  {sellerExclusions.map((ex,i)=>(
+                    <span key={i} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,padding:"4px 10px",borderRadius:6,background:"var(--red-bg)",color:"var(--red)",fontWeight:600,border:"1px solid #7A202033"}}>
+                      ✗ {ex}
+                      <button onClick={()=>setSellerExclusions(prev=>prev.filter((_,j)=>j!==i))}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"var(--red)",fontSize:13,padding:0,lineHeight:1}}>×</button>
+                    </span>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <input id="exclusion-input" type="text" placeholder="e.g. payroll processing, hiring bonuses, benefits admin..."
+                    onKeyDown={e=>{
+                      if(e.key==="Enter"&&e.target.value.trim()){
+                        setSellerExclusions(prev=>[...prev,e.target.value.trim()].slice(0,15));
+                        e.target.value="";
+                      }
+                      e.stopPropagation();
+                    }}
+                    style={{flex:1,fontSize:12,padding:"7px 10px"}}/>
+                  <button className="btn btn-secondary btn-sm" onClick={()=>{
+                    const inp=document.getElementById("exclusion-input");
+                    if(inp?.value.trim()){setSellerExclusions(prev=>[...prev,inp.value.trim()].slice(0,15));inp.value="";}
+                  }}>Add</button>
+                </div>
               </div>
 
               {/* Product / Solution URLs — up to 5, auto-scanned */}
@@ -10265,7 +10322,7 @@ ${isOpen
                                 {label:"Finance/ERP",val:brief.incumbentVendors.financeSystem},
                                 {label:"CRM",val:brief.incumbentVendors.crmSystem},
                                 {label:"Cards",val:brief.incumbentVendors.cardProvider},
-                              ].filter(x=>x.val).map((x,i)=>(
+                              ].filter(x=>x.val && !x.val.toLowerCase().includes("not specified") && !x.val.toLowerCase().includes("not found") && !x.val.toLowerCase().includes("unknown")).map((x,i)=>(
                                 <div key={i} style={{display:"flex",alignItems:"center",gap:5,background:"var(--surface)",border:"1px solid #9B2C2C33",borderRadius:20,padding:"3px 10px"}}>
                                   <span style={{fontSize:10,fontWeight:700,color:"var(--red)",textTransform:"uppercase"}}>{x.label}</span>
                                   <span style={{fontSize:12,fontWeight:700,color:"var(--ink-0)"}}>{x.val}</span>
@@ -10555,14 +10612,19 @@ ${isOpen
                   <div className="bb" style={{margin:0}}>
                     <div className="bb-hdr"><div className="bb-title" style={{fontSize:12}}>Watch-Outs</div></div>
                     <div className="bb-body">
-                      {(brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
-                        <div key={i} className="signal-row" style={{marginBottom:8}}>
-                          <div className="sig-dot" style={{background:"var(--red)"}}/>
-                          <div style={{flex:1}}>
-                            <EF value={w||""} onChange={v=>patchBrief(b=>{b.watchOuts[i]=v;})} single/>
+                      {(brief.watchOuts||[]).filter(Boolean).length > 0
+                        ? (brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
+                          <div key={i} className="signal-row" style={{marginBottom:8}}>
+                            <div className="sig-dot" style={{background:"var(--red)"}}/>
+                            <div style={{flex:1}}>
+                              <EF value={w||""} onChange={v=>patchBrief(b=>{b.watchOuts[i]=v;})} single/>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                        : <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.6,padding:"4px 0"}}>
+                            No watch-outs surfaced — add your own procurement, incumbent, or credibility risks above.
+                          </div>
+                      }
                       {(brief.competitors||[]).filter(Boolean).length>0&&(
                         <>
                           <div className="field-label" style={{marginTop:12,marginBottom:7}}>Likely Competitors</div>
@@ -11324,8 +11386,8 @@ ${isOpen
         </div>
       )}
 
-      {/* Token usage badge — visible to all org members, hidden in print */}
-      {orgCtx && (
+      {/* Token usage badge — visible to all org members, hidden in print. Collapse when at limit. */}
+      {orgCtx && orgCtx.run_count < orgCtx.run_limit && (
         <div className="no-print" style={{position:"fixed",bottom:40,left:16,zIndex:100,background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:"var(--r-md)",padding:"8px 14px",boxShadow:"0 2px 12px rgba(0,0,0,0.1)",fontSize:12,cursor:"pointer"}}
           onClick={()=>{loadSessions();setOrgPanelOpen(true);}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
