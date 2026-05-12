@@ -1419,8 +1419,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Do NOT attribute direct quotes to executives unless you have a verifiable source. Paraphrase instead.\n`+
     `- Every claim must be grounded in either (a) web search results, (b) the seller proof pack, or (c) well-established training knowledge for major companies. If none apply, omit the claim.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
-    `{"tldr":{"topFinding":"The single most important thing a seller needs to know about ${co} RIGHT NOW — a specific fact, metric, or recent move that changes how you'd approach them. One sentence, cite the source.","topOpportunity":"The single biggest reason to engage ${co} right now — a specific gap, initiative, or timing window. One sentence.","topRisk":"The single biggest risk or obstacle to selling into ${co} right now — a competitive incumbent, budget freeze, leadership change, or regulatory constraint. One sentence."},`+
-    `"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
+    `{"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
     `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
@@ -1600,7 +1599,6 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeStrategy = (r3) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), strategy:false}};
-    if (r3?.tldr?.topFinding) next.tldr = r3.tldr;
     if (r3?.elevatorPitch) next.elevatorPitch = r3.elevatorPitch;
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
@@ -5309,18 +5307,16 @@ ${isOpen
 
       const matches = result?.matches;
       if (!matches?.length) {
-        // No matches found — launch anyway with name only
-        const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
-        if (!sellerUrl) setSellerUrl("research-only");
-        pickAccount(member, overrideSellerUrl || "research-only");
-      } else if (matches.length === 1) {
-        // Single match — launch directly
-        const m = matches[0];
-        const member = { company: m.name, company_url: m.domain || "", ind: "", employees: "", publicPrivate: "" };
-        if (!sellerUrl) setSellerUrl("research-only");
-        pickAccount(member, overrideSellerUrl || "research-only");
+        // No matches found — show disambiguation with the name so user can add a URL
+        setDisambigOptions({
+          matches: [{ name: co, domain: "", description: "No website found — enter the company's domain for best results" }],
+          input: co,
+          overrideSellerUrl: overrideSellerUrl || "research-only",
+          allowManualUrl: true,
+        });
       } else {
-        // Multiple matches — show disambiguation UI
+        // ALWAYS show disambiguation for name-only input — user must confirm identity
+        // This prevents Apollo/Apollo.io, Archway/Archway Marketing type errors
         setDisambigOptions({ matches, input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
       }
     } catch (e) {
@@ -5482,6 +5478,34 @@ ${isOpen
 
     // Hypothesis only needs overview + strategy (p1+p3). Fire on earlyDone
     // so it starts 5-10s before slow web_search calls finish.
+    // ── TL;DR — dedicated micro-call (was in p3 but only populated 29-57% of the time)
+    // Fires after p1 (overview) resolves so it has the company snapshot to work from.
+    // Lightweight: only needs snapshot + strategic context, generates 3 sentences.
+    earlyDone.then(() => {
+      setTimeout(() => {
+        setBrief(current => {
+          if (!current?.companySnapshot || current.tldr?.topFinding) return current;
+          const co = member.company;
+          callAI(
+            `You are a senior sales strategist. Generate a 3-part Quick Take on ${co} for a sales rep.\n\n` +
+            `COMPANY CONTEXT:\n${(current.companySnapshot || "").slice(0, 400)}\n` +
+            (current.strategicTheme ? `STRATEGY: ${current.strategicTheme.slice(0, 300)}\n` : "") +
+            (current.fundingProfile ? `FUNDING: ${current.fundingProfile.slice(0, 200)}\n` : "") +
+            (current.revenue ? `REVENUE: ${current.revenue}\n` : "") +
+            (current.employeeCount ? `EMPLOYEES: ${current.employeeCount}\n` : "") +
+            `\nRULES:\n- Each bullet must be ONE specific, grounded sentence\n- topFinding: the single most important fact a seller needs to know RIGHT NOW\n- topOpportunity: the single biggest reason to engage them right now\n- topRisk: the single biggest obstacle to selling into them\n- NEVER use placeholder text. Empty string if genuinely unknown.\n\n` +
+            `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
+            { maxTokens: 600 }
+          ).then(r => {
+            if (r?.tldr?.topFinding) {
+              setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev);
+            }
+          }).catch(() => {});
+          return current;
+        });
+      }, 500);
+    });
+
     earlyDone.then(() => {
       setTimeout(() => {
         setBrief(current => {
@@ -6824,9 +6848,15 @@ ${isOpen
           onClick={()=>setDisambigOptions(null)}>
           <div style={{background:"var(--surface)",borderRadius:12,padding:"24px 28px",maxWidth:500,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.2)"}}
             onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",marginBottom:4,fontFamily:"Lora,serif"}}>Which company did you mean?</div>
-            <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:16}}>
-              We found {disambigOptions.matches.length} companies matching "{disambigOptions.input}" — pick the right one for an accurate brief.
+            <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",marginBottom:4,fontFamily:"Lora,serif"}}>Confirm the company</div>
+            <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:6}}>
+              {disambigOptions.matches.length > 1
+                ? `We found ${disambigOptions.matches.length} companies matching "${disambigOptions.input}" — pick the right one for an accurate brief.`
+                : `Confirm this is the right "${disambigOptions.input}" — the website URL anchors your brief to the correct company.`
+              }
+            </div>
+            <div style={{fontSize:10,color:"var(--amber)",marginBottom:14,fontWeight:600}}>
+              Tip: paste a website URL (e.g. apollo.io) instead of a name for instant, accurate results
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {disambigOptions.matches.map((m, i) => (
@@ -6840,14 +6870,38 @@ ${isOpen
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{m.name}</div>
-                    {m.domain && <div style={{fontSize:11,color:"var(--navy)",fontWeight:600}}>{m.domain}</div>}
+                    {m.domain ? <div style={{fontSize:12,color:"var(--navy)",fontWeight:600}}>🌐 {m.domain}</div>
+                              : <div style={{fontSize:11,color:"var(--red)",fontStyle:"italic"}}>No website found — brief accuracy may be limited</div>}
                     {m.description && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5,marginTop:2}}>{m.description}</div>}
                   </div>
                 </button>
               ))}
             </div>
+            {/* Manual URL input */}
+            <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--line-0)"}}>
+              <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:6}}>Or enter the website directly:</div>
+              <div style={{display:"flex",gap:6}}>
+                <input id="disambig-url" type="text" placeholder="company.com"
+                  onKeyDown={e=>{
+                    if(e.key==="Enter"&&e.target.value.trim()){
+                      const url = e.target.value.trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").split("/")[0];
+                      selectDisambigOption({ name: url.split(".")[0].charAt(0).toUpperCase() + url.split(".")[0].slice(1), domain: url });
+                    }
+                    e.stopPropagation();
+                  }}
+                  style={{flex:1,fontSize:12,padding:"7px 10px",border:"1.5px solid var(--line-0)",borderRadius:6}}/>
+                <button onClick={()=>{
+                  const inp = document.getElementById("disambig-url");
+                  const url = (inp?.value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").split("/")[0];
+                  if(url) selectDisambigOption({ name: url.split(".")[0].charAt(0).toUpperCase() + url.split(".")[0].slice(1), domain: url });
+                }}
+                  style={{padding:"7px 14px",borderRadius:6,background:"var(--ink-0)",color:"var(--surface)",border:"none",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                  Go
+                </button>
+              </div>
+            </div>
             <button onClick={()=>setDisambigOptions(null)}
-              style={{marginTop:14,fontSize:12,color:"var(--ink-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+              style={{marginTop:10,fontSize:12,color:"var(--ink-3)",background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
               Cancel
             </button>
           </div>
