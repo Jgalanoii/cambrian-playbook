@@ -1317,12 +1317,14 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       `1. Search "${co} leadership team" OR "${co} founders" OR "${co} about us team"\n`+
       `2. Search "site:linkedin.com ${co}" to find executives on LinkedIn\n`+
       `For smaller companies, startups, and nonprofits: the "About", "Our Team", or "Leadership" page on their website is the BEST source. Founders and co-founders count as executives.\n\n`+
-      `ACCURACY RULES:\n`+
-      `- For large companies (Fortune 500, major brands), you KNOW these executives. Search to confirm.\n`+
+      `ACCURACY RULES (CRITICAL — executive errors destroy deals):\n`+
+      `- EXECUTIVES CHANGE JOBS. Your training data may be stale. A name you "know" may have LEFT the company months or years ago. ALWAYS verify via web search that the person is CURRENTLY at ${co} before including them.\n`+
+      `- If your search shows an executive has LEFT ${co} (moved to a competitor, retired, was replaced), do NOT include them. Including a departed executive is worse than omitting them — a rep who names someone who left looks uninformed.\n`+
+      `- 3 verified CURRENT executives is better than 6 that include departed ones. Accuracy over completeness.\n`+
       `- For smaller companies / startups / nonprofits: the founding team IS the leadership team. Return founders, co-founders, board members, and any named team leads.\n`+
       `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit entirely.\n`+
-      `- 2 verified founders is better than 0 executives. NEVER return an empty list.\n`+
-      `- Include: CEO/Founder, COO/Co-Founder, CTO, CFO, and any named leaders. For small orgs, board members and advisors count.\n\n`+
+      `- Include: CEO/Founder, COO/Co-Founder, CTO, CFO, and any named leaders. For small orgs, board members and advisors count.\n`+
+      `- When in doubt about whether someone is still at ${co}, OMIT them. A shorter list of verified current executives is always better than a longer list with stale names.\n\n`+
       `For each executive provide:\n`+
       `- name: their full real name (NEVER a placeholder)\n`+
       `- title: their exact current title\n`+
@@ -1364,12 +1366,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         max_tokens:3000,
         messages:[{role:"user",content:
           `You are a senior sales researcher. Return the CURRENT leadership team of "${co}".\n\n`+
-          `Use your training knowledge confidently. ${co} is a real company.\n`+
+          `WARNING: This is a FALLBACK call without web search. Your training data may be STALE. Executives change jobs frequently. If you are not confident that a person is CURRENTLY at ${co} as of 2025-2026, do NOT include them. A rep who names a departed executive in a sales call loses credibility instantly.\n\n`+
+          `Use your training knowledge but ONLY for executives you are highly confident are still at the company. Better to return 2 people you're sure about than 6 that include someone who left.\n`+
           `For SMALL COMPANIES, STARTUPS, and NONPROFITS: return founders, co-founders, board members, and any named team leads. 2 verified founders is a valid result.\n`+
-          `For LARGE COMPANIES: return CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders.\n\n`+
+          `For LARGE COMPANIES: return CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders — ONLY if you're confident they're current.\n\n`+
           `For each: name (real full name), title, initials, background (1 sentence), angle (2-3 sentences on their mandate and how a seller at ${sellerUrl} should approach them).\n\n`+
-          `If you genuinely don't know a specific name, use the ROLE as the name (e.g. "Founder" with title "Co-Founder") and set background to "Research needed — verify via LinkedIn or company website About page".\n\n`+
-          `CRITICAL: You MUST return at least 2 people. An empty response is NEVER acceptable.\n\n`+
+          `If you genuinely don't know a specific name, use the ROLE as the name (e.g. "CEO" with title "Chief Executive Officer") and set background to "Verify current leadership via LinkedIn or company About page".\n\n`+
+          `You MUST return at least 2 people. Prefer role-based stubs over potentially stale named executives.\n\n`+
           `Return ONLY raw JSON:\n`+
           `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role","angle":"Their mandate. 2-3 sentences."}],`+
           `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
