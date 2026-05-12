@@ -1236,8 +1236,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `SELLER NAME CONSISTENCY: Always refer to the selling organization as "${canonicalSellerName}" — not "${sellerUrl}" or any other variation. Use this exact name in every section.\n`+
     identityAnchor +
     enrichmentCtx +
-    `RULE: All fields describe ${co} NOT the seller. ASCII only. Empty string if unknown, never "N/A".\n`+
-    `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string — do NOT write "[Verify]" or "[unknown]". Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
+    `RULE: All fields describe ${co} NOT the seller. ASCII only.\n`+
+    `EMPTY FIELD RULE (CRITICAL): If a fact is unknown, return an EMPTY STRING "". NEVER return "Not found", "Not specified", "Not available", "N/A", "Unknown", "[Verify]", or any placeholder text. The UI handles empty fields gracefully — placeholder text breaks the display. Empty string is ALWAYS correct for unknown data.\n`+
+    `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string. Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
     `STABILITY: For the same company, your output should be stable across runs. Use established facts (revenue, HQ, founding year, executive names) not ephemeral observations. Anchor every claim in verifiable data, not interpretive commentary that could vary between runs. If multiple descriptions are equally valid, prefer the most specific and factual one.\n\n`+
     // Account-specific intel docs (RFPs, requirements, discovery Qs, meeting notes)
@@ -1443,7 +1444,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 2400
+    }, 3800
   );
   // relationshipSignals feature tabled
 
@@ -1523,7 +1524,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
         `"cultureProfile":{"coreValues":"2-3 stated company values","communicationStyle":"formal/informal","decisionMaking":"top-down/consensus/distributed","sellerLanguageHint":"the vocabulary and tone this company responds to"},`+
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
-        `"sentimentScores":{"glassdoorRating":"rating or empty string (not 'Not found')","g2Rating":"rating or empty string if not software","trustpilotRating":"Trustpilot or consumer review score or empty string","npsSignal":"NPS/CSAT data or consumer loyalty signals or brand perception","standoutReview":{"text":"most revealing quote — consumer review, employee review, or press","source":"source platform","sentiment":"positive or negative"}},`+
+        `"sentimentScores":{"glassdoorRating":"Glassdoor rating as a NUMBER only e.g. '3.8' — empty string if not found. NEVER 'Not found' or 'N/A'.","g2Rating":"G2 rating as NUMBER only — empty string if not software or not found","trustpilotRating":"Trustpilot score as NUMBER only — empty string if not found","npsSignal":"NPS/CSAT data or brand perception — empty string if not found. NEVER placeholder text.","standoutReview":{"text":"most revealing quote from employee review, press, or consumer — empty string if none found","source":"source platform — empty string if none","sentiment":"positive or negative — empty string if none"}},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
       const d = await claudeFetch({
         model:activeModel(),
@@ -5583,19 +5584,54 @@ ${isOpen
                 if (cleaned.financialDeepDive.earningsInsight) cleaned.financialDeepDive.earningsInsight = fixText(cleaned.financialDeepDive.earningsInsight);
               }
               cleaned._consistencyFixed = true;
+              // Also strip placeholder text from all fields
+              const stripPlaceholders = (obj) => {
+                if (!obj || typeof obj !== "object") return obj;
+                for (const [k, v] of Object.entries(obj)) {
+                  if (typeof v === "string") {
+                    const lower = v.toLowerCase().trim();
+                    if (lower === "not found" || lower === "not specified" || lower === "not available" || lower === "n/a" || lower === "unknown" || lower === "none" || lower === "not found in recent press releases" || lower.startsWith("not found in") || lower.startsWith("unable to")) {
+                      obj[k] = "";
+                    }
+                  } else if (typeof v === "object" && v !== null) {
+                    stripPlaceholders(v);
+                  }
+                }
+                return obj;
+              };
+              stripPlaceholders(cleaned);
               return cleaned;
             }
           }
 
           // Check: does employeeCount in overview conflict with workforce section?
-          // Check: does revenue in overview conflict with financial deep dive?
-          // These are lighter checks — just log for now
           if (current.financialDeepDive?.revenueTrend && current.revenue) {
             const overviewRev = current.revenue.replace(/[^0-9.]/g, "");
             if (overviewRev && !current.financialDeepDive.revenueTrend.includes(overviewRev.slice(0, 4))) {
               console.warn(`[consistency] Revenue mismatch: overview="${current.revenue}" vs financials mentions different figure`);
             }
           }
+
+          // Strip ALL placeholder text from every field — runs on EVERY brief
+          const placeholderPatterns = ["not found", "not specified", "not available", "n/a", "unknown", "none", "unable to", "not found in recent", "search failed"];
+          const stripAllPlaceholders = (obj) => {
+            if (!obj || typeof obj !== "object") return obj;
+            for (const [k, v] of Object.entries(obj)) {
+              if (typeof v === "string") {
+                const lower = v.toLowerCase().trim();
+                if (placeholderPatterns.some(p => lower === p || lower.startsWith(p + " ") || lower.startsWith(p + "."))) {
+                  obj[k] = "";
+                }
+              } else if (Array.isArray(v)) {
+                // Don't recurse into arrays of objects (executives, etc.) — just clean string arrays
+              } else if (typeof v === "object" && v !== null) {
+                stripAllPlaceholders(v);
+              }
+            }
+            return obj;
+          };
+          stripAllPlaceholders(current);
+          if (current.publicSentiment) stripAllPlaceholders(current.publicSentiment);
 
           return current;
         });
