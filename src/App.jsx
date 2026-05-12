@@ -5321,8 +5321,26 @@ ${isOpen
         }],
       });
 
-      const matches = result?.matches;
+      // Parse the verification response — claudeFetch returns Claude API format, need to extract JSON
+      let matches = result?.matches; // direct match (unlikely)
+      if (!matches) {
+        // Extract from Claude response content
+        const textBlocks = (result?.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        for (let i = textBlocks.length - 1; i >= 0 && !matches; i--) {
+          const parsed = extractJsonWithKey(textBlocks[i], "matches");
+          if (parsed?.matches?.length) matches = parsed.matches;
+        }
+        // Fallback: try safeParseJSON on the raw text
+        if (!matches) {
+          const raw = textBlocks.join("").trim();
+          try {
+            const parsed = JSON.parse(raw.startsWith("{") ? raw : "{" + raw);
+            if (parsed?.matches?.length) matches = parsed.matches;
+          } catch {}
+        }
+      }
       if (!matches?.length) {
+        console.warn("[verify] No matches parsed from verification response");
         // No matches — launch with name only, best effort
         const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
         if (!sellerUrl) setSellerUrl("research-only");
