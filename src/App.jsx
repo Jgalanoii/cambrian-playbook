@@ -5307,8 +5307,16 @@ ${isOpen
         max_tokens: 800,
         tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
         messages: [{ role: "user", content:
-          `I need to identify the exact company a user means by "${co}". Search the web and return the top 1-3 matches.\n\n` +
-          `RULES:\n- Each match must be a REAL, currently operating company\n- Include the company's primary website domain\n- Include a one-line description\n- If there's only one clear match, return just that one\n- If the name is ambiguous (multiple companies with similar names), return up to 3 options\n\n` +
+          `I need to identify the exact company a user means by "${co}". Search the web and return the top 2-3 matches.\n\n` +
+          `RULES:\n` +
+          `- ALWAYS return at least 2 matches if any company with a similar name exists in a DIFFERENT industry. Users often mean a less-famous company.\n` +
+          `- "Apollo" could mean Apollo.io (sales intelligence) OR Apollo Global Management (PE firm). ALWAYS return both.\n` +
+          `- "Mercury" could mean Mercury (banking) OR Mercury Systems (defense). Return both.\n` +
+          `- Common words as company names (Compass, Summit, Atlas, Pioneer, etc.) ALWAYS have multiple matches. Return 2-3.\n` +
+          `- Each match must be a REAL, currently operating company\n` +
+          `- Include the company's primary website domain\n` +
+          `- Include a one-line description that distinguishes it from the others\n` +
+          `- Only return 1 match if the name is truly unique (e.g. "Salesforce", "Workday", "Starbucks")\n\n` +
           `Return ONLY raw JSON: {"matches":[{"name":"Exact Company Name","domain":"company.com","description":"One line — what they do, HQ, industry"}]}`
         }],
       });
@@ -5320,12 +5328,20 @@ ${isOpen
         if (!sellerUrl) setSellerUrl("research-only");
         pickAccount(member, overrideSellerUrl || "research-only");
       } else if (matches.length === 1 && matches[0].domain) {
-        // Single confident match WITH a domain — launch directly with that URL as anchor
-        // The URL is shown in the brief header so the user sees what we resolved to
-        const m = matches[0];
-        const member = { company: m.name, company_url: m.domain, ind: "", employees: "", publicPrivate: "" };
-        if (!sellerUrl) setSellerUrl("research-only");
-        pickAccount(member, overrideSellerUrl || "research-only");
+        // Single match — but is the name ambiguous enough to warrant confirmation?
+        // Short names and common words are high-risk for misidentification
+        const nameLen = co.replace(/\s+/g, "").length;
+        const isShortOrCommon = nameLen <= 6 || /^(apollo|mercury|compass|summit|atlas|pioneer|stripe|block|square|toast|plaid|ramp|brex|deel|gusto|ripple|circle|notion|linear|figma|vercel|clerk)$/i.test(co.trim());
+        if (isShortOrCommon) {
+          // Show disambiguation even for single match — user should confirm
+          setDisambigOptions({ matches, input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
+        } else {
+          // Confident single match with domain — launch directly
+          const m = matches[0];
+          const member = { company: m.name, company_url: m.domain, ind: "", employees: "", publicPrivate: "" };
+          if (!sellerUrl) setSellerUrl("research-only");
+          pickAccount(member, overrideSellerUrl || "research-only");
+        }
       } else {
         // Multiple matches OR single match without domain — show disambiguation
         setDisambigOptions({ matches, input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
