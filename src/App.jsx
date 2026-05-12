@@ -5307,16 +5307,19 @@ ${isOpen
 
       const matches = result?.matches;
       if (!matches?.length) {
-        // No matches found — show disambiguation with the name so user can add a URL
-        setDisambigOptions({
-          matches: [{ name: co, domain: "", description: "No website found — enter the company's domain for best results" }],
-          input: co,
-          overrideSellerUrl: overrideSellerUrl || "research-only",
-          allowManualUrl: true,
-        });
+        // No matches — launch with name only, best effort
+        const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
+        if (!sellerUrl) setSellerUrl("research-only");
+        pickAccount(member, overrideSellerUrl || "research-only");
+      } else if (matches.length === 1 && matches[0].domain) {
+        // Single confident match WITH a domain — launch directly with that URL as anchor
+        // The URL is shown in the brief header so the user sees what we resolved to
+        const m = matches[0];
+        const member = { company: m.name, company_url: m.domain, ind: "", employees: "", publicPrivate: "" };
+        if (!sellerUrl) setSellerUrl("research-only");
+        pickAccount(member, overrideSellerUrl || "research-only");
       } else {
-        // ALWAYS show disambiguation for name-only input — user must confirm identity
-        // This prevents Apollo/Apollo.io, Archway/Archway Marketing type errors
+        // Multiple matches OR single match without domain — show disambiguation
         setDisambigOptions({ matches, input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
       }
     } catch (e) {
