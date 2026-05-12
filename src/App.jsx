@@ -1752,6 +1752,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
   // ── DEEP INTELLIGENCE LAYERS (p7, p8, p9) — fire in parallel with p1-p6 ──
 
+  // Identity context for deep intel calls — prevents cross-company contamination (Apollo.io vs Apollo Global)
+  const deepIntelIdentity = url && url !== co
+    ? `IDENTITY: Research ONLY the company at https://${url} ("${co}"). Multiple companies share this name — use the website ${url} as the definitive identifier. Do NOT mix facts from different companies.\n\n`
+    : `IDENTITY: Research the company "${co}". Do NOT mix facts from different companies with similar names.\n\n`;
+
   // MICRO 7: Competitive Positioning — who they compete with and where they win/lose
   const p7 = (async()=>{
     try {
@@ -1759,8 +1764,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:activeModel(), max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
-          `Research the competitive landscape of ${co}.\n\n`+
-          `Search for "${co} competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
+          deepIntelIdentity+
+          `Research the competitive landscape of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
+          `Search for "${co} ${url && url !== co ? url + ' ' : ''}competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
           `Return raw JSON:\n`+
           `{"competitivePositioning":{`+
           `"marketPosition":"2-3 sentences: where ${co} sits in the market. Market share if known, category leadership or challenger status, analyst positioning (Gartner MQ, Forrester Wave, G2 Grid if applicable).",`+
@@ -1786,8 +1792,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:activeModel(), max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
-          `Research the board of directors, investors, and governance of ${co}.\n\n`+
-          `Search for "${co} board of directors" and "${co} investors funding".\n`+
+          deepIntelIdentity+
+          `Research the board of directors, investors, and governance of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
+          `Search for "${co} ${url && url !== co ? url + ' ' : ''}board of directors" and "${co} investors funding".\n`+
           `For private/startup companies: search for funding rounds, lead investors, board observers.\n`+
           `For public companies: search for board composition, activist investors, governance changes.\n`+
           `For nonprofits: search for board members and major donors/grantors.\n\n`+
@@ -1815,7 +1822,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:activeModel(), max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
-          `Research the financial performance and trajectory of ${co}.\n\n`+
+          deepIntelIdentity+
+          `Research the financial performance and trajectory of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `For PUBLIC companies: search for latest earnings, 10-K, revenue trends, margin analysis.\n`+
           `For PRIVATE/STARTUP companies: search for funding rounds, growth metrics, valuation signals.\n`+
           `For NONPROFITS: search for annual reports, grant funding, program spending.\n\n`+
@@ -5481,14 +5489,14 @@ ${isOpen
 
     // Hypothesis only needs overview + strategy (p1+p3). Fire on earlyDone
     // so it starts 5-10s before slow web_search calls finish.
-    // ── TL;DR — dedicated micro-call (was in p3 but only populated 29-57% of the time)
-    // Fires after p1 (overview) resolves so it has the company snapshot to work from.
-    // Lightweight: only needs snapshot + strategic context, generates 3 sentences.
-    earlyDone.then(() => {
-      setTimeout(() => {
-        setBrief(current => {
-          if (!current?.companySnapshot || current.tldr?.topFinding) return current;
-          const co = member.company;
+    // ── TL;DR — dedicated micro-call (fires twice: after earlyDone + after allDone as fallback)
+    const fireTldr = () => {
+      setBrief(current => {
+        if (!current || current.tldr?.topFinding) return current;
+        // Need SOME context to generate from — use whatever's available
+        const context = current.companySnapshot || current.strategicTheme || member.company;
+        if (!context || context.length < 10) return current;
+        const co = member.company;
           callAI(
             `You are a senior sales strategist. Generate a 3-part Quick Take on ${co} for a sales rep.\n\n` +
             `COMPANY CONTEXT:\n${(current.companySnapshot || "").slice(0, 400)}\n` +
@@ -5506,8 +5514,18 @@ ${isOpen
           }).catch(() => {});
           return current;
         });
-      }, 500);
-    });
+    };
+    // Fire after earlyDone (primary) and again after allDone (fallback if first attempt missed)
+    earlyDone.then(() => setTimeout(fireTldr, 800));
+    allDone.then(() => setTimeout(() => {
+      setBrief(current => {
+        if (current && !current.tldr?.topFinding) {
+          console.warn("[tldr] Still empty after allDone — firing fallback");
+          setTimeout(fireTldr, 100);
+        }
+        return current;
+      });
+    }, 500));
 
     earlyDone.then(() => {
       setTimeout(() => {
