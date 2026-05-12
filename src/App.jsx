@@ -1425,7 +1425,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
     `"onlineSentiment":"2-3 sentences synthesizing what employees, press, and the market say about ${co} as a COMPANY TO SELL INTO. Focus on: employee morale (Glassdoor themes), leadership reputation, workplace culture signals, press narrative, and brand health. This is NOT about their product quality vs competitors — it's about what a seller needs to know before calling.",`+
-    `"glassdoorRating":"Glassdoor employer rating as a number e.g. 3.8 — search Glassdoor for this company. Return the number only (e.g. '3.8'). Empty string if not found or not on Glassdoor. Do NOT return text like 'Not found' — numbers only or empty string.",`+
+    `"glassdoorRating":"Glassdoor employer rating as a number e.g. '3.8'. Use training knowledge — most companies with 500+ employees have a Glassdoor rating between 3.0 and 4.5. Return the number ONLY. Empty string if genuinely unsure. NEVER 'Not found'.",`+
     `"g2Rating":"G2 rating as number e.g. 4.2 — only for software/SaaS companies, empty string otherwise",`+
     `"npsSignal":"Consumer brand health signals when relevant (brand loyalty, market share trajectory, customer satisfaction trends). Useful context for understanding the company's position, not for comparing their products to competitors.",`+
     `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found or not applicable",`+
@@ -1508,16 +1508,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       // by the dedicated p6 call which has its own web_search budget + fallback.
       const prompt =
         `Search for recent information about "${co}". Use at least one search specifically for press releases.\n\n`+
-        `SEARCH STRATEGY:\n`+
-        `- Search 1: "${co}" news OR press release OR announcement last 12 months\n`+
-        `- Search 2: "${co}" site:prnewswire.com OR site:businesswire.com OR site:globenewswire.com 2025 OR 2026\n`+
-        `Press releases reveal: product launches, partnerships, executive hires, funding, expansions, awards, and strategic priorities the company chose to publicize.\n\n`+
-        `RECENCY RULE: ONLY include events, headlines, or signals from the last 18 months. If a source is older than 18 months, REJECT it — do not include it as "recent." Include the date or year in every headline.\n\n`+
-        `PRIORITY ORDER:\n`+
-        `1. Press releases and company announcements from the last 12 months — these are HIGHEST VALUE\n`+
-        `2. News coverage: M&A, leadership changes, funding, strategic moves (last 18 months only)\n`+
-        `3. Ratings and sentiment: ALWAYS include a search specifically for "${co} Glassdoor rating" or "${co} site:glassdoor.com" — employer review ratings are critical. Also search G2 (if software), Trustpilot, Amazon reviews (if consumer products)\n`+
-        `4. Growth signals or buying indicators (last 12 months only)\n`+
+        `SEARCH STRATEGY (you have 2 searches — use BOTH, one for each purpose):\n`+
+        `- Search 1 (NEWS): "${co}" news OR press release 2025 OR 2026\n`+
+        `- Search 2 (REVIEWS — MANDATORY): "${co}" Glassdoor rating reviews\n`+
+        `You MUST use Search 2 for Glassdoor. Every company with 100+ employees has Glassdoor reviews. BHN has thousands. A missing Glassdoor rating for a major employer is a data failure.\n\n`+
+        `RECENCY RULE: ONLY include events, headlines, or signals from the last 18 months. Include the date or year in every headline.\n\n`+
+        `WHAT TO EXTRACT:\n`+
+        `1. Press releases and company announcements from the last 12 months\n`+
+        `2. News coverage: M&A, leadership changes, funding, strategic moves\n`+
+        `3. From Search 2: Glassdoor employer rating (a number like 3.8), CEO approval %, employee sentiment themes. Also G2 rating if software company.\n`+
+        `4. Growth signals or buying indicators\n`+
         `5. Workforce and culture profile\n`+
         `Return ONLY raw JSON (start with {):\n`+
         `{"recentHeadlines":[{"headline":"Headline + source + date","relevance":"Why it matters","type":"press_release or news or review"},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""},{"headline":"","relevance":"","type":""}],`+
