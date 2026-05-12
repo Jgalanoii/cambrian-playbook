@@ -1291,7 +1291,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
     `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"e.g. ~200,000",`+
-    `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"linkedin.com/company/name",`+
+    `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if you are certain it's correct (e.g. linkedin.com/company/gusto). A wrong LinkedIn link is worse than no link. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
@@ -9997,13 +9997,13 @@ ${isOpen
                     {/* Website + LinkedIn */}
                     {(brief.website||brief.linkedIn)&&(
                       <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>
-                        {brief.website&&(
+                        {brief.website && /^[a-z0-9]([a-z0-9-]*\.)+[a-z]{2,}/i.test(brief.website.replace(/^https?:\/\//,"")) && (
                           <a href={"https://"+brief.website.replace(/^https?:\/\//,"")} target="_blank" rel="noopener noreferrer"
                             style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"var(--navy)",textDecoration:"none",background:"var(--navy-bg)",border:"1px solid #1B3A6B44",borderRadius:"var(--r-lg)",padding:"4px 12px",fontWeight:600}}>
                             🌐 {brief.website.replace(/^https?:\/\//,"")}
                           </a>
                         )}
-                        {brief.linkedIn&&(
+                        {brief.linkedIn && /linkedin\.com\/company\/[a-z0-9-]+/i.test(brief.linkedIn) && (
                           <a href={"https://"+brief.linkedIn.replace(/^https?:\/\//,"")} target="_blank" rel="noopener noreferrer"
                             style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"#0a66c2",textDecoration:"none",background:"#e8f3fc",border:"1px solid #0a66c244",borderRadius:"var(--r-lg)",padding:"4px 12px",fontWeight:600}}>
                             in {brief.linkedIn.replace(/^https?:\/\//,"").replace(/^linkedin\.com\/company\//,"")}
