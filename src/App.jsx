@@ -8746,6 +8746,10 @@ ${isOpen
               </button>
             </div>
             )}
+            {/* Bottom action bar */}
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
+              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
+            </div>
           </div>
         )}
 
@@ -9081,8 +9085,13 @@ ${isOpen
         {/* ── STEP 2: TARGET ACCOUNT REVIEW ── */}
         {step===3&&(
           <div className="page">
-            <div className="page-title">Your Best Matches</div>
-            <div className="page-sub">All {rows.length} companies ranked by how well they fit your buyer profile. Click any company to build a deep research brief.</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+              <div>
+                <div className="page-title">Your Best Matches</div>
+                <div className="page-sub">All {rows.length} companies ranked by how well they fit your buyer profile. Click any company to build a deep research brief.</div>
+              </div>
+              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Accounts", getAccountsCSVData())} />
+            </div>
 
             {/* ICP changed since last scoring — suggest re-score */}
             {icpLastEditTime > 0 && lastScoreTime > 0 && icpLastEditTime > lastScoreTime && Object.keys(fitScores).length > 0 && (
@@ -11278,6 +11287,13 @@ ${isOpen
                 )}
               </div>
             </div>
+            {/* Bottom action bar */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)",flexWrap:"wrap"}}>
+              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
+              <button className="btn btn-green" onClick={runPostCall} disabled={postLoading}>
+                {postLoading ? "Routing..." : "End Call & Route Deal →"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -11285,8 +11301,13 @@ ${isOpen
         {/* ── STEP 7: POST-CALL ── */}
         {step===8&&(
           <div className="page">
-            <div className="page-title">Post-Call Route</div>
-            <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, and a follow-up email that sounds like you were actually listening. Because you were.</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+              <div>
+                <div className="page-title">Post-Call Route</div>
+                <div className="page-sub">RIVER synthesis for <strong>{selectedAccount?.company}</strong> — deal routing, next steps, and a follow-up email that sounds like you were actually listening. Because you were.</div>
+              </div>
+              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
+            </div>
 
             {/* ── Transcript upload — analyze a prior call ── */}
             {!postCall && !postLoading && (
