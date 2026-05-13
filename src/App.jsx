@@ -5538,7 +5538,7 @@ ${isOpen
             (current.fundingProfile ? `FUNDING: ${current.fundingProfile.slice(0, 200)}\n` : "") +
             (current.revenue ? `REVENUE: ${current.revenue}\n` : "") +
             (current.employeeCount ? `EMPLOYEES: ${current.employeeCount}\n` : "") +
-            `\nRULES:\n- Each bullet must be ONE specific, grounded sentence\n- topFinding: the single most important fact a seller needs to know RIGHT NOW\n- topOpportunity: the single biggest reason to engage them right now\n- topRisk: the single biggest obstacle to selling into them\n- NEVER use placeholder text. Empty string if genuinely unknown.\n\n` +
+            `\nRULES:\n- Each bullet must be ONE specific, grounded sentence — cite a real fact, product, initiative, or metric. Not generic.\n- topFinding: the single most important SPECIFIC fact about ${co} that changes how you'd approach them\n- topOpportunity: the single biggest reason to engage ${co} RIGHT NOW — a specific gap, initiative, or timing window\n- topRisk: the single biggest SPECIFIC obstacle — name the incumbent, constraint, or competitive dynamic\n- NEVER be generic. Every sentence must contain a fact that's ONLY true about ${co}.\n- NEVER use placeholder text. Empty string if genuinely unknown.\n\n` +
             `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
             { maxTokens: 600 }
           ).then(r => {
@@ -5551,15 +5551,46 @@ ${isOpen
     };
     // Fire after earlyDone (primary) and again after allDone (fallback if first attempt missed)
     earlyDone.then(() => setTimeout(fireTldr, 800));
+    // After ALL sections resolve, ALWAYS re-generate TL;DR with full context.
+    // The early attempt (after earlyDone) gives fast display but thin context.
+    // This attempt replaces it with a version grounded in strategy, headlines,
+    // financials — everything the brief now knows. Quality > speed here.
     allDone.then(() => setTimeout(() => {
       setBrief(current => {
-        if (current && !current.tldr?.topFinding) {
-          console.warn("[tldr] Still empty after allDone — firing fallback");
-          setTimeout(fireTldr, 100);
-        }
+        if (!current?.companySnapshot) return current;
+        const co = member.company;
+        const fullContext = [
+          current.companySnapshot ? `Company: ${current.companySnapshot.slice(0, 400)}` : "",
+          current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0, 300)}` : "",
+          current.openingAngle ? `Opening: ${current.openingAngle.slice(0, 200)}` : "",
+          current.fundingProfile ? `Funding: ${current.fundingProfile.slice(0, 200)}` : "",
+          current.revenue ? `Revenue: ${current.revenue}` : "",
+          current.employeeCount ? `Employees: ${current.employeeCount}` : "",
+          (current.recentHeadlines||[]).slice(0,3).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean).join("; "),
+          (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
+          current.competitivePositioning?.marketPosition ? `Market: ${current.competitivePositioning.marketPosition.slice(0, 200)}` : "",
+          current.financialDeepDive?.revenueTrend ? `Trend: ${current.financialDeepDive.revenueTrend.slice(0, 200)}` : "",
+        ].filter(Boolean).join("\n");
+
+        callAI(
+          `You are a senior sales strategist. Generate a 3-part Quick Take on ${co} for a sales rep.\n\n` +
+          `FULL COMPANY INTELLIGENCE:\n${fullContext}\n\n` +
+          `RULES:\n- Each bullet must be ONE specific, grounded sentence — cite a real fact from the intelligence above\n` +
+          `- topFinding: the single most important fact about ${co} that changes how a seller approaches them. Be SPECIFIC — name a product, initiative, metric, or structural reality. Not generic.\n` +
+          `- topOpportunity: the single biggest reason to engage ${co} RIGHT NOW — a timing window, initiative, pain point, or gap. Specific to THIS company.\n` +
+          `- topRisk: the single biggest obstacle — an incumbent, budget constraint, organizational complexity, or competitive dynamic. Specific, not generic.\n` +
+          `- NEVER use placeholder text. NEVER be generic. Every sentence must contain a fact that's ONLY true about ${co}.\n\n` +
+          `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
+          { maxTokens: 600 }
+        ).then(r => {
+          if (r?.tldr?.topFinding) {
+            console.log("[tldr] Full-context TL;DR generated — replacing early version");
+            setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev);
+          }
+        }).catch(() => {});
         return current;
       });
-    }, 500));
+    }, 800));
 
     earlyDone.then(() => {
       setTimeout(() => {
