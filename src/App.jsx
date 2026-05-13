@@ -5523,38 +5523,10 @@ ${isOpen
 
     // Hypothesis only needs overview + strategy (p1+p3). Fire on earlyDone
     // so it starts 5-10s before slow web_search calls finish.
-    // ── TL;DR — dedicated micro-call (fires twice: after earlyDone + after allDone as fallback)
-    const fireTldr = () => {
-      setBrief(current => {
-        if (!current || current.tldr?.topFinding) return current;
-        // Need SOME context to generate from — use whatever's available
-        const context = current.companySnapshot || current.strategicTheme || member.company;
-        if (!context || context.length < 10) return current;
-        const co = member.company;
-          callAI(
-            `You are a senior sales strategist. Generate a 3-part Quick Take on ${co} for a sales rep.\n\n` +
-            `COMPANY CONTEXT:\n${(current.companySnapshot || "").slice(0, 400)}\n` +
-            (current.strategicTheme ? `STRATEGY: ${current.strategicTheme.slice(0, 300)}\n` : "") +
-            (current.fundingProfile ? `FUNDING: ${current.fundingProfile.slice(0, 200)}\n` : "") +
-            (current.revenue ? `REVENUE: ${current.revenue}\n` : "") +
-            (current.employeeCount ? `EMPLOYEES: ${current.employeeCount}\n` : "") +
-            `\nRULES:\n- Each bullet must be ONE specific, grounded sentence — cite a real fact, product, initiative, or metric. Not generic.\n- topFinding: the single most important SPECIFIC fact about ${co} that changes how you'd approach them\n- topOpportunity: the single biggest reason to engage ${co} RIGHT NOW — a specific gap, initiative, or timing window\n- topRisk: the single biggest SPECIFIC obstacle — name the incumbent, constraint, or competitive dynamic\n- NEVER be generic. Every sentence must contain a fact that's ONLY true about ${co}.\n- NEVER use placeholder text. Empty string if genuinely unknown.\n\n` +
-            `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
-            { maxTokens: 600 }
-          ).then(r => {
-            if (r?.tldr?.topFinding) {
-              setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev);
-            }
-          }).catch(() => {});
-          return current;
-        });
-    };
-    // Fire after earlyDone (primary) and again after allDone (fallback if first attempt missed)
-    earlyDone.then(() => setTimeout(fireTldr, 800));
-    // After ALL sections resolve, ALWAYS re-generate TL;DR with full context.
-    // The early attempt (after earlyDone) gives fast display but thin context.
-    // This attempt replaces it with a version grounded in strategy, headlines,
-    // financials — everything the brief now knows. Quality > speed here.
+    // ── TL;DR — single call after ALL sections resolve. Quality over speed.
+    // Waits for full context (snapshot, strategy, headlines, financials,
+    // competitive positioning) before generating. A great Quick Take in
+    // 15 seconds beats a half-baked one in 3 seconds.
     allDone.then(() => setTimeout(() => {
       setBrief(current => {
         if (!current?.companySnapshot) return current;
