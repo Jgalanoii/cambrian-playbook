@@ -31,7 +31,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   fintech: {
     name: "FinTech",
-    keywords: ["fintech", "financial technology", "neobank", "banking as a service", "baas", "lending", "regtech", "banking", "finance", "insurance", "financial services", "embedded-finance", "challenger-bank", "insurtech", "digital-assets", "capital-markets"],
+    keywords: ["fintech", "financial technology", "neobank", "banking as a service", "baas", "lending", "regtech", "banking", "finance", "financial services", "embedded-finance", "challenger-bank", "digital-assets", "capital-markets"],
     personas: ["CFO", "Head of Payments", "VP Finance Ops", "Chief Risk Officer", "CCO", "BSA Officer", "Engineering Lead", "Sponsor Bank", "Chief Compliance Officer", "General Counsel", "Internal Audit", "Fraud Ops Lead"],
     triggers: ["Regulatory action (exam finding, MRA, consent order, Section 1033)", "Incumbent vendor sunset/failure or M&A-driven price increase", "Volume threshold crossed (outgrowing processor limits)", "New product/rail launch (FedNow, RTP, card program, new geography)", "Fraud/loss event (chargeback spike, synthetic fraud, ATO)", "Sponsor bank change (re-papering required)", "Audit/SOX/ASC 606 issue forcing GL-ready reporting", "Funding round or M&A triggering stack modernization", "New Head of Risk/CCO hire (first 6 months)"],
     disqualifiers: ["Treating fintech as single market (it's 6+ sub-industries)", "Missing compliance kit for bank buyer (no SOC 2 Type II)", "No external compelling event driving timeline", "Ignoring sponsor bank dynamics (post-Synapse sensitivity)", "Under-resourcing reference calls", "Cannot pass TPRM questionnaire (SIG Lite minimum)"],

@@ -1,0 +1,33 @@
+name: knowledge-lint
+
+# Tier A of the validation harness: static analysis of the knowledge layer.
+# Zero LLM cost, zero npm dependencies -- runs in seconds on every relevant PR.
+# Hard-fails the build only on errors (parse failures, missing *_INJECTION).
+# Warnings (uncited claims, tier-3 leaks, keyword collisions) are surfaced
+# but do not block -- they are the remediation backlog, reviewed by a human.
+
+on:
+  pull_request:
+    paths:
+      - 'src/data/**'
+      - 'tests/knowledge-lint.js'
+      - 'tests/knowledge-lint.config.json'
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/data/**'
+  workflow_dispatch: {}
+
+jobs:
+  knowledge-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # No `npm install` -- the linter uses only Node built-ins.
+      - name: Run knowledge-lint
+        run: node tests/knowledge-lint.js

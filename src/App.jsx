@@ -87,6 +87,9 @@ let KL_MEDICAL_PAYMENTS_SCORING = null;
 let KL_MEDICAL_PAYMENTS_DISCOVERY = "";
 let KL_SMB_MIDMARKET = ""; // SMB & mid-market cross-cutting (buying patterns by size)
 let KL_SMB_MIDMARKET_DISCOVERY = "";
+let KL_INSURANCE = ""; // Insurance industry (carriers, MGAs, brokers, reinsurers, insurtech)
+let KL_INSURANCE_SCORING = null;
+let KL_INSURANCE_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -156,6 +159,9 @@ async function fetchKnowledgeLayer() {
     KL_MEDICAL_PAYMENTS_DISCOVERY = d.medicalPaymentsDiscovery || "";
     KL_SMB_MIDMARKET = d.smbMidmarket || "";
     KL_SMB_MIDMARKET_DISCOVERY = d.smbMidmarketDiscovery || "";
+    KL_INSURANCE = d.insuranceIndustry || "";
+    KL_INSURANCE_SCORING = d.insuranceScoring || null;
+    KL_INSURANCE_DISCOVERY = d.insuranceDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -224,6 +230,9 @@ const BLANK_BRIEF = {
   financialDeepDive:null, // {revenueTrend, marginTrend, segmentBreakdown, earningsInsight, capitalPriorities, guidanceQuote}
   competitivePositioning:null, // {marketPosition, primaryCompetitors:[{name,strength,weakness,recentMove}], whereWinning, whereLosing, displacementAngle}
   boardAndInvestors:null, // {boardMembers:[{name,title,background,significance}], leadInvestors, investmentThesis, boardMandate}
+  // Data confidence — anti-hallucination provenance tracking
+  _dataConfidence:null, // "high" | "medium" | "low" — computed after all sections resolve
+  _sectionsGrounded:0, // count of sections that used web search successfully
 };
 
 const RKEYS = ["reality","impact","vision","entryPoints","route"];
@@ -802,6 +811,23 @@ function getInvestorInjection(sellerICP, targetIndustry) {
   return "\n" + KL_INVESTOR;
 }
 
+// ── INSURANCE INDUSTRY INJECTION ───────────────────────────────────────
+// Triggers for carriers, MGAs, brokers, reinsurers, insurtechs, and
+// insurance-adjacent services. Core keywords trigger on 1 match;
+// broader terms need 2 to avoid false positives.
+const INSURANCE_CORE_KW = ["insurance carrier", "property casualty", "p&c insurance", "underwriting", "claims management", "policyholder", "actuarial", "reinsurance", "managing general agent", "insurtech", "admitted carrier", "excess and surplus", "combined ratio", "policy administration", "fronting carrier", "life insurance", "annuity", "specialty lines"];
+const INSURANCE_BROAD_KW = ["insurance", "insurer", "mga", "carrier", "claims", "adjuster", "premium", "deductible", "indemnity"];
+function getInsuranceInjection(sellerICP, targetIndustry) {
+  if (!KL_INSURANCE) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  // Core insurance terms trigger with 1 match
+  if (INSURANCE_CORE_KW.some(kw => text.includes(kw))) return "\n" + KL_INSURANCE;
+  // Broader terms need 2 matches to avoid false positives ("claims" alone is too generic)
+  if (INSURANCE_BROAD_KW.filter(kw => text.includes(kw)).length >= 2) return "\n" + KL_INSURANCE;
+  return "";
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -848,6 +874,20 @@ async function claudeFetch(body, { retries = 3, extraHeaders = {} } = {}) {
   return { error: { type: "unavailable", message: "Our AI engine is temporarily unavailable — try again in a moment." } };
 }
 
+// ── UNIVERSAL ANTI-HALLUCINATION GUARD ──────────────────────────────────
+// Injected into the system prompt of EVERY AI call (callAI, streamAI,
+// streamAIWithSearch). This is the last line of defense — individual
+// prompts add domain-specific guards, but this catches everything.
+const ANTI_HALLUCINATION_SYSTEM = `You are a JSON API. Output only valid JSON. Use only ASCII punctuation.
+ANTI-HALLUCINATION RULES (apply to EVERY response):
+- NEVER fabricate statistics, market share figures, revenue numbers, employee counts, or financial metrics. If you do not have verified data, return an empty string.
+- NEVER invent person names, executive names, or attribute quotes to people. If you cannot verify a name, describe the role instead.
+- NEVER invent company names, customer names, or partnership claims. Only cite companies you are certain exist and are relevant.
+- NEVER invent conference names, event dates, or future dates. You do not reliably know the current date or upcoming events.
+- NEVER present review-platform metrics (G2 rankings, Capterra product counts, review-site "market share") as actual market share or economic data.
+- If data was not provided in the context above or found via web search, return an empty string for that field. Empty is ALWAYS better than fabricated.
+- A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.`;
+
 async function streamAI(prompt, onChunk, maxTok=2000) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Wrap the initial fetch in retry. Once the stream is open we let it run
@@ -862,6 +902,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
         model: activeModel(),
         max_tokens: maxTok,
         temperature: 0,
+        system: ANTI_HALLUCINATION_SYSTEM,
         messages: [
           { role: 'user', content: prompt },
           { role: 'assistant', content: '{' }
@@ -904,6 +945,91 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
   } catch { return null; }
 }
 
+// streamAIWithSearch: like streamAI but with web_search tool support.
+// The model may call web_search before generating JSON. We:
+//   - Pass tools in the request body (server already handles this)
+//   - Remove the assistant "{" prefill (incompatible with tool use)
+//   - Track content block types — only feed TEXT blocks to onChunk
+//   - Use extractJsonWithKey for final parse (handles preamble text)
+// anchorKey: the expected top-level JSON key to find (e.g. "elevatorPitch")
+async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null } = {}) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let response = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    response = await fetch('/api/claude-stream', {
+      method: 'POST',
+      headers: { ...authHeaders(), ..._trackingCtx },
+      body: JSON.stringify({
+        model: activeModel(),
+        max_tokens: maxTok,
+        temperature: 0,
+        system: ANTI_HALLUCINATION_SYSTEM,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: maxSearches }],
+        messages: [
+          { role: 'user', content: prompt },
+          // No assistant prefill — model must decide whether to search first
+        ],
+      }),
+    });
+    if (response.status !== 529 && response.status !== 429) break;
+    const wait = response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
+    console.warn(`[claude-stream-search] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
+    await sleep(wait);
+  }
+  if (!response || !response.body) return null;
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '';           // All text from text-type content blocks
+  let currentBlockType = null; // Track what kind of block we're in
+  let searchFired = false;     // Did the model use web_search?
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      try {
+        const event = JSON.parse(data);
+        // Track block starts to know when we're in text vs tool_use vs tool_result
+        if (event.type === 'content_block_start') {
+          currentBlockType = event.content_block?.type || null;
+          if (currentBlockType === 'web_search_tool_result' || currentBlockType === 'tool_use') {
+            if (!searchFired && onStatus) { onStatus("Searching..."); searchFired = true; }
+          }
+        }
+        if (event.type === 'content_block_stop') {
+          currentBlockType = null;
+        }
+        // Only accumulate text deltas from text blocks (not tool_use/tool_result)
+        if (event.type === 'content_block_delta' && event.delta?.text && currentBlockType === 'text') {
+          fullText += event.delta.text;
+          if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, ""));
+        }
+      } catch {}
+    }
+  }
+  // Parse: use extractJsonWithKey if anchor provided, else try direct parse
+  try {
+    const cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").trim();
+    if (anchorKey) {
+      const result = extractJsonWithKey(cleaned, anchorKey);
+      if (result) return stripCitations(result);
+    }
+    // Fallback: try to find JSON object in the text
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      return stripCitations(JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)));
+    }
+    return null;
+  } catch { return null; }
+}
+
 // callAI: JSON-specific wrapper around claudeFetch. Delegates all HTTP/retry
 // logic to claudeFetch, then extracts + repairs JSON from the response.
 async function callAI(prompt, { maxTokens = 5500 } = {}){
@@ -911,7 +1037,7 @@ async function callAI(prompt, { maxTokens = 5500 } = {}){
     model:activeModel(),
     max_tokens:maxTokens,
     temperature:0,
-    system:"You are a JSON API. Output only valid JSON. Use only ASCII punctuation — no curly quotes, no em-dashes.",
+    system:ANTI_HALLUCINATION_SYSTEM,
     messages:[
       {role:"user",content:prompt},
       {role:"assistant",content:"{"},
@@ -1238,7 +1364,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     enrichmentCtx +
     `RULE: All fields describe ${co} NOT the seller. ASCII only.\n`+
     `EMPTY FIELD RULE (CRITICAL): If a fact is unknown, return an EMPTY STRING "". NEVER return "Not found", "Not specified", "Not available", "N/A", "Unknown", "[Verify]", or any placeholder text. The UI handles empty fields gracefully — placeholder text breaks the display. Empty string is ALWAYS correct for unknown data.\n`+
-    `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string. Use your training knowledge confidently for well-known companies; only leave blank for genuinely obscure facts.\n`+
+    `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string.\n`+
+    `DATA CONFIDENCE RULE (CRITICAL — a brief with 5 verified facts is worth more than one with 15 guesses):\n`+
+    `- If web search found no data for a field, return empty string "" — do NOT fill it from training knowledge alone.\n`+
+    `- If a figure is uncertain, present as a range (e.g. "$2-3B") or add "(estimate)" — never state an uncertain figure as fact.\n`+
+    `- For data-scarce targets (mutuals, private companies, small firms, nonprofits): include "Limited public data available" in companySnapshot so the rep knows to verify before the call.\n`+
+    `- NEVER fabricate a Glassdoor rating, revenue figure, executive name, or acquisition that did not appear in web search results or the Apollo data above.\n`+
+    `- A rep who cites a wrong fact in a sales call loses credibility permanently. Empty is safe; wrong is fatal.\n`+
     `CONSISTENCY: Return EXACTLY the structure shown — same field names, same array lengths.\n`+
     `STABILITY: For the same company, your output should be stable across runs. Use established facts (revenue, HQ, founding year, executive names) not ephemeral observations. Anchor every claim in verifiable data, not interpretive commentary that could vary between runs. If multiple descriptions are equally valid, prefer the most specific and factual one.\n\n`+
     // Account-specific intel docs (RFPs, requirements, discovery Qs, meeting notes)
@@ -1267,6 +1399,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getBaasInjection(sellerICP, member.ind) +
     getCharitableInjection(sellerICP, member.ind) +
     getSmbMidmarketInjection(sellerICP, member.ind, member) +
+    getInsuranceInjection(sellerICP, member.ind) +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -1275,14 +1408,15 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // User sees the overview card the moment the fastest resolves (~2s)
 
   // MICRO 1: Company overview. Pre-cache (web_search, rich) → instant hit.
-  // Inline fallback uses streamAI (training-only, ~2s) for fast first paint.
+  // Inline fallback NOW ALSO uses web_search via streamAIWithSearch so that
+  // cache misses still get grounded data instead of training-data-only.
   // The pre-cache fires on account select (step 4) with web_search — by the
   // time the user clicks Build Brief, it's usually ready.
   const preCache = caches.brief || {};
   const overviewCache = preCache.overview;
   const p1 = overviewCache
     ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
-    : streamAI(baseLight+
+    : streamAIWithSearch(baseLight+
     `OWNERSHIP ACCURACY — CRITICAL:\n`+
     `- Many companies have CHANGED ownership status. Do NOT rely on stale data. Common examples: Blackhawk Network went private (acquired 2018), Dell went private then re-IPO'd, Worldpay was acquired by FIS then spun out to Global Payments.\n`+
     `- If a company was acquired, taken private, or delisted, it is PRIVATE — do NOT show a ticker.\n`+
@@ -1290,18 +1424,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"e.g. $2.4B (FY2024)","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"e.g. ~200,000",`+
+    `"revenue":"e.g. $2.4B (FY2024) — use ONLY figures from web search or Apollo data. Empty string if not found.","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"e.g. ~200,000",`+
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if you are certain it's correct (e.g. linkedin.com/company/gusto). A wrong LinkedIn link is worse than no link. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
     (partial) => {
       if (!onStream || partial.length < 40) return;
-      // Extract companySnapshot value from partial stream using regex
-      // (more reliable than JSON.parse on incomplete JSON)
       const snapMatch = partial.match(/"companySnapshot"\s*:\s*"((?:[^"\\]|\\.)*)"/);
       if (snapMatch) onStream("overview", { companySnapshot: snapMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n') });
-    }, 1800
+    }, 1800, { maxSearches: 1, anchorKey: "companySnapshot", onStatus }
   );
 
   // MICRO 2: Executives — reuse pre-cache promise/result. Never duplicate.
@@ -1406,8 +1538,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     }
   })();
 
-  // MICRO 3: Strategy + opening angle — needs seller context for "why you" (streamed)
-  const p3 = streamAI(baseFull+
+  // MICRO 3: Strategy + opening angle — needs seller context for "why you"
+  // NOW WEB-GROUNDED: uses streamAIWithSearch so elevator pitch, strategic
+  // theme, opening angle, and sentiment are grounded in live search results
+  // rather than fabricated from training data.
+  const p3 = streamAIWithSearch(baseFull+
+    `SEARCH INSTRUCTION: Search for "${co}" recent strategy, news, earnings, and market position. Use the search results to ground every claim in your analysis.\n\n`+
     `TEACHING ANGLE: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption about their industry"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
     `SOCIAL PROOF: Name a SPECIFIC similar company as proof. Lead with a precise stat or insight.\n`+
     `DEPTH REQUIREMENT: Every field must contain SPECIFIC, actionable intelligence — not generic descriptions. "They're focused on digital transformation" is useless. "${co} is investing $200M in cloud migration after their Q3 earnings miss" is valuable.\n`+
@@ -1416,21 +1552,21 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Do NOT invent executive names. If you're unsure who the CEO is, describe the role without naming anyone. "The CEO" not "CEO Jane Doe."\n`+
     `- Do NOT fabricate statistics about the seller (customer counts, revenue, market share). Only cite numbers from the proof pack above.\n`+
     `- Do NOT suggest use cases that require capabilities in the seller's exclusion list.\n`+
-    `- Do NOT attribute direct quotes to executives unless you have a verifiable source. Paraphrase instead.\n`+
-    `- Every claim must be grounded in either (a) web search results, (b) the seller proof pack, or (c) well-established training knowledge for major companies. If none apply, omit the claim.\n\n`+
+    `- Do NOT attribute direct quotes to executives unless you found the quote in web search results. Paraphrase instead.\n`+
+    `- Every claim must be grounded in either (a) your web search results, or (b) the seller proof pack. If neither provides data for a field, return an empty string — do NOT guess from training knowledge. A brief with 5 verified facts is worth more than one with 15 guesses.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
-    `{"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
-    `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed.",`+
+    `{"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge FROM YOUR SEARCH RESULTS. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
+    `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements FROM YOUR SEARCH RESULTS. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed. If search returned nothing, say so briefly rather than fabricating.",`+
     `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
-    `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
+    `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} FROM YOUR SEARCH RESULTS — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
     `"onlineSentiment":"2-3 sentences synthesizing what employees, press, and the market say about ${co} as a COMPANY TO SELL INTO. Focus on: employee morale (Glassdoor themes), leadership reputation, workplace culture signals, press narrative, and brand health. This is NOT about their product quality vs competitors — it's about what a seller needs to know before calling.",`+
-    `"glassdoorRating":"Glassdoor employer rating as a number e.g. '3.8'. Use training knowledge — most companies with 500+ employees have a Glassdoor rating between 3.0 and 4.5. Return the number ONLY. Empty string if genuinely unsure. NEVER 'Not found'.",`+
-    `"g2Rating":"G2 rating as number e.g. 4.2 — only for software/SaaS companies, empty string otherwise",`+
-    `"npsSignal":"Consumer brand health signals when relevant (brand loyalty, market share trajectory, customer satisfaction trends). Useful context for understanding the company's position, not for comparing their products to competitors.",`+
-    `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found or not applicable",`+
-    `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — search for this, most large employers have it. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly.",`+
-    `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company — something that tells a seller what it's like to work with or sell into this organization","source":"Glassdoor / Indeed / press / analyst","sentiment":"positive or negative"},`+
+    `"glassdoorRating":"Glassdoor employer rating as a number e.g. '3.8'. Use ONLY a rating found in your web search results. If search did not return a Glassdoor rating, return empty string. Do NOT guess or estimate from training knowledge. NEVER 'Not found'.",`+
+    `"g2Rating":"G2 rating as number e.g. 4.2 — only for software/SaaS companies, empty string otherwise. Use ONLY ratings from search results.",`+
+    `"npsSignal":"Consumer brand health signals when relevant (brand loyalty, market share trajectory, customer satisfaction trends). Useful context for understanding the company's position, not for comparing their products to competitors. Empty string if not found in search.",`+
+    `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found in search results",`+
+    `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
+    `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
@@ -1446,21 +1582,24 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 3800
+    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus }
   );
   // relationshipSignals feature tabled
 
-  // MICRO 4: Solution mapping + contacts — shows after strategy (streamed)
+  // MICRO 4: Solution mapping + contacts — shows after strategy
+  // NOW WEB-GROUNDED: uses streamAIWithSearch so key contacts, tech stack,
+  // and organizational intelligence are grounded in live search results.
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
   // and (when possible) a named customer from the seller's proof pack above.
   const isResearchOnly = sellerUrl === "research-only";
-  const p4 = streamAI(baseFull+
+  const p4 = streamAIWithSearch(baseFull+
+    `SEARCH INSTRUCTION: Search for "${co}" leadership team, technology stack, and organizational structure. Use the search results to ground contacts and tech stack.\n\n`+
     `Return ONLY raw JSON (start with {) for ${isResearchOnly ? "organizational intelligence" : "solution fit and contacts"}:\n`+
     (isResearchOnly
       ? `This is a RESEARCH-ONLY brief. There is no selling organization. You MUST still populate ALL fields below:\n`+
         `- solutionMapping: leave as empty array []\n`+
-        `- keyContacts: identify 2-3 key decision-makers at ${co} by likely title and function — VP level or above. Fill in title, angle (what they care about, how they'd evaluate a vendor), and initials. Use training knowledge.\n`+
-        `- techStack: research or infer ${co}'s technology stack (CRM, ERP, HRIS, marketing, payments, analytics, infrastructure). Use training knowledge confidently.\n`+
+        `- keyContacts: identify 2-3 key decision-makers at ${co} by likely title and function — VP level or above. Use ONLY names found in your web search results or the Apollo-verified contacts above. If search returned no names for a role, leave name as empty string but still fill in the title and angle.\n`+
+        `- techStack: use your web search results to identify ${co}'s technology stack. If not found in search, return empty string for that field — do NOT guess.\n`+
         `- mobilizer: describe who at ${co} would champion a new technology purchase — what title, what motivates them, how to identify them.\n`+
         `- processMaturity: assess ${co}'s operational maturity (Define/Measure/Analyze/Improve/Control) based on their industry and size.\n`+
         `CRITICAL: Do NOT return empty objects. Every field except solutionMapping must have substantive content.\n`
@@ -1481,21 +1620,22 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"measurableOutcome":"Specific outcome (e.g. 'Cut HR ticket volume 30% in 90 days')"},`+
     `{"product":"","imperativeServed":"","buyerRole":"","jobToBeDone":"","painRelieved":"","gainCreated":"","challengerInsight":"","joltRiskRemover":"","fit":"","provenWith":"","measurableOutcome":""}],`+
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
-    `"keyContacts":[{"name":"Real name if known from web search (leave EMPTY STRING if not verified — do NOT guess names)","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this","initials":"XX if name known, empty string if not","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
-    `"techStack":{"crm":"e.g. Salesforce — or empty string if unknown","erp":"e.g. SAP — or empty string","hris":"e.g. Workday — or empty string","marketing":"e.g. HubSpot — or empty string","payments":"e.g. Stripe — or empty string","analytics":"e.g. Tableau — or empty string","infrastructure":"e.g. AWS — or empty string","other":[]},`+
+    `"keyContacts":[{"name":"Use ONLY names found in your web search results or the Apollo-verified contacts above. If search returned no name for this role, leave as EMPTY STRING — do NOT guess or fabricate names","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this even if name is unknown","initials":"First+last initials if name is known, empty string if not","angle":"Why they feel this pain daily, what they personally win if this succeeds, how to reach them"},{"name":"","title":"","initials":"","angle":""}],`+
+    `"techStack":{"crm":"Use ONLY tech found in web search results (job postings, case studies, press). Empty string if not found — do NOT guess.","erp":"empty string if not found","hris":"empty string if not found","marketing":"empty string if not found","payments":"empty string if not found","analytics":"empty string if not found","infrastructure":"empty string if not found","other":[]},`+
     `"mobilizer":{"description":"Who is the likely Mobilizer at ${co}? The person who asks 'how do we make this happen?' — specific title, function, and what motivates them to champion this deal internally.","identifyingBehavior":"How will the seller know they've found this person in a meeting? What do they say or ask that a Talker or Blocker wouldn't?","teachingAngle":"The specific insight to teach THROUGH this Mobilizer to the broader buying group — one surprising fact or case study that reframes their assumptions."},`+
     `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
     (partial) => {
       if (!onStream || partial.length < 100) return;
       // For p4, try JSON parse since solutionMapping is complex
       try {
+        const first = partial.indexOf('{');
         const last = partial.lastIndexOf('}');
-        if (last > 0) {
-          const parsed = JSON.parse(partial.slice(0, last + 1));
+        if (first >= 0 && last > first) {
+          const parsed = JSON.parse(partial.slice(first, last + 1));
           if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
         }
       } catch { /* partial — wait for more */ }
-    }, 4500
+    }, 4500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus }
   );
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
@@ -1769,7 +1909,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
           `Return raw JSON:\n`+
           `{"competitivePositioning":{`+
-          `"marketPosition":"2-3 sentences: where ${co} sits in the market. Market share if known, category leadership or challenger status, analyst positioning (Gartner MQ, Forrester Wave, G2 Grid if applicable).",`+
+          `"marketPosition":"2-3 sentences: where ${co} sits in the market. Category leadership or challenger status, analyst positioning (Gartner MQ, Forrester Wave if applicable). CRITICAL: Do NOT cite G2 Grid rankings, review-site 'market share' percentages, or product-listing counts as real market share. G2/Capterra/TrustRadius rank by reviews and traffic, NOT by actual revenue or market share. If the only market-share data available is from a review platform, omit it.",`+
           `"primaryCompetitors":[{"name":"Competitor name","strength":"Their #1 advantage over ${co}","weakness":"Where ${co} beats them","recentMove":"Latest competitive action (launch, acquisition, pivot, loss)"}],`+
           `"whereWinning":"1-2 sentences: deal types, segments, or use cases where ${co} consistently wins and why",`+
           `"whereLosing":"1-2 sentences: where they lose deals and to whom — be specific about WHY (price, feature, relationship, incumbent)",`+
@@ -1850,7 +1990,20 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeDeepIntel = (r7, r8, r9) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), deepIntel:false}};
-    if (r7?.competitivePositioning) next.competitivePositioning = r7.competitivePositioning;
+    if (r7?.competitivePositioning) {
+      const cp = { ...r7.competitivePositioning };
+      // Post-process: strip review-platform metrics that masquerade as market share.
+      // G2/Capterra "market share" is review volume, not economics. These patterns
+      // have caused the worst hallucinations (e.g. "0.05% market share" for a market leader).
+      if (cp.marketPosition) {
+        cp.marketPosition = cp.marketPosition
+          .replace(/\b0\.\d+%\s*market\s*(?:share|presence)\b/gi, "")
+          .replace(/\b\d{2,3}[\s-]+(?:competitor|product|alternative)s?\b/gi, "")
+          .replace(/ranked?\s*#?\d+\s*(?:of|out of|among)\s*\d+\s*(?:products?|competitors?|alternatives?)/gi, "")
+          .replace(/\s{2,}/g, " ").trim();
+      }
+      next.competitivePositioning = cp;
+    }
     if (r8?.boardAndInvestors) next.boardAndInvestors = r8.boardAndInvestors;
     if (r9?.financialDeepDive) next.financialDeepDive = r9.financialDeepDive;
     return next;
@@ -3312,6 +3465,15 @@ export default function App(){
   const[favPanelOpen,setFavPanelOpen]=useState(false);
   const[sessionMode,setSessionMode]=useState(sbUser ? "full" : "quick"); // "full" | "quick" (guests default to quick)
   const[hubspotStatus,setHubspotStatus]=useState(null); // null | {connected:bool, portalId:string}
+  // Re-check HubSpot status if still null when token is available — the login
+  // check (line 7085) can fail silently on slow networks or cold-start timeouts.
+  const hubspotCheckedRef=useRef(false);
+  useEffect(()=>{
+    if(hubspotStatus!==null||hubspotCheckedRef.current||!sbToken) return;
+    hubspotCheckedRef.current=true;
+    fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({action:"status"})})
+      .then(r=>r.ok?r.json():null).then(d=>{if(d)setHubspotStatus(d);}).catch(()=>{});
+  },[sbToken,hubspotStatus]);
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
   const lastGenSig = useRef({ icp: "", brief: "", hypo: "", postCall: "" });
@@ -3780,7 +3942,7 @@ ${scaleGuidance}
 - Do NOT return companies from the "known customers" list — they are already customers.
 - AVOID companies matching the disqualifiers.
 - Distribute across the listed industries — do not cluster in one vertical.
-- Be CONFIDENT. You know tens of thousands of real companies across every US industry from training data. Use that knowledge. Do NOT refuse, apologize, or say you can't verify. Return 20 companies.
+- Return REAL companies you are confident exist. Do NOT invent company names. If you cannot fill 20 slots with companies you are certain are real, return fewer rather than fabricating. 15 real companies is better than 20 with 5 invented ones.
 - OWNERSHIP ACCURACY: If a company was acquired or went private, say "Private" — NEVER include a stale ticker. Only include a ticker if currently publicly traded.
 - QUALITY MIX: Return 15-20 STRONG fits (companies you are confident match the ICP well) followed by 10-15 STRETCH targets (companies that partially match — right industry but wrong size, right size but adjacent industry, or companies where a specific relationship or context could make them viable). This gives the seller both high-confidence targets and exploratory opportunities.
 - CONSISTENCY: For the same seller and ICP inputs, return the same core companies every time. Anchor on the most obvious, well-known companies first, then fill remaining slots. Sort output alphabetically by company name.
@@ -4062,6 +4224,11 @@ ${scaleGuidance}
             `High-fit: ${KL_MEDICAL_PAYMENTS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_MEDICAL_PAYMENTS_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") +
+        (KL_INSURANCE_SCORING && getInsuranceInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nINSURANCE VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_INSURANCE_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_INSURANCE_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CALIBRATION: Adjust scoring by company size. SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Score higher when company size matches seller's sweet spot.\n`
           : "") +
@@ -4070,7 +4237,7 @@ ${scaleGuidance}
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [named customer] — same vertical, comparable employee count, and identical buyer persona.","incumbentRisk":"No known incumbent in this category. Greenfield opportunity with moderate integration requirements.","orgSize":"~50K employees","ownership":"CURRENT status only — if company was acquired or went private, say Private (acquired by X). NEVER include a stale ticker for a company that delisted. No ticker unless you are certain it is currently listed.","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [named customer from the seller's proof pack above] — same vertical, comparable employee count, and identical buyer persona. If no close match exists, say so honestly.","incumbentRisk":"Name the incumbent vendor ONLY if you are certain. If uncertain, say 'Unknown — research needed'. Do NOT invent vendor names.","orgSize":"Employee count ONLY if you are confident — otherwise empty string. Do NOT guess.","ownership":"CURRENT status only — if company was acquired or went private, say Private (acquired by X). NEVER include a stale ticker for a company that delisted. No ticker unless you are certain it is currently listed. Empty string if uncertain.","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped — empty string if uncertain"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt, { maxTokens: 7500 });
@@ -4594,9 +4761,9 @@ ${isOpen
       `"tractionChannels":["Primary GTM channel","Secondary","Tertiary"],`+
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
       `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
-      `"customerExamples":["VERIFIED customer 1 — from research or certain training knowledge","Customer 2","Customer 3"],`+
-      `"relevantEvents":[{"name":"REAL event name (e.g. Money20/20, SHRM Annual, NRF Big Show)","date":"FUTURE dates only — e.g. 'Oct 26-29, 2026' or 'June 2027'","city":"City, State/Country — use the NEXT scheduled location, not last year's","url":"Official event website URL (e.g. https://www.money2020.com)"}]}}`+
-      `\n\nFor relevantEvents: TODAY IS ${new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}. Return 3-5 REAL conferences where the seller's ICP buyers attend. CRITICAL: every event MUST be in the FUTURE (after today). Use the NEXT upcoming edition — not last year's dates, city, or URL. If you only know the typical month, project forward to the next occurrence (e.g. if it's usually in October, use October ${new Date().getMonth()>=9?new Date().getFullYear()+1:new Date().getFullYear()}). NEVER return a past event.`;
+      `"customerExamples":["Customer names from the Phase 1 research above ONLY — do NOT add names from training knowledge. If research found no customers, return empty array."],`+
+      `"relevantEvents":[{"name":"Industry conference name — ONLY conferences you found in the Phase 1 research above or that are well-established annual events (Money20/20, NRF Big Show, HIMSS, etc.)","date":"Empty string — do NOT guess dates. Dates change yearly and your training data is stale.","city":"Empty string — do NOT guess cities. Locations change yearly.","url":"Official website URL if you are CERTAIN, otherwise empty string"}]}}`+
+      `\n\nFor relevantEvents: Return ONLY well-known, established industry conferences that you are CERTAIN exist (e.g. Money20/20, SHRM Annual, NRF Big Show, HIMSS, RSA Conference). Do NOT guess dates, cities, or URLs — leave those as empty strings. The UI will link to search results. 3 verified event names with empty dates is better than 5 events with fabricated dates. NEVER invent a conference name.`;
 
     try{
       const d2 = await claudeFetch({
@@ -5116,7 +5283,8 @@ ${isOpen
       const r = await callAI(
         `What is the PRIMARY website domain for the company "${name.trim()}"?\n` +
         `Return ONLY raw JSON: {"url":"company.com","industry":"Primary vertical","employees":"e.g. ~5,000"}\n` +
-        `If unknown, return {"url":"","industry":"","employees":""}`
+        `ACCURACY: Only return a URL you are CERTAIN is correct. A wrong URL is worse than no URL. Only return employee count for well-known companies. Empty string for any field you are not confident about.\n` +
+        `If unknown or uncertain, return {"url":"","industry":"","employees":""}`
       );
       if (r?.url) {
         setQuickEntries(prev => prev.map((e, j) => j === idx ? {
@@ -5174,8 +5342,9 @@ ${isOpen
         const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
         const result = await callAI(
           `For each company, return the primary industry vertical, estimated employee count, and ownership type.\n` +
-          `Use training knowledge confidently. Empty string if truly unknown.\n` +
-          `OWNERSHIP ACCURACY: Many companies have changed ownership. If acquired or taken private, say "Private" — NEVER include a stale ticker. Only include a ticker if you are certain the company is CURRENTLY publicly traded. A wrong ticker destroys credibility.\n\n` +
+          `ACCURACY OVER COMPLETENESS: Return empty string for any field you are not confident about. An empty employee count is better than a fabricated one. An empty ownership field is better than a wrong ticker.\n` +
+          `OWNERSHIP ACCURACY: Many companies have changed ownership. If acquired or taken private, say "Private" — NEVER include a stale ticker. Only include a ticker if you are certain the company is CURRENTLY publicly traded.\n` +
+          `EMPLOYEE COUNT: Only provide if you are reasonably confident (well-known companies). For unfamiliar companies, return empty string.\n\n` +
           `Companies (Name|URL):\n${companiesStr}\n\n` +
           `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"Public or Private or PE-backed — no ticker unless certain","url":"verified domain or empty"}]}`
         );
@@ -5546,19 +5715,48 @@ ${isOpen
         ].filter(Boolean).join("\n");
 
         callAI(
-          `You are a senior sales strategist. Generate a 3-part Quick Take on ${co} for a sales rep.\n\n` +
+          `You are a senior sales strategist. Extract a 3-part Quick Take on ${co} from the intelligence below.\n\n` +
           `FULL COMPANY INTELLIGENCE:\n${fullContext}\n\n` +
-          `RULES:\n- Each bullet must be ONE specific, grounded sentence — cite a real fact from the intelligence above\n` +
-          `- topFinding: the single most important fact about ${co} that changes how a seller approaches them. Be SPECIFIC — name a product, initiative, metric, or structural reality. Not generic.\n` +
-          `- topOpportunity: the single biggest reason to engage ${co} RIGHT NOW — a timing window, initiative, pain point, or gap. Specific to THIS company.\n` +
-          `- topRisk: the single biggest obstacle — an incumbent, budget constraint, organizational complexity, or competitive dynamic. Specific, not generic.\n` +
-          `- NEVER use placeholder text. NEVER be generic. Every sentence must contain a fact that's ONLY true about ${co}.\n\n` +
+          `EXTRACTION RULES (these are absolute — violation means the output is wrong):\n` +
+          `1. You may ONLY state facts that appear in the FULL COMPANY INTELLIGENCE section above. If a fact, number, percentage, or claim is not written above, you CANNOT use it.\n` +
+          `2. Do NOT add any statistics, market share figures, revenue numbers, competitor counts, or percentages from your own knowledge. ZERO. Only numbers that appear verbatim in the intelligence above.\n` +
+          `3. Do NOT cite G2 rankings, review-site metrics, or product-listing counts as market share or competitive position. These are review-platform artifacts, not market economics.\n` +
+          `4. If the intelligence above lacks a clear risk, state the structural challenge (e.g. "private company with limited public data" or "highly fragmented market with switching costs") WITHOUT inventing specific numbers.\n\n` +
+          `FORMAT:\n` +
+          `- topFinding: the single most important fact FROM THE TEXT ABOVE that changes how a seller approaches ${co}.\n` +
+          `- topOpportunity: the single biggest reason to engage ${co} RIGHT NOW — extracted FROM THE TEXT ABOVE.\n` +
+          `- topRisk: the single biggest obstacle — extracted FROM THE TEXT ABOVE. If no clear risk in the data, describe a structural obstacle without fabricating statistics.\n\n` +
           `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
           { maxTokens: 600 }
         ).then(r => {
           if (r?.tldr?.topFinding) {
+            // Post-processing: strip any claims with suspicious fabricated statistics
+            // Pattern: very specific percentages (0.05%, 0.12%) or "$XX.XM revenue" not in source data
+            const stripFabricated = (text) => {
+              if (!text) return text;
+              // Check if text contains specific market-share percentages not in the source
+              const suspiciousStats = text.match(/\b0\.\d+%\s*market\s*share/i) ||
+                text.match(/\b\d{2,3}-competitor\b/i) ||
+                text.match(/\b\d{3,}\s*competitors?\b/i);
+              if (suspiciousStats) {
+                // Check if this stat appears in the source context
+                const statStr = suspiciousStats[0];
+                if (!fullContext.toLowerCase().includes(statStr.toLowerCase().slice(0, 10))) {
+                  console.warn(`[tldr] Stripped suspected fabricated stat: "${statStr}"`);
+                  // Remove the sentence containing the fabricated stat
+                  const sentences = text.split(/(?<=\.)\s+/);
+                  return sentences.filter(s => !s.toLowerCase().includes(statStr.toLowerCase().slice(0, 10))).join(" ").trim() || text;
+                }
+              }
+              return text;
+            };
+            const cleaned = {
+              topFinding: stripFabricated(r.tldr.topFinding),
+              topOpportunity: stripFabricated(r.tldr.topOpportunity),
+              topRisk: stripFabricated(r.tldr.topRisk),
+            };
             console.log("[tldr] Full-context TL;DR generated — replacing early version");
-            setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev);
+            setBrief(prev => prev ? { ...prev, tldr: cleaned } : prev);
           }
         }).catch(() => {});
         return current;
@@ -5718,6 +5916,33 @@ ${isOpen
           };
           stripAllPlaceholders(current);
           if (current.publicSentiment) stripAllPlaceholders(current.publicSentiment);
+
+          // ── DATA CONFIDENCE COMPUTATION ────────────────────────────────
+          // Count how many sections have substantive data (proxy for web-grounded)
+          let grounded = 0;
+          if (current.companySnapshot && current.companySnapshot.length > 50) grounded++; // p1
+          if (current.keyExecutives?.some(e => e?.name)) grounded++;  // p2 (web-searched)
+          if (current.strategicTheme && current.strategicTheme.length > 30) grounded++; // p3
+          if (current.solutionMapping?.some(s => s?.product)) grounded++; // p4
+          if (current.recentHeadlines?.length > 0) grounded++; // p5 (web-searched)
+          if (current.openRoles?.roles?.some(r => r?.title)) grounded++; // p6 (web-searched)
+          if (current.competitivePositioning?.marketPosition) grounded++; // p7 (web-searched)
+          if (current.boardAndInvestors?.boardMembers?.length > 0) grounded++; // p8 (web-searched)
+          if (current.financialDeepDive?.revenueTrend) grounded++; // p9 (web-searched)
+          current._sectionsGrounded = grounded;
+          current._dataConfidence = grounded >= 7 ? "high" : grounded >= 4 ? "medium" : "low";
+
+          // ── POST-MERGE CONSISTENCY: prefer authoritative sources ────────
+          // If Apollo enrichment revenue exists and p1 returned something different, prefer Apollo
+          const apolloRev = member._enrichment?.organization?.revenue;
+          if (apolloRev && current.revenue && current.revenue !== apolloRev) {
+            console.log(`[consistency] Revenue: preferring Apollo "${apolloRev}" over p1 "${current.revenue}"`);
+            current.revenue = apolloRev;
+          }
+          // If p5 Glassdoor (web-searched) differs from p3 Glassdoor (was training-only, now searched too), prefer p5
+          const p5Glassdoor = current.publicSentiment?.glassdoorRating;
+          // p3's glassdoor was backfilled into publicSentiment only if p5 didn't set it (see mergeStrategy)
+          // so this is already handled by merge priority — p5 is authoritative
 
           return current;
         });
@@ -5983,6 +6208,7 @@ ${isOpen
       (KL_INVESTOR_DISCOVERY && getInvestorInjection(sellerICP, member?.ind) ? KL_INVESTOR_DISCOVERY + "\n" : "") +
       (KL_MEDICAL_PAYMENTS_DISCOVERY && getMedicalPaymentsInjection(sellerICP, member?.ind) ? KL_MEDICAL_PAYMENTS_DISCOVERY + "\n" : "") +
       (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
+      (KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
@@ -9983,6 +10209,22 @@ ${isOpen
                       <div className="skeleton" style={{width:"80%",height:14,borderRadius:4}}/>
                       <div className="skeleton" style={{width:"85%",height:14,borderRadius:4}}/>
                     </div>
+                  </div>
+                )}
+
+                {/* Data Confidence badge — anti-hallucination transparency */}
+                {brief._dataConfidence && (
+                  <div style={{
+                    display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"6px 12px",
+                    borderRadius:"var(--r-md)",fontSize:11,fontWeight:600,
+                    background: brief._dataConfidence === "high" ? "var(--green-bg)" : brief._dataConfidence === "medium" ? "var(--amber-bg)" : "var(--red-bg)",
+                    color: brief._dataConfidence === "high" ? "var(--green)" : brief._dataConfidence === "medium" ? "var(--amber)" : "var(--red)",
+                  }}>
+                    <span>{brief._dataConfidence === "high" ? "High" : brief._dataConfidence === "medium" ? "Medium" : "Low"} Data Confidence</span>
+                    <span style={{fontWeight:400,opacity:0.8}}>
+                      {brief._sectionsGrounded}/9 sections web-verified
+                      {brief._dataConfidence !== "high" && " — verify key facts before the call"}
+                    </span>
                   </div>
                 )}
 

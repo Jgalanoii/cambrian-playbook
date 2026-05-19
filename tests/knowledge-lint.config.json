@@ -1,0 +1,43 @@
+{
+  "_comment": "Config for tests/knowledge-lint.js. Classifies knowledge files so the schema check knows intent. Citation, tier3, sources, and keyword checks run on all files regardless of classification.",
+
+  "knowledgeDir": "src/data",
+
+  "_verticalFiles": "Held to the full standard: must export *_INJECTION, *_SCORING_CONTEXT, *_DISCOVERY_INJECTION. Missing INJECTION = hard error; missing SCORING/DISCOVERY = warning.",
+  "verticalFiles": [
+    "rewardsIncentivesKnowledge.js",
+    "paymentsKnowledge.js",
+    "bankingKnowledge.js",
+    "fintechKnowledge.js",
+    "baasKnowledge.js",
+    "healthcareSaasKnowledge.js",
+    "medicalPaymentsKnowledge.js",
+    "realEstateKnowledge.js",
+    "aiMlKnowledge.js",
+    "qsrKnowledge.js",
+    "charitableGivingKnowledge.js",
+    "accountingFinanceKnowledge.js",
+    "smbMidmarketKnowledge.js",
+    "insuranceKnowledge.js"
+  ],
+
+  "_partialVerticalFiles": "INJECTION required; SCORING/DISCOVERY optional. These are cross-cutting layers that legitimately ship without a SCORING_CONTEXT.",
+  "partialVerticalFiles": [
+    "b2bSalesKnowledge.js",
+    "okrKpiKnowledge.js",
+    "investorIntelligenceKnowledge.js"
+  ],
+
+  "_exemptFiles": "Schema check skipped — these have different shapes by design. Text checks still apply.",
+  "exemptFiles": [
+    "complianceKnowledge.js",
+    "verticalPlaybooks.js",
+    "advancedKnowledge.js",
+    "icpFitKnowledge.js",
+    "negotiationFrameworks.js",
+    "riverFramework.js",
+    "outcomes.js",
+    "rfpSources.js",
+    "sampleAccounts.js"
+  ]
+}

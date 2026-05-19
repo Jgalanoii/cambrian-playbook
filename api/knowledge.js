@@ -35,6 +35,7 @@ import { BAAS_INJECTION, BAAS_SCORING, BAAS_DISCOVERY } from "../src/data/baasKn
 import { CHARITABLE_GIVING_INJECTION, CHARITABLE_GIVING_SCORING, CHARITABLE_GIVING_DISCOVERY } from "../src/data/charitableGivingKnowledge.js";
 import { MEDICAL_PAYMENTS_INJECTION, MEDICAL_PAYMENTS_SCORING, MEDICAL_PAYMENTS_DISCOVERY } from "../src/data/medicalPaymentsKnowledge.js";
 import { SMB_MIDMARKET_INJECTION, SMB_MIDMARKET_SCORING, SMB_MIDMARKET_DISCOVERY } from "../src/data/smbMidmarketKnowledge.js";
+import { INSURANCE_INDUSTRY_INJECTION, INSURANCE_SCORING_CONTEXT, INSURANCE_DISCOVERY_INJECTION, INSURANCE_PLAYBOOK } from "../src/data/insuranceKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -247,6 +248,11 @@ export default async function handler(req, res) {
       smbMidmarket: SMB_MIDMARKET_INJECTION,
       smbMidmarketScoring: SMB_MIDMARKET_SCORING,
       smbMidmarketDiscovery: SMB_MIDMARKET_DISCOVERY,
+      // Insurance industry (carriers, MGAs, brokers, reinsurers, insurtech)
+      insuranceIndustry: INSURANCE_INDUSTRY_INJECTION,
+      insuranceScoring: INSURANCE_SCORING_CONTEXT,
+      insuranceDiscovery: INSURANCE_DISCOVERY_INJECTION,
+      insurancePlaybook: INSURANCE_PLAYBOOK,
       // Advanced frameworks (paid only)
       pricingNegotiation: PRICING_NEGOTIATION,
       archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
