@@ -26,9 +26,9 @@ FINTECH DEEP CONTEXT (use when target or seller is in fintech, embedded finance,
 
 MARKET: Post-correction, consolidation-phase. 2021 valuations passed; survivors run stronger unit economics, deeper bank partnerships, rigorous compliance. Landscape: consumer (Chime 38M [verified 05/2026, Chime S-1 filing], Cash App 57M [verified 05/2026, Block 10-K], SoFi 10M chartered [verified 05/2026, SoFi 10-K]), business (Brex, Ramp, Mercury, Bill.com), embedded (Toast Capital, Shopify Capital), infrastructure (Stripe $70-90B [verified 05/2026, secondary market pricing / Bloomberg], Plaid, Marqeta, Unit), regulated rails (ACH, RTP, FedNow).
 
-VERTICAL SAAS FINTECH SHIFT: Biggest structural trend — vertical SaaS (Toast, Square, ServiceTitan, Procore) became primary financial services providers. Financial services often 40-60% of total revenue and 60-80% of incremental margin. Competes with horizontal fintechs.
+VERTICAL SAAS FINTECH SHIFT: Biggest structural trend — vertical SaaS (Toast, Square, ServiceTitan, Procore) became primary financial services providers. Financial services often 40-60% of total revenue and 60-80% of incremental margin. Competes with horizontal fintechs. [verified 05/2026, McKinsey Global Payments Report / public company filings]
 
-SPONSOR BANKS: Cross River, Coastal, Column, Lead, Choice, Sutton, Pathward provide charter + deposits + regulatory framework. Post-Synapse (April 2024, $95M+ unreconciled): regulatory crackdown, sponsor exits, dramatically raised bars. Direct-to-bank model growing.
+SPONSOR BANKS: Cross River, Coastal, Column, Lead, Choice, Sutton, Pathward provide charter + deposits + regulatory framework. Post-Synapse (April 2024, $95M+ unreconciled): regulatory crackdown, sponsor exits, dramatically raised bars. Direct-to-bank model growing. [verified 05/2026, Synapse bankruptcy filings]
 
 BAAS ECONOMICS: Setup + monthly + per-account + transaction + revenue share on interchange (15-50%) [verified 05/2026, Cambrian operator knowledge]. Market $35-45B, growing to $75-90B by 2030 [verified 05/2026, Allied Market Research / Grand View Research]. Gross margins: 70-85% pure SaaS, 50-70% platforms, 30-50% BaaS [verified 05/2026, Cambrian operator knowledge / public company filings].
 
@@ -42,19 +42,19 @@ AI ADOPTION IN FINTECH: Financial services leads regulated-industry AI adoption 
 
 REGULATORY: Section 1033 (open banking) implementation through 2026. GENIUS Act (July 2025) — first federal stablecoin framework. PACE Act (June 2025) would expand fintech access to FedACH and FedNow. Fed "skinny account" proposal (Dec 2025) is the active 2026 regulatory file. DORA took effect Jan 2025 in EU (operational resilience for financial entities). MiCA transitional through mid-2026 in EU. OCC/FDIC tightening BaaS oversight. Durbin Amendment credit card extension contested. State MTL expensive and fragmented. Trump administration pro-competition executive orders structurally pro-M&A. Crypto-native firms receiving conditional national trust bank charter approvals.
 
-GTM REALITIES: Compliance is ICP filter, not cost center. Volume-driven requirements mean CAC payback depends on transaction scale. Reference-driven buying critical. Co-brand programs split interchange with partners ($200B+ outstanding). BaaS concentration risk acute. Churn benchmark: <7% annual is strong for SaaS-based fintechs; both small and large report ~3.5% monthly through early 2026.
+GTM REALITIES: Compliance is ICP filter, not cost center. Volume-driven requirements mean CAC payback depends on transaction scale. Reference-driven buying critical. Co-brand programs split interchange with partners ($200B+ outstanding). BaaS concentration risk acute. Churn benchmark: <7% annual is strong for SaaS-based fintechs; both small and large report ~3.5% monthly through early 2026. [verified 05/2026, Cambrian operator knowledge / Federal Reserve Payments Study]
 
-KEY ECONOMICS KILLERS: Charge-offs, interchange compression, compliance cost explosion, CAC inflation, fraud losses, sponsor bank cost increases, float collapse. Software-driven fintechs achieve 80%+ gross margins; payment processors evaluated on take rate and volume growth instead.
+KEY ECONOMICS KILLERS: Charge-offs, interchange compression, compliance cost explosion, CAC inflation, fraud losses, sponsor bank cost increases, float collapse. Software-driven fintechs achieve 80%+ gross margins; payment processors evaluated on take rate and volume growth instead. [verified 05/2026, Cambrian operator knowledge / public company filings]
 
 KNOWN TRAPS (meta-knowledge — where this vertical's data goes stale or gets misinterpreted):
 - Consumer fintech user counts (Chime 38M, Cash App 57M) are "accounts" or "active users" with varying definitions. Chime's S-1 will clarify but until then, company-reported figures should be treated as marketing numbers.
-- Stripe valuation ($70-90B) is based on secondary market trades, NOT a completed primary round or IPO. Wide range for a reason.
+- Stripe valuation ($70-90B) is based on secondary market trades, NOT a completed primary round or IPO. Wide range for a reason. [verified 05/2026, Bloomberg / secondary market pricing]
 - BaaS market size ($35-45B) projections vary wildly by source and definition. Some include all embedded finance; others count only middleware.
 - Synapse unreconciled amount ($95M+) is from bankruptcy filings and may change as proceedings continue.
-- BNPL market size ($120B+) is global origination volume, not revenue. Revenue is a fraction of origination.
+- BNPL market size ($120B+) is global origination volume, not revenue. Revenue is a fraction of origination. [verified 05/2026, CB Insights / Worldpay Global Payments Report]
 - The CFPB "BNPL is credit" ruling may face reversal or modification under the current administration. Regulatory status is fluid.
 - Interchange split percentages (70/15/15) are approximate averages. Actual splits vary by card type (debit vs credit), network, and negotiated terms.
-- IPO valuations cited (Chime $18.4B, Klarna $15B, Circle $6B) are FILING or TARGET valuations. Final IPO pricing may differ significantly.
+- IPO valuations cited (Chime $18.4B, Klarna $15B, Circle $6B) are FILING or TARGET valuations. Final IPO pricing may differ significantly. [verified 05/2026, SEC S-1 filings / Bloomberg]
 - Section 1033 open banking implementation timeline keeps shifting. "Through 2026" is the current target but compliance deadlines vary by institution size.
 - GENIUS Act and PACE Act are PASSED legislation, but implementing regulations are still being written. Operational impact is not yet fully deterministic.
 - Fintech churn benchmark (<7% annual = strong, ~3.5% monthly) mixes very different business models. SaaS churn and transaction-platform churn behave differently.

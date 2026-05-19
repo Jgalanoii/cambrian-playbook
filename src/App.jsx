@@ -90,6 +90,8 @@ let KL_SMB_MIDMARKET_DISCOVERY = "";
 let KL_INSURANCE = ""; // Insurance industry (carriers, MGAs, brokers, reinsurers, insurtech)
 let KL_INSURANCE_SCORING = null;
 let KL_INSURANCE_DISCOVERY = "";
+let KL_EXEC_PERSPECTIVES = ""; // Executive Perspectives — role-keyed C-suite intelligence
+let KL_EXEC_PERSPECTIVES_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -162,6 +164,8 @@ async function fetchKnowledgeLayer() {
     KL_INSURANCE = d.insuranceIndustry || "";
     KL_INSURANCE_SCORING = d.insuranceScoring || null;
     KL_INSURANCE_DISCOVERY = d.insuranceDiscovery || "";
+    KL_EXEC_PERSPECTIVES = d.executivePerspectives || "";
+    KL_EXEC_PERSPECTIVES_DISCOVERY = d.executivePerspectivesDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -1400,6 +1404,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getCharitableInjection(sellerICP, member.ind) +
     getSmbMidmarketInjection(sellerICP, member.ind, member) +
     getInsuranceInjection(sellerICP, member.ind) +
+    (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -6262,6 +6267,7 @@ ${isOpen
       (KL_MEDICAL_PAYMENTS_DISCOVERY && getMedicalPaymentsInjection(sellerICP, member?.ind) ? KL_MEDICAL_PAYMENTS_DISCOVERY + "\n" : "") +
       (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
       (KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY + "\n" : "") +
+      (KL_EXEC_PERSPECTIVES_DISCOVERY ? KL_EXEC_PERSPECTIVES_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

@@ -90,7 +90,8 @@
           "field": "industry",
           "tier": 1,
           "value": "Retail",
-          "match": "fuzzy_contains",
+          "match": "set_membership",
+          "accepted": ["retail", "store", "supermarket", "grocery", "discount", "e-commerce"],
           "verified": "2026-05-19",
           "source": "https://corporate.walmart.com"
         },
@@ -444,6 +445,135 @@
       ],
       "invariants": ["no_entity_confusion", "no_placeholders"],
       "forbidden_strings": ["Mercury Systems", "defense contractor", "Mercury Insurance", "NYSE: MRCY", "auto insurance"]
+    },
+    {
+      "id": "verizon",
+      "name": "Verizon",
+      "url": "verizon.com",
+      "category": "data-rich-public",
+      "vertical": "telecom",
+      "purpose": "Fact-match baseline — telecom/high-friction vertical",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Telecom", "match": "set_membership", "accepted": ["telecom", "telecommunications", "communications", "wireless"], "verified": "2026-05-19", "source": "verizon.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NYSE: VZ" },
+        { "field": "hq_location", "tier": 1, "value": "New York", "match": "fuzzy_location", "verified": "2026-05-19", "source": "verizon.com/about" },
+        { "field": "revenue", "tier": 2, "value": 138200000000, "match": "numeric_tolerance", "tolerance_pct": 15, "verified": "2026-05-19", "source": "VZ FY2025: $138.2B" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "nextera-energy",
+      "name": "NextEra Energy",
+      "url": "nexteraenergy.com",
+      "category": "data-rich-public",
+      "vertical": "energy",
+      "purpose": "Fact-match baseline — energy/utilities vertical",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Energy", "match": "set_membership", "accepted": ["energy", "utilities", "power", "renewable", "electric"], "verified": "2026-05-19", "source": "nexteraenergy.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NYSE: NEE" },
+        { "field": "hq_location", "tier": 1, "value": "Juno Beach", "match": "set_membership", "accepted": ["Juno Beach", "Florida", "FL", "Palm Beach"], "verified": "2026-05-19", "source": "nexteraenergy.com" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "state-farm",
+      "name": "State Farm",
+      "url": "statefarm.com",
+      "category": "data-scarce-private",
+      "vertical": "insurance",
+      "purpose": "Data-scarce sentinel — mutual insurer, policyholder-owned, very limited public data",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Insurance", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "statefarm.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Mutual", "match": "set_membership", "accepted": ["Private", "Mutual", "Policyholder-owned", "Member-owned", "mutual"], "verified": "2026-05-19", "source": "Wikipedia" },
+        { "field": "hq_location", "tier": 1, "value": "Bloomington", "match": "fuzzy_location", "verified": "2026-05-19", "source": "statefarm.com/about-us" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded", "IPO"]
+    },
+    {
+      "id": "tango-card",
+      "name": "Tango Card",
+      "url": "tangocard.com",
+      "category": "regression-sentinel",
+      "vertical": "rewards",
+      "purpose": "Regression sentinel — the company where fabricated G2 market share (0.05%) was caught. Must NOT fabricate market share or competitor counts from review platforms.",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Rewards", "match": "set_membership", "accepted": ["rewards", "incentives", "gift card", "digital rewards", "loyalty"], "verified": "2026-05-19", "source": "tangocard.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "set_membership", "accepted": ["Private", "Private (acquired", "Subsidiary"], "verified": "2026-05-19", "source": "Acquired by BHN/Blackhawk Network" }
+      ],
+      "invariants": ["no_placeholders", "no_entity_confusion"],
+      "forbidden_strings": ["0.05%", "126 competitors", "179 competitors", "market share in a", "47.7M revenue"]
+    },
+    {
+      "id": "blackhawk-network",
+      "name": "Blackhawk Network",
+      "url": "blackhawknetwork.com",
+      "category": "regression-sentinel",
+      "vertical": "payments",
+      "purpose": "Regression sentinel — went private in 2018. Must NOT show as public or have a stock ticker.",
+      "facts": [
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Acquired by Silver Lake Partners 2018" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": ["NYSE: HAWK", "NASDAQ:", "publicly traded", "stock ticker"]
+    },
+    {
+      "id": "mole-street",
+      "name": "Mole Street",
+      "url": "molestreet.com",
+      "category": "disambiguation-trap",
+      "vertical": "consulting",
+      "purpose": "Entity-confusion sentinel — small digital agency, must NOT confuse with any other company. Tests behavior on small/obscure companies.",
+      "facts": [
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Small agency" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "billion"]
+    },
+    {
+      "id": "fluz",
+      "name": "Fluz",
+      "url": "fluz.app",
+      "category": "regression-sentinel",
+      "vertical": "fintech",
+      "purpose": "Regression sentinel — thin-context company. Tests abstention behavior when little public data exists.",
+      "facts": [
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Startup" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+    },
+    {
+      "id": "allstate",
+      "name": "Allstate",
+      "url": "allstate.com",
+      "category": "data-rich-public",
+      "vertical": "insurance",
+      "purpose": "Fact-match baseline — insurance vertical, tests insurance knowledge layer",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Insurance", "match": "set_membership", "accepted": ["insurance", "protect", "auto insurance", "property casualty", "p&c"], "verified": "2026-05-19", "source": "allstate.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NYSE: ALL" },
+        { "field": "hq_location", "tier": 1, "value": "Northbrook", "match": "set_membership", "accepted": ["Northbrook", "Illinois", "IL", "Chicago"], "verified": "2026-05-19", "source": "allstate.com" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "gusto",
+      "name": "Gusto",
+      "url": "gusto.com",
+      "category": "disambiguation-trap",
+      "vertical": "hr-tech",
+      "purpose": "Disambiguation sentinel — Gusto (HR/payroll) vs other Gusto entities. Also tests mid-market private company data quality.",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "HR", "match": "set_membership", "accepted": ["hr", "payroll", "human resources", "hris", "people operations"], "verified": "2026-05-19", "source": "gusto.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Crunchbase" },
+        { "field": "hq_location", "tier": 1, "value": "San Francisco", "match": "fuzzy_location", "verified": "2026-05-19", "source": "gusto.com" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
     }
   ]
 }

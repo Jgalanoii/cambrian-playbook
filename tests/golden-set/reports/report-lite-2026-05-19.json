@@ -1,12 +1,12 @@
 {
   "mode": "lite",
-  "timestamp": "2026-05-19T23:32:53.464Z",
+  "timestamp": "2026-05-19T23:48:14.036Z",
   "summary": {
-    "totalFacts": 66,
-    "passedFacts": 66,
+    "totalFacts": 93,
+    "passedFacts": 93,
     "failedFacts": 0,
-    "totalInvariants": 28,
-    "passedInvariants": 28,
+    "totalInvariants": 38,
+    "passedInvariants": 38,
     "failedInvariants": 0
   },
   "companies": [
@@ -64,7 +64,7 @@
             {
               "name": "exec_consistency",
               "pass": true,
-              "detail": "no CEO in executives — skipped"
+              "detail": "CEO \"Jamie Dimon\" consistent across sections"
             },
             {
               "name": "no_placeholders",
@@ -95,7 +95,7 @@
               "field": "industry",
               "tier": 1,
               "pass": true,
-              "detail": "contains \"Retail\""
+              "detail": "matched accepted set"
             },
             {
               "field": "ownership_type",
@@ -138,7 +138,7 @@
             {
               "name": "exec_consistency",
               "pass": true,
-              "detail": "CEO \"John Furner\" consistent across sections"
+              "detail": "CEO \"David Guggina\" consistent across sections"
             },
             {
               "name": "no_placeholders",
@@ -409,7 +409,7 @@
               "field": "revenue",
               "tier": 2,
               "pass": true,
-              "detail": "447,570,000,000 vs 447,000,000,000 (0.1% diff, threshold 12%)"
+              "detail": "447,600,000,000 vs 447,000,000,000 (0.1% diff, threshold 12%)"
             }
           ],
           "invariants": [
@@ -798,6 +798,371 @@
           "factsTotal": 4,
           "invariantsPass": 2,
           "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "verizon",
+      "name": "Verizon",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"New York\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "138,190,000,000 vs 138,200,000,000 (0.0% diff, threshold 15%)"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "nextera-energy",
+      "name": "NextEra Energy",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "state-farm",
+      "name": "State Farm",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Insurance\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Bloomington\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "tango-card",
+      "name": "Tango Card",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 5 forbidden strings found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "blackhawk-network",
+      "name": "Blackhawk Network",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 2,
+          "factsTotal": 2,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "mole-street",
+      "name": "Mole Street",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 2,
+          "factsTotal": 2,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "fluz",
+      "name": "Fluz",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 2,
+          "factsTotal": 2,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "allstate",
+      "name": "Allstate",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "gusto",
+      "name": "Gusto",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Francisco\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
         }
       ]
     }

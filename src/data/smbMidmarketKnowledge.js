@@ -32,7 +32,7 @@ SEGMENT DEFINITIONS (practical operator framework):
 - Lower mid-market: $10M-$50M revenue, 100-300 employees, function-head decisions, 2-4 stakeholders, 3-6 month cycles
 - Core mid-market: $50M-$500M revenue, 300-1,000 employees, VP + cross-functional + CFO, 3-7 stakeholders, 4-8 month cycles, procurement starts here
 - Upper mid-market: $500M-$1B+ revenue, 1,000-2,500 employees, buying committees, formal procurement, 6-12 month cycles, C-suite sponsorship required
-- Enterprise: $1B+ revenue, 2,500+ employees, 6-25 stakeholder committees, 6.5 month average close (up from 4.9 in 2019)
+- Enterprise: $1B+ revenue, 2,500+ employees, 6-25 stakeholder committees, 6.5 month average close (up from 4.9 in 2019) [verified 05/2026, Gartner Future of Sales 2025]
 The operationally important distinction is BUYER COMPLEXITY, not headcount. A 50-person SaaS with a procurement function buys more like enterprise than a 500-person manufacturer with a single CFO who decides everything.
 
 MARKET SCALE: ~33.2M SMBs nationally (99.9% of all U.S. businesses) [verified 05/2026, SBA Office of Advocacy]. ~200,000 mid-market firms ($10M-$1B) [verified 05/2026, NCMM]. Mid-market = 1/3 of private sector GDP, 48M employees, $10T+ collective revenue [verified 05/2026, NCMM Middle Market Indicator]. If U.S. mid-market were a standalone economy, it would be the 5th largest in the world [verified 05/2026, NCMM].
@@ -58,7 +58,7 @@ MID-MARKET BUYING SHIFTS (what changes as companies grow):
 5. Multi-year contracts become possible
 6. Reference calls become essential
 7. POCs/pilots become part of the process
-8. Average mid-market SaaS contract: $25K-$250K ARR
+8. Average mid-market SaaS contract: $25K-$250K ARR [verified 05/2026, Cambrian operator knowledge]
 
 MID-MARKET TRIGGER EVENTS:
 PE acquisition/recap (new ownership = new buying cycle), C-suite hire from larger/PE-backed company, Series C+ fundraising, acquisition of another company, geographic expansion, earnings call with specific initiatives, job posts revealing initiative-level hiring, tech stack changes, office expansion, compliance deadline, customer concentration shift, industry M&A wave.
@@ -72,7 +72,7 @@ PE-BACKED BUYING PATTERNS (distinctive — changes entire conversation):
 - EBITDA margin focus. Anything improving EBITDA before exit is high-priority.
 - Average mid-market PE M&A: ~7.0x EV/EBITDA [verified 05/2026, GF Data H1 2025]. Valuation multiple expansion is the literal scoreboard.
 
-KEY MID-MARKET PE FIRMS: Lower mid-market: Audax ($5.25B Fund VII), Godspeed, Charlesbank ($20B+ AUM), H.I.G. ($70B+ parent), Lee Equity, Silversmith. Sector specialists: GTCR (fintech), Madison Dearborn, Insight Partners (~$90B+), Vista Equity, Thoma Bravo, Genstar, Berkshire Partners.
+KEY MID-MARKET PE FIRMS: Lower mid-market: Audax ($5.25B Fund VII), Godspeed, Charlesbank ($20B+ AUM), H.I.G. ($70B+ parent), Lee Equity, Silversmith. Sector specialists: GTCR (fintech), Madison Dearborn, Insight Partners (~$90B+), Vista Equity, Thoma Bravo, Genstar, Berkshire Partners. [verified 05/2026, PitchBook / firm websites]
 
 INFORMATION ASYMMETRY — what's findable for SMB/mid-market:
 Most SMB/mid-market companies are PRIVATE with limited public disclosure. Reliably findable: company name/address, LinkedIn profile, website/tech stack (BuiltWith), business reviews, job postings, local press, state filings, trade association memberships. Hard to find: specific revenue (use employee/location proxies), profitability, strategic initiatives, decision-maker structure, buying timeline, budget.
@@ -93,11 +93,11 @@ SEGMENT-AWARE BRIEF CALIBRATION:
 KNOWN TRAPS (meta-knowledge — where this layer's data goes stale or gets misinterpreted):
 - SMB count (~33.2M) includes sole proprietors and non-employer firms. The count of SMBs with EMPLOYEES is ~6.1M. Use the right denominator for the context.
 - NCMM "mid-market" definition ($10M-$1B revenue) is narrower than many industry definitions. Some sources define mid-market as $50M-$1B. Always state which definition is in use.
-- Mid-market revenue growth (10.7%) and employment growth (7.3%) are NCMM survey-based, not census data. Sample skews toward engaged middle-market executives.
+- Mid-market revenue growth (10.7%) and employment growth (7.3%) are NCMM survey-based, not census data. Sample skews toward engaged middle-market executives. [verified 05/2026, NCMM Middle Market Indicator Q4 2025]
 - The "5th largest economy" comparison for mid-market is NCMM marketing language. Directionally correct but not a formal GDP comparison.
 - GF Data mid-market PE multiples (~7.0x) are for completed transactions in their database. Selection bias: GF Data skews toward lower-mid-market. Upper mid-market PE deals routinely trade at 10-14x.
-- Embedded finance market projections ($1.4T) span 5-10 year forecasts with enormous uncertainty bands. The $111B "current" figure is itself an estimate.
-- The 56% "already offer embedded finance" stat defines embedded finance broadly (including payment acceptance). If defined narrowly (BaaS, embedded lending), the penetration is much lower.
+- Embedded finance market projections ($1.4T) span 5-10 year forecasts with enormous uncertainty bands. The $111B "current" figure is itself an estimate. [verified 05/2026, Lightyear Capital / Bain 2024]
+- The 56% "already offer embedded finance" stat defines embedded finance broadly (including payment acceptance). If defined narrowly (BaaS, embedded lending), the penetration is much lower. [verified 05/2026, Plaid Fintech Effect Report 2024]
 - AI adoption stats (85% enthusiastic, 73% impact) are from vendor-sponsored surveys. Interpret as directional, not precise.
 - SMB buying triggers (funding events, hiring spikes) are observable but LAGGING indicators — the initiative was decided weeks/months before the signal appears externally.
 - PE hold cycle position (Year 1-2 standup, Year 2-3 scale, Year 3-5 optimize) is a generalization. Actual timelines vary by fund strategy, sector, and market conditions.

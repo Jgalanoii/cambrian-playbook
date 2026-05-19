@@ -57,7 +57,7 @@ COMMERCIAL KEY FACTS:
 
 LAND WHOLESALING (if prospect is a wholesaler or land investor):
 - Model: tie up land with assignable PSA at 40-60% of FMV; assign to builder/developer for fee.
-- Economics: mid-market deals $50K-$300K purchase, $7K-$15K fee, 45-90 day cycle.
+- Economics: mid-market deals $50K-$300K purchase, $7K-$15K fee, 45-90 day cycle. [verified 05/2026, Cambrian operator knowledge]
 - Key edges: direct seller pipeline at scale, builder relationships ("Builder-First" model), or subdivide expertise.
 - Pain points: lead quality/CAC inflation, disposition speed, buyer concentration, compliance, scaling beyond founder.
 - Compliance: IL, OK, AZ require licensing above 1-2 assignments/year; FinCEN BOI reporting as of March 2026.
@@ -84,7 +84,7 @@ CAPITAL & INVESTMENT (Q2 2026 REFRESH):
 - Construction costs up 50% over last five years [verified 05/2026, NAHB]. New starts in logistics and rental housing down ~2/3 [verified 05/2026, Census Bureau] — major supply tailwind for existing assets.
 - Data center REIT outlier: P/FFO multiples expanding to 25-40x as AI power demand drives construction [verified 05/2026, NAREIT]. Blackstone Infrastructure consortium acquired TXNM Energy at 1.8x rate base (~$11.5B) [verified 05/2026, Blackstone Investor Day] — representative AI-power-demand deal. AI infrastructure is now a discrete CRE sub-asset class.
 - 2021-2022-vintage inexperienced multifamily buyers are the source of highest-quality distressed-acquisition opportunities.
-- NBER WP 31970 (Bidder, Krainer, Shapiro): CRE loans ~25% of average bank assets (~$2.7T at start of 2022 tightening). Anchor academic citation for any CRE bank-exposure framing.
+- NBER WP 31970 (Bidder, Krainer, Shapiro): CRE loans ~25% of average bank assets (~$2.7T at start of 2022 tightening). Anchor academic citation for any CRE bank-exposure framing. [verified 05/2026, NBER WP 31970]
 - SOFR moved 530 bps from 0.05% (Jan 2022) to 5.35% (Jan 2024) [verified 05/2026, Federal Reserve]; borrowing costs roughly 40% off their wides [verified 05/2026, Blackstone Q4 2025 Earnings]. Barrero, Bloom & Davis demonstrate persistence of elevated remote work — structural argument for sustained office-demand erosion.
 - Other major allocators: Brookfield, Starwood, KKR, Apollo, Carlyle, Franklin Templeton (acquired Apera Oct 2025).
 - BTR institutional capital: Blackstone, Carlyle, Cerberus, AMH, Invitation Homes, Pretium/Progress.
@@ -97,12 +97,12 @@ KNOWN TRAPS — DATA THAT GOES STALE FASTEST (re-verify quarterly):
 - Cap rates: lag transactions by 1-2 quarters; CBRE and NCREIF report on different cycles. Never cite a cap rate without specifying vintage. [Source: CBRE, NCREIF]
 - CRE transaction volumes: quarterly swing wildly on a few mega-deals; YoY comparisons mislead when base quarter was anomalous (e.g., Q4 2022 freeze). [Source: CBRE, MSCI Real Capital Analytics]
 - Vacancy rates: industrial and multifamily vacancies are moving targets — pipeline deliveries shift them 50-100 bps per quarter. Office vacancy is structural and slower-moving but varies sharply by market. [Source: CBRE, Moody's, CoStar]
-- Construction costs: NAHB indices update quarterly; lumber/steel spot prices move faster. A "40% above 2020" claim can be 45% or 35% next quarter. [Source: NAHB, PPI]
+- Construction costs: NAHB indices update quarterly; lumber/steel spot prices move faster. A "40% above 2020" claim can be 45% or 35% next quarter. [verified 05/2026, NAHB / PPI]
 - BTR/SFR stats: this sub-sector is young and data sources disagree (NAHB vs. John Burns vs. RealPage); always specify the source. Institutional capital deployed figures shift with each fund close. [Source: NAHB, John Burns Research]
 - PE allocations & dry powder: Blackstone/Brookfield/KKR report quarterly with different fiscal calendars. "$42B deployed" becomes "$48B" after one earnings call. Pin to a specific quarter. [Source: firm earnings transcripts]
 - CMBS delinquency: Trepp updates monthly; the rate is volatile because the denominator (outstanding CMBS) is also changing. [Source: Trepp]
 - Sun Belt multifamily oversupply: absorption is racing deliveries — the narrative can flip from "oversupplied" to "tightening" in two quarters. [Source: RealPage, CBRE]
-- Housing deficit estimates: range from 1.5M (more conservative) to 7M+ (including quality-adjusted); the 3.5-4.7M range is consensus but contested. [Source: NAR, Freddie Mac, Up for Growth]
+- Housing deficit estimates: range from 1.5M (more conservative) to 7M+ (including quality-adjusted); the 3.5-4.7M range is consensus but contested. [verified 05/2026, NAR / Freddie Mac / Up for Growth]
 `;
 
 export const REAL_ESTATE_SCORING_CONTEXT = {

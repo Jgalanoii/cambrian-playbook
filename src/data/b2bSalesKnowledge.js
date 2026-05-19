@@ -26,14 +26,14 @@ export const B2B_SALES_INJECTION = `
 B2B SALES & VALUE CREATION CONTEXT (cross-cutting — apply to ALL B2B prospects):
 
 BUYING GROUP DYNAMICS (Q2 2026 REFRESH — credentialed research):
-- 74% of buying teams demonstrate "unhealthy conflict" during the buying decision process (Gartner May 2025, n=632 B2B buyers). Buying groups that reach consensus are 2.5x more likely to report a high-quality deal.
-- 61% of B2B buyers prefer an overall rep-free buying experience; 73% actively avoid vendors that send irrelevant outreach (Gartner June 2025).
-- 92% of buyers start with at least one vendor in mind; 41% have a single preferred vendor before formal evaluation begins (Forrester 2024 Buyers Journey, n=11,352).
-- 86% of B2B purchases stall at some point; 81% of buyers report dissatisfaction with their chosen provider post-purchase (Forrester State of Business Buying 2024).
-- Buyers spend ~17% of total purchase journey time interacting with all potential vendors combined. Initial seller contact occurs at ~57% through the purchase process (Gartner Future of Sales 2025).
-- 53% of B2B customer loyalty derives from the sales experience itself — outranks brand, product/service delivery, and value-to-price ratio (Dixon & Adamson, The Challenger Sale, with CEB/Gartner replications 2016 and 2019).
+- 74% of buying teams demonstrate "unhealthy conflict" during the buying decision process (Gartner May 2025, n=632 B2B buyers). Buying groups that reach consensus are 2.5x more likely to report a high-quality deal. [verified 05/2026, Gartner May 2025]
+- 61% of B2B buyers prefer an overall rep-free buying experience; 73% actively avoid vendors that send irrelevant outreach (Gartner June 2025). [verified 05/2026, Gartner June 2025]
+- 92% of buyers start with at least one vendor in mind; 41% have a single preferred vendor before formal evaluation begins (Forrester 2024 Buyers Journey, n=11,352). [verified 05/2026, Forrester 2024]
+- 86% of B2B purchases stall at some point; 81% of buyers report dissatisfaction with their chosen provider post-purchase (Forrester State of Business Buying 2024). [verified 05/2026, Forrester 2024]
+- Buyers spend ~17% of total purchase journey time interacting with all potential vendors combined. Initial seller contact occurs at ~57% through the purchase process (Gartner Future of Sales 2025). [verified 05/2026, Gartner Future of Sales 2025]
+- 53% of B2B customer loyalty derives from the sales experience itself — outranks brand, product/service delivery, and value-to-price ratio (Dixon & Adamson, The Challenger Sale, with CEB/Gartner replications 2016 and 2019). [verified 05/2026, CEB/Gartner]
 - Buying groups span 5-16 people across as many as 4 functions [verified 05/2026, Gartner 2025]; up to 22 in healthcare [verified 05/2026, FTI Consulting / HIMSS].
-- The "champion" model is necessary but no longer sufficient. Insight-led reframing remains the highest-ROI seller behavior, particularly because 41-57% of buyers have already formed preferences before any seller contact.
+- The "champion" model is necessary but no longer sufficient. Insight-led reframing remains the highest-ROI seller behavior, particularly because 41-57% of buyers have already formed preferences before any seller contact. [verified 05/2026, Forrester 2024 / Gartner Future of Sales 2025]
 - Gen AI estimated to add $0.8T-$1.2T incremental productivity in sales and marketing [verified 05/2026, McKinsey 2024]. 19% of B2B decision-makers actively implementing gen AI use cases; another 23% in process [verified 05/2026, McKinsey Global B2B Pulse, n=3,942 across 34 sectors].
 
 PIPELINE ARCHITECTURE: Sequential stages (Awareness → Interest → Consideration → Evaluation → Negotiation → Close). Pipeline coverage 3-5x quota is leading indicator [verified 05/2026, Forrester / SiriusDecisions benchmark]. Deal progression shaped by: ICP fit at entry, discovery rigor, champion presence, buying committee consensus (not just alignment). The 17% total-vendor-time stat is the strongest argument against high-frequency outbound: most contact time is wasted because buyers have already narrowed.
@@ -60,11 +60,11 @@ KNOWN TRAPS (meta-knowledge — where this layer's data goes stale or gets misin
 - The Challenger Sale loyalty stat (53% from sales experience) is from original CEB research replicated in 2016 and 2019. The methodology has been debated — it measures stated preference, not revealed preference.
 - Forrester's "92% start with a vendor in mind" and "86% of purchases stall" are from a large sample (n=11,352) but skew toward enterprise/mid-market buyers. SMB buying may not follow the same pattern.
 - Pipeline coverage benchmarks (3-5x) vary dramatically by ACV, cycle length, and conversion rates. A 3x coverage ratio at $500K ACV is very different from 3x at $20K ACV.
-- McKinsey's $0.8T-$1.2T GenAI productivity estimate is a TOTAL ADDRESSABLE IMPACT figure, not realized value. It assumes full adoption across all sales and marketing functions globally.
-- The "19% actively implementing GenAI" stat is from a 2024 survey. This number is likely materially higher by mid-2026 — use as a floor, not current state.
-- Channel economics (20-35% reseller margin) are averages. SaaS reseller margins are compressing as vendors push toward direct and marketplace distribution.
+- McKinsey's $0.8T-$1.2T GenAI productivity estimate is a TOTAL ADDRESSABLE IMPACT figure, not realized value. It assumes full adoption across all sales and marketing functions globally. [verified 05/2026, McKinsey 2024]
+- The "19% actively implementing GenAI" stat is from a 2024 survey. This number is likely materially higher by mid-2026 — use as a floor, not current state. [verified 05/2026, McKinsey Global B2B Pulse]
+- Channel economics (20-35% reseller margin) are averages. SaaS reseller margins are compressing as vendors push toward direct and marketplace distribution. [verified 05/2026, Forrester Channel Economics Report]
 - Enterprise cycle lengths (9-18 months) are pre-COVID baselines that have been disrupted. Remote buying shortened some cycles but elongated others due to consensus-building friction.
-- "Companies undercapture 20-40%" on pricing is from Simon-Kucher studies that sample their own client base — companies seeking pricing help are more likely to have pricing problems.
+- "Companies undercapture 20-40%" on pricing is from Simon-Kucher studies that sample their own client base — companies seeking pricing help are more likely to have pricing problems. [verified 05/2026, Simon-Kucher & Partners]
 `;
 
 export const B2B_SALES_DISCOVERY = `

@@ -1,0 +1,34 @@
+name: golden-set-full
+
+# Tier C: Run all 25 sentinel companies x3 against ground truth.
+# Nightly on main + manual dispatch + pre-release.
+# Requires ANTHROPIC_API_KEY secret.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC daily (1 AM EST)
+  workflow_dispatch: {}
+
+jobs:
+  golden-set-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run golden-set full (25 companies x3)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node tests/golden-set/run.js --full
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-set-full-report
+          path: tests/golden-set/reports/
+          retention-days: 90
