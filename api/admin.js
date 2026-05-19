@@ -46,7 +46,10 @@ export default async function handler(req, res) {
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
 
-  // Look up the caller's email — must match superuser
+  // Look up the caller's email — must match superuser + email must be verified
+  if (!payload.email_confirmed_at && !payload.email_verified) {
+    return res.status(403).json({ error: "Email not verified" });
+  }
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);
   const callerEmail = userRes?.[0]?.email;
   if (!SUPERUSER_EMAIL || callerEmail?.toLowerCase() !== SUPERUSER_EMAIL.toLowerCase()) {

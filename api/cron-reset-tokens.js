@@ -12,9 +12,13 @@ export default async function handler(req, res) {
   // Only allow GET (Vercel Cron sends GET requests)
   if (req.method !== "GET") return res.status(405).end();
 
-  // Verify the request is from Vercel Cron
+  // Verify the request is from Vercel Cron — FAIL CLOSED if secret not configured
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && req.headers.authorization !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    console.error("[cron] CRON_SECRET not set — rejecting request (fail-closed)");
+    return res.status(500).json({ error: "Cron not configured" });
+  }
+  if (req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -61,6 +65,6 @@ export default async function handler(req, res) {
     res.status(200).json({ ok: true, orgs_reset: count, timestamp: new Date().toISOString() });
   } catch (e) {
     console.error("[cron] Token reset failed:", e.message);
-    res.status(500).json({ error: "Reset failed", message: e.message });
+    res.status(500).json({ error: "Reset failed" });
   }
 }

@@ -47,7 +47,10 @@ export default async function handler(req, res) {
   const payload = decodeJwtPayload(authToken);
   if (!payload?.sub || !UUID_RE.test(payload.sub)) return res.status(401).json({ error: "Authentication required" });
 
-  // Verify superuser
+  // Verify superuser — must have confirmed email (prevents unverified signup escalation)
+  if (!payload.email_confirmed_at && !payload.email_verified) {
+    return res.status(403).json({ error: "Email not verified" });
+  }
   const userRes = await sbFetch(`users?id=eq.${payload.sub}&select=email`);
   const callerEmail = userRes?.[0]?.email;
   if (!SUPERUSER_EMAIL || callerEmail?.toLowerCase() !== SUPERUSER_EMAIL.toLowerCase()) return res.status(403).json({ error: "Forbidden" });

@@ -181,9 +181,20 @@ export default async function handler(req, res) {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object;
-        const orgId = sub.metadata?.org_id;
-        console.log(`[stripe] Subscription cancelled: org=${orgId}`);
-        await downgradeOrg(orgId);
+        // Server-side org_id lookup — don't trust metadata
+        const delUserId = sub.metadata?.user_id;
+        let delOrgId = null;
+        if (delUserId && SB_URL && SB_KEY) {
+          try {
+            const r = await fetch(`${SB_URL}/rest/v1/users?id=eq.${delUserId}&select=org_id`, {
+              headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+            });
+            const users = await r.json();
+            delOrgId = users?.[0]?.org_id || null;
+          } catch (e) { console.error("[stripe] Sub delete org lookup failed:", e.message); }
+        }
+        console.log(`[stripe] Subscription cancelled: user=${delUserId}, org=${delOrgId}`);
+        await downgradeOrg(delOrgId);
         break;
       }
 

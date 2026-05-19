@@ -3,11 +3,15 @@
 // Handles enterprise/invoice inquiry form submissions.
 // Logs the inquiry to the database and sends notification emails.
 
-import { isAllowedOrigin } from "./_guard.js";
+import { isAllowedOrigin, checkRateLimit } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
-const ADMIN_EMAIL = process.env.SUPERUSER_EMAIL || "itsjoegalano@gmail.com";
+const ADMIN_EMAIL = process.env.SUPERUSER_EMAIL;
+if (!ADMIN_EMAIL) console.warn("[contact] SUPERUSER_EMAIL not set — admin notifications disabled");
+
+// Basic email format validation
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -15,8 +19,20 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || req.headers.referer || "";
   if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "Origin not allowed" });
 
+  // Rate limiting — prevent form spam
+  const xff = req.headers["x-forwarded-for"];
+  const ip = req.headers["x-vercel-forwarded-for"]?.split(",")[0]?.trim()
+           || (xff ? xff.split(",").pop().trim() : "")
+           || req.headers["x-real-ip"] || req.socket?.remoteAddress || "unknown";
+  if (!checkRateLimit(ip)) return res.status(429).json({ error: "Too many requests" });
+
   const { name, email, company, interest, message } = req.body || {};
   if (!name || !email || !company) return res.status(400).json({ error: "Name, email, and company are required" });
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "Invalid email format" });
+  // Cap field lengths to prevent abuse
+  if (name.length > 200 || email.length > 254 || company.length > 200 || (message && message.length > 5000)) {
+    return res.status(400).json({ error: "Input too long" });
+  }
 
   const interestLabels = {
     enterprise: "Enterprise pricing",

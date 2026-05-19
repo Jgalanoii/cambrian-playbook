@@ -37,7 +37,6 @@ import { MEDICAL_PAYMENTS_INJECTION, MEDICAL_PAYMENTS_SCORING, MEDICAL_PAYMENTS_
 import { SMB_MIDMARKET_INJECTION, SMB_MIDMARKET_SCORING, SMB_MIDMARKET_DISCOVERY } from "../src/data/smbMidmarketKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
-}
 
 export default async function handler(req, res) {
   if (req.method !== "GET") { res.status(405).end(); return; }
@@ -63,6 +62,37 @@ export default async function handler(req, res) {
   if (!await verifyJwt(req)) {
     res.status(401).json({ error: "authentication required" });
     return;
+  }
+
+  // Plan-based gating — look up user's org plan to determine knowledge tier
+  let userPlan = "trial"; // default to trial (minimal knowledge)
+  if (!req._isGuest) {
+    try {
+      const authToken = (req.headers.authorization || "").slice(7);
+      const parts = authToken.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+        const userId = payload?.sub;
+        if (userId) {
+          const SB_URL = process.env.VITE_SUPABASE_URL;
+          const SB_SVC = process.env.SUPABASE_SERVICE_KEY;
+          if (SB_URL && SB_SVC) {
+            const r = await fetch(`${SB_URL}/rest/v1/users?id=eq.${userId}&select=org_id`, {
+              headers: { apikey: SB_SVC, Authorization: `Bearer ${SB_SVC}` },
+            });
+            const users = await r.json();
+            const orgId = users?.[0]?.org_id;
+            if (orgId) {
+              const orgR = await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}&select=plan`, {
+                headers: { apikey: SB_SVC, Authorization: `Bearer ${SB_SVC}` },
+              });
+              const orgs = await orgR.json();
+              userPlan = orgs?.[0]?.plan || "trial";
+            }
+          }
+        }
+      }
+    } catch {} // fail open to trial tier — they get minimal knowledge, not nothing
   }
 
   // Guest limit — guests share the 3-call limit with Claude endpoints
@@ -109,8 +139,13 @@ export default async function handler(req, res) {
     });
   }
 
-  // ── Authenticated: full knowledge layer ───────────────────────────────
+  // ── Authenticated: knowledge tier based on plan ────────────────────────
+  // Trial/free users get core frameworks only (ICP, B2B sales, basic scoring).
+  // Paid users get everything including vertical knowledge, compliance, battle cards.
+  const isPaid = userPlan === "paid" || userPlan === "enterprise";
+
   res.status(200).json({
+    _plan: userPlan,
     fitScoringRules: FIT_SCORING_RULES,
     negotiations: ALL_NEGOTIATION_INJECTIONS,
     fisherUry: FISHER_URY_INJECTION,
@@ -149,78 +184,91 @@ export default async function handler(req, res) {
     archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
     postSaleExpansion: POST_SALE_EXPANSION,
     solutionFitCards: SOLUTION_FIT_CARDS,
-    // Payments deep knowledge layer
-    paymentsIndustry: PAYMENTS_INDUSTRY_INJECTION,
-    paymentsScoring: PAYMENTS_SCORING_CONTEXT,
-    paymentsDiscovery: PAYMENTS_DISCOVERY_INJECTION,
-    // New frameworks (v4.28.26)
+    // ── PAID-ONLY: Vertical knowledge layers, compliance, battle cards ──
+    // Trial users get core frameworks above. Vertical depth is the premium.
+    ...(isPaid ? {
+      // Payments deep knowledge layer
+      paymentsIndustry: PAYMENTS_INDUSTRY_INJECTION,
+      paymentsScoring: PAYMENTS_SCORING_CONTEXT,
+      paymentsDiscovery: PAYMENTS_DISCOVERY_INJECTION,
+      // Compliance awareness layer (13 frameworks × 4 verticals)
+      complianceFrameworks: COMPLIANCE_FRAMEWORKS,
+      complianceVerticalMap: COMPLIANCE_VERTICAL_MAP,
+      complianceDisclaimer: COMPLIANCE_DISCLAIMER,
+      complianceHandoff: HANDOFF_PROTOCOL,
+      // Real estate & land development knowledge layer
+      realEstateIndustry: REAL_ESTATE_INDUSTRY_INJECTION,
+      realEstateScoring: REAL_ESTATE_SCORING_CONTEXT,
+      realEstateDiscovery: REAL_ESTATE_DISCOVERY_INJECTION,
+      // Banking & capital markets knowledge layer
+      bankingIndustry: BANKING_INDUSTRY_INJECTION,
+      bankingScoring: BANKING_SCORING_CONTEXT,
+      bankingDiscovery: BANKING_DISCOVERY_INJECTION,
+      // Accounting & financial management (cross-cutting)
+      accountingFinance: ACCOUNTING_FINANCE_INJECTION,
+      accountingFinanceScoring: ACCOUNTING_FINANCE_SCORING,
+      accountingFinanceDiscovery: ACCOUNTING_FINANCE_DISCOVERY,
+      // Healthcare SaaS deep knowledge
+      healthcareSaas: HEALTHCARE_SAAS_INJECTION,
+      healthcareSaasScoring: HEALTHCARE_SAAS_SCORING,
+      healthcareSaasDiscovery: HEALTHCARE_SAAS_DISCOVERY,
+      // AI/ML deep knowledge
+      aiMl: AI_ML_INJECTION,
+      aiMlScoring: AI_ML_SCORING,
+      aiMlDiscovery: AI_ML_DISCOVERY,
+      // Fintech deep knowledge
+      fintechDeep: FINTECH_DEEP_INJECTION,
+      fintechDeepScoring: FINTECH_DEEP_SCORING,
+      fintechDeepDiscovery: FINTECH_DEEP_DISCOVERY,
+      // Rewards & incentives deep knowledge (Cambrian's core domain)
+      rewardsIncentives: REWARDS_INCENTIVES_INJECTION,
+      rewardsIncentivesScoring: REWARDS_INCENTIVES_SCORING,
+      rewardsIncentivesDiscovery: REWARDS_INCENTIVES_DISCOVERY,
+      // QSR / restaurants
+      qsr: QSR_INJECTION,
+      qsrScoring: QSR_SCORING,
+      qsrDiscovery: QSR_DISCOVERY,
+      // Investor intelligence (cross-cutting)
+      investorIntelligence: INVESTOR_INTELLIGENCE_INJECTION,
+      investorIntelligenceDiscovery: INVESTOR_INTELLIGENCE_DISCOVERY,
+      // BaaS / sponsor banking / embedded banking
+      baas: BAAS_INJECTION,
+      baasScoring: BAAS_SCORING,
+      baasDiscovery: BAAS_DISCOVERY,
+      // Charitable giving / DAFs / charity gift cards
+      charitableGiving: CHARITABLE_GIVING_INJECTION,
+      charitableGivingScoring: CHARITABLE_GIVING_SCORING,
+      charitableGivingDiscovery: CHARITABLE_GIVING_DISCOVERY,
+      // Medical & healthcare payments
+      medicalPayments: MEDICAL_PAYMENTS_INJECTION,
+      medicalPaymentsScoring: MEDICAL_PAYMENTS_SCORING,
+      medicalPaymentsDiscovery: MEDICAL_PAYMENTS_DISCOVERY,
+      // SMB & mid-market cross-cutting intelligence
+      smbMidmarket: SMB_MIDMARKET_INJECTION,
+      smbMidmarketScoring: SMB_MIDMARKET_SCORING,
+      smbMidmarketDiscovery: SMB_MIDMARKET_DISCOVERY,
+      // Advanced frameworks (paid only)
+      pricingNegotiation: PRICING_NEGOTIATION,
+      archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
+      postSaleExpansion: POST_SALE_EXPANSION,
+      solutionFitCards: SOLUTION_FIT_CARDS,
+    } : {
+      // Trial users: basic B2B sales + OKR frameworks only (no vertical depth)
+      b2bSales: B2B_SALES_INJECTION,
+      b2bSalesDiscovery: B2B_SALES_DISCOVERY,
+      okrKpi: OKR_KPI_INJECTION,
+      okrKpiDiscovery: OKR_KPI_DISCOVERY,
+    }),
+    // Frameworks available to all tiers
     fitzpatrickMomTest: FITZPATRICK_MOM_TEST,
     mooreChasm: MOORE_CHASM,
     sixsenseAbm: SIXSENSE_ABM,
     lajaCxl: LAJA_CXL,
     discoveryQuestionBank: DISCOVERY_QUESTION_BANK,
     salesMethodologyFrameworks: SALES_METHODOLOGY_FRAMEWORKS,
-    // Compliance awareness layer (13 frameworks × 4 verticals)
-    complianceFrameworks: COMPLIANCE_FRAMEWORKS,
-    complianceVerticalMap: COMPLIANCE_VERTICAL_MAP,
-    complianceDisclaimer: COMPLIANCE_DISCLAIMER,
-    complianceHandoff: HANDOFF_PROTOCOL,
-    // Real estate & land development knowledge layer
-    realEstateIndustry: REAL_ESTATE_INDUSTRY_INJECTION,
-    realEstateScoring: REAL_ESTATE_SCORING_CONTEXT,
-    realEstateDiscovery: REAL_ESTATE_DISCOVERY_INJECTION,
-    // Banking & capital markets knowledge layer
-    bankingIndustry: BANKING_INDUSTRY_INJECTION,
-    bankingScoring: BANKING_SCORING_CONTEXT,
-    bankingDiscovery: BANKING_DISCOVERY_INJECTION,
-    // Accounting & financial management (cross-cutting)
-    accountingFinance: ACCOUNTING_FINANCE_INJECTION,
-    accountingFinanceScoring: ACCOUNTING_FINANCE_SCORING,
-    accountingFinanceDiscovery: ACCOUNTING_FINANCE_DISCOVERY,
-    // Healthcare SaaS deep knowledge
-    healthcareSaas: HEALTHCARE_SAAS_INJECTION,
-    healthcareSaasScoring: HEALTHCARE_SAAS_SCORING,
-    healthcareSaasDiscovery: HEALTHCARE_SAAS_DISCOVERY,
-    // AI/ML deep knowledge
-    aiMl: AI_ML_INJECTION,
-    aiMlScoring: AI_ML_SCORING,
-    aiMlDiscovery: AI_ML_DISCOVERY,
-    // Fintech deep knowledge
-    fintechDeep: FINTECH_DEEP_INJECTION,
-    fintechDeepScoring: FINTECH_DEEP_SCORING,
-    fintechDeepDiscovery: FINTECH_DEEP_DISCOVERY,
-    // Rewards & incentives deep knowledge (Cambrian's core domain)
-    rewardsIncentives: REWARDS_INCENTIVES_INJECTION,
-    rewardsIncentivesScoring: REWARDS_INCENTIVES_SCORING,
-    rewardsIncentivesDiscovery: REWARDS_INCENTIVES_DISCOVERY,
-    // Cross-cutting: B2B sales + value creation
-    b2bSales: B2B_SALES_INJECTION,
-    b2bSalesDiscovery: B2B_SALES_DISCOVERY,
-    // Cross-cutting: OKRs, KPIs, measurement
+    // B2B sales available to all (core product functionality)
+    ...(isPaid ? {} : { b2bSales: B2B_SALES_INJECTION, b2bSalesDiscovery: B2B_SALES_DISCOVERY }),
     okrKpi: OKR_KPI_INJECTION,
     okrKpiDiscovery: OKR_KPI_DISCOVERY,
-    // QSR / restaurants
-    qsr: QSR_INJECTION,
-    qsrScoring: QSR_SCORING,
-    qsrDiscovery: QSR_DISCOVERY,
-    // Investor intelligence (cross-cutting)
-    investorIntelligence: INVESTOR_INTELLIGENCE_INJECTION,
-    investorIntelligenceDiscovery: INVESTOR_INTELLIGENCE_DISCOVERY,
-    // BaaS / sponsor banking / embedded banking
-    baas: BAAS_INJECTION,
-    baasScoring: BAAS_SCORING,
-    baasDiscovery: BAAS_DISCOVERY,
-    // Charitable giving / DAFs / charity gift cards
-    charitableGiving: CHARITABLE_GIVING_INJECTION,
-    charitableGivingScoring: CHARITABLE_GIVING_SCORING,
-    charitableGivingDiscovery: CHARITABLE_GIVING_DISCOVERY,
-    // Medical & healthcare payments (flex cards, SNAP/EBT, food-as-medicine, filtered-spend)
-    medicalPayments: MEDICAL_PAYMENTS_INJECTION,
-    medicalPaymentsScoring: MEDICAL_PAYMENTS_SCORING,
-    medicalPaymentsDiscovery: MEDICAL_PAYMENTS_DISCOVERY,
-    // SMB & mid-market cross-cutting intelligence (buying patterns by size)
-    smbMidmarket: SMB_MIDMARKET_INJECTION,
-    smbMidmarketScoring: SMB_MIDMARKET_SCORING,
-    smbMidmarketDiscovery: SMB_MIDMARKET_DISCOVERY,
   });
 }
