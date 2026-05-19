@@ -3311,6 +3311,7 @@ export default function App(){
   const[favorites,setFavorites]=useState([]); // [{id, type, label, content, company, step, timestamp}]
   const[favPanelOpen,setFavPanelOpen]=useState(false);
   const[sessionMode,setSessionMode]=useState(sbUser ? "full" : "quick"); // "full" | "quick" (guests default to quick)
+  const[hubspotStatus,setHubspotStatus]=useState(null); // null | {connected:bool, portalId:string}
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
   const lastGenSig = useRef({ icp: "", brief: "", hypo: "", postCall: "" });
@@ -6273,6 +6274,30 @@ ${isOpen
   };
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
+  const [hubspotPushing,setHubspotPushing]=useState("");
+  const pushToHubSpot=async(action,data)=>{
+    if(!hubspotStatus?.connected){setCopied("hs_err");setTimeout(()=>setCopied(""),3000);return;}
+    setHubspotPushing(action);
+    try{
+      const r=await fetch("/api/hubspot-push",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({action,data})});
+      const d=await r.json();
+      if(d.ok){
+        const parts=[];
+        if(d.created?.companies)parts.push(`${d.created.companies} company`);
+        if(d.created?.deals)parts.push(`${d.created.deals} deal`);
+        if(d.created?.notes)parts.push(`${d.created.notes} note`);
+        if(d.created?.tasks)parts.push(`${d.created.tasks} task${d.created.tasks>1?"s":""}`);
+        if(d.created?.contacts)parts.push(`${d.created.contacts} contact${d.created.contacts>1?"s":""}`);
+        setCopied("hs_ok");setTimeout(()=>setCopied(""),4000);
+        setChatMessages(prev=>[...prev,{role:"assistant",content:`Pushed to HubSpot: ${parts.join(", ")} created.`}]);
+      }else{
+        if(d.error?.includes("expired")||d.error?.includes("reconnect")){setHubspotStatus({connected:false});}
+        setCopied("hs_err");setTimeout(()=>setCopied(""),4000);
+        setChatMessages(prev=>[...prev,{role:"assistant",content:`HubSpot push failed: ${d.error||"unknown error"}`}]);
+      }
+    }catch(e){setCopied("hs_err");setTimeout(()=>setCopied(""),3000);}
+    finally{setHubspotPushing("");}
+  };
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   // ── CUSTOMER-FACING POST-CALL BRIEF ─────────────────────────────────────
   const escHtml=(s)=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -6825,10 +6850,22 @@ ${isOpen
     } else if (checkout === "cancel") {
       window.history.replaceState({}, "", window.location.pathname);
     }
+    // Detect HubSpot OAuth redirect
+    const hubspot = params.get("hubspot");
+    if (hubspot === "connected") {
+      window.history.replaceState({}, "", window.location.pathname);
+      setHubspotStatus({ connected: true });
+      setChatMessages(prev => [...prev, { role: "assistant", content: "HubSpot connected! You can now push briefs, deal routes, and CRM notes directly to your CRM from any brief or post-call screen." }]);
+      setChatOpen(true);
+    } else if (hubspot === "error") {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
 
   if(!authed) return <PasswordGate onAuth={async(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
+    // Check HubSpot connection status
+    fetch("/api/hubspot-auth",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${tok}`},body:JSON.stringify({action:"status"})}).then(r=>r.json()).then(d=>setHubspotStatus(d)).catch(()=>{});
     // Accept pending invitation before fetching org context
     const pendingInvite = sessionStorage.getItem("pending_invite_token");
     if (pendingInvite && u?.id) {
@@ -9814,6 +9851,10 @@ ${isOpen
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)",color:"#555",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                       📋 Copy Brief
                     </button>
+                    {hubspotStatus?.connected&&<button onClick={()=>pushToHubSpot("push_brief",{company:{name:selectedAccount?.company,domain:selectedAccount?.company_url||"",industry:selectedAccount?.industry||selectedAccount?.ind,revenue:brief?.revenue,employees:brief?.employeeCount},executives:(brief?.keyExecutives||[]).map(e=>({name:e.name,title:e.title,background:e.background,angle:e.angle})),tldr:brief?.tldr,elevatorPitch:brief?.elevatorPitch,strategicTheme:brief?.strategicTheme,fiveQuestions:brief?.fiveQuestions})} disabled={!!hubspotPushing}
+                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":"var(--surface)",color:copied==="hs_ok"?"var(--green)":"#555",cursor:hubspotPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5}}>
+                      {hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":"Push to HubSpot"}
+                    </button>}
                     <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                     <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                     {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
@@ -11589,7 +11630,7 @@ ${isOpen
                     ) : postCall.nextSteps?.map((s,i)=>(i+1)+". "+s).join("\n")}
                   </div>
                 </div>
-                <div className="post-sec"><div className="post-lbl">CRM Note <button className="copy-btn" onClick={()=>copyText(postCall.crmNote,"crm")}>{copied==="crm"?"Copied ✓":"Copy"}</button></div><div className="post-content">{postCall.crmNote}</div></div>
+                <div className="post-sec"><div className="post-lbl">CRM Note <button className="copy-btn" onClick={()=>copyText(postCall.crmNote,"crm")}>{copied==="crm"?"Copied ✓":"Copy"}</button>{hubspotStatus?.connected&&<button className="copy-btn" style={{marginLeft:4,background:hubspotPushing==="push_postcall"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":copied==="hs_err"?"#fee":""}} onClick={()=>pushToHubSpot("push_postcall",{company:{name:selectedAccount?.company,domain:selectedAccount?.company_url||"",industry:selectedAccount?.industry||selectedAccount?.ind},crmNote:postCall.crmNote,callSummary:postCall.callSummary,dealRoute:postCall.dealRoute,dealRouteReason:postCall.dealRouteReason,dealRisk:postCall.dealRisk,nextSteps:postCall.nextSteps||[],emailSubject:postCall.emailSubject,emailBody:postCall.emailBody,confidence:confidence})} disabled={!!hubspotPushing}>{hubspotPushing==="push_postcall"?"Pushing...":copied==="hs_ok"?"Pushed ✓":copied==="hs_err"?"Failed":"Push to HubSpot"}</button>}</div><div className="post-content">{postCall.crmNote}</div></div>
                 <div className="post-sec"><div className="post-lbl">Call Summary <button className="copy-btn" onClick={()=>copyText(postCall.callSummary,"summary")}>{copied==="summary"?"Copied ✓":"Copy"}</button></div><div className="post-content">{postCall.callSummary}</div></div>
                 <div className="post-sec">
                   <div className="post-lbl">Follow-Up Email <button className="copy-btn" onClick={()=>copyText("Subject: "+postCall.emailSubject+"\n\n"+postCall.emailBody,"email")}>{copied==="email"?"Copied ✓":"Copy Email"}</button></div>

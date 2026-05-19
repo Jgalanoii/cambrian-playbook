@@ -34,6 +34,68 @@ function ReferralWidget({ sbToken }) {
   );
 }
 
+function HubSpotSection({ sbToken }) {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  useEffect(() => {
+    if (!sbToken) return;
+    fetch("/api/hubspot-auth", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+      body: JSON.stringify({ action: "status" }) })
+      .then(r => r.json()).then(setStatus).catch(() => setStatus({ connected: false }));
+  }, [sbToken]);
+
+  const startConnect = () => {
+    setLoading(true);
+    fetch("/api/hubspot-auth", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+      body: JSON.stringify({ action: "start" }) })
+      .then(r => r.json())
+      .then(d => { if (d.url) window.location.href = d.url; else setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+
+  const disconnect = () => {
+    if (!confirm("Disconnect HubSpot? You can reconnect anytime.")) return;
+    setDisconnecting(true);
+    fetch("/api/hubspot-auth", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+      body: JSON.stringify({ action: "disconnect" }) })
+      .then(() => setStatus({ connected: false }))
+      .finally(() => setDisconnecting(false));
+  };
+
+  return (
+    <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>CRM Integration</div>
+      {status?.connected ? (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", display: "inline-block" }} />
+            <span style={{ fontSize: 12, color: "var(--ink-1)" }}>Connected to HubSpot{status.portalId ? ` (portal ${status.portalId})` : ""}</span>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.6, marginBottom: 8 }}>
+            Push briefs, deal routes, CRM notes, and next steps directly to HubSpot from any brief or post-call screen.
+          </div>
+          <button onClick={disconnect} disabled={disconnecting}
+            style={{ padding: "6px 14px", borderRadius: 6, border: "1.5px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-2)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+            {disconnecting ? "Disconnecting..." : "Disconnect"}
+          </button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 8 }}>
+            Connect HubSpot to push briefs, deal routes, and CRM notes directly from Cambrian — no downloads, no copy-paste.
+          </div>
+          <button onClick={startConnect} disabled={loading || status === null}
+            style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ff7a59", color: "#fff", fontSize: 12, fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: (loading || status === null) ? 0.6 : 1 }}>
+            {loading ? "Connecting..." : status === null ? "Loading..." : "Connect HubSpot"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -683,6 +745,9 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
                   {orgCtx?.run_limit || 5} runs/month · {(orgCtx?.max_run_limit || 0) > 0 ? `${orgCtx.max_run_limit} Max runs` : "Max not included"}
                 </div>
               </div>
+
+              {/* HubSpot CRM Integration */}
+              <HubSpotSection sbToken={sbToken} />
 
               {/* Refer & Earn */}
               <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 12 }}>

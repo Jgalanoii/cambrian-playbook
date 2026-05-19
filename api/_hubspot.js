@@ -1,0 +1,272 @@
+// api/_hubspot.js
+//
+// Shared HubSpot token management for OAuth integration.
+// Underscore prefix prevents Vercel from routing as endpoint.
+//
+// Handles: encryption, token CRUD, auto-refresh, authenticated fetch.
+// All tokens are AES-256-GCM encrypted at rest in Supabase.
+
+import { createCipheriv, createDecipheriv, randomBytes, createHmac } from "crypto";
+
+const SB_URL = process.env.VITE_SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+const HS_CLIENT_ID = process.env.HUBSPOT_CLIENT_ID;
+const HS_CLIENT_SECRET = process.env.HUBSPOT_CLIENT_SECRET;
+const TOKEN_KEY = process.env.HUBSPOT_TOKEN_KEY; // 32 bytes as hex (64 chars)
+
+const HS_AUTH_URL = "https://app.hubspot.com/oauth/authorize";
+const HS_TOKEN_URL = "https://api.hubapi.com/oauth/v1/token";
+const HS_API_BASE = "https://api.hubapi.com";
+
+const SCOPES = [
+  "crm.objects.contacts.read",
+  "crm.objects.contacts.write",
+  "crm.objects.companies.read",
+  "crm.objects.companies.write",
+  "crm.objects.deals.read",
+  "crm.objects.deals.write",
+].join(" ");
+
+// ── Encryption helpers ─────────────────────────────────────────────────
+function getKeyBuffer() {
+  if (!TOKEN_KEY || TOKEN_KEY.length !== 64) throw new Error("HUBSPOT_TOKEN_KEY must be 64 hex chars (32 bytes)");
+  return Buffer.from(TOKEN_KEY, "hex");
+}
+
+export function encrypt(text) {
+  const key = getKeyBuffer();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  const tag = cipher.getAuthTag().toString("hex");
+  return { encrypted: encrypted + ":" + tag, iv: iv.toString("hex") };
+}
+
+export function decrypt(encrypted, ivHex) {
+  const key = getKeyBuffer();
+  const iv = Buffer.from(ivHex, "hex");
+  const parts = encrypted.split(":");
+  const encData = parts[0];
+  const tag = Buffer.from(parts[1], "hex");
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  let decrypted = decipher.update(encData, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
+}
+
+// ── HMAC state signing for OAuth CSRF protection ───────────────────────
+export function signState(payload) {
+  const data = JSON.stringify(payload);
+  const sig = createHmac("sha256", HS_CLIENT_SECRET).update(data).digest("hex");
+  const encoded = Buffer.from(data).toString("base64url");
+  return `${encoded}.${sig}`;
+}
+
+export function verifyState(state) {
+  const [encoded, sig] = state.split(".");
+  if (!encoded || !sig) return null;
+  const data = Buffer.from(encoded, "base64url").toString();
+  const expected = createHmac("sha256", HS_CLIENT_SECRET).update(data).digest("hex");
+  if (sig !== expected) return null;
+  try { return JSON.parse(data); } catch { return null; }
+}
+
+// ── Supabase REST helper ───────────────────────────────────────────────
+async function sbFetch(path, method = "GET", body = null) {
+  const headers = {
+    apikey: SB_KEY,
+    Authorization: `Bearer ${SB_KEY}`,
+    "Content-Type": "application/json",
+  };
+  if (method === "POST") headers.Prefer = "return=representation";
+  if (method === "PATCH") headers.Prefer = "return=minimal";
+  return fetch(`${SB_URL}/rest/v1/${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+// ── Token CRUD ─────────────────────────────────────────────────────────
+export async function getTokenForUser(userId) {
+  const r = await sbFetch(`hubspot_tokens?user_id=eq.${userId}&select=*`);
+  const rows = await r.json();
+  if (!rows?.length) return null;
+  const row = rows[0];
+  try {
+    return {
+      accessToken: decrypt(row.access_token, row.token_iv),
+      refreshToken: decrypt(row.refresh_token, row.token_iv),
+      expiresAt: new Date(row.expires_at),
+      portalId: row.portal_id,
+      scopes: row.scopes,
+    };
+  } catch {
+    return null; // corrupted tokens — treat as disconnected
+  }
+}
+
+export async function saveTokenForUser(userId, { accessToken, refreshToken, expiresIn, portalId, scopes }) {
+  const atEnc = encrypt(accessToken);
+  const rtEnc = encrypt(refreshToken);
+  // Both use the same IV for storage simplicity — each has its own auth tag
+  const iv = atEnc.iv;
+  const rtReenc = encrypt(refreshToken); // re-encrypt with separate call (gets own IV)
+
+  // Use access token IV for both — simpler storage
+  const expiresAt = new Date(Date.now() + (expiresIn || 1800) * 1000).toISOString();
+
+  // Check if row exists
+  const existing = await sbFetch(`hubspot_tokens?user_id=eq.${userId}&select=id`);
+  const rows = await existing.json();
+
+  if (rows?.length) {
+    // Update existing
+    await sbFetch(`hubspot_tokens?user_id=eq.${userId}`, "PATCH", {
+      access_token: atEnc.encrypted,
+      refresh_token: rtReenc.encrypted,
+      token_iv: iv, // access token IV — refresh gets its own via its encrypted blob
+      portal_id: portalId || null,
+      scopes: scopes || null,
+      expires_at: expiresAt,
+      updated_at: new Date().toISOString(),
+    });
+  } else {
+    // Insert new
+    await sbFetch("hubspot_tokens", "POST", {
+      user_id: userId,
+      access_token: atEnc.encrypted,
+      refresh_token: rtReenc.encrypted,
+      token_iv: iv,
+      portal_id: portalId || null,
+      scopes: scopes || null,
+      expires_at: expiresAt,
+    });
+  }
+}
+
+export async function deleteTokenForUser(userId) {
+  await sbFetch(`hubspot_tokens?user_id=eq.${userId}`, "DELETE");
+}
+
+// ── Token refresh ──────────────────────────────────────────────────────
+export async function refreshAccessToken(userId) {
+  const tokens = await getTokenForUser(userId);
+  if (!tokens) return null;
+
+  const r = await fetch(HS_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: HS_CLIENT_ID,
+      client_secret: HS_CLIENT_SECRET,
+      refresh_token: tokens.refreshToken,
+    }),
+  });
+
+  if (!r.ok) {
+    console.error("[hubspot] Token refresh failed:", r.status);
+    // If refresh fails with 400/401, the refresh token is revoked — delete stored tokens
+    if (r.status === 400 || r.status === 401) {
+      await deleteTokenForUser(userId);
+    }
+    return null;
+  }
+
+  const data = await r.json();
+  await saveTokenForUser(userId, {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+    portalId: tokens.portalId,
+    scopes: tokens.scopes,
+  });
+
+  return data.access_token;
+}
+
+// ── Authenticated HubSpot fetch ────────────────────────────────────────
+// Resolves token, auto-refreshes if near expiry, retries once on 401.
+export async function hubspotFetch(userId, path, options = {}) {
+  let tokens = await getTokenForUser(userId);
+  if (!tokens) return { ok: false, status: 401, error: "not_connected" };
+
+  // Refresh if token expires within 60 seconds
+  let accessToken = tokens.accessToken;
+  if (tokens.expiresAt.getTime() < Date.now() + 60_000) {
+    const refreshed = await refreshAccessToken(userId);
+    if (!refreshed) return { ok: false, status: 401, error: "token_expired" };
+    accessToken = refreshed;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  const r = await fetch(`${HS_API_BASE}${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  // Retry once on 401 (token may have been revoked mid-request)
+  if (r.status === 401) {
+    const refreshed = await refreshAccessToken(userId);
+    if (!refreshed) return { ok: false, status: 401, error: "token_expired" };
+    const retry = await fetch(`${HS_API_BASE}${path}`, {
+      method: options.method || "GET",
+      headers: { ...headers, Authorization: `Bearer ${refreshed}` },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    return retry;
+  }
+
+  return r;
+}
+
+// ── OAuth URL builder ──────────────────────────────────────────────────
+export function buildAuthUrl(redirectUri, state) {
+  const params = new URLSearchParams({
+    client_id: HS_CLIENT_ID,
+    redirect_uri: redirectUri,
+    scope: SCOPES,
+    state,
+  });
+  return `${HS_AUTH_URL}?${params}`;
+}
+
+// ── Exchange auth code for tokens ──────────────────────────────────────
+export async function exchangeCodeForTokens(code, redirectUri) {
+  const r = await fetch(HS_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: HS_CLIENT_ID,
+      client_secret: HS_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      code,
+    }),
+  });
+  if (!r.ok) return null;
+  return r.json();
+}
+
+// ── Get portal info from access token ──────────────────────────────────
+export async function getPortalInfo(accessToken) {
+  const r = await fetch(`${HS_API_BASE}/oauth/v1/access-tokens/${accessToken}`);
+  if (!r.ok) return null;
+  const data = await r.json();
+  return { portalId: String(data.hub_id), scopes: (data.scopes || []).join(",") };
+}
+
+// ── Config check ───────────────────────────────────────────────────────
+export function isConfigured() {
+  return !!(HS_CLIENT_ID && HS_CLIENT_SECRET && TOKEN_KEY && SB_URL && SB_KEY);
+}
