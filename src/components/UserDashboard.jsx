@@ -45,7 +45,13 @@ const ROLE_META = {
 };
 const r = (role) => ROLE_META[role] || ROLE_META.rep;
 
+// Lazy import OrgPanel for no-org users
+import OrgPanel from "./OrgPanel.jsx";
+
 export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, savedSessions, onClose }) {
+  // If user has no org, show the simplified OrgPanel (has "Create Organization" flow)
+  if (!orgCtx) return <OrgPanel orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} onClose={onClose} />;
+
   const [tab, setTab] = useState("dashboard");
 
   // ── Team data ──

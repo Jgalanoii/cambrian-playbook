@@ -7305,45 +7305,55 @@ ${isOpen
               {moreMenuOpen&&(
                 <>
                   <div onClick={()=>setMoreMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:999}}/>
-                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:200,maxWidth:"85vw",zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
+                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:220,maxWidth:"85vw",zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
+                    {/* TOOLS */}
+                    <div style={{padding:"4px 16px 2px",fontSize:9,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.5px"}}>Tools</div>
                     <button onClick={()=>{setCmdOpen(true);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>🔍</span> Search <span style={{marginLeft:"auto",fontSize:10,color:"var(--ink-3)",fontFamily:"monospace"}}>⌘K</span>
+                      Search <span style={{marginLeft:"auto",fontSize:10,color:"var(--ink-3)",fontFamily:"monospace"}}>⌘K</span>
                     </button>
                     <button onClick={()=>{setResourcesOpen(r=>!r);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>📁</span> Resources
+                      Resources
                     </button>
-                    <button onClick={()=>{setFavPanelOpen(true);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:favorites.length?"var(--amber)":"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                    {favorites.length>0&&<button onClick={()=>{setFavPanelOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--amber)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>★</span> Favorites{favorites.length?` (${favorites.length})`:""}
-                    </button>
-                    {sbUser&&orgCtx&&<button onClick={()=>{loadSessions();setOrgPanelOpen(true);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>📊</span> My Dashboard
+                      Favorites ({favorites.length})
                     </button>}
-                    <button onClick={()=>{setContactOpen(true);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>✉</span> Contact Us
-                    </button>
-                    {sbUser&&<button onClick={()=>{setUpgradeOpen(true);setMoreMenuOpen(false);}}
-                      style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--tan-0)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                      <span style={{width:20,textAlign:"center"}}>⚡</span> Plans & Pricing
-                    </button>}
+
+                    {/* ACCOUNT */}
                     <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
+                    <div style={{padding:"4px 16px 2px",fontSize:9,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.5px"}}>Account</div>
+                    {sbUser&&<button onClick={()=>{loadSessions();setOrgPanelOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      {orgCtx?`${orgCtx.name} Settings`:"Organization & Settings"}
+                    </button>}
+                    {sbUser&&<button onClick={()=>{setUpgradeOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--tan-0)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      Plans & Pricing
+                    </button>}
+
+                    {/* SUPPORT */}
+                    <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
+                    <button onClick={()=>{setContactOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      Contact Us
+                    </button>
+
+                    {/* ADMIN */}
                     {sbUser?.email==="itsjoegalano@gmail.com"&&(
                       <>
                         <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
                         <button onClick={()=>{setSuperAdminOpen(true);setMoreMenuOpen(false);}}
-                          style={{width:"100%",padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--violet)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                          style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--violet)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                           onMouseEnter={e=>e.currentTarget.style.background="var(--violet-bg)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                          <span style={{width:20,textAlign:"center"}}>⚙</span> Super Admin
+                          Super Admin
                         </button>
                       </>
                     )}
@@ -11773,7 +11783,7 @@ ${isOpen
       )}
 
       {/* User dashboard (replaces OrgPanel + ReportPanel) */}
-      {orgPanelOpen && orgCtx && (
+      {orgPanelOpen && (
         <UserDashboard orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} savedSessions={savedSessions} onClose={()=>setOrgPanelOpen(false)} />
       )}
 

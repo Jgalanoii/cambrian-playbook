@@ -1182,8 +1182,27 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
                       Personal Workspaces ({personalOrgs.length})
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 10 }}>
-                      Move users to a company org, or add a website to convert a workspace into a company org.
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span>Move users to a company org, or add a website to convert a workspace into a company org.</span>
+                      {personalOrgs.filter(o => o.run_count === 0).length > 0 && (
+                        <button onClick={async () => {
+                          const unused = personalOrgs.filter(o => o.run_count === 0);
+                          if (!window.confirm(`Clean up ${unused.length} unused workspace${unused.length > 1 ? "s" : ""}? Users will be unassigned (they can create or join an org later).`)) return;
+                          setPlanSaveMsg("Cleaning up...");
+                          let cleaned = 0;
+                          for (const o of unused) {
+                            try {
+                              const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` }, body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "cleanup" }) });
+                              const d = await r.json();
+                              if (d.ok) cleaned++;
+                            } catch {}
+                          }
+                          setPlanSaveMsg(`Cleaned up ${cleaned} workspace${cleaned > 1 ? "s" : ""}`);
+                          setTimeout(fetchData, 500); setTimeout(() => setPlanSaveMsg(""), 4000);
+                        }} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--red)", background: "var(--red-bg)", color: "var(--red)", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          Clean Up {personalOrgs.filter(o => o.run_count === 0).length} Unused
+                        </button>
+                      )}
                     </div>
                     <table className="admin-table">
                       <thead>
