@@ -1,0 +1,295 @@
+{
+  "version": "1.0",
+  "last_full_verification": "2026-05-19",
+  "fixed_seller": {
+    "name": "Cambrian Test Seller",
+    "url": "cambriancatalyst.ai",
+    "note": "Held constant across all runs. Target facts are seller-independent."
+  },
+  "companies": [
+    {
+      "id": "jpmorgan-chase",
+      "name": "JPMorgan Chase",
+      "url": "jpmorganchase.com",
+      "category": "data-rich-public",
+      "vertical": "banking",
+      "purpose": "Fact-match baseline — large public company with abundant verifiable data",
+      "facts": [
+        {
+          "field": "industry",
+          "tier": 1,
+          "value": "Banking",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://www.jpmorganchase.com"
+        },
+        {
+          "field": "ownership_type",
+          "tier": 1,
+          "value": "Public",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "NYSE: JPM"
+        },
+        {
+          "field": "hq_location",
+          "tier": 1,
+          "value": "New York",
+          "match": "fuzzy_location",
+          "verified": "2026-05-19",
+          "source": "https://www.jpmorganchase.com"
+        },
+        {
+          "field": "revenue",
+          "tier": 2,
+          "value": 182000000000,
+          "match": "numeric_tolerance",
+          "tolerance_pct": 15,
+          "verified": "2026-05-19",
+          "source": "JPM FY2025 10-K: $182.4B net revenue. Tolerance widened — sources report varying revenue lines (net vs managed)."
+        },
+        {
+          "field": "employee_count",
+          "tier": 2,
+          "value": 318000,
+          "match": "numeric_tolerance",
+          "tolerance_pct": 10,
+          "verified": "2026-05-19",
+          "source": "JPM FY2025 10-K: 318,512 employees"
+        },
+        {
+          "field": "founded",
+          "tier": 1,
+          "value": "1799",
+          "match": "set_membership",
+          "accepted": ["1799", "2000", "1871"],
+          "verified": "2026-05-19",
+          "source": "1799 (Bank of the Manhattan Company), 1871 (J.P. Morgan & Co), 2000 (JPMorgan Chase merger) — all valid"
+        },
+        {
+          "field": "ticker",
+          "tier": 1,
+          "value": "JPM",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "NYSE: JPM"
+        }
+      ],
+      "invariants": ["exec_consistency", "no_placeholders", "revenue_consistency"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "walmart",
+      "name": "Walmart",
+      "url": "walmart.com",
+      "category": "data-rich-public",
+      "vertical": "retail",
+      "purpose": "Fact-match baseline — largest revenue company, well-known facts",
+      "facts": [
+        {
+          "field": "industry",
+          "tier": 1,
+          "value": "Retail",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://corporate.walmart.com"
+        },
+        {
+          "field": "ownership_type",
+          "tier": 1,
+          "value": "Public",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "NYSE: WMT"
+        },
+        {
+          "field": "hq_location",
+          "tier": 1,
+          "value": "Bentonville",
+          "match": "fuzzy_location",
+          "verified": "2026-05-19",
+          "source": "https://corporate.walmart.com"
+        },
+        {
+          "field": "revenue",
+          "tier": 2,
+          "value": 681000000000,
+          "match": "numeric_tolerance",
+          "tolerance_pct": 10,
+          "verified": "2026-05-19",
+          "source": "Walmart FY2025 10-K: $681B"
+        },
+        {
+          "field": "employee_count",
+          "tier": 2,
+          "value": 2100000,
+          "match": "numeric_tolerance",
+          "tolerance_pct": 15,
+          "verified": "2026-05-19",
+          "source": "Walmart FY2025: ~2.1M associates"
+        },
+        {
+          "field": "founded",
+          "tier": 1,
+          "value": "1962",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://corporate.walmart.com/about/history"
+        },
+        {
+          "field": "ticker",
+          "tier": 1,
+          "value": "WMT",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "NYSE: WMT"
+        }
+      ],
+      "invariants": ["exec_consistency", "no_placeholders", "revenue_consistency"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "url": "stripe.com",
+      "category": "data-rich-private",
+      "vertical": "fintech",
+      "purpose": "Private company sentinel — must NOT fabricate a stock ticker or claim it is public",
+      "facts": [
+        {
+          "field": "industry",
+          "tier": 1,
+          "value": "Payments",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://stripe.com"
+        },
+        {
+          "field": "ownership_type",
+          "tier": 1,
+          "value": "Private",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://www.cnbc.com/2026/02/24/stripe-value-stock-sale-tender-offer.html"
+        },
+        {
+          "field": "hq_location",
+          "tier": 1,
+          "value": "San Francisco",
+          "match": "fuzzy_location",
+          "verified": "2026-05-19",
+          "source": "https://stripe.com"
+        },
+        {
+          "field": "founded",
+          "tier": 1,
+          "value": "2010",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://en.wikipedia.org/wiki/Stripe,_Inc."
+        },
+        {
+          "field": "employee_count",
+          "tier": 2,
+          "value": 10000,
+          "match": "numeric_tolerance",
+          "tolerance_pct": 60,
+          "verified": "2026-05-19",
+          "source": "Tracxn/TrueUp: ~10,140 employees (2025). Stripe hiring aggressively — 300+ planned hires. Sources vary 8K-16K. Wide tolerance appropriate."
+        }
+      ],
+      "invariants": ["no_placeholders", "no_entity_confusion"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded", "IPO", "NYSE: STRP", "STRP"]
+    },
+    {
+      "id": "usaa",
+      "name": "USAA",
+      "url": "usaa.com",
+      "category": "data-scarce-private",
+      "vertical": "insurance",
+      "purpose": "Calibrated-abstention sentinel — mutual insurer with limited public data. Brief should caveat data confidence.",
+      "facts": [
+        {
+          "field": "industry",
+          "tier": 1,
+          "value": "Insurance",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://www.usaa.com"
+        },
+        {
+          "field": "ownership_type",
+          "tier": 1,
+          "value": "Member-owned",
+          "match": "set_membership",
+          "accepted": ["Private", "Member-owned", "Mutual", "Private / Member-owned", "Member-Owned"],
+          "verified": "2026-05-19",
+          "source": "https://en.wikipedia.org/wiki/USAA"
+        },
+        {
+          "field": "hq_location",
+          "tier": 1,
+          "value": "San Antonio",
+          "match": "fuzzy_location",
+          "verified": "2026-05-19",
+          "source": "https://newsroom.usaa360.com/media-kit/usaa-san-antonio-headquarters"
+        },
+        {
+          "field": "founded",
+          "tier": 1,
+          "value": "1922",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://en.wikipedia.org/wiki/USAA"
+        }
+      ],
+      "invariants": ["no_placeholders", "no_entity_confusion"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+    },
+    {
+      "id": "apollo-io",
+      "name": "Apollo.io",
+      "url": "apollo.io",
+      "category": "disambiguation-trap",
+      "vertical": "sales-tech",
+      "purpose": "Entity-confusion regression sentinel — must NOT confuse with Apollo Global Management",
+      "facts": [
+        {
+          "field": "industry",
+          "tier": 1,
+          "value": "Sales",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://www.apollo.io"
+        },
+        {
+          "field": "ownership_type",
+          "tier": 1,
+          "value": "Private",
+          "match": "fuzzy_contains",
+          "verified": "2026-05-19",
+          "source": "https://www.crunchbase.com/organization/zenprospect"
+        },
+        {
+          "field": "hq_location",
+          "tier": 1,
+          "value": "San Francisco",
+          "match": "fuzzy_location",
+          "verified": "2026-05-19",
+          "source": "https://www.apollo.io/careers"
+        }
+      ],
+      "invariants": ["no_entity_confusion", "no_placeholders"],
+      "forbidden_strings": [
+        "Apollo Global Management",
+        "Apollo Global",
+        "asset management",
+        "private equity firm",
+        "AUM",
+        "NYSE: APO",
+        "Marc Rowan",
+        "Leon Black"
+      ]
+    }
+  ]
+}

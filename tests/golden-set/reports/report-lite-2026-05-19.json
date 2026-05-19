@@ -1,0 +1,333 @@
+{
+  "mode": "lite",
+  "timestamp": "2026-05-19T23:12:50.616Z",
+  "summary": {
+    "totalFacts": 29,
+    "passedFacts": 29,
+    "failedFacts": 0,
+    "totalInvariants": 12,
+    "passedInvariants": 12,
+    "failedInvariants": 0
+  },
+  "companies": [
+    {
+      "id": "jpmorgan-chase",
+      "name": "JPMorgan Chase",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Banking\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"New York\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "162,000,000,000 vs 182,000,000,000 (11.0% diff, threshold 15%)"
+            },
+            {
+              "field": "employee_count",
+              "tier": 2,
+              "pass": true,
+              "detail": "313,000 vs 318,000 (1.6% diff, threshold 10%)"
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ticker",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"JPM\""
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "no CEO in executives — skipped"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "revenue_consistency",
+              "pass": true,
+              "detail": "one or both revenue fields empty — skipped"
+            }
+          ],
+          "factsPass": 7,
+          "factsTotal": 7,
+          "invariantsPass": 3,
+          "invariantsTotal": 3
+        }
+      ]
+    },
+    {
+      "id": "walmart",
+      "name": "Walmart",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Retail\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Bentonville\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "681,000,000,000 vs 681,000,000,000 (0.0% diff, threshold 10%)"
+            },
+            {
+              "field": "employee_count",
+              "tier": 2,
+              "pass": true,
+              "detail": "2,100,000 vs 2,100,000 (0.0% diff, threshold 15%)"
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"1962\""
+            },
+            {
+              "field": "ticker",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"WMT\""
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "CEO \"John Furner\" consistent across sections"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "revenue_consistency",
+              "pass": true,
+              "detail": "one or both revenue fields empty — skipped"
+            }
+          ],
+          "factsPass": 7,
+          "factsTotal": 7,
+          "invariantsPass": 3,
+          "invariantsTotal": 3
+        }
+      ]
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Payments\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Francisco\""
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"2010\""
+            },
+            {
+              "field": "employee_count",
+              "tier": 2,
+              "pass": true,
+              "detail": "15,142 vs 10,000 (51.4% diff, threshold 60%)"
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 6 forbidden strings found"
+            }
+          ],
+          "factsPass": 6,
+          "factsTotal": 6,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "usaa",
+      "name": "USAA",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Insurance\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Antonio\""
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"1922\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 3 forbidden strings found"
+            }
+          ],
+          "factsPass": 5,
+          "factsTotal": 5,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "apollo-io",
+      "name": "Apollo.io",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Sales\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Francisco\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 8 forbidden strings found"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    }
+  ]
+}
