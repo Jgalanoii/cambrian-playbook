@@ -42,7 +42,7 @@ SAAS METRICS (what CFOs and investors obsess over):
 - Rule of 40: revenue growth % + EBITDA margin %. >40 = best-in-class.
 
 EBITDA & VALUATION:
-PE and acquirers value at EBITDA × multiple. Every $1 incremental EBITDA at 8-12x = $8-12M enterprise value. Adjusted EBITDA adds back one-time items, SBC, acquisition amortization. Quality matters: recurring "one-time" items and SBC at 25%+ of revenue signal earnings quality issues.
+PE and acquirers value at EBITDA × multiple. Every $1 incremental EBITDA at 8-12x = $8-12M enterprise value [verified 05/2026, standard PE valuation math]. Adjusted EBITDA adds back one-time items, SBC, acquisition amortization. Quality matters: recurring "one-time" items and SBC at 25%+ of revenue signal earnings quality issues.
 
 WORKING CAPITAL:
 Cash Conversion Cycle = DSO + DIO - DPO. SaaS with annual upfront billing runs NEGATIVE working capital (collects before delivering) — structural advantage. Growing companies consume working capital; fast growth without cash-efficient billing = capital dependency.

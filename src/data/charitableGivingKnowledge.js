@@ -53,7 +53,7 @@ WORKPLACE GIVING PLATFORMS: Benevity (~$15B+ cumulative), YourCause (Blackbaud),
 
 KNOWN TRAPS:
 - DAF payout rate stats vary wildly depending on whether donation-processor DAFs (168% payout) are included — always clarify which universe. [verified 05/2026, DAFRC 2025]
-- "Total DAF assets" conflates national sponsors (70% of assets) with community foundations (very different economics) — segment before citing.
+- "Total DAF assets" conflates national sponsors (70% of assets) with community foundations (very different economics) — segment before citing. [verified 05/2026, DAFRC 2025]
 - Gift card "revenue" is almost entirely liability; quoting GMV as revenue misrepresents the business by 10-20x.
 - OBBBA deduction compression (0.5% AGI floor) is new for 2026 — many practitioners are still citing pre-OBBBA rules. [verified 05/2026, OBBBA legislative text 2025]
 - PF-to-DAF and DAF-to-DAF transfers inflate apparent payout rates — flag this when citing DAFRC payout data.

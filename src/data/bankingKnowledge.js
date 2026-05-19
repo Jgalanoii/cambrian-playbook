@@ -69,8 +69,8 @@ KEY STRUCTURAL THEMES:
 
 BANKING TIERS:
 - G-SIBs (8): JPM, BAC, C, WFC, GS, MS, BK, STT — dominant but rarely buy from boutique consultants directly.
-- Super-regionals ($100B-$700B): USB, PNC, Truist, Capital One, Citizens, Fifth Third, KeyCorp, M&T, Regions, Huntington — SWEET SPOT for GTM consulting.
-- Community banks (<$10B): ~4,000 banks. Relationship-driven, increasingly serving as BaaS sponsor banks.
+- Super-regionals ($100B-$700B): USB, PNC, Truist, Capital One, Citizens, Fifth Third, KeyCorp, M&T, Regions, Huntington — SWEET SPOT for GTM consulting. [verified 05/2026, FDIC QBP Q4 2025]
+- Community banks (<$10B): ~4,000 banks. Relationship-driven, increasingly serving as BaaS sponsor banks. [verified 05/2026, FDIC QBP Q4 2025]
 - Credit unions: mission-driven, committee-governed, slower decisions. Digital experience gap is biggest strategic risk.
 
 PRIVATE CAPITAL:

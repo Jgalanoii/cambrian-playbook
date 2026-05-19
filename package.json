@@ -11,7 +11,8 @@
     "test:lint": "node tests/knowledge-lint.js",
     "test:golden": "node tests/golden-set/run.js",
     "test:golden:full": "node tests/golden-set/run.js --full",
-    "test": "npm run test:lint && npm run test:golden"
+    "test:backtest": "node tests/icp-backtest/backtest.js --self-test",
+    "test": "npm run test:lint && npm run test:backtest && npm run test:golden"
   },
   "dependencies": {
     "fflate": "^0.8.2",

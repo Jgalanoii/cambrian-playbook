@@ -1,0 +1,35 @@
+{
+  "_comment": "ICP Backtest template. Copy this file and fill in real customer data for a specific seller. DO NOT fabricate customer lists — use the seller's actual current customers.",
+
+  "seller": {
+    "name": "Your Seller Name",
+    "url": "seller-website.com",
+    "description": "What the seller does — 1-2 sentences",
+    "industries": ["target industry 1", "target industry 2"],
+    "products": ["Product A", "Product B"],
+    "icp_summary": "Brief ICP description — who they sell to, what size, what problem"
+  },
+
+  "known_good": [
+    { "name": "Real Customer 1", "url": "customer1.com", "industry": "Industry", "note": "Current customer — strong account" },
+    { "name": "Real Customer 2", "url": "customer2.com", "industry": "Industry", "note": "Current customer — renewed 2x" }
+  ],
+
+  "_known_good_guidance": "Minimum 8 companies for statistical confidence. 15-20 ideal. These MUST be the seller's real, current, healthy customers. Fabricated customers defeat the purpose.",
+
+  "negative_controls": [
+    { "name": "Wrong-Fit Company 1", "url": "wrongfit1.com", "industry": "Wrong Industry", "note": "Structurally wrong — wrong industry" },
+    { "name": "Wrong-Fit Company 2", "url": "wrongfit2.com", "industry": "Wrong Size", "note": "Structurally wrong — wrong size" }
+  ],
+
+  "_negative_controls_guidance": "Minimum 5. Pick companies that are structurally wrong: wrong industry (a reinsurer for a consumer-rewards seller), wrong size (20-person startup for enterprise seller), or wrong buying model (no budget owner for this product).",
+
+  "expected": {
+    "known_good_median_min": 55,
+    "known_good_pct_above_40_min": 0.70,
+    "negative_control_median_max": 35,
+    "discrimination_gap_min": 20
+  },
+
+  "_expected_guidance": "Calibrate after the first run. Default thresholds work for most sellers. If known-good median is 48, consider whether the ICP is slightly too narrow or scoring runs conservative — don't just fail it."
+}

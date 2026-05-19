@@ -108,8 +108,8 @@ KNOWN TRAPS — DATA THAT GOES STALE FASTEST (re-verify on every quarterly sweep
 - M&A activity: Payments M&A is cyclical and deal-heavy. Global Payments/Worldpay, Capital One/Discover, and Fiserv's strategic review can all generate follow-on deals. Track S&P Global and Nilson for announced/closed transactions.
 - Fiserv/Clover stock and litigation: Stock price, class action status, and merchant migration numbers are fast-moving. Re-verify from SEC filings and earnings calls.
 - Agentic commerce partnerships: Visa Intelligent Commerce and Mastercard Agent Pay partner counts and production status change quarterly. Verify from network press releases.
-- Stablecoin market share projections: The ~3% (2026) and 10% (2031) figures are McKinsey estimates subject to revision. Cross-check with Chainalysis, BIS, and IMF updates.
-- PayFac economics benchmarks: The 3-6x multiplier and $500K-$1M setup cost are industry estimates that shift with PFaaS pricing changes (Stripe Connect, Adyen for Platforms, Finix fee schedules).
+- Stablecoin market share projections: The ~3% (2026) and 10% (2031) figures are McKinsey estimates subject to revision. Cross-check with Chainalysis, BIS, and IMF updates. [verified 05/2026, McKinsey Global Payments Report]
+- PayFac economics benchmarks: The 3-6x multiplier and $500K-$1M setup cost are industry estimates that shift with PFaaS pricing changes (Stripe Connect, Adyen for Platforms, Finix fee schedules). [verified 05/2026, Infinicept / Payrix / Finix]
 `;
 
 // ── PAYMENTS SCORING CONTEXT ────────────────────────────────────────────
