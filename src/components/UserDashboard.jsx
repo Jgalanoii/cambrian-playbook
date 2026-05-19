@@ -6,7 +6,70 @@ import React, { useState, useEffect, useMemo } from "react";
 import { fetchOrgMembers, fetchOrgInvitations, sbPatch } from "../lib/org.js";
 import { timeAgo } from "../lib/utils.js";
 
-// ── ReferralWidget (same as OrgPanel) ──
+// ── HubSpotSection (CRM integration) ──
+function HubSpotSection({ sbToken }) {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  useEffect(() => {
+    if (!sbToken) return;
+    fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+      body: JSON.stringify({ action: "status" }) })
+      .then(r => r.json()).then(setStatus).catch(() => setStatus({ connected: false }));
+  }, [sbToken]);
+
+  const startConnect = () => {
+    setLoading(true);
+    fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+      body: JSON.stringify({ action: "start" }) })
+      .then(r => r.json())
+      .then(d => { if (d.url) window.location.href = d.url; else setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+
+  const disconnect = () => {
+    if (!confirm("Disconnect HubSpot? You can reconnect anytime.")) return;
+    setDisconnecting(true);
+    fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+      body: JSON.stringify({ action: "disconnect" }) })
+      .then(() => setStatus({ connected: false }))
+      .finally(() => setDisconnecting(false));
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>CRM Integration</div>
+      {status?.connected ? (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", display: "inline-block" }} />
+            <span style={{ fontSize: 12, color: "var(--ink-1)" }}>Connected to HubSpot{status.portalId ? ` (${status.portalId})` : ""}</span>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.6, marginBottom: 6 }}>
+            Push briefs, deal routes, and CRM notes directly from any brief or post-call screen.
+          </div>
+          <button onClick={disconnect} disabled={disconnecting}
+            style={{ padding: "5px 12px", borderRadius: 6, border: "1.5px solid var(--line-0)", background: "var(--surface)", color: "var(--ink-2)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+            {disconnecting ? "Disconnecting..." : "Disconnect"}
+          </button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 8 }}>
+            Connect HubSpot to push briefs, deal routes, and CRM notes directly — no downloads, no copy-paste.
+          </div>
+          <button onClick={startConnect} disabled={loading || status === null}
+            style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ff7a59", color: "#fff", fontSize: 12, fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: (loading || status === null) ? 0.6 : 1 }}>
+            {loading ? "Connecting..." : status === null ? "Loading..." : "Connect HubSpot"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ReferralWidget ──
 function ReferralWidget({ sbToken }) {
   const [info, setInfo] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -740,6 +803,11 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                   </div>
                 </div>
 
+                {/* CRM Integration */}
+                <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 16 }}>
+                  <HubSpotSection sbToken={sbToken} />
+                </div>
+
                 {/* Refer & Earn */}
                 <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 16 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Refer & Earn</div>
@@ -751,7 +819,7 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
 
                 {/* Contact */}
                 <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.6, borderTop: "1px solid var(--line-0)", paddingTop: 12 }}>
-                  Need more runs, a plan change, or just want to talk? <a href="mailto:info@cambriancatalyst.com" style={{ color: "var(--tan-0)" }}>info@cambriancatalyst.com</a> -- we reply fast.
+                  Need help? <a href="mailto:info@cambriancatalyst.com" style={{ color: "var(--tan-0)" }}>info@cambriancatalyst.com</a>
                 </div>
               </div>
             </div>
