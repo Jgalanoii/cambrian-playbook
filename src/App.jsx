@@ -3476,8 +3476,17 @@ export default function App(){
   useEffect(()=>{
     if(hubspotStatus!==null||hubspotCheckedRef.current||!sbToken) return;
     hubspotCheckedRef.current=true;
+    console.log("[hubspot] Checking status...");
     fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({action:"status"})})
-      .then(r=>r.ok?r.json():null).then(d=>{if(d)setHubspotStatus(d);}).catch(()=>{});
+      .then(r=>{
+        console.log("[hubspot] Status response:", r.status, r.statusText);
+        return r.ok?r.json():r.text().then(t=>{console.warn("[hubspot] Status error body:",t);return null;});
+      })
+      .then(d=>{
+        console.log("[hubspot] Status result:", JSON.stringify(d));
+        if(d)setHubspotStatus(d);
+      })
+      .catch(e=>console.error("[hubspot] Status fetch failed:",e.message));
   },[sbToken,hubspotStatus]);
   // Track input signatures for each stage to detect "no change" on regenerate.
   // Each key stores a JSON string of the inputs used for the last generation.
@@ -7150,7 +7159,10 @@ ${isOpen
   if(!authed) return <PasswordGate onAuth={async(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
     // Check HubSpot connection status
-    fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${tok}`},body:JSON.stringify({action:"status"})}).then(r=>r.json()).then(d=>setHubspotStatus(d)).catch(()=>{});
+    fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${tok}`},body:JSON.stringify({action:"status"})})
+      .then(r=>{console.log("[hubspot] Login status check:",r.status);return r.json();})
+      .then(d=>{console.log("[hubspot] Login status result:",JSON.stringify(d));setHubspotStatus(d);})
+      .catch(e=>console.error("[hubspot] Login status failed:",e.message));
     // Accept pending invitation before fetching org context
     const pendingInvite = sessionStorage.getItem("pending_invite_token");
     if (pendingInvite && u?.id) {

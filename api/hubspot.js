@@ -151,6 +151,7 @@ export default async function handler(req, res) {
     // ── OAuth: status ──────────────────────────────────────────────────
     if (action === "status") {
       const tokens = await getTokenForUser(userId);
+      console.log(`[hubspot] Status check for user ${userId}: ${tokens ? `connected (portal ${tokens.portalId})` : "not connected"}`);
       if (!tokens) return res.json({ connected: false });
       return res.json({ connected: true, portalId: tokens.portalId });
     }

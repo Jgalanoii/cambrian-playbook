@@ -111,12 +111,18 @@ export async function getTokenForUser(userId) {
 
 export async function saveTokenForUser(userId, { accessToken, refreshToken, expiresIn, portalId, scopes }) {
   const atEnc = encrypt(accessToken);
-  const rtEnc = encrypt(refreshToken);
-  // Both use the same IV for storage simplicity — each has its own auth tag
+  // CRITICAL: Use the SAME IV for both tokens so getTokenForUser can decrypt
+  // both with the single stored token_iv. Previously rtReenc used a different
+  // IV which caused decrypt to fail → getTokenForUser returned null → button
+  // never showed.
   const iv = atEnc.iv;
-  const rtReenc = encrypt(refreshToken); // re-encrypt with separate call (gets own IV)
+  const ivBuf = Buffer.from(iv, "hex");
+  const rtCipher = createCipheriv("aes-256-gcm", Buffer.from(TOKEN_KEY, "hex"), ivBuf);
+  let rtEncrypted = rtCipher.update(refreshToken, "utf8", "hex");
+  rtEncrypted += rtCipher.final("hex");
+  const rtTag = rtCipher.getAuthTag().toString("hex");
+  const rtEncStr = rtEncrypted + ":" + rtTag;
 
-  // Use access token IV for both — simpler storage
   const expiresAt = new Date(Date.now() + (expiresIn || 1800) * 1000).toISOString();
 
   // Check if row exists
@@ -127,8 +133,8 @@ export async function saveTokenForUser(userId, { accessToken, refreshToken, expi
     // Update existing
     await sbFetch(`hubspot_tokens?user_id=eq.${userId}`, "PATCH", {
       access_token: atEnc.encrypted,
-      refresh_token: rtReenc.encrypted,
-      token_iv: iv, // access token IV — refresh gets its own via its encrypted blob
+      refresh_token: rtEncStr,
+      token_iv: iv,
       portal_id: portalId || null,
       scopes: scopes || null,
       expires_at: expiresAt,
@@ -139,7 +145,7 @@ export async function saveTokenForUser(userId, { accessToken, refreshToken, expi
     await sbFetch("hubspot_tokens", "POST", {
       user_id: userId,
       access_token: atEnc.encrypted,
-      refresh_token: rtReenc.encrypted,
+      refresh_token: rtEncStr,
       token_iv: iv,
       portal_id: portalId || null,
       scopes: scopes || null,
