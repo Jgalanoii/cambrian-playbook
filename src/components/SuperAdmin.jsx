@@ -881,7 +881,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   {filteredUsers.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
                     const adminAction = async (action, extra = {}) => {
                       try {
-                        const r = await fetch("/api/admin-action", {
+                        const r = await fetch("/api/admin", {
                           method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                           body: JSON.stringify({ action, email: u.email, userId: u.id, ...extra }),
                         });
@@ -892,7 +892,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     };
                     const patchUser = async (fields, msg) => {
                       try {
-                        const r = await fetch("/api/admin-action", {
+                        const r = await fetch("/api/admin", {
                           method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                           body: JSON.stringify({ action: "update_user", userId: u.id, email: u.email, fields }),
                         });
@@ -974,7 +974,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                 <button className="admin-action-item danger" onClick={async () => {
                                   if (!window.confirm(`Delete ${u.email}? This removes their auth account AND user record. They'll need to sign up again from scratch.`)) return;
                                   try {
-                                    const r = await fetch("/api/admin-action", {
+                                    const r = await fetch("/api/admin", {
                                       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                                       body: JSON.stringify({ action: "delete_user", userId: u.id, email: u.email }),
                                     });
@@ -1028,7 +1028,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     const body = { name, plan, ...(limits[plan] || {}) };
                     if (url) body.seller_url = url.startsWith("http") ? url : `https://${url}`;
                     try {
-                      const r = await fetch("/api/admin-action", {
+                      const r = await fetch("/api/admin", {
                         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                         body: JSON.stringify({ action: "create_org", email: "org", orgData: body }),
                       });
@@ -1070,7 +1070,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                           const members = data.users.filter(u => u.org_id === o.id);
                           const patchOrg = async (fields, msg) => {
                             try {
-                              const r = await fetch("/api/admin-action", {
+                              const r = await fetch("/api/admin", {
                                 method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                                 body: JSON.stringify({ action: "update_org", orgId: o.id, email: "org", fields }),
                               });
@@ -1131,7 +1131,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                         : `Delete "${o.name}"?`;
                                       if (!window.confirm(msg)) return;
                                       try {
-                                        const r = await fetch("/api/admin-action", {
+                                        const r = await fetch("/api/admin", {
                                           method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                                           body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }),
                                         });
@@ -1161,7 +1161,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 const companyOrgList = (data.orgs || []).filter(o => o.seller_url || o.member_count > 1);
                 const patchOrgApi = async (orgId, fields, msg) => {
                   try {
-                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                    const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                       body: JSON.stringify({ action: "update_org", orgId, email: "org", fields }) });
                     const d = await r.json();
                     setPlanSaveMsg(d.ok ? msg : `Error: ${d.error}`);
@@ -1170,7 +1170,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 };
                 const moveUserToOrg = async (userId, email, targetOrgId, targetOrgName) => {
                   try {
-                    const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                    const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
                       body: JSON.stringify({ action: "update_user", userId, email, fields: { org_id: targetOrgId } }) });
                     const d = await r.json();
                     setPlanSaveMsg(d.ok ? `✓ Moved ${email} → ${targetOrgName}` : `Error: ${d.error}`);
@@ -1229,7 +1229,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                   onClick={async () => {
                                     if (!window.confirm(`Delete "${o.name}"?${members.length > 0 ? ` ${members.length} member(s) will be unassigned.` : ""}`)) return;
                                     try {
-                                      const r = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` }, body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }) });
+                                      const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` }, body: JSON.stringify({ action: "delete_org", orgId: o.id, email: "org" }) });
                                       const d = await r.json();
                                       setPlanSaveMsg(d.ok ? `✓ Deleted ${o.name}` : `Error: ${d.error}`);
                                     } catch { setPlanSaveMsg("Failed"); }

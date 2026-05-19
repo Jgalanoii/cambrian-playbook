@@ -41,14 +41,14 @@ function HubSpotSection({ sbToken }) {
 
   useEffect(() => {
     if (!sbToken) return;
-    fetch("/api/hubspot-auth", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+    fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "status" }) })
       .then(r => r.json()).then(setStatus).catch(() => setStatus({ connected: false }));
   }, [sbToken]);
 
   const startConnect = () => {
     setLoading(true);
-    fetch("/api/hubspot-auth", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+    fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "start" }) })
       .then(r => r.json())
       .then(d => { if (d.url) window.location.href = d.url; else setLoading(false); })
@@ -58,7 +58,7 @@ function HubSpotSection({ sbToken }) {
   const disconnect = () => {
     if (!confirm("Disconnect HubSpot? You can reconnect anytime.")) return;
     setDisconnecting(true);
-    fetch("/api/hubspot-auth", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+    fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "disconnect" }) })
       .then(() => setStatus({ connected: false }))
       .finally(() => setDisconnecting(false));

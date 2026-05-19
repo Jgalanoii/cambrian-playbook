@@ -6279,7 +6279,7 @@ ${isOpen
     if(!hubspotStatus?.connected){setCopied("hs_err");setTimeout(()=>setCopied(""),3000);return;}
     setHubspotPushing(action);
     try{
-      const r=await fetch("/api/hubspot-push",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({action,data})});
+      const r=await fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({action,data})});
       const d=await r.json();
       if(d.ok){
         const parts=[];
@@ -6865,7 +6865,7 @@ ${isOpen
   if(!authed) return <PasswordGate onAuth={async(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
     // Check HubSpot connection status
-    fetch("/api/hubspot-auth",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${tok}`},body:JSON.stringify({action:"status"})}).then(r=>r.json()).then(d=>setHubspotStatus(d)).catch(()=>{});
+    fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${tok}`},body:JSON.stringify({action:"status"})}).then(r=>r.json()).then(d=>setHubspotStatus(d)).catch(()=>{});
     // Accept pending invitation before fetching org context
     const pendingInvite = sessionStorage.getItem("pending_invite_token");
     if (pendingInvite && u?.id) {

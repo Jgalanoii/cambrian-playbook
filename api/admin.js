@@ -23,7 +23,11 @@ async function sbFetch(path, maxRows = 10000) {
   return r.json();
 }
 
+import adminActionHandler from "./_admin-action.js";
+
 export default async function handler(req, res) {
+  // Route POST requests to admin-action handler (consolidated to stay within Vercel 12-function limit)
+  if (req.method === "POST") return adminActionHandler(req, res);
   if (req.method !== "GET") return res.status(405).end();
   if (!SB_KEY) return res.status(500).json({ error: "Not configured" });
 
