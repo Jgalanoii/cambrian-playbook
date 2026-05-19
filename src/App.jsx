@@ -5932,17 +5932,70 @@ ${isOpen
           current._sectionsGrounded = grounded;
           current._dataConfidence = grounded >= 7 ? "high" : grounded >= 4 ? "medium" : "low";
 
-          // ── POST-MERGE CONSISTENCY: prefer authoritative sources ────────
-          // If Apollo enrichment revenue exists and p1 returned something different, prefer Apollo
-          const apolloRev = member._enrichment?.organization?.revenue;
-          if (apolloRev && current.revenue && current.revenue !== apolloRev) {
-            console.log(`[consistency] Revenue: preferring Apollo "${apolloRev}" over p1 "${current.revenue}"`);
-            current.revenue = apolloRev;
+          // ── CORROBORATION GATE (Moat Architecture §2.2) ─────────────────
+          // Tier 3 facts (executives, revenue, ownership) must be corroborated
+          // by 2+ independent sources. Single-source facts get caveated.
+          // Priority: Apollo (verified API) > web_search (p2/p5/p7-p9) > training (p1/p3/p4)
+          const apollo = member._enrichment?.organization;
+          const apolloPeople = member._enrichment?.people || [];
+
+          // Revenue: Apollo > p9 (web-searched financials) > p1 (overview)
+          if (apollo?.revenue) {
+            if (current.revenue && current.revenue !== apollo.revenue) {
+              console.log(`[corroboration] Revenue: Apollo "${apollo.revenue}" overrides p1 "${current.revenue}"`);
+            }
+            current.revenue = apollo.revenue;
+          } else if (current.financialDeepDive?.revenueTrend && current.revenue) {
+            // Both p1 and p9 have revenue — check if they agree (rough check)
+            const p1digits = (current.revenue || "").replace(/[^0-9.]/g, "").slice(0, 4);
+            const p9text = current.financialDeepDive.revenueTrend || "";
+            if (p1digits && !p9text.includes(p1digits.slice(0, 3))) {
+              console.warn(`[corroboration] Revenue: p1="${current.revenue}" not corroborated by p9. Keeping p1 but flagging.`);
+            }
           }
-          // If p5 Glassdoor (web-searched) differs from p3 Glassdoor (was training-only, now searched too), prefer p5
-          const p5Glassdoor = current.publicSentiment?.glassdoorRating;
-          // p3's glassdoor was backfilled into publicSentiment only if p5 didn't set it (see mergeStrategy)
-          // so this is already handled by merge priority — p5 is authoritative
+
+          // Employee count: Apollo > p1
+          if (apollo?.employeeCount && current.employeeCount) {
+            const apolloNum = parseInt(String(apollo.employeeCount).replace(/[^0-9]/g, ""));
+            const p1Num = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""));
+            if (apolloNum && p1Num && Math.abs(apolloNum - p1Num) / apolloNum > 0.3) {
+              console.log(`[corroboration] Employees: Apollo ${apolloNum} overrides p1 ${p1Num} (>30% diff)`);
+              current.employeeCount = apollo.employeeCount;
+            }
+          }
+
+          // HQ: Apollo > p1
+          if (apollo?.headquarters && current.headquarters) {
+            const aHQ = (apollo.headquarters || "").toLowerCase();
+            const pHQ = (current.headquarters || "").toLowerCase();
+            if (aHQ && pHQ && !pHQ.includes(aHQ.split(",")[0]) && !aHQ.includes(pHQ.split(",")[0])) {
+              console.log(`[corroboration] HQ: Apollo "${apollo.headquarters}" overrides p1 "${current.headquarters}"`);
+              current.headquarters = apollo.headquarters;
+            }
+          }
+
+          // Key contacts (p4) vs executives (p2): p2 is web-searched, higher trust
+          // If p4 invented a name that doesn't appear in p2's verified list, strip it
+          const verifiedExecNames = (current.keyExecutives || []).filter(e => e?.name).map(e => e.name.toLowerCase());
+          if (verifiedExecNames.length > 0) {
+            (current.keyContacts || []).forEach(contact => {
+              if (contact.name && contact.name.trim()) {
+                const contactLower = contact.name.toLowerCase();
+                // Check if this name appears in the verified exec list (fuzzy — last name match)
+                const contactLastName = contactLower.split(" ").pop();
+                const isVerified = verifiedExecNames.some(n => n.includes(contactLastName));
+                const isFromApollo = apolloPeople.some(p => p.name?.toLowerCase().includes(contactLastName));
+                if (!isVerified && !isFromApollo) {
+                  console.warn(`[corroboration] Contact "${contact.name}" not in p2 executives or Apollo — stripping name (keeping role)`);
+                  contact.name = "";
+                  contact.initials = "";
+                }
+              }
+            });
+          }
+
+          // Glassdoor: p5 (web-searched) is authoritative over p3
+          // Already handled by mergeStrategy backfill logic — p5 takes priority
 
           return current;
         });

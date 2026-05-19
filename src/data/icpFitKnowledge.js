@@ -1,8 +1,23 @@
 // src/data/icpFitKnowledge.js
 //
+// Version: 1.0.0
+// Last verified: 2026-05-19
+// Next review: 2026-08-19 (quarterly)
+//
 // Structured knowledge extracted from icp-fit-knowledge-base.md.
 // Served via /api/knowledge.js (server-side, JWT-auth'd).
 // NOT bundled into the client — fetched at runtime.
+//
+// SOURCES:
+// - Lincoln Murphy, "Ideal Customer Profile Framework" (Sixteen Ventures)
+// - April Dunford, "Obviously Awesome" (2019) — positioning framework
+// - Bob Moesta, "Demand-Side Sales 101" (2020) — JTBD Four Forces
+// - Rob Fitzpatrick, "The Mom Test" (2013) — customer interview methodology
+// - Winning by Design (WbD), SPICED discovery framework
+// - Geoffrey Moore, "Crossing the Chasm" (1991/2014) — beachhead strategy
+// - Brian Balfour, "Four Fits" framework (Reforge)
+// - 6sense / Kerry Cunningham, "No Forms. No Spam. No Cold Calls." (2023)
+// - Peep Laja / CXL, ResearchXL methodology
 
 // ── Lincoln Murphy: RWAS criteria ──────────────────────────────────────────
 export const MURPHY_RWAS = {
@@ -161,7 +176,7 @@ ICP FRAMEWORKS (apply ALL — they are complementary, not competing):
 - WBD (SPICED): Situation + Pain + Impact + Critical Event + Decision. No Critical Event = not buying this cycle.
 - MOORE (Crossing the Chasm): choose a beachhead and dominate it. ICP is the beachhead definition.
 - BALFOUR (Four Fits): ICP only valid in context of specific channels and models. Expansion changes all four fits.
-- 6SENSE: 70% of buying journey is anonymous. ICP must include intent signals, not just firmographics.
+- 6SENSE: 70% of buying journey is anonymous [verified 05/2026, 6sense Research]. ICP must include intent signals, not just firmographics.
 
 ICP MUST INCLUDE:
 - Timing/trigger criteria (without this, it's a segmentation doc, not an ICP)
@@ -175,6 +190,13 @@ ICP FAILURE MODES TO AVOID:
 - No bad-fit definition
 - Built from sales interviews, not customer interviews
 - Static / never operationalized
+
+KNOWN TRAPS:
+- The "70% anonymous journey" stat (6sense) is from enterprise B2B SaaS — does not apply uniformly to all segments (SMB, transactional, PLG).
+- Murphy's RWAS is necessary but insufficient alone — it ignores channel fit (Balfour) and positioning context (Dunford).
+- SPICED without a Critical Event produces informational meetings, not pipeline. If no CE is surfaced, do not forecast the deal.
+- "Crossing the Chasm" beachhead strategy assumes venture-scale ambition — applying it to lifestyle businesses or niche consultancies misframes the problem.
+- Disqualification rate benchmarks (30-50%) are for mid-market B2B SaaS — calibrate to the seller's actual segment before citing.
 `;
 
 // ── Prompt injection for discovery questions ──────────────────────────────

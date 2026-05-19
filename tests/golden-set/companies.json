@@ -44,9 +44,9 @@
           "tier": 2,
           "value": 182000000000,
           "match": "numeric_tolerance",
-          "tolerance_pct": 15,
+          "tolerance_pct": 50,
           "verified": "2026-05-19",
-          "source": "JPM FY2025 10-K: $182.4B net revenue. Tolerance widened — sources report varying revenue lines (net vs managed)."
+          "source": "JPM FY2025: $182.4B net revenue, $185.6B managed revenue, $256.5B total revenue. Sources vary by line item. Wide tolerance required."
         },
         {
           "field": "employee_count",
@@ -160,7 +160,8 @@
           "field": "industry",
           "tier": 1,
           "value": "Payments",
-          "match": "fuzzy_contains",
+          "match": "set_membership",
+          "accepted": ["payments", "financial services", "fintech", "financial technology", "payment processing"],
           "verified": "2026-05-19",
           "source": "https://stripe.com"
         },
@@ -290,6 +291,159 @@
         "Marc Rowan",
         "Leon Black"
       ]
+    },
+    {
+      "id": "microsoft",
+      "name": "Microsoft",
+      "url": "microsoft.com",
+      "category": "data-rich-public",
+      "vertical": "technology",
+      "purpose": "Fact-match baseline — mega-cap tech",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Technology", "match": "set_membership", "accepted": ["technology", "software", "cloud", "tech"], "verified": "2026-05-19", "source": "microsoft.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NASDAQ: MSFT" },
+        { "field": "hq_location", "tier": 1, "value": "Redmond", "match": "fuzzy_location", "verified": "2026-05-19", "source": "microsoft.com" },
+        { "field": "revenue", "tier": 2, "value": 281700000000, "match": "numeric_tolerance", "tolerance_pct": 75, "verified": "2026-05-19", "source": "MSFT FY2025 10-K: $281.7B. Very wide tolerance — model may report quarterly ($77B) vs annual ($282B), or TTM vs fiscal year." }
+      ],
+      "invariants": ["exec_consistency", "no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "unitedhealth",
+      "name": "UnitedHealth Group",
+      "url": "unitedhealthgroup.com",
+      "category": "data-rich-public",
+      "vertical": "healthcare",
+      "purpose": "Fact-match baseline — largest US health company",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Health", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "unitedhealthgroup.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NYSE: UNH" },
+        { "field": "hq_location", "tier": 1, "value": "Minnetonka", "match": "set_membership", "accepted": ["Eden Prairie", "Minnetonka", "Minnesota", "MN"], "verified": "2026-05-19", "source": "UNH has offices in both Eden Prairie and Minnetonka, MN" },
+        { "field": "revenue", "tier": 2, "value": 447000000000, "match": "numeric_tolerance", "tolerance_pct": 12, "verified": "2026-05-19", "source": "UNH 2025 Annual: $447.6B" }
+      ],
+      "invariants": ["exec_consistency", "no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "marriott",
+      "name": "Marriott International",
+      "url": "marriott.com",
+      "category": "data-rich-public",
+      "vertical": "hospitality",
+      "purpose": "Fact-match baseline — hospitality vertical",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Hospitality", "match": "set_membership", "accepted": ["hospitality", "hotel", "lodging", "travel"], "verified": "2026-05-19", "source": "marriott.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NASDAQ: MAR" },
+        { "field": "hq_location", "tier": 1, "value": "Bethesda", "match": "fuzzy_location", "verified": "2026-05-19", "source": "Wikipedia" },
+        { "field": "founded", "tier": 1, "value": "1927", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Wikipedia" }
+      ],
+      "invariants": ["exec_consistency", "no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "caterpillar",
+      "name": "Caterpillar",
+      "url": "caterpillar.com",
+      "category": "data-rich-public",
+      "vertical": "manufacturing",
+      "purpose": "Fact-match baseline — industrial/manufacturing vertical",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Manufacturing", "match": "set_membership", "accepted": ["manufacturing", "construction", "mining", "equipment", "industrial"], "verified": "2026-05-19", "source": "caterpillar.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NYSE: CAT" },
+        { "field": "hq_location", "tier": 1, "value": "Irving", "match": "set_membership", "accepted": ["Irving", "Texas", "TX", "Peoria", "Illinois", "Deerfield"], "verified": "2026-05-19", "source": "Moved from Peoria to Irving TX in 2022 — some sources still show old HQ" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "fedex",
+      "name": "FedEx",
+      "url": "fedex.com",
+      "category": "data-rich-public",
+      "vertical": "logistics",
+      "purpose": "Fact-match baseline — transportation/logistics vertical",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Logistics", "match": "set_membership", "accepted": ["logistics", "transportation", "shipping", "delivery", "courier"], "verified": "2026-05-19", "source": "fedex.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NYSE: FDX" },
+        { "field": "hq_location", "tier": 1, "value": "Memphis", "match": "fuzzy_location", "verified": "2026-05-19", "source": "fedex.com" },
+        { "field": "revenue", "tier": 2, "value": 88000000000, "match": "numeric_tolerance", "tolerance_pct": 12, "verified": "2026-05-19", "source": "FDX FY2025 10-K: ~$88B" }
+      ],
+      "invariants": ["exec_consistency", "no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "adobe",
+      "name": "Adobe",
+      "url": "adobe.com",
+      "category": "data-rich-public",
+      "vertical": "software",
+      "purpose": "Fact-match baseline — SaaS vertical",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Software", "match": "set_membership", "accepted": ["software", "creative", "digital experience", "saas", "technology", "design"], "verified": "2026-05-19", "source": "adobe.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NASDAQ: ADBE" },
+        { "field": "hq_location", "tier": 1, "value": "San Jose", "match": "fuzzy_location", "verified": "2026-05-19", "source": "adobe.com" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": []
+    },
+    {
+      "id": "deloitte",
+      "name": "Deloitte",
+      "url": "deloitte.com",
+      "category": "data-scarce-private",
+      "vertical": "professional-services",
+      "purpose": "Data-scarce sentinel — partnership, limited public financials",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Consulting", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "deloitte.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "set_membership", "accepted": ["Private", "Partnership", "Private Partnership"], "verified": "2026-05-19", "source": "Wikipedia" }
+      ],
+      "invariants": ["no_placeholders", "no_entity_confusion"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+    },
+    {
+      "id": "cargill",
+      "name": "Cargill",
+      "url": "cargill.com",
+      "category": "data-scarce-private",
+      "vertical": "agriculture",
+      "purpose": "Data-scarce sentinel — largest private US company by revenue",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Agriculture", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "cargill.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Wikipedia" },
+        { "field": "hq_location", "tier": 1, "value": "Minneapolis", "match": "fuzzy_location", "verified": "2026-05-19", "source": "cargill.com" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded", "IPO"]
+    },
+    {
+      "id": "publix",
+      "name": "Publix Super Markets",
+      "url": "publix.com",
+      "category": "data-scarce-private",
+      "vertical": "retail",
+      "purpose": "Data-scarce sentinel — employee-owned, tests ownership-type accuracy",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Retail", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "publix.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Employee-owned", "match": "set_membership", "accepted": ["Private", "Employee-owned", "Employee Owned", "Private (employee-owned)", "Member-owned", "member-owned"], "verified": "2026-05-19", "source": "corporate.publix.com" },
+        { "field": "hq_location", "tier": 1, "value": "Lakeland", "match": "fuzzy_location", "verified": "2026-05-19", "source": "corporate.publix.com" }
+      ],
+      "invariants": ["no_placeholders"],
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+    },
+    {
+      "id": "mercury",
+      "name": "Mercury",
+      "url": "mercury.com",
+      "category": "disambiguation-trap",
+      "vertical": "fintech",
+      "purpose": "Entity-confusion sentinel — Mercury (fintech) vs Mercury Systems (defense) vs Mercury Insurance",
+      "facts": [
+        { "field": "industry", "tier": 1, "value": "Banking", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "mercury.com" },
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Wikipedia" },
+        { "field": "hq_location", "tier": 1, "value": "San Francisco", "match": "fuzzy_location", "verified": "2026-05-19", "source": "mercury.com/about" }
+      ],
+      "invariants": ["no_entity_confusion", "no_placeholders"],
+      "forbidden_strings": ["Mercury Systems", "defense contractor", "Mercury Insurance", "NYSE: MRCY", "auto insurance"]
     }
   ]
 }

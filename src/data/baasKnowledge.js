@@ -1,15 +1,28 @@
 // src/data/baasKnowledge.js
 //
+// Version: 1.0.0
+// Last verified: 2026-05-19
+// Next review: 2026-08-19 (quarterly)
+//
 // Banking-as-a-Service deep knowledge layer.
 // Covers: sponsor banks, middleware, post-Synapse regulatory reality,
 // program architecture, economics, compliance, and 2026 trends.
 //
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
+//
+// SOURCES:
+// - Remolina (2025, SMU School of Law, SSRN 5434476) — BaaS regulatory taxonomy
+// - Yale Journal of International Affairs (Jan 2026) — "weakest-link" BaaS chains
+// - Sumsub (Mar 2026) — EMI/FCA enforcement coverage
+// - American Banker (Dec 2024) — Treasury Prime code-escrow, Celent equilibrium
+// - Dallas Fed / FSB — middleware concentration risk
+// - OCC/FDIC consent orders (Evolve, Lineage, Blue Ridge)
+// - Synapse bankruptcy proceedings (April 2024)
 
 export const BAAS_INJECTION = `
 BANKING-AS-A-SERVICE (BaaS) DEEP CONTEXT (use when target or seller is in BaaS, sponsor banking, embedded banking, or fintech infrastructure):
 
-MARKET SHIFT: Pre-2024 BaaS was high-growth, loosely regulated (60+ sponsor banks, 30+ middleware). Post-Synapse (April 2024, $95M+ unreconciled), environment fundamentally shifted: sponsor banks collapsed to 25-35, middleware to 8-12, launch timelines from 3-6 months to 9-18 months, pricing up 30-60%, compliance investment table-stakes.
+MARKET SHIFT: Pre-2024 BaaS was high-growth, loosely regulated (60+ sponsor banks, 30+ middleware). Post-Synapse (April 2024, $95M+ unreconciled) [verified 05/2026, Synapse bankruptcy filings], environment fundamentally shifted: sponsor banks collapsed to 25-35, middleware to 8-12, launch timelines from 3-6 months to 9-18 months, pricing up 30-60%, compliance investment table-stakes.
 
 SYNAPSE COLLAPSE: Middleware connecting fintechs (Yotta, Juno, Copper) to four sponsor banks. Bankruptcy exposed three-party model risk: ledger fragmentation, no accountability clarity, bankruptcy law had no clean answer. Aftermath: sustained enforcement wave, consent orders against Evolve, Lineage, Blue Ridge. Key lesson: the BANK owns regulatory obligation even when outsourcing operations.
 
@@ -33,6 +46,14 @@ REGULATORY SCHOLARSHIP (Q2 2026 REFRESH): Remolina (2025, SMU School of Law, SSR
 POST-SYNAPSE CODIFIED EXPECTATIONS: Direct-to-bank API models are displacing generalist middleware as the dominant resilience pattern. Sub-ledger reconciliation and FBO account transparency are de facto compliance expectations even where not formally codified. Deposit segregation language is now table stakes in any sponsor-bank deck. The three-party model (Fintech ← Middleware ← Sponsor) is structurally disfavored; two-party direct and vertical SaaS embedded are the growth architectures.
 
 2026 TRENDS: Market bifurcating — well-capitalized fintechs with compliance maturity growing with top sponsors; under-resourced programs struggling/exiting. Vertical SaaS embedded expanding. Direct sponsor relationships gaining share. Regulatory bar raised permanently. Sponsor consolidation continuing; new entrants rare.
+
+KNOWN TRAPS:
+- Sponsor bank counts (25-35 active) shift quarterly as banks enter/exit BaaS — verify current count before citing.
+- "BaaS" vs "embedded finance" vs "open banking" are distinct concepts (per Remolina 2025) — conflating them signals lack of domain expertise.
+- Compliance cost ranges ($500K-$5M annually) vary by 10x depending on program type and volume — always contextualize.
+- The three-party model is "disfavored," not "dead" — some programs still operate it; stating it's obsolete is inaccurate.
+- Consent order details (Evolve, Lineage, Blue Ridge) evolve as enforcement actions progress — verify current status before citing.
+- Post-Synapse regulatory expectations are largely de facto, not de jure — do not cite sub-ledger reconciliation as a formal regulation.
 `;
 
 export const BAAS_SCORING = {

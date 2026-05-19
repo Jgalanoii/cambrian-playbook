@@ -1,25 +1,41 @@
 // src/data/charitableGivingKnowledge.js
 //
+// Version: 1.0.0
+// Last verified: 2026-05-19
+// Next review: 2026-08-19 (quarterly)
+//
 // Charitable giving, donor-advised funds (DAFs), and charity gift cards
 // deep knowledge layer. Covers: 501(c)(3) infrastructure, DAF mechanics,
 // IRS regulatory framework (§4966/4967/170), charity gift card operating
 // models, corporate philanthropy, workplace giving, and unit economics.
 //
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
+//
+// SOURCES:
+// - DAFRC (Heist, Vance-McMullen, Williams, Shaker, Sumsion, 2025, DOI: 10.4087/XUGU3656)
+// - DAFgiving360 FY2025 Annual Report
+// - IPS Independent Report on DAF payout rates
+// - Giving USA 2025 (individual/corporate/foundation/bequest splits)
+// - IRS §4966/§4967/§170 regulatory framework
+// - Pension Protection Act of 2006
+// - November 2023 Proposed DAF Regulations (Treasury/IRS)
+// - OBBBA (One Big Beautiful Bill Act, passed 2025)
+// - Inside Philanthropy editorial coverage
+// - CCS Fundraising reports
 
 export const CHARITABLE_GIVING_INJECTION = `
 CHARITABLE GIVING & DAF CONTEXT (use when target or seller is in charitable giving, donor-advised funds, philanthropy, nonprofit infrastructure, or charity gift cards):
 
-MARKET: U.S. charitable giving ~$560-580B annually. Individual giving ~67% (~$370B), corporate ~7% (~$40B), foundation ~19% (~$100B+), bequests ~8% (~$45B). ~1.8M registered 501(c)(3) public charities. Half of charitable dollars flow through intermediaries (DAFs, private foundations, community foundations, charity gift card platforms), with intermediary share growing rapidly.
+MARKET: U.S. charitable giving ~$560-580B annually [verified 05/2026, Giving USA 2025]. Individual giving ~67% (~$370B), corporate ~7% (~$40B), foundation ~19% (~$100B+), bequests ~8% (~$45B) [verified 05/2026, Giving USA 2025]. ~1.8M registered 501(c)(3) public charities [verified 05/2026, IRS BMF Data]. Half of charitable dollars flow through intermediaries (DAFs, private foundations, community foundations, charity gift card platforms), with intermediary share growing rapidly.
 
 DAF ECOSYSTEM (Q2 2026 REFRESH — DAFRC is now the canonical primary source, replacing NPT):
 The DAF Research Collaborative (Heist, Vance-McMullen, Williams, Shaker, Sumsion, 2025, DOI: 10.4087/XUGU3656) is the independent successor to the NPT report. Analyzes 1,485 DAF sponsors (99 national, 788 community foundations, 598 single-issue charities) — this is now the ONLY credible primary citation for DAF aggregate data. Replace any lingering NPT references.
 
-~3M+ active DAF accounts across ~1,500 sponsoring organizations. Total DAF assets ~$280-300B, annual contributions ~$85B, annual grants ~$55-65B. DAFs capture ~16% of individual giving. National sponsors (Fidelity Charitable ~$50B+, Schwab Charitable ~$30B+, Vanguard Charitable ~$20B+, NPT ~$25B+) represent only 3% of sponsors but hold 70% of assets. Median DAF account: ~$21K (not just ultra-rich). 74% of FY2024 contributions to DAFgiving360 were noncash assets (ETFs, index funds, real estate, crypto) — this stat is THE most important talking point for platform-economics framing where digital incentives and DAF infrastructure intersect. Tax efficiency: immediate deduction at higher AGI limits than private foundations, no capital gains on appreciated assets, tax-free growth, estate planning benefits, bunching strategy (concentrate multi-year giving for itemization benefit).
+~3M+ active DAF accounts across ~1,500 sponsoring organizations [verified 05/2026, DAFRC 2025]. Total DAF assets ~$280-300B, annual contributions ~$85B, annual grants ~$55-65B [verified 05/2026, DAFRC 2025]. DAFs capture ~16% of individual giving. National sponsors (Fidelity Charitable ~$50B+, Schwab Charitable ~$30B+, Vanguard Charitable ~$20B+, NPT ~$25B+) represent only 3% of sponsors but hold 70% of assets [verified 05/2026, DAFRC 2025]. Median DAF account: ~$21K (not just ultra-rich). 74% of FY2024 contributions to DAFgiving360 were noncash assets (ETFs, index funds, real estate, crypto) [verified 05/2026, DAFgiving360 FY2025 Report] — this stat is THE most important talking point for platform-economics framing where digital incentives and DAF infrastructure intersect. Tax efficiency: immediate deduction at higher AGI limits than private foundations, no capital gains on appreciated assets, tax-free growth, estate planning benefits, bunching strategy (concentrate multi-year giving for itemization benefit).
 
-DAFgiving360 FY2025: 155,000 charities supported via 1.4M grants (19% YoY growth); $24M+ granted per day; 38% scheduled recurring; 78% within own state; 85% to previously-supported charities, 15% net-new. Julie Sunwoo (DAFgiving360/Schwab president) is a key voice.
+DAFgiving360 FY2025: 155,000 charities supported via 1.4M grants (19% YoY growth); $24M+ granted per day; 38% scheduled recurring; 78% within own state; 85% to previously-supported charities, 15% net-new [verified 05/2026, DAFgiving360 FY2025 Report]. Julie Sunwoo (DAFgiving360/Schwab president) is a key voice.
 
-Donation-processor segment (GoFundMe entered DAF market in 2025) is structurally distinct: 168% payout rate in FY2024 vs 24% for all other DAFs. Growth rate for non-processor accounts has been slowing. IPS Independent Report: median payout rates around 9-10%, well above the 5% required for private foundations, but with no mandated minimum.
+Donation-processor segment (GoFundMe entered DAF market in 2025) is structurally distinct: 168% payout rate in FY2024 vs 24% for all other DAFs [verified 05/2026, DAFRC 2025]. Growth rate for non-processor accounts has been slowing. IPS Independent Report: median payout rates around 9-10%, well above the 5% required for private foundations, but with no mandated minimum [verified 05/2026, IPS Independent Report].
 
 REGULATORY: Pension Protection Act 2006 created modern DAF framework. §4966: 20% excise tax on taxable distributions from DAFs. §4967: 125% excise tax on distributions providing donor benefit. November 2023 proposed regulations expanded definitions of DAF, distribution, and donor-advisor — final regs still pending as of 2026. OBBBA (passed 2025): starting 2026, itemizers can only deduct charitable contributions above 0.5% of AGI; top-rate value reduced from 37% to 35%. This will likely compress the number of DAF accounts while DAF assets continue to grow — the dominant 2026 regulatory input reshaping donor behavior. Expenditure responsibility required for non-public-charity recipients. Compliance stack: charity verification at every distribution, donor benefit screening, quid-pro-quo screening, Form 990 with Schedule D disclosures, state charitable registration in 40+ states.
 
@@ -27,13 +43,21 @@ VOICES: DAFRC team (Heist, Vance-McMullen, Williams, Shaker, Sumsion), Julie Sun
 
 CHARITY GIFT CARDS: Niche but growing — combines prepaid card mechanics with DAF-like liability accounting. Model: buyer purchases card (gets tax deduction at purchase), card delivered to recipient, recipient selects charity from verified database (~2M charities), platform distributes funds. Key: gift card sales are NOT revenue — recorded as liabilities (funds held for charitable distribution). Platform revenue is the operational fee margin only. This creates apparent size mismatch (GMV >> reported revenue) by deliberate design.
 
-PRIVATE FOUNDATIONS VS DAFs: PFs have 5% mandatory annual payout, 30% AGI cash deduction limit, 1.39% excise tax on investment income, and full board control. DAFs have no payout requirement (politically controversial), 60% AGI cash limit, no excise tax, and advisory-only control. PFs practical above ~$2M assets; DAFs practical from $0. Growing concern: PF-to-DAF transfers ($3.2B+ in 2022) and DAF-to-DAF transfers ($4.4B in 2023) may overstate apparent payout rates.
+PRIVATE FOUNDATIONS VS DAFs: PFs have 5% mandatory annual payout, 30% AGI cash deduction limit, 1.39% excise tax on investment income [verified 05/2026, IRS §4940/§4942], and full board control. DAFs have no payout requirement (politically controversial), 60% AGI cash limit, no excise tax, and advisory-only control. PFs practical above ~$2M assets; DAFs practical from $0. Growing concern: PF-to-DAF transfers ($3.2B+ in 2022) and DAF-to-DAF transfers ($4.4B in 2023) may overstate apparent payout rates.
 
 CORPORATE PHILANTHROPY: ~$40B annually. Forms: direct gifts, corporate foundations, matching gifts, volunteer programs, cause marketing, corporate gift cards. Corporate gifting market ~$240B overall; charity gift cards serve the values-aligned niche. Corporate buyers: HR/People teams (employee recognition), Marketing (client gifting), Office managers, Procurement. Higher AOV ($5K-$500K+ vs consumer $25-$100), predictable repeat business, strong reference value.
 
 WORKPLACE GIVING PLATFORMS: Benevity (~$15B+ cumulative), YourCause (Blackbaud), Bright Funds, Millie. Offer: employee giving portals, matching administration, volunteer tracking, charity verification, reporting.
 
 2026 TRENDS: DAF reform debate (payout mandates, transparency, transfer rules — no legislation passed). DAF democratization (Daffy, Charityvest, Chariot — $0 minimums, mobile-first). Embedded charitable giving (checkout donations, subscription-attached, loyalty-to-charity). Decline of umbrella organizations (United Way). Corporate ESG volatility (recipient-choice models neutralize ideological risk for buyers). AI in charity verification and donor matching.
+
+KNOWN TRAPS:
+- DAF payout rate stats vary wildly depending on whether donation-processor DAFs (168% payout) are included — always clarify which universe.
+- "Total DAF assets" conflates national sponsors (70% of assets) with community foundations (very different economics) — segment before citing.
+- Gift card "revenue" is almost entirely liability; quoting GMV as revenue misrepresents the business by 10-20x.
+- OBBBA deduction compression (0.5% AGI floor) is new for 2026 — many practitioners are still citing pre-OBBBA rules.
+- PF-to-DAF and DAF-to-DAF transfers inflate apparent payout rates — flag this when citing DAFRC payout data.
+- November 2023 proposed DAF regs are still pending as of 2026 — do not cite as final rules.
 `;
 
 export const CHARITABLE_GIVING_SCORING = {

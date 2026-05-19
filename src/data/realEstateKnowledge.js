@@ -1,33 +1,57 @@
 // src/data/realEstateKnowledge.js
 //
+// Version: 1.0.0
+// Last verified: 2026-05-19
+// Next review: 2026-08-19 (quarterly)
+//
 // U.S. Real Estate & Land Development knowledge layer.
 // Covers: residential, commercial, land wholesaling, BTR, builders,
 // REITs, capital markets, geographic hotspots, and tech stack.
 //
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
+//
+// -- SOURCES (re-verify each on quarterly sweep) --
+//   Freddie Mac PMMS (Primary Mortgage Market Survey) — https://www.freddiemac.com/pmms
+//   FHFA (Federal Housing Finance Agency) — https://www.fhfa.gov
+//   NAR (National Association of Realtors) — https://www.nar.realtor/research-and-statistics
+//   NAHB (National Association of Home Builders) — https://www.nahb.org/news-and-economics
+//   CoreLogic Home Price Insights — https://www.corelogic.com/intelligence
+//   CBRE Research — https://www.cbre.com/insights
+//   Census Bureau (New Residential Construction / Survey of Construction) — https://www.census.gov/construction
+//   Builder 100 / Builder Magazine — https://www.builderonline.com/builder-100
+//   John Burns Research & Consulting — https://www.jbrec.com
+//   RealPage Analytics — https://www.realpage.com/analytics
+//   Moody's CRE / REIS — https://www.moodys.com
+//   Blackstone Earnings / Investor Day — https://www.blackstone.com/shareholders
+//   Brookfield Asset Management — https://www.brookfield.com
+//   Trepp CMBS Research — https://www.trepp.com
+//   NBER Working Papers — https://www.nber.org/papers
+//   NAREIT (National Association of REITs) — https://www.reit.com/data-research
+//   Federal Reserve (SOFR / rates) — https://www.newyorkfed.org/markets/reference-rates/sofr
+//   FinCEN BOI Reporting — https://www.fincen.gov/boi
 
 export const REAL_ESTATE_INDUSTRY_INJECTION = `
 REAL ESTATE & LAND DEVELOPMENT CONTEXT (use when target or seller is in real estate, land, homebuilding, commercial development, or property):
 
 MARKET SNAPSHOT (2026):
-- 30yr fixed mortgage: ~6.1-6.3%. Lock-in effect fading but not gone (~50% of mortgages still sub-4%).
-- Structural housing deficit: 3.5-4.7M units short. This is THE macro fact for any land-related business.
-- Home price growth: 0-2% national consensus. Resale > new home pricing (unusual inversion from builder incentives).
-- Inventory: still ~17% below pre-pandemic levels despite improvement.
-- CRE transaction volume: +15-20% forecast (recovery from 2022-2024 freeze).
-- Construction costs: 40%+ above early-2020 levels (compresses what builders pay for land).
+- 30yr fixed mortgage: ~6.1-6.3% [verified 05/2026, Freddie Mac PMMS]. Lock-in effect fading but not gone (~50% of mortgages still sub-4%) [verified 05/2026, FHFA].
+- Structural housing deficit: 3.5-4.7M units short [verified 05/2026, NAR / Freddie Mac / NAHB]. This is THE macro fact for any land-related business.
+- Home price growth: 0-2% national consensus [verified 05/2026, NAR / CoreLogic]. Resale > new home pricing (unusual inversion from builder incentives).
+- Inventory: still ~17% below pre-pandemic levels despite improvement [verified 05/2026, NAR].
+- CRE transaction volume: +15-20% forecast (recovery from 2022-2024 freeze) [verified 05/2026, CBRE].
+- Construction costs: 40%+ above early-2020 levels (compresses what builders pay for land) [verified 05/2026, NAHB].
 
 RESIDENTIAL KEY FACTS:
-- Top 100 builders now do ~50% of all new SF home sales (up from ~33% two decades ago).
-- D.R. Horton: 13.6% national share (93K closings, #1 for 23 years). Lennar: 11.7% (73K). PulteGroup: 4.6%.
-- 2/3 of new SF construction is in South + Mountain West (TX, FL, Carolinas, GA, AZ, TN).
-- BTR (build-to-rent): surged 102%+ since 2019; now ~6.3-7% of SF starts; $50B+ institutional capital deployed.
-- Lot sizes shrinking: median under 9,000 sqft nationally; Phoenix/Houston pushing under 5,000 sqft.
+- Top 100 builders now do ~50% of all new SF home sales (up from ~33% two decades ago) [verified 05/2026, Builder 100 / NAHB].
+- D.R. Horton: 13.6% national share (93K closings, #1 for 23 years). Lennar: 11.7% (73K). PulteGroup: 4.6% [verified 05/2026, Builder 100 / company 10-Ks].
+- 2/3 of new SF construction is in South + Mountain West (TX, FL, Carolinas, GA, AZ, TN) [verified 05/2026, Census Bureau].
+- BTR (build-to-rent): surged 102%+ since 2019; now ~6.3-7% of SF starts; $50B+ institutional capital deployed [verified 05/2026, NAHB / John Burns Research].
+- Lot sizes shrinking: median under 9,000 sqft nationally; Phoenix/Houston pushing under 5,000 sqft [verified 05/2026, Census Bureau Survey of Construction].
 
 COMMERCIAL KEY FACTS:
-- Industrial: vacancy peaked ~7.6%, new starts down 62% from 2022 — tightening. Reshoring supports demand.
-- Multifamily: absorbed 1.1M units in 2024-2025; Sun Belt oversupply through 2027; coastal markets tighter.
-- Office: ~23% national vacancy (structural decline); trophy assets strong, Class B/C obsolete in many markets.
+- Industrial: vacancy peaked ~7.6%, new starts down 62% from 2022 — tightening [verified 05/2026, CBRE]. Reshoring supports demand.
+- Multifamily: absorbed 1.1M units in 2024-2025 [verified 05/2026, RealPage]; Sun Belt oversupply through 2027; coastal markets tighter.
+- Office: ~23% national vacancy (structural decline) [verified 05/2026, Moody's / CBRE]; trophy assets strong, Class B/C obsolete in many markets.
 - Data centers: ALL new supply pre-leased; constrained by power/zoning, not demand. AI capex reshaping markets.
 - Retail: quietly best-performing core sector; years of underbuilding = structurally tight conditions.
 
@@ -52,21 +76,33 @@ BUILDER RELATIONSHIPS:
 - BTR developers want larger contiguous parcels (20-80+ acres), renter-demand submarkets, density-friendly zoning.
 
 CAPITAL & INVESTMENT (Q2 2026 REFRESH):
-- Blackstone invested $42B of equity in real estate since early 2024, Q4 2025 deal screening activity up >25% YoY. Blackstone $2.3B Alexander & Baldwin acquisition (Hawaii commercial REIT) — privatization streak is dominant 2026 structural pattern.
-- Brookfield ($1T+ AUM) positioning aggressively across housing, logistics, data centers, hospitality. Announced Oct 2025 acquisition of remaining ~26% interest in Oaktree. Key voices: Bruce Flatt (CEO), Lowell Baron (Real Estate CEO).
-- Real estate values fell 22% over two years ending 2024, only 7% above trough as of late 2025 — Blackstone framing as one of most attractive entry points in years.
-- $957B in CRE loans matured in 2025 — nearly triple the 20-year average. CMBS delinquency 7.29% (~6x bank-loan rates). Office vacancy hit record 19.6% in Q1 2025. The "extend and pretend" lender posture from 2023-2024 is now ending — forced sales increasing.
-- Multifamily transactions grew 39.5% YoY in 2025; Q1 2025 absorption more than doubled to 82,500 units. 2025 vacancy ending at 4.9%, rent growth 2.6% (CBRE). Sun Belt and Mountain regions adding ~20% to inventory in three years.
-- Construction costs up 50% over last five years. New starts in logistics and rental housing down ~2/3 — major supply tailwind for existing assets.
-- Data center REIT outlier: P/FFO multiples expanding to 25-40x as AI power demand drives construction. Blackstone Infrastructure consortium acquired TXNM Energy at 1.8x rate base (~$11.5B) — representative AI-power-demand deal. AI infrastructure is now a discrete CRE sub-asset class.
+- Blackstone invested $42B of equity in real estate since early 2024, Q4 2025 deal screening activity up >25% YoY [verified 05/2026, Blackstone Q4 2025 Earnings]. Blackstone $2.3B Alexander & Baldwin acquisition (Hawaii commercial REIT) — privatization streak is dominant 2026 structural pattern [verified 05/2026, Blackstone Investor Day].
+- Brookfield ($1T+ AUM) positioning aggressively across housing, logistics, data centers, hospitality [verified 05/2026, Brookfield]. Announced Oct 2025 acquisition of remaining ~26% interest in Oaktree [verified 05/2026, Brookfield]. Key voices: Bruce Flatt (CEO), Lowell Baron (Real Estate CEO).
+- Real estate values fell 22% over two years ending 2024, only 7% above trough as of late 2025 [verified 05/2026, Blackstone Q4 2025 Earnings] — Blackstone framing as one of most attractive entry points in years.
+- $957B in CRE loans matured in 2025 — nearly triple the 20-year average [verified 05/2026, Trepp]. CMBS delinquency 7.29% (~6x bank-loan rates) [verified 05/2026, Trepp]. Office vacancy hit record 19.6% in Q1 2025 [verified 05/2026, Moody's]. The "extend and pretend" lender posture from 2023-2024 is now ending — forced sales increasing.
+- Multifamily transactions grew 39.5% YoY in 2025; Q1 2025 absorption more than doubled to 82,500 units [verified 05/2026, CBRE]. 2025 vacancy ending at 4.9%, rent growth 2.6% [verified 05/2026, CBRE]. Sun Belt and Mountain regions adding ~20% to inventory in three years [verified 05/2026, RealPage].
+- Construction costs up 50% over last five years [verified 05/2026, NAHB]. New starts in logistics and rental housing down ~2/3 [verified 05/2026, Census Bureau] — major supply tailwind for existing assets.
+- Data center REIT outlier: P/FFO multiples expanding to 25-40x as AI power demand drives construction [verified 05/2026, NAREIT]. Blackstone Infrastructure consortium acquired TXNM Energy at 1.8x rate base (~$11.5B) [verified 05/2026, Blackstone Investor Day] — representative AI-power-demand deal. AI infrastructure is now a discrete CRE sub-asset class.
 - 2021-2022-vintage inexperienced multifamily buyers are the source of highest-quality distressed-acquisition opportunities.
 - NBER WP 31970 (Bidder, Krainer, Shapiro): CRE loans ~25% of average bank assets (~$2.7T at start of 2022 tightening). Anchor academic citation for any CRE bank-exposure framing.
-- SOFR moved 530 bps from 0.05% (Jan 2022) to 5.35% (Jan 2024); borrowing costs roughly 40% off their wides (Jon Gray, Blackstone). Barrero, Bloom & Davis demonstrate persistence of elevated remote work — structural argument for sustained office-demand erosion.
+- SOFR moved 530 bps from 0.05% (Jan 2022) to 5.35% (Jan 2024) [verified 05/2026, Federal Reserve]; borrowing costs roughly 40% off their wides [verified 05/2026, Blackstone Q4 2025 Earnings]. Barrero, Bloom & Davis demonstrate persistence of elevated remote work — structural argument for sustained office-demand erosion.
 - Other major allocators: Brookfield, Starwood, KKR, Apollo, Carlyle, Franklin Templeton (acquired Apera Oct 2025).
 - BTR institutional capital: Blackstone, Carlyle, Cerberus, AMH, Invitation Homes, Pretium/Progress.
 - REITs by sector: Industrial (Prologis), Multifamily (Equity Residential, Greystar), Retail (Simon), Office (BXP).
 - Data center: Equinix, Digital Realty, QTS (Blackstone), CyrusOne (KKR).
 - Voices to track: Jon Gray (Blackstone president — most-cited CRE recovery voice), Manus Clancy (Trepp — CMBS delinquency), CBRE Econometric Advisors, PIMCO real estate research, NAIOP.
+
+KNOWN TRAPS — DATA THAT GOES STALE FASTEST (re-verify quarterly):
+- Mortgage rates: move weekly; 30yr fixed can shift 50+ bps in a quarter. Always hedge with "as of [date]." [Source: Freddie Mac PMMS]
+- Cap rates: lag transactions by 1-2 quarters; CBRE and NCREIF report on different cycles. Never cite a cap rate without specifying vintage. [Source: CBRE, NCREIF]
+- CRE transaction volumes: quarterly swing wildly on a few mega-deals; YoY comparisons mislead when base quarter was anomalous (e.g., Q4 2022 freeze). [Source: CBRE, MSCI Real Capital Analytics]
+- Vacancy rates: industrial and multifamily vacancies are moving targets — pipeline deliveries shift them 50-100 bps per quarter. Office vacancy is structural and slower-moving but varies sharply by market. [Source: CBRE, Moody's, CoStar]
+- Construction costs: NAHB indices update quarterly; lumber/steel spot prices move faster. A "40% above 2020" claim can be 45% or 35% next quarter. [Source: NAHB, PPI]
+- BTR/SFR stats: this sub-sector is young and data sources disagree (NAHB vs. John Burns vs. RealPage); always specify the source. Institutional capital deployed figures shift with each fund close. [Source: NAHB, John Burns Research]
+- PE allocations & dry powder: Blackstone/Brookfield/KKR report quarterly with different fiscal calendars. "$42B deployed" becomes "$48B" after one earnings call. Pin to a specific quarter. [Source: firm earnings transcripts]
+- CMBS delinquency: Trepp updates monthly; the rate is volatile because the denominator (outstanding CMBS) is also changing. [Source: Trepp]
+- Sun Belt multifamily oversupply: absorption is racing deliveries — the narrative can flip from "oversupplied" to "tightening" in two quarters. [Source: RealPage, CBRE]
+- Housing deficit estimates: range from 1.5M (more conservative) to 7M+ (including quality-adjusted); the 3.5-4.7M range is consensus but contested. [Source: NAR, Freddie Mac, Up for Growth]
 `;
 
 export const REAL_ESTATE_SCORING_CONTEXT = {

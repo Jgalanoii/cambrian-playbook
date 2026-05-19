@@ -12,7 +12,8 @@ const norm = s => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
 function extractNumber(s) {
   if (typeof s === "number") return s;
   if (!s) return NaN;
-  const str = String(s).replace(/,/g, "").trim();
+  // Strip citation tags, parenthetical dates, and common noise before parsing
+  const str = String(s).replace(/<\/?cite[^>]*>/g, "").replace(/\(.*?\)/g, "").replace(/,/g, "").trim();
 
   // Handle "$182.4B" / "$6.9B" / "$681 billion" patterns
   const billionMatch = str.match(/([\d.]+)\s*(billion|bn|b)\b/i);
