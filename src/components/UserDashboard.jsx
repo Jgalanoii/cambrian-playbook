@@ -7,7 +7,7 @@ import { fetchOrgMembers, fetchOrgInvitations, sbPatch } from "../lib/org.js";
 import { timeAgo } from "../lib/utils.js";
 
 // ── HubSpotSection (CRM integration) ──
-function HubSpotSection({ sbToken }) {
+function HubSpotSection({ sbToken, onStatusChange }) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -16,7 +16,7 @@ function HubSpotSection({ sbToken }) {
     if (!sbToken) return;
     fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "status" }) })
-      .then(r => r.json()).then(setStatus).catch(() => setStatus({ connected: false }));
+      .then(r => r.json()).then(s => { setStatus(s); onStatusChange?.(s); }).catch(() => setStatus({ connected: false }));
   }, [sbToken]);
 
   const [authUrl, setAuthUrl] = useState(null);
@@ -31,7 +31,7 @@ function HubSpotSection({ sbToken }) {
   const checkConnection = () => {
     fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "status" }) })
-      .then(r => r.json()).then(s => { setStatus(s); if (s?.connected) setAuthUrl(null); })
+      .then(r => r.json()).then(s => { setStatus(s); if (s?.connected) { setAuthUrl(null); onStatusChange?.(s); } })
       .catch(() => {});
   };
 
@@ -40,7 +40,7 @@ function HubSpotSection({ sbToken }) {
     setDisconnecting(true);
     fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "disconnect" }) })
-      .then(() => setStatus({ connected: false }))
+      .then(() => { setStatus({ connected: false }); onStatusChange?.({ connected: false }); })
       .finally(() => setDisconnecting(false));
   };
 
@@ -134,7 +134,7 @@ const r = (role) => ROLE_META[role] || ROLE_META.rep;
 // Lazy import OrgPanel for no-org users
 import OrgPanel from "./OrgPanel.jsx";
 
-export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, savedSessions, onClose }) {
+export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, savedSessions, onClose, onHubspotChange }) {
   // If user has no org, show the simplified OrgPanel (has "Create Organization" flow)
   if (!orgCtx) return <OrgPanel orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} onClose={onClose} />;
 
@@ -816,7 +816,7 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
 
                 {/* CRM Integration */}
                 <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 16 }}>
-                  <HubSpotSection sbToken={sbToken} />
+                  <HubSpotSection sbToken={sbToken} onStatusChange={onHubspotChange} />
                 </div>
 
                 {/* Refer & Earn */}

@@ -12625,7 +12625,7 @@ ${isOpen
 
       {/* User dashboard (replaces OrgPanel + ReportPanel) */}
       {orgPanelOpen && (
-        <UserDashboard orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} savedSessions={savedSessions} onClose={()=>setOrgPanelOpen(false)} />
+        <UserDashboard orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} savedSessions={savedSessions} onClose={()=>setOrgPanelOpen(false)} onHubspotChange={setHubspotStatus} />
       )}
 
       {/* Superuser analytics */}
