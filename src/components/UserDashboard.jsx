@@ -24,7 +24,7 @@ function HubSpotSection({ sbToken }) {
     fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "start" }) })
       .then(r => r.json())
-      .then(d => { if (d.url) window.location.href = d.url; else setLoading(false); })
+      .then(d => { if (d.url) window.open(d.url, "_blank"); setLoading(false); })
       .catch(() => setLoading(false));
   };
 
