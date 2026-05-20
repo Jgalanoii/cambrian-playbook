@@ -42,6 +42,7 @@ import { RETAIL_INDUSTRY_INJECTION, RETAIL_SCORING_CONTEXT, RETAIL_DISCOVERY_INJ
 import { PROFESSIONAL_SERVICES_INJECTION, PROFESSIONAL_SERVICES_SCORING, PROFESSIONAL_SERVICES_DISCOVERY } from "../src/data/professionalServicesKnowledge.js";
 import { MANUFACTURING_INJECTION, MANUFACTURING_SCORING, MANUFACTURING_DISCOVERY } from "../src/data/manufacturingKnowledge.js";
 import { PE_HOLDCO_INJECTION, PE_HOLDCO_DISCOVERY, PE_HOLDCO_SCORING } from "../src/data/peHoldcoKnowledge.js";
+import { DIGITAL_INCENTIVES_PLATFORMS_INJECTION, DIGITAL_INCENTIVES_PLATFORMS_DISCOVERY, DIGITAL_INCENTIVES_PLATFORMS_SCORING } from "../src/data/digitalIncentivesPlatformsKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -283,6 +284,10 @@ export default async function handler(req, res) {
       peHoldco: PE_HOLDCO_INJECTION,
       peHoldcoScoring: PE_HOLDCO_SCORING,
       peHoldcoDiscovery: PE_HOLDCO_DISCOVERY,
+      // Digital Incentives Platforms (deep market/economics layer)
+      digitalIncentivesPlatforms: DIGITAL_INCENTIVES_PLATFORMS_INJECTION,
+      digitalIncentivesPlatformsScoring: DIGITAL_INCENTIVES_PLATFORMS_SCORING,
+      digitalIncentivesPlatformsDiscovery: DIGITAL_INCENTIVES_PLATFORMS_DISCOVERY,
       // Advanced frameworks (paid only)
       pricingNegotiation: PRICING_NEGOTIATION,
       archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,

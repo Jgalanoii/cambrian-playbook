@@ -105,6 +105,8 @@ let KL_MANUFACTURING_SCORING = null;
 let KL_MANUFACTURING_DISCOVERY = "";
 let KL_PE_HOLDCO = ""; // PE-backed holdco / post-merger commercial integration
 let KL_PE_HOLDCO_DISCOVERY = "";
+let KL_DIG_INCENTIVES = ""; // Digital incentives platforms — market economics, stack taxonomy
+let KL_DIG_INCENTIVES_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -192,6 +194,8 @@ async function fetchKnowledgeLayer() {
     KL_MANUFACTURING_DISCOVERY = d.manufacturingDiscovery || "";
     KL_PE_HOLDCO = d.peHoldco || "";
     KL_PE_HOLDCO_DISCOVERY = d.peHoldcoDiscovery || "";
+    KL_DIG_INCENTIVES = d.digitalIncentivesPlatforms || "";
+    KL_DIG_INCENTIVES_DISCOVERY = d.digitalIncentivesPlatformsDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -851,6 +855,16 @@ function getRetailInjection(sellerICP, targetIndustry) {
   return "\n" + KL_RETAIL;
 }
 
+// ── DIGITAL INCENTIVES PLATFORMS INJECTION ─────────────────────────────
+const DIG_INCENTIVES_KW = ["digital incentive", "gift card", "prepaid", "reward platform", "b2b rewards", "stored value", "payout", "raas", "incentive platform", "corporate rewards", "employee reward"];
+function getDigIncentivesInjection(sellerICP, targetIndustry) {
+  if (!KL_DIG_INCENTIVES) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (DIG_INCENTIVES_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_DIG_INCENTIVES;
+}
+
 // ── PROFESSIONAL SERVICES INJECTION ────────────────────────────────────
 const PROF_SERVICES_KW = ["consulting", "professional services", "advisory", "audit", "accounting firm", "law firm", "legal services", "staffing", "managed services", "big 4", "management consulting"];
 function getProfServicesInjection(sellerICP, targetIndustry) {
@@ -1461,6 +1475,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getCharitableInjection(sellerICP, member.ind) +
     getSmbMidmarketInjection(sellerICP, member.ind, member) +
     getInsuranceInjection(sellerICP, member.ind) +
+    getDigIncentivesInjection(sellerICP, member.ind) +
     getRetailInjection(sellerICP, member.ind) +
     getProfServicesInjection(sellerICP, member.ind) +
     getManufacturingInjection(sellerICP, member.ind) +
@@ -6550,6 +6565,7 @@ ${isOpen
       (KL_MEDICAL_PAYMENTS_DISCOVERY && getMedicalPaymentsInjection(sellerICP, member?.ind) ? KL_MEDICAL_PAYMENTS_DISCOVERY + "\n" : "") +
       (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
       (KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY + "\n" : "") +
+      (KL_DIG_INCENTIVES_DISCOVERY && getDigIncentivesInjection(sellerICP, member?.ind) ? KL_DIG_INCENTIVES_DISCOVERY + "\n" : "") +
       (KL_RETAIL_DISCOVERY && getRetailInjection(sellerICP, member?.ind) ? KL_RETAIL_DISCOVERY + "\n" : "") +
       (KL_PROF_SERVICES_DISCOVERY && getProfServicesInjection(sellerICP, member?.ind) ? KL_PROF_SERVICES_DISCOVERY + "\n" : "") +
       (KL_MANUFACTURING_DISCOVERY && getManufacturingInjection(sellerICP, member?.ind) ? KL_MANUFACTURING_DISCOVERY + "\n" : "") +
