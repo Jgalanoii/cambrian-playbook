@@ -3563,7 +3563,7 @@ export default function App(){
   const[contactOpen,setContactOpen]=useState(false);
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
-  const[collapsedBB,setCollapsedBB]=useState(new Set()); // Phase 2b: collapsed brief sections
+  const[collapsedBB,setCollapsedBB]=useState(new Set(["sessionSummary"])); // Phase 2b: collapsed brief sections. Session summary starts collapsed — accessed via top action bar.
   const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
   // Helpers for collapsible bb blocks. bbHdr() returns onClick + chevron props;
   // bbWrap() returns the wrapper className for the body.
@@ -10523,6 +10523,16 @@ ${isOpen
                     }}
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)",color:"#555",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                       📋 Copy Brief
+                    </button>
+                    <button onClick={()=>{
+                      const summary = buildSessionSummary();
+                      if (!summary) return;
+                      const text = sessionSummaryToText(summary);
+                      navigator.clipboard?.writeText(text);
+                      setEditToast("Full session summary copied — paste into CRM, email, or doc");
+                    }}
+                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--tan-0)",borderRadius:8,background:"var(--tan-bg,#faf6f0)",color:"var(--tan-0)",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                      📋 Copy Summary
                     </button>
                     {hubspotStatus?.connected&&<button onClick={()=>{
                       const summary = buildSessionSummary();
