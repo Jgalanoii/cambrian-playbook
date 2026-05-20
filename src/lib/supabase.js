@@ -14,15 +14,20 @@ let _onTokenRefreshed = null; // callback to update App state
 export function sbSetTokenCallback(cb) { _onTokenRefreshed = cb; }
 
 export function sbStoreTokens(data) {
-  if (data.access_token) sessionStorage.setItem('sb_token', data.access_token);
-  if (data.refresh_token) sessionStorage.setItem('sb_refresh_token', data.refresh_token);
+  if (data.access_token) {
+    sessionStorage.setItem('sb_token', data.access_token);
+    localStorage.setItem('sb_token', data.access_token); // persist across navigations (HubSpot OAuth)
+  }
+  if (data.refresh_token) {
+    sessionStorage.setItem('sb_refresh_token', data.refresh_token);
+    localStorage.setItem('sb_refresh_token', data.refresh_token);
+  }
   if (data.expires_in) {
     const expiresAt = Date.now() + (data.expires_in * 1000);
     sessionStorage.setItem('sb_token_expires', String(expiresAt));
+    localStorage.setItem('sb_token_expires', String(expiresAt));
     _scheduleRefresh(data.expires_in);
   }
-  // Clear legacy localStorage tokens
-  localStorage.removeItem('sb_token');
 }
 
 function _scheduleRefresh(expiresInSecs) {
