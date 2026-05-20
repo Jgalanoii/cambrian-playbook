@@ -6619,6 +6619,7 @@ ${isOpen
   const [hubspotPushing,setHubspotPushing]=useState("");
   const pushToHubSpot=async(action,data)=>{
     if(!hubspotStatus?.connected){setCopied("hs_err");setTimeout(()=>setCopied(""),3000);return;}
+    console.log(`[hubspot] Pushing ${action}:`, JSON.stringify({company: data?.company?.name, domain: data?.company?.domain, selectedAccount: selectedAccount?.company}, null, 2));
     setHubspotPushing(action);
     try{
       const r=await fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({action,data})});
