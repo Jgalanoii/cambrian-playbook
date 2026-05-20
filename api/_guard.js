@@ -88,8 +88,9 @@ async function verifyAsymmetricSignature(token, alg) {
 
   const keys = await getJWKS();
   if (!keys || !keys.length) {
-    // JWKS unavailable — fail closed in production, allow in dev with issuer+expiry checks
-    return !IS_PRODUCTION;
+    // JWKS unavailable — always fail closed. No auth without key verification.
+    console.error("[auth] JWKS unavailable — rejecting request");
+    return false;
   }
 
   for (const jwk of keys) {

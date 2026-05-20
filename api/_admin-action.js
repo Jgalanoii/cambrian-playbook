@@ -173,6 +173,12 @@ export default async function handler(req, res) {
       for (const k of allowed) { if (k in fields) patch[k] = fields[k]; }
       if (!Object.keys(patch).length) return res.status(400).json({ error: "No valid fields" });
 
+      // Validate seller_url is a reasonable domain
+      if (patch.seller_url && !/^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}(\/.*)?$/.test(patch.seller_url.replace(/^https?:\/\//, ""))) {
+        return res.status(400).json({ error: "seller_url must be a valid domain" });
+      }
+      // Sanitize string fields against XSS
+      if (patch.name) patch.name = String(patch.name).replace(/<[^>]*>/g, "").slice(0, 200);
       // DB constraint only allows trial/paid/suspended — map tier names
       if (patch.plan && !["trial", "paid", "suspended"].includes(patch.plan)) patch.plan = "paid";
 

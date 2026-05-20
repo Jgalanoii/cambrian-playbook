@@ -42,11 +42,17 @@ export function logTokenUsage({ userId, orgId, model, inputTokens, outputTokens,
 }
 
 /** Extract tracking context from request headers (set by client) */
+// Sanitize tracking headers — untrusted client input, logged to DB
+const sanitizeTracking = (val, maxLen = 200) => {
+  if (!val || typeof val !== "string") return null;
+  // Strip HTML/script tags, control chars, and excessive whitespace
+  return val.replace(/<[^>]*>/g, "").replace(/[\x00-\x1f]/g, "").trim().slice(0, maxLen) || null;
+};
 export function extractTrackingContext(req) {
   return {
-    targetCompany: req.headers["x-target-company"] || null,
-    sellerUrl: req.headers["x-seller-url"] || null,
-    briefType: req.headers["x-brief-type"] || null,
+    targetCompany: sanitizeTracking(req.headers["x-target-company"], 150),
+    sellerUrl: sanitizeTracking(req.headers["x-seller-url"], 150),
+    briefType: sanitizeTracking(req.headers["x-brief-type"], 50),
   };
 }
 
