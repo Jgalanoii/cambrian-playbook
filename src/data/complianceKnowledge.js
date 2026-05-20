@@ -9,7 +9,12 @@
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
 // Source: compliance-knowledge-layer.json (schema v1.0.0)
 
-import data from "./compliance-knowledge-layer.json";
+// JSON import — use createRequire for Node ESM compatibility on Vercel.
+// Vite handles bare JSON imports at build time, but the API route runs
+// in Node where `import x from "file.json"` needs `with { type: "json" }`.
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const data = require("./compliance-knowledge-layer.json");
 
 // ── Framework lookups ───────────────────────────────────────────────────
 
