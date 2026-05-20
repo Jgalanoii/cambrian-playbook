@@ -3419,9 +3419,9 @@ export default function App(){
   // Structured ICP targeting. segment=single select, others=multi-select arrays.
   const[icpTargeting,setIcpTargeting]=useState({
     segment: "",           // single: SMB | Mid-Market | Enterprise
-    headcount: [],         // up to 2: ["50-499","500-4,999"]
-    revenue: [],           // up to 2: ["$1M-$10M","$10M-$100M"]
-    ownership: [],         // up to 2: ["Public","PE-Backed"]
+    headcount: [],         // up to 3: ["50-499","500-4,999","5,000-49,999"]
+    revenue: [],           // up to 3: ["$1M-$10M","$10M-$100M","$100M-$1B"]
+    ownership: [],         // up to 3: ["Public","PE-Backed","Private"]
     geography: [],         // up to 3: ["USA","EMEA","APAC"]
     excludes: [],          // unlimited: ["Healthcare","Government",...]
   });
@@ -3520,9 +3520,9 @@ export default function App(){
   const[targetGenNote,setTargetGenNote]=useState(""); // surfaced after generation completes
   const[targetIndustries,setTargetIndustries]=useState([]); // user-selected industries for target gen (up to 3)
   const[targetIndInput,setTargetIndInput]=useState(""); // free-text input for custom industry
-  const[targetHeadcount,setTargetHeadcount]=useState([]); // up to 2, e.g. ["50-499 employees","500-999 employees"]
-  const[targetRevenue,setTargetRevenue]=useState([]); // up to 2, e.g. ["$10M-$50M","$50M-$100M"]
-  const[targetOwnership,setTargetOwnership]=useState([]); // up to 2, e.g. ["Public","PE-backed"]
+  const[targetHeadcount,setTargetHeadcount]=useState([]); // up to 3, e.g. ["50-499 employees","500-4,999 employees","5,000-9,999 employees"]
+  const[targetRevenue,setTargetRevenue]=useState([]); // up to 3, e.g. ["$10M-$50M","$50M-$100M","$100M-$500M"]
+  const[targetOwnership,setTargetOwnership]=useState([]); // up to 3, e.g. ["Public","PE-backed","Private"]
   const[disqualified,setDisqualified]=useState({}); // {companyName: "reason"}
   const[dqModalTarget,setDqModalTarget]=useState(null); // company name for disqualify modal
   // Auto-populate target generation dropdowns from structured targeting preferences
@@ -3531,11 +3531,11 @@ export default function App(){
     const rArr = Array.isArray(icpTargeting.revenue) ? icpTargeting.revenue : (icpTargeting.revenue ? [icpTargeting.revenue] : []);
     if (hArr.length && targetHeadcount.length === 0) {
       const hMap = {"1-49":"1-49 employees","50-499":"50-499 employees","500-4,999":"500-4,999 employees","5,000-49,999":"5,000-9,999 employees","50,000+":"50,000+ employees"};
-      setTargetHeadcount(hArr.slice(0,2).map(h => hMap[h] || h + " employees"));
+      setTargetHeadcount(hArr.slice(0,3).map(h => hMap[h] || h + " employees"));
     }
     if (rArr.length && targetRevenue.length === 0) {
       const rMap = {"<$1M":"Under $1M","$1M-$10M":"$1M-$10M","$10M-$100M":"$10M-$50M","$100M-$1B":"$100M-$500M","$1B+":"$1B-$10B"};
-      setTargetRevenue(rArr.slice(0,2).map(r => rMap[r] || r));
+      setTargetRevenue(rArr.slice(0,3).map(r => rMap[r] || r));
     }
   }, [icpTargeting.headcount, icpTargeting.revenue]);
   const[dealValue,setDealValue]=useState(""); // e.g. "$10,000 – $50,000"
@@ -4828,7 +4828,7 @@ ${isOpen
             });
             // Only cache if the ICP is usable. Catches: model echoed "PICK ONE"
             // instructions verbatim, returned "unknown", or web_search failed.
-            const badPattern = /unknown|unable to determine|insufficient data|n\/a|PICK ONE|PICK FROM|PICK 1-2|PICK 2-3|PICK 2-4/i;
+            const badPattern = /unknown|unable to determine|insufficient data|n\/a|PICK ONE|PICK FROM|PICK 1-2|PICK 1-3|PICK 2-3|PICK 2-4/i;
             const core = [parsed.marketCategory, parsed.icp?.companySize, parsed.icp?.revenueRange, parsed.icp?.dealSize];
             const hasIndustries = parsed.icp?.industries?.length > 0 && !badPattern.test(parsed.icp.industries[0]);
             const usable = hasIndustries && core.every(v => typeof v === "string" && v.length > 0 && !badPattern.test(v));
@@ -8060,27 +8060,27 @@ ${isOpen
                     </div>
                   </div>
 
-                  {/* Headcount — up to 2 */}
+                  {/* Headcount — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Company Size <span style={{fontWeight:400,color:"#bbb"}}>up to 2</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Company Size <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["1-49","50-499","500-4,999","5,000-49,999","50,000+"].map(v=>pill("headcount",v,"var(--navy)",2))}
+                      {["1-49","50-499","500-4,999","5,000-49,999","50,000+"].map(v=>pill("headcount",v,"var(--navy)",3))}
                     </div>
                   </div>
 
-                  {/* Revenue — up to 2 */}
+                  {/* Revenue — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Revenue Range <span style={{fontWeight:400,color:"#bbb"}}>up to 2</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Revenue Range <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["<$1M","$1M-$10M","$10M-$100M","$100M-$1B","$1B+"].map(v=>pill("revenue",v,"var(--green)",2))}
+                      {["<$1M","$1M-$10M","$10M-$100M","$100M-$1B","$1B+"].map(v=>pill("revenue",v,"var(--green)",3))}
                     </div>
                   </div>
 
-                  {/* Ownership — up to 2 */}
+                  {/* Ownership — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Ownership Type <span style={{fontWeight:400,color:"#bbb"}}>up to 2</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Ownership Type <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["Public","Private","PE-Backed","VC-Backed","Bootstrapped"].map(v=>pill("ownership",v,"var(--tan-0)",2))}
+                      {["Public","Private","PE-Backed","VC-Backed","Bootstrapped"].map(v=>pill("ownership",v,"var(--tan-0)",3))}
                     </div>
                   </div>
 
@@ -9427,13 +9427,13 @@ ${isOpen
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:targetHeadcount.length>0?"var(--green)":"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
-                            {targetHeadcount.length>0?"✓":"*"} Headcount <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select 1-2{targetHeadcount.length===0?" — required":""})</span>
+                            {targetHeadcount.length>0?"✓":"*"} Headcount <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select up to 3{targetHeadcount.length===0?" — required":""})</span>
                           </div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {["1-49","50-499","500-4,999","5,000-9,999","10,000-49,999","50,000+"].map(h=>{
                               const val=h+" employees";
                               const sel=targetHeadcount.includes(val);
-                              return <button key={h} onClick={()=>setTargetHeadcount(prev=>sel?prev.filter(x=>x!==val):prev.length<2?[...prev,val]:prev)}
+                              return <button key={h} onClick={()=>setTargetHeadcount(prev=>sel?prev.filter(x=>x!==val):prev.length<3?[...prev,val]:prev)}
                                 style={{fontSize:11,padding:"3px 8px",borderRadius:"var(--r-lg)",border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
                                   background:sel?"var(--green-bg)":"var(--surface)",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{h}</button>;
                             })}
@@ -9442,12 +9442,12 @@ ${isOpen
                         </div>
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:targetRevenue.length>0?"var(--green)":"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
-                            {targetRevenue.length>0?"✓":"*"} Revenue <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select 1-2{targetRevenue.length===0?" — required":""})</span>
+                            {targetRevenue.length>0?"✓":"*"} Revenue <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select up to 3{targetRevenue.length===0?" — required":""})</span>
                           </div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                             {["Under $1M","$1M-$10M","$10M-$50M","$50M-$100M","$100M-$500M","$500M-$1B","$1B-$10B","$10B+"].map(r=>{
                               const sel=targetRevenue.includes(r);
-                              return <button key={r} onClick={()=>setTargetRevenue(prev=>sel?prev.filter(x=>x!==r):prev.length<2?[...prev,r]:prev)}
+                              return <button key={r} onClick={()=>setTargetRevenue(prev=>sel?prev.filter(x=>x!==r):prev.length<3?[...prev,r]:prev)}
                                 style={{fontSize:11,padding:"3px 8px",borderRadius:"var(--r-lg)",border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
                                   background:sel?"var(--green-bg)":"var(--surface)",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{r}</button>;
                             })}
@@ -9459,12 +9459,12 @@ ${isOpen
                       {/* Ownership type selector */}
                       <div style={{marginBottom:14}}>
                         <div style={{fontSize:11,fontWeight:700,color:targetOwnership.length>0?"var(--green)":"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:5}}>
-                          {targetOwnership.length>0?"✓":"*"} Ownership Type <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select 1-2{targetOwnership.length===0?" — required":""})</span>
+                          {targetOwnership.length>0?"✓":"*"} Ownership Type <span style={{fontWeight:400,color:"var(--ink-3)",textTransform:"none"}}>(select up to 3{targetOwnership.length===0?" — required":""})</span>
                         </div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                           {["Public","Private","PE-backed","VC-backed","Bootstrapped"].map(o=>{
                             const sel=targetOwnership.includes(o);
-                            return <button key={o} onClick={()=>setTargetOwnership(prev=>sel?prev.filter(x=>x!==o):prev.length<2?[...prev,o]:prev)}
+                            return <button key={o} onClick={()=>setTargetOwnership(prev=>sel?prev.filter(x=>x!==o):prev.length<3?[...prev,o]:prev)}
                               style={{fontSize:11,padding:"3px 10px",borderRadius:"var(--r-lg)",border:"1.5px solid "+(sel?"var(--green)":"var(--line-0)"),
                                 background:sel?"var(--green-bg)":"var(--surface)",color:sel?"var(--green)":"var(--ink-2)",fontWeight:sel?700:500,cursor:"pointer"}}>{o}</button>;
                           })}
