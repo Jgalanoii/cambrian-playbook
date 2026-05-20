@@ -7797,7 +7797,7 @@ ${isOpen
           <div className="session-bar">
             {sellerUrl !== "research-only" ? (
               <>
-                <span>Selling for</span><span className="session-url">{orgCtx?.name || sellerUrl}</span>
+                <span>Selling for</span><span className="session-url">{sellerICP?.sellerName || sellerUrl}</span>
                 {products.filter(p=>p.name.trim()).length>0&&(
                   <span style={{fontSize:10,color:"var(--tan-0)",fontWeight:600}}>
                     {products.filter(p=>p.name.trim()).length} product{products.filter(p=>p.name.trim()).length>1?"s":""} loaded
