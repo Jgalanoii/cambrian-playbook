@@ -70,15 +70,29 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   // Enrich from session summary
   const s = summary || {};
   if (s.headquarters) {
-    properties.city = s.headquarters.split(",")[0]?.trim();
-    if (s.headquarters.includes(",")) properties.state = s.headquarters.split(",").slice(1).join(",").trim();
+    const hqParts = s.headquarters.split(",").map(p => p.trim());
+    if (hqParts[0]) properties.city = hqParts[0];
+    if (hqParts.length >= 2) properties.state = hqParts.slice(1).join(", ").trim();
+    // Try to detect country (if 3+ parts like "City, State, Country" or non-US locations)
+    if (hqParts.length >= 3) properties.country = hqParts[hqParts.length - 1];
+    else if (hqParts.length === 2 && !/^[A-Z]{2}$/.test(hqParts[1]) && !["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"].includes(hqParts[1])) {
+      properties.country = hqParts[1]; // Non-US: "London, UK" → country = UK
+      properties.state = ""; // Don't put country in state
+    }
   }
   if (s.website) properties.website = s.website.startsWith("http") ? s.website : `https://${s.website}`;
-  if (s.companySnapshot) {
-    const industryLabel = company.industry ? `Industry: ${company.industry}. ` : "";
-    properties.description = (industryLabel + s.companySnapshot).slice(0, 2000);
+  // LinkedIn company URL
+  if (s.executives?.[0] || summary?.linkedIn) {
+    const li = summary?.linkedIn || "";
+    if (li && li.includes("linkedin.com")) properties.linkedin_company_page = li.startsWith("http") ? li : `https://${li}`;
   }
-  // Ownership type goes in description — HubSpot's "type" enum is strict
+  // Phone number if available
+  if (summary?.phone) properties.phone = summary.phone;
+  // Description with industry and ownership context
+  if (s.companySnapshot) {
+    const meta = [company.industry && `Industry: ${company.industry}`, s.ownership && `Ownership: ${s.ownership}`].filter(Boolean).join(". ");
+    properties.description = (meta ? meta + ". " : "") + s.companySnapshot.slice(0, meta ? 2000 - meta.length - 2 : 2000);
+  }
 
   console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" owner="${ownerId||"none"}"`);
 
