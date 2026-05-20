@@ -2774,6 +2774,20 @@ function PasswordGate({ onAuth }) {
                 </div>
               ))}
             </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,fontSize:13,color:"var(--ink-2)"}}>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>1</span>
+                <span><strong>Enter your company</strong> — we build your ICP automatically</span>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>2</span>
+                <span><strong>Pick your targets</strong> — import a list or let us generate matches</span>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>3</span>
+                <span><strong>Get sales-ready</strong> — briefs, call prep, coaching, CRM export</span>
+              </div>
+            </div>
           </div>
 
           {/* Right — auth form */}
@@ -3496,7 +3510,7 @@ export default function App(){
   // reportPanelOpen removed — consolidated into UserDashboard (orgPanelOpen)
   const[moreMenuOpen,setMoreMenuOpen]=useState(false); // header overflow menu
   const[helpOpen,setHelpOpen]=useState(false); // header help dropdown
-  const[welcomeShown,setWelcomeShown]=useState(()=>!!localStorage.getItem("cambrian_welcome_v1")); // first-timer welcome
+  // welcomeShown removed — welcome content now lives on the login page, not as an overlay
   const[quickBriefInput,setQuickBriefInput]=useState(""); // a la carte brief company name
   const[favorites,setFavorites]=useState([]); // [{id, type, label, content, company, step, timestamp}]
   const[favPanelOpen,setFavPanelOpen]=useState(false);
@@ -7957,38 +7971,7 @@ ${isOpen
         </div>
       )}
 
-      {/* First-timer welcome overlay */}
-      {!welcomeShown && savedSessions.length === 0 && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}}
-          onClick={()=>{localStorage.setItem("cambrian_welcome_v1","1");setWelcomeShown(true);}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:16,padding:"40px 48px",maxWidth:480,width:"90%",textAlign:"center",boxShadow:"0 16px 64px rgba(0,0,0,0.2)"}}>
-            <div style={{fontSize:36,marginBottom:12}}>👋</div>
-            <div style={{fontFamily:"Lora,serif",fontSize:24,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>Welcome to Cambrian Catalyst</div>
-            <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7,marginBottom:24}}>
-              Sales intelligence that makes you the most prepared person in every room. Here's how it works:
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:12,textAlign:"left",marginBottom:28,padding:"0 8px"}}>
-              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>1</span>
-                <div><strong>Enter your company</strong> — we research your website, build your ICP, and identify who you should be selling to.</div>
-              </div>
-              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>2</span>
-                <div><strong>Pick your targets</strong> — import a list or let us generate ICP-matched companies with fit scores.</div>
-              </div>
-              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>3</span>
-                <div><strong>Get sales-ready</strong> — full company briefs, call prep, live coaching, and post-call analysis. Everything exports to your CRM.</div>
-              </div>
-            </div>
-            <button onClick={()=>{localStorage.setItem("cambrian_welcome_v1","1");setWelcomeShown(true);}}
-              style={{padding:"12px 36px",borderRadius:8,border:"none",background:"var(--tan-0)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-              Let's go
-            </button>
-            <div style={{fontSize:11,color:"var(--ink-3)",marginTop:12}}>Press <strong>?</strong> anytime for help · <strong>Cmd+K</strong> to search</div>
-          </div>
-        </div>
-      )}
+      {/* Welcome overlay removed from authed app — now shows on login page only */}
 
       <div className="app"
         data-focus={step===7 ? "call" : undefined}
