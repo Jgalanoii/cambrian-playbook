@@ -208,7 +208,7 @@ export default async function handler(req, res) {
       const { company, summary } = data;
       const s = summary || {}; // full session summary — rich payload
       console.log(`[hubspot] push_brief for TARGET company: "${company.name}" domain: "${company.domain}" industry: "${company.industry}"`);
-      const created = { companies: 0, contacts: 0, notes: 0 };
+      const created = { companies: 0, notes: 0 };
 
       // 1. Upsert company — this creates the TARGET company in HubSpot
       const companyResult = await upsertCompany(userId, company);
@@ -225,138 +225,138 @@ export default async function handler(req, res) {
       if (s.founded) enrichProps.founded_year = String(s.founded).replace(/[^0-9]/g, "").slice(0, 4);
       if (s.website) enrichProps.website = s.website.startsWith("http") ? s.website : `https://${s.website}`;
       if (s.companySnapshot) enrichProps.description = s.companySnapshot.slice(0, 2000);
+      if (company.industry) enrichProps.industry = company.industry;
       if (Object.keys(enrichProps).length) {
         await hubspotFetch(userId, `/crm/v3/objects/companies/${companyResult.id}`, { method: "PATCH", body: { properties: enrichProps } });
       }
 
-      // 3. Create contacts for verified executives
-      const execs = s.executives || data.executives || [];
-      for (const exec of execs.slice(0, 6)) {
-        if (!exec?.name) continue;
-        const nameParts = exec.name.trim().split(/\s+/);
-        const properties = { firstname: nameParts[0] || "", lastname: nameParts.slice(1).join(" ") || "" };
-        if (exec.title) properties.jobtitle = exec.title;
-        const r = await hubspotFetch(userId, "/crm/v3/objects/contacts", { method: "POST", body: { properties, associations: [{ to: { id: companyResult.id }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 1 }] }] } });
-        if (r.ok) created.contacts++;
-      }
-
-      // 4. Build rich note from full session summary
-      const n = []; // note lines
-      const hr = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
-      n.push("[Cambrian Catalyst — Full Session Summary]", "");
+      // 3. Build HTML note — clean, data-rich, scannable
+      // No contact creation — executives are researched names, not verified contacts
+      const e = (t) => (t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); // escape HTML
+      const h = []; // html parts
+      h.push(`<h2>Cambrian Catalyst — Session Summary</h2>`);
+      h.push(`<p style="color:#666;font-size:12px">${e(s.sellerName || "")} → ${e(s.targetCompany || company.name)} | ${new Date().toLocaleDateString()}</p>`);
 
       // Quick Take
       if (s.topFinding || s.topOpportunity || s.topRisk) {
-        n.push(hr, "QUICK TAKE", hr);
-        if (s.topFinding) n.push(`FINDING: ${s.topFinding}`);
-        if (s.topOpportunity) n.push(`OPPORTUNITY: ${s.topOpportunity}`);
-        if (s.topRisk) n.push(`RISK: ${s.topRisk}`);
-        n.push("");
+        h.push(`<h3>Quick Take</h3>`);
+        if (s.topFinding) h.push(`<p><strong>Finding:</strong> ${e(s.topFinding)}</p>`);
+        if (s.topOpportunity) h.push(`<p><strong>Opportunity:</strong> ${e(s.topOpportunity)}</p>`);
+        if (s.topRisk) h.push(`<p><strong>Risk:</strong> ${e(s.topRisk)}</p>`);
+      }
+
+      // Company Profile
+      const profileParts = [s.revenue && `Revenue: ${s.revenue}`, s.employeeCount && `Employees: ${s.employeeCount}`, s.headquarters && `HQ: ${s.headquarters}`, s.ownership && `Ownership: ${s.ownership}`].filter(Boolean);
+      if (s.companySnapshot || profileParts.length) {
+        h.push(`<h3>Company Profile</h3>`);
+        if (s.companySnapshot) h.push(`<p>${e(s.companySnapshot)}</p>`);
+        if (profileParts.length) h.push(`<p style="color:#666;font-size:12px">${profileParts.map(e).join(" · ")}</p>`);
+      }
+
+      // Executives
+      if (s.executives?.length) {
+        h.push(`<h3>Key Executives</h3><ul>`);
+        s.executives.forEach(ex => h.push(`<li><strong>${e(ex.name)}</strong> — ${e(ex.title)}</li>`));
+        h.push(`</ul>`);
       }
 
       // Strategy
-      if (s.strategicTheme || s.sellerOpportunity || s.elevatorPitch) {
-        n.push(hr, "STRATEGY & POSITIONING", hr);
-        if (s.strategicTheme) n.push(`Strategic Theme: ${s.strategicTheme}`);
-        if (s.openingAngle) n.push(`Opening: ${s.openingAngle}`);
-        if (s.sellerOpportunity) n.push(`Seller Opportunity: ${s.sellerOpportunity}`);
-        if (s.elevatorPitch) n.push("", `Elevator Pitch: ${s.elevatorPitch}`);
-        n.push("");
+      if (s.strategicTheme || s.sellerOpportunity) {
+        h.push(`<h3>Strategy & Positioning</h3>`);
+        if (s.strategicTheme) h.push(`<p><strong>Theme:</strong> ${e(s.strategicTheme)}</p>`);
+        if (s.openingAngle) h.push(`<p><strong>Opening:</strong> ${e(s.openingAngle)}</p>`);
+        if (s.sellerOpportunity) h.push(`<p><strong>Opportunity:</strong> ${e(s.sellerOpportunity)}</p>`);
+      }
+
+      // Elevator Pitch
+      if (s.elevatorPitch) {
+        h.push(`<h3>Elevator Pitch</h3><p><em>${e(s.elevatorPitch)}</em></p>`);
       }
 
       // Solutions
       if (s.solutions?.length) {
-        n.push(hr, "SOLUTION FIT", hr);
-        s.solutions.forEach((sol, i) => {
-          n.push(`${i + 1}. ${sol.product}: ${sol.jobToBeDone || ""}`);
-          if (sol.measurableOutcome) n.push(`   Target outcome: ${sol.measurableOutcome}`);
-          if (sol.provenWith) n.push(`   Proven with: ${sol.provenWith}`);
+        h.push(`<h3>Solution Fit</h3>`);
+        s.solutions.forEach(sol => {
+          h.push(`<p><strong>${e(sol.product)}</strong>: ${e(sol.jobToBeDone || "")}`);
+          if (sol.measurableOutcome) h.push(`<br/>Target: ${e(sol.measurableOutcome)}`);
+          h.push(`</p>`);
         });
-        n.push("");
       }
 
       // Competitive
       if (s.marketPosition) {
-        n.push(hr, "COMPETITIVE LANDSCAPE", hr);
-        n.push(s.marketPosition);
-        if (s.displacementAngle) n.push(`Displacement angle: ${s.displacementAngle}`);
-        n.push("");
+        h.push(`<h3>Competitive Landscape</h3><p>${e(s.marketPosition)}</p>`);
+        if (s.displacementAngle) h.push(`<p><strong>Displacement:</strong> ${e(s.displacementAngle)}</p>`);
       }
 
       // Financial
       if (s.revenueTrend || s.capitalPriorities) {
-        n.push(hr, "FINANCIAL INTELLIGENCE", hr);
-        if (s.revenueTrend) n.push(`Revenue trend: ${s.revenueTrend}`);
-        if (s.capitalPriorities) n.push(`Capital priorities: ${s.capitalPriorities}`);
-        if (s.guidanceQuote) n.push(`Guidance: "${s.guidanceQuote}"`);
-        n.push("");
+        h.push(`<h3>Financial Intelligence</h3>`);
+        if (s.revenueTrend) h.push(`<p><strong>Trend:</strong> ${e(s.revenueTrend)}</p>`);
+        if (s.capitalPriorities) h.push(`<p><strong>Capital:</strong> ${e(s.capitalPriorities)}</p>`);
+        if (s.guidanceQuote) h.push(`<p><em>"${e(s.guidanceQuote)}"</em></p>`);
       }
 
       // Board
       if (s.leadInvestors || s.boardMandate) {
-        n.push(hr, "BOARD & INVESTORS", hr);
-        if (s.leadInvestors) n.push(`Investors: ${s.leadInvestors}`);
-        if (s.investmentThesis) n.push(`Thesis: ${s.investmentThesis}`);
-        if (s.boardMandate) n.push(`Mandate: ${s.boardMandate}`);
-        n.push("");
+        h.push(`<h3>Board & Investors</h3>`);
+        if (s.leadInvestors) h.push(`<p><strong>Investors:</strong> ${e(s.leadInvestors)}</p>`);
+        if (s.boardMandate) h.push(`<p><strong>Mandate:</strong> ${e(s.boardMandate)}</p>`);
       }
 
       // Hiring
       if (s.hiringSummary) {
-        n.push(hr, "HIRING SIGNALS", hr);
-        n.push(s.hiringSummary);
-        (s.topRoles || []).forEach(r => n.push(`  ${r.title} (${r.dept}) — ${r.signal}`));
-        n.push("");
+        h.push(`<h3>Hiring Signals</h3><p>${e(s.hiringSummary)}</p>`);
+        if (s.topRoles?.length) {
+          h.push(`<ul>`);
+          s.topRoles.forEach(r => h.push(`<li>${e(r.title)} (${e(r.dept)}) — ${e(r.signal)}</li>`));
+          h.push(`</ul>`);
+        }
       }
 
       // Fit Score
       if (s.fitScore !== null && s.fitScore !== undefined) {
-        n.push(hr, "FIT SCORE", hr);
-        n.push(`${s.fitScore}/100 — ${s.fitLabel}`);
-        if (s.fitReason) n.push(s.fitReason);
-        n.push("");
+        h.push(`<h3>Fit Score: ${s.fitScore}/100 — ${e(s.fitLabel)}</h3>`);
+        if (s.fitReason) h.push(`<p>${e(s.fitReason)}</p>`);
       }
 
       // Discovery Questions
       if (s.discoveryQuestions?.length) {
-        n.push(hr, "TOP DISCOVERY QUESTIONS", hr);
-        s.discoveryQuestions.forEach((q, i) => n.push(`${i + 1}. ${q.question}`));
-        n.push("");
+        h.push(`<h3>Discovery Questions</h3><ol>`);
+        s.discoveryQuestions.forEach(q => h.push(`<li>${e(q.question)}</li>`));
+        h.push(`</ol>`);
       }
 
       // RIVER Hypothesis
       if (s.hypothesis) {
-        n.push(hr, "RIVER HYPOTHESIS", hr);
-        if (s.hypothesis.reality) n.push(`Reality: ${s.hypothesis.reality}`);
-        if (s.hypothesis.impact) n.push(`Impact: ${s.hypothesis.impact}`);
-        if (s.hypothesis.vision) n.push(`Vision: ${s.hypothesis.vision}`);
-        if (s.hypothesis.route) n.push(`Route: ${s.hypothesis.route}`);
-        n.push("");
+        h.push(`<h3>RIVER Hypothesis</h3>`);
+        if (s.hypothesis.reality) h.push(`<p><strong>Reality:</strong> ${e(s.hypothesis.reality)}</p>`);
+        if (s.hypothesis.impact) h.push(`<p><strong>Impact:</strong> ${e(s.hypothesis.impact)}</p>`);
+        if (s.hypothesis.vision) h.push(`<p><strong>Vision:</strong> ${e(s.hypothesis.vision)}</p>`);
+        if (s.hypothesis.route) h.push(`<p><strong>Route:</strong> ${e(s.hypothesis.route)}</p>`);
       }
 
       // Post-Call
       if (s.postCallSummary) {
-        n.push(hr, "POST-CALL ANALYSIS", hr);
-        n.push(`Deal Route: ${s.postCallSummary.dealRoute} — ${s.postCallSummary.dealRouteReason}`);
-        if (s.postCallSummary.callSummary) n.push(`Summary: ${s.postCallSummary.callSummary}`);
+        h.push(`<h3>Post-Call: ${e(s.postCallSummary.dealRoute)}</h3>`);
+        if (s.postCallSummary.dealRouteReason) h.push(`<p>${e(s.postCallSummary.dealRouteReason)}</p>`);
         if (s.postCallSummary.nextSteps?.length) {
-          n.push("Next Steps:");
-          s.postCallSummary.nextSteps.forEach((step, i) => n.push(`  ${i + 1}. ${step}`));
+          h.push(`<p><strong>Next Steps:</strong></p><ol>`);
+          s.postCallSummary.nextSteps.forEach(step => h.push(`<li>${e(step)}</li>`));
+          h.push(`</ol>`);
         }
-        n.push("");
       }
 
       // Watch-outs
       if (s.watchOuts?.length) {
-        n.push(hr, "WATCH-OUTS", hr);
-        s.watchOuts.forEach(w => n.push(`- ${w}`));
-        n.push("");
+        h.push(`<h3>Watch-Outs</h3><ul>`);
+        s.watchOuts.forEach(w => h.push(`<li>${e(w)}</li>`));
+        h.push(`</ul>`);
       }
 
-      n.push(hr);
-      n.push(`Generated by Cambrian Catalyst | ${s.dataConfidence || ""} confidence | ${new Date().toLocaleDateString()}`);
+      h.push(`<hr/><p style="color:#999;font-size:11px">Generated by Cambrian Catalyst${s.dataConfidence ? ` | ${s.dataConfidence} confidence` : ""} | ${new Date().toLocaleDateString()}</p>`);
 
-      const noteResult = await createNote(userId, { body: n.join("\n"), companyId: companyResult.id });
+      const noteResult = await createNote(userId, { body: h.join(""), companyId: companyResult.id });
       if (noteResult) created.notes = 1;
 
       return res.json({ ok: true, created });
