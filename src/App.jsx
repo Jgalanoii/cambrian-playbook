@@ -10481,7 +10481,20 @@ ${isOpen
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)",color:"#555",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                       📋 Copy Brief
                     </button>
-                    {hubspotStatus?.connected&&<button onClick={()=>pushToHubSpot("push_brief",{company:{name:selectedAccount?.company,domain:selectedAccount?.company_url||"",industry:selectedAccount?.industry||selectedAccount?.ind,revenue:brief?.revenue,employees:brief?.employeeCount},executives:(brief?.keyExecutives||[]).map(e=>({name:e.name,title:e.title,background:e.background,angle:e.angle})),tldr:brief?.tldr,elevatorPitch:brief?.elevatorPitch,strategicTheme:brief?.strategicTheme,fiveQuestions:brief?.fiveQuestions})} disabled={!!hubspotPushing}
+                    {hubspotStatus?.connected&&<button onClick={()=>{
+                      const summary = buildSessionSummary();
+                      if (!summary) return;
+                      pushToHubSpot("push_brief",{
+                        summary,
+                        // Legacy fields for backward compatibility
+                        company:{name:summary.targetCompany,domain:summary.targetDomain,industry:selectedAccount?.industry||selectedAccount?.ind,revenue:summary.revenue,employees:summary.employeeCount},
+                        executives:summary.executives,
+                        tldr:{topFinding:summary.topFinding,topOpportunity:summary.topOpportunity,topRisk:summary.topRisk},
+                        elevatorPitch:summary.elevatorPitch,
+                        strategicTheme:summary.strategicTheme,
+                        fiveQuestions:summary.discoveryQuestions,
+                      });
+                    }} disabled={!!hubspotPushing}
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":"var(--surface)",color:copied==="hs_ok"?"var(--green)":"#555",cursor:hubspotPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5}}>
                       {hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":"Push to HubSpot"}
                     </button>}

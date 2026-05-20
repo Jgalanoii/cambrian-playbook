@@ -194,13 +194,15 @@ export default async function handler(req, res) {
       return res.json({ ok: true, created });
     }
 
-    // ── Push: brief ────────────────────────────────────────────────────
+    // ── Push: brief (full session summary) ──────────────────────────────
     if (action === "push_brief") {
       if (!data?.company?.name) return res.status(400).json({ error: "Company name required" });
-      const { company, executives, tldr, elevatorPitch, strategicTheme, fiveQuestions } = data;
-      console.log(`[hubspot] push_brief for company: "${company.name}" domain: "${company.domain}" industry: "${company.industry}"`);
+      const { company, summary } = data;
+      const s = summary || {}; // full session summary — rich payload
+      console.log(`[hubspot] push_brief for TARGET company: "${company.name}" domain: "${company.domain}" industry: "${company.industry}"`);
       const created = { companies: 0, contacts: 0, notes: 0 };
 
+      // 1. Upsert company — this creates the TARGET company in HubSpot
       const companyResult = await upsertCompany(userId, company);
       if (!companyResult) {
         console.error(`[hubspot] upsertCompany failed for "${company.name}" (${company.domain})`);
@@ -208,31 +210,145 @@ export default async function handler(req, res) {
       }
       if (companyResult.created) created.companies = 1;
 
-      if (executives?.length) {
-        for (const exec of executives.slice(0, 10)) {
-          if (!exec?.name) continue;
-          const nameParts = exec.name.trim().split(/\s+/);
-          const properties = { firstname: nameParts[0] || "", lastname: nameParts.slice(1).join(" ") || "" };
-          if (exec.title) properties.jobtitle = exec.title;
-          const r = await hubspotFetch(userId, "/crm/v3/objects/contacts", { method: "POST", body: { properties, associations: [{ to: { id: companyResult.id }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 1 }] }] } });
-          if (r.ok) created.contacts++;
-        }
+      // 2. Update company with enriched properties from the session summary
+      const enrichProps = {};
+      if (s.headquarters) enrichProps.city = s.headquarters.split(",")[0]?.trim();
+      if (s.headquarters?.includes(",")) enrichProps.state = s.headquarters.split(",").slice(1).join(",").trim();
+      if (s.founded) enrichProps.founded_year = String(s.founded).replace(/[^0-9]/g, "").slice(0, 4);
+      if (s.website) enrichProps.website = s.website.startsWith("http") ? s.website : `https://${s.website}`;
+      if (s.companySnapshot) enrichProps.description = s.companySnapshot.slice(0, 2000);
+      if (Object.keys(enrichProps).length) {
+        await hubspotFetch(userId, `/crm/v3/objects/companies/${companyResult.id}`, { method: "PATCH", body: { properties: enrichProps } });
       }
 
-      const noteParts = ["[Cambrian Catalyst — Sales Brief]", ""];
-      if (tldr) {
-        if (tldr.topFinding) noteParts.push(`FINDING: ${tldr.topFinding}`);
-        if (tldr.topOpportunity) noteParts.push(`OPPORTUNITY: ${tldr.topOpportunity}`);
-        if (tldr.topRisk) noteParts.push(`RISK: ${tldr.topRisk}`);
-        noteParts.push("");
+      // 3. Create contacts for verified executives
+      const execs = s.executives || data.executives || [];
+      for (const exec of execs.slice(0, 6)) {
+        if (!exec?.name) continue;
+        const nameParts = exec.name.trim().split(/\s+/);
+        const properties = { firstname: nameParts[0] || "", lastname: nameParts.slice(1).join(" ") || "" };
+        if (exec.title) properties.jobtitle = exec.title;
+        const r = await hubspotFetch(userId, "/crm/v3/objects/contacts", { method: "POST", body: { properties, associations: [{ to: { id: companyResult.id }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 1 }] }] } });
+        if (r.ok) created.contacts++;
       }
-      if (strategicTheme) noteParts.push(`STRATEGIC THEME: ${strategicTheme}`, "");
-      if (elevatorPitch) noteParts.push(`ELEVATOR PITCH: ${elevatorPitch}`, "");
-      if (fiveQuestions?.length) {
-        noteParts.push("TOP QUESTIONS:");
-        fiveQuestions.slice(0, 5).forEach((q, i) => { const t = typeof q === "string" ? q : q?.question || ""; if (t) noteParts.push(`${i + 1}. ${t}`); });
+
+      // 4. Build rich note from full session summary
+      const n = []; // note lines
+      const hr = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+      n.push("[Cambrian Catalyst — Full Session Summary]", "");
+
+      // Quick Take
+      if (s.topFinding || s.topOpportunity || s.topRisk) {
+        n.push(hr, "QUICK TAKE", hr);
+        if (s.topFinding) n.push(`FINDING: ${s.topFinding}`);
+        if (s.topOpportunity) n.push(`OPPORTUNITY: ${s.topOpportunity}`);
+        if (s.topRisk) n.push(`RISK: ${s.topRisk}`);
+        n.push("");
       }
-      const noteResult = await createNote(userId, { body: noteParts.join("\n"), companyId: companyResult.id });
+
+      // Strategy
+      if (s.strategicTheme || s.sellerOpportunity || s.elevatorPitch) {
+        n.push(hr, "STRATEGY & POSITIONING", hr);
+        if (s.strategicTheme) n.push(`Strategic Theme: ${s.strategicTheme}`);
+        if (s.openingAngle) n.push(`Opening: ${s.openingAngle}`);
+        if (s.sellerOpportunity) n.push(`Seller Opportunity: ${s.sellerOpportunity}`);
+        if (s.elevatorPitch) n.push("", `Elevator Pitch: ${s.elevatorPitch}`);
+        n.push("");
+      }
+
+      // Solutions
+      if (s.solutions?.length) {
+        n.push(hr, "SOLUTION FIT", hr);
+        s.solutions.forEach((sol, i) => {
+          n.push(`${i + 1}. ${sol.product}: ${sol.jobToBeDone || ""}`);
+          if (sol.measurableOutcome) n.push(`   Target outcome: ${sol.measurableOutcome}`);
+          if (sol.provenWith) n.push(`   Proven with: ${sol.provenWith}`);
+        });
+        n.push("");
+      }
+
+      // Competitive
+      if (s.marketPosition) {
+        n.push(hr, "COMPETITIVE LANDSCAPE", hr);
+        n.push(s.marketPosition);
+        if (s.displacementAngle) n.push(`Displacement angle: ${s.displacementAngle}`);
+        n.push("");
+      }
+
+      // Financial
+      if (s.revenueTrend || s.capitalPriorities) {
+        n.push(hr, "FINANCIAL INTELLIGENCE", hr);
+        if (s.revenueTrend) n.push(`Revenue trend: ${s.revenueTrend}`);
+        if (s.capitalPriorities) n.push(`Capital priorities: ${s.capitalPriorities}`);
+        if (s.guidanceQuote) n.push(`Guidance: "${s.guidanceQuote}"`);
+        n.push("");
+      }
+
+      // Board
+      if (s.leadInvestors || s.boardMandate) {
+        n.push(hr, "BOARD & INVESTORS", hr);
+        if (s.leadInvestors) n.push(`Investors: ${s.leadInvestors}`);
+        if (s.investmentThesis) n.push(`Thesis: ${s.investmentThesis}`);
+        if (s.boardMandate) n.push(`Mandate: ${s.boardMandate}`);
+        n.push("");
+      }
+
+      // Hiring
+      if (s.hiringSummary) {
+        n.push(hr, "HIRING SIGNALS", hr);
+        n.push(s.hiringSummary);
+        (s.topRoles || []).forEach(r => n.push(`  ${r.title} (${r.dept}) — ${r.signal}`));
+        n.push("");
+      }
+
+      // Fit Score
+      if (s.fitScore !== null && s.fitScore !== undefined) {
+        n.push(hr, "FIT SCORE", hr);
+        n.push(`${s.fitScore}/100 — ${s.fitLabel}`);
+        if (s.fitReason) n.push(s.fitReason);
+        n.push("");
+      }
+
+      // Discovery Questions
+      if (s.discoveryQuestions?.length) {
+        n.push(hr, "TOP DISCOVERY QUESTIONS", hr);
+        s.discoveryQuestions.forEach((q, i) => n.push(`${i + 1}. ${q.question}`));
+        n.push("");
+      }
+
+      // RIVER Hypothesis
+      if (s.hypothesis) {
+        n.push(hr, "RIVER HYPOTHESIS", hr);
+        if (s.hypothesis.reality) n.push(`Reality: ${s.hypothesis.reality}`);
+        if (s.hypothesis.impact) n.push(`Impact: ${s.hypothesis.impact}`);
+        if (s.hypothesis.vision) n.push(`Vision: ${s.hypothesis.vision}`);
+        if (s.hypothesis.route) n.push(`Route: ${s.hypothesis.route}`);
+        n.push("");
+      }
+
+      // Post-Call
+      if (s.postCallSummary) {
+        n.push(hr, "POST-CALL ANALYSIS", hr);
+        n.push(`Deal Route: ${s.postCallSummary.dealRoute} — ${s.postCallSummary.dealRouteReason}`);
+        if (s.postCallSummary.callSummary) n.push(`Summary: ${s.postCallSummary.callSummary}`);
+        if (s.postCallSummary.nextSteps?.length) {
+          n.push("Next Steps:");
+          s.postCallSummary.nextSteps.forEach((step, i) => n.push(`  ${i + 1}. ${step}`));
+        }
+        n.push("");
+      }
+
+      // Watch-outs
+      if (s.watchOuts?.length) {
+        n.push(hr, "WATCH-OUTS", hr);
+        s.watchOuts.forEach(w => n.push(`- ${w}`));
+        n.push("");
+      }
+
+      n.push(hr);
+      n.push(`Generated by Cambrian Catalyst | ${s.dataConfidence || ""} confidence | ${new Date().toLocaleDateString()}`);
+
+      const noteResult = await createNote(userId, { body: n.join("\n"), companyId: companyResult.id });
       if (noteResult) created.notes = 1;
 
       return res.json({ ok: true, created });
