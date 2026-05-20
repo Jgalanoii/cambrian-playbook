@@ -8,6 +8,11 @@
 // - qbr-template.md
 // - solution-fit-cards.md
 //
+// SOURCES:
+// - April Dunford, "Obviously Awesome" (reframing methodology)
+// - Cambrian operator knowledge (battle card templates, QBR frameworks)
+// - Internal playbook documents (discovery scorecard, onboarding, solution-fit)
+//
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
 
 // ── COMPETITIVE BATTLE CARDS ──────────────────────────────────────────────

@@ -31,7 +31,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   fintech: {
     name: "FinTech",
-    keywords: ["fintech", "financial technology", "neobank", "banking as a service", "baas", "lending", "regtech", "banking", "finance", "financial services", "embedded-finance", "challenger-bank", "digital-assets", "capital-markets"],
+    keywords: ["fintech", "financial technology", "neobank", "banking as a service", "baas", "lending", "regtech", "banking", "fintech-finance", "financial services", "embedded-finance", "challenger-bank", "digital-assets", "capital-markets"],
     personas: ["CFO", "Head of Payments", "VP Finance Ops", "Chief Risk Officer", "CCO", "BSA Officer", "Engineering Lead", "Sponsor Bank", "Chief Compliance Officer", "General Counsel", "Internal Audit", "Fraud Ops Lead"],
     triggers: ["Regulatory action (exam finding, MRA, consent order, Section 1033)", "Incumbent vendor sunset/failure or M&A-driven price increase", "Volume threshold crossed (outgrowing processor limits)", "New product/rail launch (FedNow, RTP, card program, new geography)", "Fraud/loss event (chargeback spike, synthetic fraud, ATO)", "Sponsor bank change (re-papering required)", "Audit/SOX/ASC 606 issue forcing GL-ready reporting", "Funding round or M&A triggering stack modernization", "New Head of Risk/CCO hire (first 6 months)"],
     disqualifiers: ["Treating fintech as single market (it's 6+ sub-industries)", "Missing compliance kit for bank buyer (no SOC 2 Type II)", "No external compelling event driving timeline", "Ignoring sponsor bank dynamics (post-Synapse sensitivity)", "Under-resourcing reference calls", "Cannot pass TPRM questionnaire (SIG Lite minimum)"],
@@ -131,7 +131,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   "real-estate": {
     name: "Real Estate & Land Development",
-    keywords: ["real estate", "land", "homebuilder", "developer", "property", "commercial real estate", "cre", "residential", "multifamily", "industrial", "btr", "build-to-rent", "wholesaling", "lot", "parcel", "reit", "land bank", "entitlement", "zoning"],
+    keywords: ["real estate", "land", "homebuilder", "land-developer", "property", "commercial real estate", "commercial-re", "residential", "multifamily", "industrial", "btr", "build-to-rent", "wholesaling", "lot", "parcel", "reit", "land bank", "entitlement", "zoning"],
     personas: ["CEO/Founder", "VP Land Acquisition", "Director of Development", "CFO", "VP Sales", "Director of Operations", "Land Acquisition Manager", "Dispositions Manager", "VP Construction", "Capital Partner", "PE Operating Partner"],
     triggers: ["First W-2 hire on acquisitions or dispositions (scaling beyond founder)", "Expanding into 3+ states (workflow complexity)", "Builder relationship concentrated in 1-2 buyers (risk)", "Lead CAC rising while conversion flat (pipeline math)", "Earnest money exposure stretching (disposition speed)", "New compliance requirements (state licensing, FinCEN BOI)", "Capital partner or investor joining (operational accountability)", "CRM migration or tech stack frustration", "Market entry into BTR or commercial from residential", "Post-acquisition integration (PE rollup)"],
     disqualifiers: ["Solo operator doing <$200K/year (too small for consulting)", "Pure speculative land banking (no active sales motion)", "No interest in systematizing operations (lifestyle business)", "Exclusively rural recreational land (different buyer dynamics)", "Regulatory-blocked markets with no near-term path"],

@@ -80,7 +80,7 @@ LOYALTY RESEARCH (Q2 2026 REFRESH — peer-reviewed):
 - Choice-based delivery ("recipient picks from menu") has won over single-brand
 - Global/cross-border: 100+ countries with local-currency redemption now table stakes
 - Consolidation: BHN acquired Tango (2022), Rybbon (2022); PE appetite high
-- OBBBA charitable deduction floor (0.5% AGI for itemizers, effective 2026) reshapes donor-incentive intersection
+- OBBBA charitable deduction floor (effective 2026) reshapes donor-incentive intersection [verified 05/2026, OBBBA legislative text 2025]
 - Federal interchange fee debate live: Fed Dec 2025 biennial report (100.7B debit/prepaid transactions, $4.7T, $34.12B interchange) [verified 05/2026, Federal Reserve Payments Study Dec 2025]
 - Prepaid debit card growth decelerating in volume (down from 9.6% to ~4-5% annually) but interchange revenue holding [verified 05/2026, Federal Reserve Payments Study Dec 2025]
 
@@ -96,7 +96,7 @@ CAMBRIAN'S EDGE: Joe's BHN background provides operator-level credibility. Every
 
 KNOWN TRAPS (meta-knowledge — where this vertical's data goes stale or gets misinterpreted):
 - GTCR/BHN deal status: has been "in advanced talks" since July 2025. Do NOT state it has closed unless confirmed by a binding agreement press release. Check before every use.
-- Market size figures ($230B gift card, $80B B2B incentives) are industry-body estimates with wide confidence bands. Do not present as precise.
+- Market size figures ($230B gift card, $80B B2B incentives) are industry-body estimates with wide confidence bands [verified 05/2026, GCVA / IRF]. Do not present as precise.
 - BHN acquisition count (19) and average deal size ($132M) are Tracxn-sourced and may lag by 1-2 quarters.
 - The Wang meta-analysis (cash > vouchers for response rates) applies to SURVEY INCENTIVES specifically — do not generalize to employee recognition or loyalty without caveating.
 - The Antavo 74% disengagement stat is from their platform data, not an independent sample. Strong signal but potential selection bias.

@@ -25,13 +25,13 @@
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
 
 export const SMB_MIDMARKET_INJECTION = `
-SMB & MID-MARKET INTELLIGENCE (apply to ANY account under ~2,500 employees or ~$1B revenue — adjusts brief calibration by company size):
+SMB & MID-MARKET INTELLIGENCE (apply to ANY account under ~2,500 employees — adjusts brief calibration by company size):
 
 SEGMENT DEFINITIONS (practical operator framework):
 - Small business / SMB: <100 employees, <$10M revenue, owner-operator decisions, single-DM cycle, close in days-weeks
 - Lower mid-market: $10M-$50M revenue, 100-300 employees, function-head decisions, 2-4 stakeholders, 3-6 month cycles
 - Core mid-market: $50M-$500M revenue, 300-1,000 employees, VP + cross-functional + CFO, 3-7 stakeholders, 4-8 month cycles, procurement starts here
-- Upper mid-market: $500M-$1B+ revenue, 1,000-2,500 employees, buying committees, formal procurement, 6-12 month cycles, C-suite sponsorship required
+- Upper mid-market: 1,000-2,500 employees, buying committees, formal procurement, 6-12 month cycles, C-suite sponsorship required [verified 05/2026, Cambrian operator knowledge]
 - Enterprise: $1B+ revenue, 2,500+ employees, 6-25 stakeholder committees, 6.5 month average close (up from 4.9 in 2019) [verified 05/2026, Gartner Future of Sales 2025]
 The operationally important distinction is BUYER COMPLEXITY, not headcount. A 50-person SaaS with a procurement function buys more like enterprise than a 500-person manufacturer with a single CFO who decides everything.
 
@@ -92,7 +92,7 @@ SEGMENT-AWARE BRIEF CALIBRATION:
 
 KNOWN TRAPS (meta-knowledge — where this layer's data goes stale or gets misinterpreted):
 - SMB count (~33.2M) includes sole proprietors and non-employer firms. The count of SMBs with EMPLOYEES is ~6.1M [verified 05/2026, SBA Office of Advocacy]. Use the right denominator for the context.
-- NCMM "mid-market" definition ($10M-$1B revenue) is narrower than many industry definitions. Some sources define mid-market as $50M-$1B. Always state which definition is in use.
+- NCMM "mid-market" definition is narrower than many industry definitions [verified 05/2026, NCMM]. Some sources define mid-market differently. Always state which definition is in use.
 - Mid-market revenue growth (10.7%) and employment growth (7.3%) are NCMM survey-based, not census data. Sample skews toward engaged middle-market executives. [verified 05/2026, NCMM Middle Market Indicator Q4 2025]
 - The "5th largest economy" comparison for mid-market is NCMM marketing language. Directionally correct but not a formal GDP comparison.
 - GF Data mid-market PE multiples (~7.0x) are for completed transactions in their database. Selection bias: GF Data skews toward lower-mid-market. Upper mid-market PE deals routinely trade at 10-14x [verified 05/2026, PitchBook / GF Data].

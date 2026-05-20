@@ -58,7 +58,7 @@ ASU 2023-08 — CRYPTO ASSETS (ASC 350-60): Effective for ALL entities fiscal ye
 
 ASU 2023-05 — JOINT VENTURE FORMATIONS: Effective for JVs formed after Jan 1, 2025. New basis of accounting — contributed net assets at fair value upon formation. Material for bank-fintech BaaS arrangements where formation accounting becomes a diligence question.
 
-KEY POSITIONING: Most consultants pitch in marketing/sales language. Your edge: translate pipeline improvements into EBITDA and multiple expansion — the language CFOs and PE owners speak. "12% conversion lift at 70% gross margin and 40% operating leverage = $X incremental EBITDA at 10x multiple." That's the conversation that wins CFO-led deals. The Grant Thornton compliance pedigree — especially in segment reporting (ASU 2023-07) and crypto accounting (ASU 2023-08) — is a genuine credibility differentiator in financial services and PE engagements.
+KEY POSITIONING: Most consultants pitch in marketing/sales language. Your edge: translate pipeline improvements into EBITDA and multiple expansion — the language CFOs and PE owners speak. "Conversion lift at gross margin and operating leverage = incremental EBITDA at market multiple." That's the conversation that wins CFO-led deals. The Grant Thornton compliance pedigree — especially in segment reporting (ASU 2023-07) and crypto accounting (ASU 2023-08) — is a genuine credibility differentiator in financial services and PE engagements.
 
 KNOWN TRAPS:
 - ARR vs reported revenue: a common conflation. $12M ARR booked in January is ~$1M Q1 revenue. Never equate the two.

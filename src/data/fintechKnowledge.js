@@ -49,7 +49,7 @@ KEY ECONOMICS KILLERS: Charge-offs, interchange compression, compliance cost exp
 KNOWN TRAPS (meta-knowledge — where this vertical's data goes stale or gets misinterpreted):
 - Consumer fintech user counts (Chime 38M, Cash App 57M) are "accounts" or "active users" with varying definitions. Chime's S-1 will clarify but until then, company-reported figures should be treated as marketing numbers.
 - Stripe valuation ($70-90B) is based on secondary market trades, NOT a completed primary round or IPO. Wide range for a reason. [verified 05/2026, Bloomberg / secondary market pricing]
-- BaaS market size ($35-45B) projections vary wildly by source and definition. Some include all embedded finance; others count only middleware.
+- BaaS market size ($35-45B) projections vary wildly by source and definition [verified 05/2026, Allied Market Research / Grand View Research]. Some include all embedded finance; others count only middleware.
 - Synapse unreconciled amount ($95M+) is from bankruptcy filings and may change as proceedings continue.
 - BNPL market size ($120B+) is global origination volume, not revenue. Revenue is a fraction of origination. [verified 05/2026, CB Insights / Worldpay Global Payments Report]
 - The CFPB "BNPL is credit" ruling may face reversal or modification under the current administration. Regulatory status is fluid.

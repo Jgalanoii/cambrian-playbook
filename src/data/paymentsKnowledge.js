@@ -101,7 +101,7 @@ KNOWN TRAPS — DATA THAT GOES STALE FASTEST (re-verify on every quarterly sweep
 - Interchange rates: Visa and Mastercard update schedules twice a year (April and October). Published rates shift by category; premium/rewards tiers creep up. Re-pull from published schedules each cycle.
 - Network volume rankings: Acquiring volume shifts quarterly with merchant wins/losses and M&A. Nilson and Nilson-derived rankings lag 6-12 months. Cross-check with earnings releases from Fiserv, Global Payments, Stripe, Adyen, Toast.
 - CCCA legislative status: Bill has been reintroduced multiple sessions. Track committee votes, floor scheduling, and any amendment riders each quarter. Status can shift from "stalled" to "passed committee" in weeks.
-- Durbin Amendment thresholds: The Fed periodically adjusts the regulated debit cap (last adjusted 2024). Any proposed rulemaking resets economics for $10B+ issuers.
+- Durbin Amendment thresholds: The Fed periodically adjusts the regulated debit cap [verified 05/2026, Federal Reserve Regulation II]. Any proposed rulemaking resets economics for large issuers above the statutory threshold.
 - Section 1033 (Open Banking / CFPB): Final rule issued Oct 2024, phased compliance through 2030. Implementation timelines and legal challenges (bank trade group lawsuits) shift quarterly.
 - Stablecoin legislation (GENIUS Act / OCC NPRM): Regulatory posture is evolving rapidly. OCC rulemaking, state-level frameworks, and enforcement actions change the landscape each quarter.
 - FedNow / RTP adoption rates: Participant counts, transaction limits, and use-case maturity shift monthly. Federal Reserve publishes updated participant lists; The Clearing House publishes RTP stats.

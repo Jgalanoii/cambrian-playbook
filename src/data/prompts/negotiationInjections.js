@@ -1,6 +1,11 @@
 // src/data/prompts/negotiationInjections.js
 // All negotiation framework injections
 // Injected into: discovery questions, hypothesis, talk tracks
+//
+// SOURCES:
+// - Chris Voss, "Never Split the Difference" (FBI negotiation)
+// - Roger Fisher & William Ury, "Getting to Yes" (Harvard Negotiation Project)
+// - Cambrian operator knowledge (framework synthesis and injection design)
 
 export const VOSS_INJECTION = `
 VOSS (Never Split the Difference — FBI):

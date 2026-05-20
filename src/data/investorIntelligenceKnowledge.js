@@ -82,7 +82,7 @@ KNOWN TRAPS (meta-knowledge — where this vertical's data goes stale or gets mi
 - "PE pays ~3 turns more" is a market-wide average. Sector-specific premiums vary dramatically (healthcare > fintech > industrials). [verified 05/2026, GF Data / PitchBook]
 - Cambridge Associates PE/VC index returns are NET of fees and carry. Gross returns are materially higher — do not confuse the two.
 - The "70% of PE firms mandate AI adoption" stat is from a survey of operating partners, not a census. Selection bias likely inflates the number. [verified 05/2026, Bain PE Operating Partners Survey 2025]
-- Gartner's ">40% agentic AI projects canceled by 2027" is a PREDICTION, not a measurement. Treat as directional forecast.
+- Gartner's ">40% agentic AI projects canceled by 2027" is a PREDICTION, not a measurement [verified 05/2026, Gartner]. Treat as directional forecast.
 - Fintech multiple compression (20-40x to 5-15x) is a range across subsectors. Payments infrastructure trades higher than consumer fintech. [verified 05/2026, PitchBook Fintech Analyst Note]
 - CRE loan maturity wall ($957B) is a 2025 figure that shifts quarterly as extensions and refinancings occur. Confirm current figure before using. [verified 05/2026, MSCI Real Assets]
 - PitchBook flagged potential 2026 IPOs (SpaceX, OpenAI, Anthropic) — these are analyst speculation, not confirmed filings.

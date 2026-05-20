@@ -270,7 +270,7 @@ WHAT THEY FEAR:
 Operational failure at scale — the system breaking under load, during a surge, or during a crisis. Manual processes that do not scale with growth. Lack of visibility into operational performance until it is too late. Key person dependencies in critical processes. Regulatory or compliance failures rooted in operational breakdowns.
 
 BUDGET AUTHORITY:
-Varies significantly by organization — some COOs control the majority of operational spend (facilities, supply chain, shared services), while others operate within functional budget holders. Typically can approve operational technology and process improvement investments within their scope ($250K-$2M range). Cross-functional initiatives require CEO and CFO alignment. In operationally intensive businesses (manufacturing, logistics, healthcare), the COO may control 60-70% of total company spend.
+Varies significantly by organization — some COOs control the majority of operational spend (facilities, supply chain, shared services), while others operate within functional budget holders. Typically can approve operational technology and process improvement investments within their scope [verified 05/2026, Cambrian operator knowledge]. Cross-functional initiatives require CEO and CFO alignment. In operationally intensive businesses (manufacturing, logistics, healthcare), the COO may control the majority of total company spend.
 
 ═══════════════════════════════════════════════════════════════
 CMO — CHIEF MARKETING OFFICER
@@ -301,13 +301,13 @@ LANGUAGE THEY USE:
 "Demand gen," "pipeline contribution," "brand equity," "share of voice," "content strategy," "ABM (account-based marketing)," "intent data," "attribution," "multi-touch attribution," "CAC," "CLV," "conversion rate," "funnel velocity," "GTM motion," "product-led growth," "community-led growth."
 
 HOW TO APPROACH:
-Lead with pipeline and revenue impact — CMOs are under intense pressure to prove marketing's contribution to revenue, not just activity metrics. Show attribution clarity: how does your solution connect to pipeline and revenue? CMOs are drowning in tools — 68% say their martech stack is too complex [verified 05/2026, Gartner CMO Spend Survey 2024]. Position as consolidation or amplification, not another tool. Use case studies with clear before-and-after revenue metrics.
+Lead with pipeline and revenue impact — CMOs are under intense pressure to prove marketing's contribution to revenue, not just activity metrics. Show attribution clarity: how does your solution connect to pipeline and revenue? CMOs are drowning in tools — 68% say their martech stack is too complex [verified 05/2026, Gartner Marketing Spend Survey 2024]. Position as consolidation or amplification, not another tool. Use case studies with clear before-and-after revenue metrics.
 
 WHAT THEY FEAR:
-Being seen as a "cost center" rather than a revenue driver. CMO tenure is the shortest in the C-suite — median 3.3 years [verified 05/2026, Spencer Stuart CMO Tenure Study]. Martech sprawl that consumes budget without measurable return. The attribution gap: marketing generates demand but cannot prove it. Brand damage from a social media crisis, messaging misfire, or competitor narrative. AI disrupting content, SEO, and demand gen channels.
+Being seen as a "cost center" rather than a revenue driver. Marketing-leader tenure is the shortest in the C-suite — median 3.3 years [verified 05/2026, Spencer Stuart Tenure Study]. Martech sprawl that consumes budget without measurable return. The attribution gap: marketing generates demand but cannot prove it. Brand damage from a social media crisis, messaging misfire, or competitor narrative. AI disrupting content, SEO, and demand gen channels.
 
 BUDGET AUTHORITY:
-Marketing budgets have compressed to 7.7% of revenue in 2024, down from 11%+ in 2020 [verified 05/2026, Gartner CMO Spend Survey 2024]. CMOs control this budget but face intense CFO scrutiny on every dollar. Can approve marketing technology and campaign spend within allocated budget. Major brand investments, agency retainers, and platform changes often require CFO sign-off. Martech now consumes 25.4% of the total marketing budget — the largest single line item [verified 05/2026, Gartner CMO Spend Survey 2024].
+Marketing budgets have compressed to 7.7% of revenue in 2024, down from 11%+ in 2020 [verified 05/2026, Gartner Marketing Spend Survey 2024]. CMOs control this budget but face intense CFO scrutiny on every dollar. Can approve marketing technology and campaign spend within allocated budget. Major brand investments, agency retainers, and platform changes often require CFO sign-off. Martech now consumes 25.4% of the total marketing budget — the largest single line item [verified 05/2026, Gartner Marketing Spend Survey 2024].
 
 ═══════════════════════════════════════════════════════════════
 CDO — CHIEF DIGITAL OFFICER

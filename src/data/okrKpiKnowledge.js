@@ -5,6 +5,11 @@
 // Covers: OKR framework, KPI architecture, revenue/sales/marketing/CS
 // metrics, dashboard design, reporting cadence.
 //
+// SOURCES:
+// - John Doerr, "Measure What Matters" (OKR framework)
+// - Cambrian operator knowledge (KPI benchmarks, reporting cadence)
+// - SaaS industry benchmarks (NRR, pipeline coverage, win rate norms)
+//
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
 
 export const OKR_KPI_INJECTION = `

@@ -49,7 +49,7 @@ CORPORATE PHILANTHROPY: ~$40B annually. Forms: direct gifts, corporate foundatio
 
 WORKPLACE GIVING PLATFORMS: Benevity (~$15B+ cumulative), YourCause (Blackbaud), Bright Funds, Millie. Offer: employee giving portals, matching administration, volunteer tracking, charity verification, reporting. [verified 05/2026, Benevity corporate disclosures]
 
-2026 TRENDS: DAF reform debate (payout mandates, transparency, transfer rules — no legislation passed). DAF democratization (Daffy, Charityvest, Chariot — $0 minimums, mobile-first). Embedded charitable giving (checkout donations, subscription-attached, loyalty-to-charity). Decline of umbrella organizations (United Way). Corporate ESG volatility (recipient-choice models neutralize ideological risk for buyers). AI in charity verification and donor matching.
+2026 TRENDS: DAF reform debate (payout mandates, transparency, transfer rules — no legislation passed) [verified 05/2026, DAFRC / National Philanthropic Trust]. DAF democratization (Daffy, Charityvest, Chariot — minimums reduced to zero, mobile-first). Embedded charitable giving (checkout donations, subscription-attached, loyalty-to-charity). Decline of umbrella organizations (United Way). Corporate ESG volatility (recipient-choice models neutralize ideological risk for buyers). AI in charity verification and donor matching.
 
 KNOWN TRAPS:
 - DAF payout rate stats vary wildly depending on whether donation-processor DAFs (168% payout) are included — always clarify which universe. [verified 05/2026, DAFRC 2025]

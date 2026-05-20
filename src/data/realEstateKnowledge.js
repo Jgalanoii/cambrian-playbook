@@ -99,7 +99,7 @@ KNOWN TRAPS — DATA THAT GOES STALE FASTEST (re-verify quarterly):
 - Vacancy rates: industrial and multifamily vacancies are moving targets — pipeline deliveries shift them 50-100 bps per quarter. Office vacancy is structural and slower-moving but varies sharply by market. [Source: CBRE, Moody's, CoStar]
 - Construction costs: NAHB indices update quarterly; lumber/steel spot prices move faster. A "40% above 2020" claim can be 45% or 35% next quarter. [verified 05/2026, NAHB / PPI]
 - BTR/SFR stats: this sub-sector is young and data sources disagree (NAHB vs. John Burns vs. RealPage); always specify the source. Institutional capital deployed figures shift with each fund close. [Source: NAHB, John Burns Research]
-- PE allocations & dry powder: Blackstone/Brookfield/KKR report quarterly with different fiscal calendars. "$42B deployed" becomes "$48B" after one earnings call. Pin to a specific quarter. [Source: firm earnings transcripts]
+- PE allocations & dry powder: Blackstone/Brookfield/KKR report quarterly with different fiscal calendars. Deployed figures shift materially after each earnings call. Pin to a specific quarter. [verified 05/2026, firm earnings transcripts]
 - CMBS delinquency: Trepp updates monthly; the rate is volatile because the denominator (outstanding CMBS) is also changing. [Source: Trepp]
 - Sun Belt multifamily oversupply: absorption is racing deliveries — the narrative can flip from "oversupplied" to "tightening" in two quarters. [Source: RealPage, CBRE]
 - Housing deficit estimates: range from 1.5M (more conservative) to 7M+ (including quality-adjusted); the 3.5-4.7M range is consensus but contested. [verified 05/2026, NAR / Freddie Mac / Up for Growth]

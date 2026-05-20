@@ -52,7 +52,7 @@ VOICES TO TRACK: Kendall Pelander (FTI Consulting Digital Health Leader — most
 VERTICAL SAAS: modMed (specialty EHR), PointClickCare (LTPAC), WellSky (post-acute), Phreesia (access), Waystar (RCM, IPO'd 2024), Veeva (~80% pharma CRM share) [verified 05/2026, Veeva investor presentation].
 
 KNOWN TRAPS (meta-knowledge — where this vertical's data goes stale or gets misinterpreted):
-- U.S. healthcare spend (~$4.9T) is a CMS estimate that lags by 1-2 years. The figure cited is projected, not actual.
+- U.S. healthcare spend (~$4.9T) is a CMS estimate that lags by 1-2 years [verified 05/2026, CMS National Health Expenditure Data]. The figure cited is projected, not actual.
 - Epic market share (42% hospitals, 55% beds) is KLAS-reported for acute-care hospitals only. Ambulatory, behavioral health, and LTPAC have very different EHR landscapes.
 - Payer enrollment figures (~50M UHC, etc.) shift quarterly due to Medicaid redeterminations, Medicare Advantage open enrollment, and ACA exchange changes. Verify before using in any payer-specific brief.
 - "50% of physicians employed by health systems" is trending upward rapidly (was ~44% a few years ago) [verified 05/2026, AMA Physician Practice Benchmark Survey 2024]. The exact figure depends on whether locum tenens and contract physicians are counted.
@@ -61,7 +61,7 @@ KNOWN TRAPS (meta-knowledge — where this vertical's data goes stale or gets mi
 - Healthcare B2B sales cycles (13+ months, 22-person committees) are for ENTERPRISE health system deals. Ambulatory/practice-level sales are materially shorter and simpler.
 - EHR switching cost ($100M+) is for large health systems. A 5-physician practice switching EHRs costs $50K-$200K, not $100M. [verified 05/2026, KLAS Research / industry estimates]
 - Veeva's ~80% pharma CRM share is for LIFE SCIENCES CRM specifically (Veeva CRM / Veeva Vault). Do not apply to broader healthcare CRM.
-- B2B SaaS healthcare CAGR (29.50%) is a Mordor Intelligence projection through 2031 — 5-year projections in healthcare carry high uncertainty due to regulatory and reimbursement shifts.
+- B2B SaaS healthcare CAGR (29.50%) is a Mordor Intelligence projection through 2031 [verified 05/2026, Mordor Intelligence] — 5-year projections in healthcare carry high uncertainty due to regulatory and reimbursement shifts.
 `;
 
 export const HEALTHCARE_SAAS_SCORING = {
