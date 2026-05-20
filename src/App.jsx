@@ -481,10 +481,9 @@ function authHeaders() {
 // When enabled, AI calls use Opus instead of Haiku. ~15x cost but
 // significantly richer output. Set by the component; read by all AI helpers.
 const HAIKU = "claude-haiku-4-5-20251001";
-const OPUS  = "claude-opus-4-6-20250514";
-let _maxMode = false;
-function setCambrianMaxMode(on) { _maxMode = !!on; }
-function activeModel() { return _maxMode ? OPUS : HAIKU; }
+// Model selection — always Haiku. Opus available for future silent upgrades
+// on specific high-value calls (server-side, not user-facing toggle).
+function activeModel() { return HAIKU; }
 
 // Tracking context — set before brief generation, read by claudeFetch/streamAI
 let _trackingCtx = {};
@@ -1493,7 +1492,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         max_tokens:3000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:execPrompt}],
-      }, { extraHeaders: _maxMode ? { "x-billable-max": "1" } : { "x-billable-run": "1" } });
+      }, { extraHeaders: { "x-billable-run": "1" } });
       const result = parseExecResponse(d);
       if(result?.keyExecutives?.length) return result;
 
@@ -2391,10 +2390,10 @@ function BriefLoader({ company, status }) {
 
 // ── PRICING TIERS (shared by landing page + upgrade modal) ───────────────────
 const PRICING_TIERS = [
-  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",maxRuns:"5 Max runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"],priceId:"price_1TTsJr1ukA5Jsm7oFWPVRXWW"},
-  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",maxRuns:"20 Max runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true,priceId:"price_1TTsK31ukA5Jsm7odTEg1faZ"},
-  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",maxRuns:"50 Max runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"],priceId:"price_1TTsKH1ukA5Jsm7oKosAgD2i"},
-  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",maxRuns:"200 Max runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"],priceId:"price_1TTsKW1ukA5Jsm7o41o7K39i"},
+  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"],priceId:"price_1TTsJr1ukA5Jsm7oFWPVRXWW"},
+  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true,priceId:"price_1TTsK31ukA5Jsm7odTEg1faZ"},
+  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"],priceId:"price_1TTsKH1ukA5Jsm7oKosAgD2i"},
+  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"],priceId:"price_1TTsKW1ukA5Jsm7o41o7K39i"},
 ];
 
 // ── AUTH / PASSWORD GATE ──────────────────────────────────────────────────────
@@ -2857,7 +2856,7 @@ function PasswordGate({ onAuth }) {
                   <span style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>{plan.price}</span>
                   <span style={{fontSize:12,color:"var(--ink-3)"}}>{plan.period}</span>
                 </div>
-                <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.runs} · {plan.maxRuns}</div>
+                <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.runs}</div>
                 <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:12,fontStyle:"italic"}}>{plan.desc}</div>
                 {plan.features.map(f=>(
                   <div key={f} style={{fontSize:11,color:"var(--ink-1)",padding:"2px 0",display:"flex",gap:6}}>
@@ -3550,7 +3549,7 @@ export default function App(){
   const[cmdOpen,setCmdOpen]=useState(false); // Cmd-K command palette
   const[celebrateStep,setCelebrateStep]=useState(null); // milestone celebration pulse
   // dark mode removed — not needed for beta
-  const[cambrianMax,setCambrianMax]=useState(false); // Premium Opus tier toggle
+  // cambrianMax removed — every output is the best we can produce, no quality toggle
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState([]); // [{role:'user'|'assistant', content}]
   const[chatLoading,setChatLoading]=useState(false);
@@ -4832,7 +4831,7 @@ ${isOpen
           {role:"user",content:icpPrompt},
           {role:"assistant",content:"{"},
         ],
-      }, { extraHeaders: _maxMode ? { "x-billable-max": "1" } : { "x-billable-run": "1" } });
+      }, { extraHeaders: { "x-billable-run": "1" } });
       if(d2.error){
         console.warn("ICP phase 2 error:",d2.error);
         // Surface usage limit errors
@@ -4869,7 +4868,7 @@ ${isOpen
             setOrgCtx(prev => {
               if (!prev) return prev;
               const next = { ...prev, run_count: prev.run_count + 1 };
-              if (_maxMode) next.max_run_count = (prev.max_run_count || 0) + 1;
+              // max_run_count tracking removed — no Max mode
               return next;
             });
             // Only cache if the ICP is usable. Catches: model echoed "PICK ONE"
@@ -7936,22 +7935,6 @@ ${isOpen
           )}
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {step===7&&<div className="live-badge"><div className="live-dot"/>Live Call</div>}
-
-            {/* Max toggle */}
-            <button onClick={()=>{
-                if (!cambrianMax && orgCtx && (orgCtx.max_run_limit||0) <= 0) { setUpgradeOpen(true); return; }
-                if (!cambrianMax && orgCtx && (orgCtx.max_run_count||0) >= (orgCtx.max_run_limit||0)) {
-                  alert(`You've used all ${orgCtx.max_run_limit} Max runs this month. Runs reset monthly, or upgrade for more.`); return;
-                }
-                const next=!cambrianMax;setCambrianMax(next);setCambrianMaxMode(next);
-              }}
-              title={cambrianMax?"Switch to Standard":`Cambrian Max — premium intelligence${orgCtx?.max_run_limit?` (${orgCtx.max_run_count||0}/${orgCtx.max_run_limit} runs used)`:""}`}
-              style={{padding:"3px 10px",borderRadius:20,cursor:"pointer",fontSize:11,fontWeight:700,letterSpacing:"0.3px",
-                border:cambrianMax?"2px solid var(--violet)":"1.5px solid var(--line-0)",
-                background:cambrianMax?"linear-gradient(135deg,var(--violet),#6D28D9)":"var(--surface)",
-                color:cambrianMax?"#fff":"var(--ink-2)",transition:"all 0.2s"}}>
-              {cambrianMax?"⚡ MAX ON":`⚡ Max${orgCtx?.max_run_limit?` ${orgCtx.max_run_count||0}/${orgCtx.max_run_limit}`:""}`}
-            </button>
 
             {/* Save */}
             {step>0&&(
@@ -12592,17 +12575,7 @@ ${isOpen
               <div style={{width:80,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
                 <div style={{height:"100%",borderRadius:2,background:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--green)",width:Math.min(100,Math.round(orgCtx.run_count/orgCtx.run_limit*100))+"%",transition:"width 0.3s"}}/>
               </div>
-              {(orgCtx.max_run_limit||0)>0&&(
-                <>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:2}}>
-                    <span style={{fontSize:10,fontWeight:700,color:"var(--violet)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Max</span>
-                    <span style={{fontWeight:700,fontSize:12,color:"var(--violet)"}}>{orgCtx.max_run_count||0}/{orgCtx.max_run_limit}</span>
-                  </div>
-                  <div style={{width:80,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
-                    <div style={{height:"100%",borderRadius:2,background:(orgCtx.max_run_count||0)>=(orgCtx.max_run_limit||0)?"var(--red)":"var(--violet)",width:Math.min(100,Math.round((orgCtx.max_run_count||0)/(orgCtx.max_run_limit||1)*100))+"%",transition:"width 0.3s"}}/>
-                  </div>
-                </>
-              )}
+              {/* Max runs usage bar removed — no Max mode */}
             </div>
             {orgCtx.plan==="trial"&&<span style={{fontSize:8,color:"var(--amber)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px",writingMode:"vertical-rl",transform:"rotate(180deg)"}}>Trial</span>}
           </div>
@@ -12856,7 +12829,7 @@ ${isOpen
                     <span style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>{plan.price}</span>
                     <span style={{fontSize:12,color:"var(--ink-3)"}}>{plan.period}</span>
                   </div>
-                  <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.runs} · {plan.maxRuns}</div>
+                  <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>{plan.runs}</div>
                   <div style={{fontSize:11,color:"var(--ink-3)",marginBottom:10}}>{plan.desc}</div>
                   {plan.features.map(f=>(
                     <div key={f} style={{fontSize:11,color:"var(--ink-1)",padding:"2px 0",display:"flex",gap:6}}>
