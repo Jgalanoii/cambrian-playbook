@@ -792,6 +792,23 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 
   /* Favorites panel */
   .fav-panel { width: min(340px, 92vw) !important; }
+
+  /* Nav bar: back/forward arrows + new session */
+  [style*="justifyContent: \"space-between\""][style*="borderBottom"] { flex-wrap: wrap; padding: 6px 12px !important; gap: 6px !important; }
+  [style*="justifyContent: \"space-between\""][style*="borderBottom"] button { font-size: 11px !important; padding: 3px 8px !important; }
+
+  /* Action bar: wrap buttons */
+  [style*="flexWrap:\"wrap\""][style*="gap:10px"] { gap: 6px !important; }
+  [style*="flexWrap:\"wrap\""][style*="gap:10px"] button { font-size: 10px !important; padding: 5px 10px !important; }
+
+  /* Gate map: stack grids */
+  [style*="gridTemplateColumns:\"1fr 1fr\""] { grid-template-columns: 1fr !important; }
+
+  /* Help dropdown: full width on mobile */
+  [style*="width:340px"] { width: min(340px, 90vw) !important; }
+
+  /* Session summary: stack hire/tech grids */
+  [style*="gridTemplateColumns:\"1fr 1fr\""][style*="gap:16px"] { grid-template-columns: 1fr !important; }
 }
 
 /* ── SMALL PHONE (375px and below) ──────────────────────────────────────── */
@@ -842,15 +859,16 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .admin-filters input, .admin-filters select { font-size: 12px; padding: 6px 10px; border: 1.5px solid var(--line-0); border-radius: 6px; background: var(--surface); font-family: inherit; }
 .admin-filters input { flex: 1 1 160px; min-width: 120px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.admin-table th { padding: 8px 10px; font-size: 10px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.3px; text-align: left; border-bottom: 2px solid var(--line-0); position: sticky; top: 0; background: var(--surface); z-index: 1; }
-.admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--line-1); vertical-align: middle; }
+.admin-table th { padding: 10px 12px; font-size: 10px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.3px; text-align: left; border-bottom: 2px solid var(--line-0); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.admin-table td { padding: 10px 12px; border-bottom: 1px solid var(--line-1); vertical-align: middle; }
+.admin-table tbody tr:nth-child(even) td { background: var(--bg-0); }
 .admin-table tr:hover td { background: var(--bg-1); }
 .admin-table select { font-size: 11px; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--line-0); font-weight: 600; cursor: pointer; background: var(--surface); }
 .admin-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
-.admin-dot-menu { background: none; border: 1px solid var(--line-0); border-radius: 6px; padding: 2px 6px; cursor: pointer; font-size: 14px; color: var(--ink-3); line-height: 1; }
-.admin-dot-menu:hover { background: var(--bg-1); color: var(--ink-0); }
+.admin-dot-menu { background: var(--bg-1); border: 1.5px solid var(--line-0); border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 16px; color: var(--ink-2); line-height: 1; transition: all 0.15s; }
+.admin-dot-menu:hover { background: var(--ink-0); color: var(--surface); border-color: var(--ink-0); }
 .admin-action-menu { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1.5px solid var(--line-0); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); min-width: 180px; z-index: 10; overflow: hidden; padding: 4px 0; }
-.admin-action-item { display: block; width: 100%; padding: 7px 14px; font-size: 12px; color: var(--ink-1); background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; }
+.admin-action-item { display: block; width: 100%; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--ink-1); background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; transition: background 0.1s; }
 .admin-action-item:hover { background: var(--bg-1); }
 .admin-action-item.danger { color: var(--red); }
 .admin-action-item.danger:hover { background: var(--red-bg); }
