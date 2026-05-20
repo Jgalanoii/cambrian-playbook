@@ -99,54 +99,24 @@ async function createTasks(userId, { steps, dealId, companyId }) {
 
 export default async function handler(req, res) {
   // ── GET: OAuth callback from HubSpot ─────────────────────────────────
-  // Two-step callback: HubSpot redirects here with ?code=...&state=...
-  // Step 1 (no ?confirmed): Show a page asking user to click "Complete Connection"
-  //   This gives them time to finish HubSpot's consent flow (e.g. "I accept the risk")
-  // Step 2 (?confirmed=1): Actually exchange the code for tokens
+  // HubSpot redirects here with ?code=...&state=... after user approves.
+  // Exchange code for tokens immediately and redirect back to the app.
   if (req.method === "GET") {
     if (!isConfigured()) return res.redirect(302, `${APP_URL}?hubspot=error&reason=not_configured`);
-    const { code, state, confirmed } = req.query || {};
+    const { code, state } = req.query || {};
     if (!state || !code) return res.redirect(302, `${APP_URL}?hubspot=error&reason=missing_params`);
 
     const statePayload = verifyState(state);
     if (!statePayload?.userId) return res.redirect(302, `${APP_URL}?hubspot=error&reason=invalid_state`);
     if (statePayload.ts && Date.now() - statePayload.ts > 600_000) return res.redirect(302, `${APP_URL}?hubspot=error&reason=expired`);
 
-    // Step 1: Show confirmation page — don't exchange yet.
-    // HubSpot may redirect here before the user finishes their consent flow
-    // (e.g. "I accept the risk" prompt). This page lets them go back to
-    // HubSpot to finish, then come back here to complete the connection.
-    if (!confirmed) {
-      const confirmUrl = `${APP_URL}/api/hubspot?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}&confirmed=1`;
-      res.setHeader("Content-Type", "text/html");
-      return res.send(`<!DOCTYPE html><html><head><title>Complete Connection</title></head>
-        <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
-        <div style="text-align:center;max-width:440px;padding:20px">
-          <h2 style="margin:0 0 16px">Finish HubSpot Authorization</h2>
-          <p style="color:#666;line-height:1.7;margin:0 0 20px">HubSpot may have asked you to verify or type a confirmation. If you weren't able to finish, go back and complete it now.</p>
-          <div style="margin-bottom:24px">
-            <a href="https://app.hubspot.com" target="_blank" rel="noopener noreferrer"
-              style="display:inline-block;padding:10px 24px;border-radius:8px;border:2px solid #ff7a59;background:white;color:#ff7a59;font-size:13px;font-weight:700;text-decoration:none">
-              Open HubSpot to finish verification &rarr;
-            </a>
-          </div>
-          <p style="color:#666;line-height:1.7;margin:0 0 20px">Once you've completed everything on HubSpot's side, click below to save the connection.</p>
-          <a href="${confirmUrl}" style="display:inline-block;padding:12px 32px;border-radius:8px;background:#ff7a59;color:#fff;font-size:14px;font-weight:700;text-decoration:none">Complete Connection</a>
-        </div></body></html>`);
-    }
-
-    // Step 2: Exchange code for tokens
     const userId = statePayload.userId;
     const redirectUri = `${APP_URL}/api/hubspot`;
 
     try {
       const tokenData = await exchangeCodeForTokens(code, redirectUri);
       if (!tokenData?.access_token) {
-        res.setHeader("Content-Type", "text/html");
-        return res.send(`<!DOCTYPE html><html><head><title>Error</title></head>
-          <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
-          <div style="text-align:center"><h1 style="color:#c00">Connection Failed</h1>
-          <p style="color:#666">The authorization code may have expired. Go back to Settings and try again.</p></div></body></html>`);
+        return res.redirect(302, `${APP_URL}?hubspot=error&reason=token_exchange`);
       }
       const portalInfo = await getPortalInfo(tokenData.access_token);
       await saveTokenForUser(userId, { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expiresIn: tokenData.expires_in, portalId: portalInfo?.portalId, scopes: portalInfo?.scopes });
