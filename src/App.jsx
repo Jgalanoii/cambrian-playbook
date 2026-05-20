@@ -92,6 +92,8 @@ let KL_INSURANCE_SCORING = null;
 let KL_INSURANCE_DISCOVERY = "";
 let KL_EXEC_PERSPECTIVES = ""; // Executive Perspectives — role-keyed C-suite intelligence
 let KL_EXEC_PERSPECTIVES_DISCOVERY = "";
+let KL_APPROVAL_GATES = ""; // Approval Gates — steering committees, deal desk, gate mapping
+let KL_APPROVAL_GATES_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -166,6 +168,8 @@ async function fetchKnowledgeLayer() {
     KL_INSURANCE_DISCOVERY = d.insuranceDiscovery || "";
     KL_EXEC_PERSPECTIVES = d.executivePerspectives || "";
     KL_EXEC_PERSPECTIVES_DISCOVERY = d.executivePerspectivesDiscovery || "";
+    KL_APPROVAL_GATES = d.approvalGates || "";
+    KL_APPROVAL_GATES_DISCOVERY = d.approvalGatesDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -1405,6 +1409,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getSmbMidmarketInjection(sellerICP, member.ind, member) +
     getInsuranceInjection(sellerICP, member.ind) +
     (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
+    (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -6370,6 +6375,7 @@ ${isOpen
       (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
       (KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY + "\n" : "") +
       (KL_EXEC_PERSPECTIVES_DISCOVERY ? KL_EXEC_PERSPECTIVES_DISCOVERY + "\n" : "") +
+      (KL_APPROVAL_GATES_DISCOVERY ? KL_APPROVAL_GATES_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

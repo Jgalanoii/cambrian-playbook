@@ -37,6 +37,7 @@ import { MEDICAL_PAYMENTS_INJECTION, MEDICAL_PAYMENTS_SCORING, MEDICAL_PAYMENTS_
 import { SMB_MIDMARKET_INJECTION, SMB_MIDMARKET_SCORING, SMB_MIDMARKET_DISCOVERY } from "../src/data/smbMidmarketKnowledge.js";
 import { INSURANCE_INDUSTRY_INJECTION, INSURANCE_SCORING_CONTEXT, INSURANCE_DISCOVERY_INJECTION, INSURANCE_PLAYBOOK } from "../src/data/insuranceKnowledge.js";
 import { EXECUTIVE_PERSPECTIVES_INJECTION, EXECUTIVE_PERSPECTIVES_SCORING, EXECUTIVE_PERSPECTIVES_DISCOVERY } from "../src/data/executivePerspectivesKnowledge.js";
+import { APPROVAL_GATES_INJECTION, APPROVAL_GATES_DISCOVERY, APPROVAL_GATES_SCORING } from "../src/data/approvalGatesKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -258,6 +259,10 @@ export default async function handler(req, res) {
       executivePerspectives: EXECUTIVE_PERSPECTIVES_INJECTION,
       executivePerspectivesScoring: EXECUTIVE_PERSPECTIVES_SCORING,
       executivePerspectivesDiscovery: EXECUTIVE_PERSPECTIVES_DISCOVERY,
+      // Approval Gates — steering committees, deal desk, procurement, gate mapping
+      approvalGates: APPROVAL_GATES_INJECTION,
+      approvalGatesDiscovery: APPROVAL_GATES_DISCOVERY,
+      approvalGatesScoring: APPROVAL_GATES_SCORING,
       // Advanced frameworks (paid only)
       pricingNegotiation: PRICING_NEGOTIATION,
       archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,

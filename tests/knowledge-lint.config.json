@@ -19,7 +19,8 @@
     "accountingFinanceKnowledge.js",
     "smbMidmarketKnowledge.js",
     "insuranceKnowledge.js",
-    "executivePerspectivesKnowledge.js"
+    "executivePerspectivesKnowledge.js",
+    "approvalGatesKnowledge.js"
   ],
 
   "_partialVerticalFiles": "INJECTION required; SCORING/DISCOVERY optional. These are cross-cutting layers that legitimately ship without a SCORING_CONTEXT.",
