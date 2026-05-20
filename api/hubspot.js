@@ -51,7 +51,7 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   // Enrich from session summary
   const s = summary || {};
   if (s.headquarters) { properties.city = s.headquarters.split(",")[0]?.trim(); if (s.headquarters.includes(",")) properties.state = s.headquarters.split(",").slice(1).join(",").trim(); }
-  if (s.founded) properties.founded_year = String(s.founded).replace(/[^0-9]/g, "").slice(0, 4);
+  // founded_year is not a standard HubSpot property — skip to avoid 400 errors
   if (s.website) properties.website = s.website.startsWith("http") ? s.website : `https://${s.website}`;
   if (s.companySnapshot) properties.description = s.companySnapshot.slice(0, 2000);
   console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" owner="${ownerId||"none"}"`);
@@ -60,6 +60,7 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   if (existing) {
     console.log(`[hubspot] Found existing company ${existing.id} for domain "${domain}" — updating`);
     const r = await hubspotFetch(userId, `/crm/v3/objects/companies/${existing.id}`, { method: "PATCH", body: { properties } });
+    if (!r.ok) { const errBody = await r.text().catch(()=>""); console.error(`[hubspot] Company update failed: ${r.status} ${errBody.slice(0,300)}`); }
     return { id: (r.ok ? (await r.json()).id : existing.id), created: false };
   }
   console.log(`[hubspot] No existing company for domain "${domain}" — creating new`);
@@ -236,7 +237,6 @@ export default async function handler(req, res) {
       const e = (t) => (t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); // escape HTML
       const h = []; // html parts
       h.push(`<h2>Cambrian Catalyst — Session Summary</h2>`);
-      const sellerLabel = s.sellerName || data.strategicTheme ? "" : ""; // omit if unknown
       h.push(`<p style="color:#666;font-size:12px">${s.sellerName ? e(s.sellerName) + " → " : ""}${e(s.targetCompany || company.name)} | ${new Date().toLocaleDateString()}</p>`);
 
       // Quick Take
