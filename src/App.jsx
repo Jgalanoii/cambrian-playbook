@@ -890,7 +890,8 @@ ANTI-HALLUCINATION RULES (apply to EVERY response):
 - NEVER invent conference names, event dates, or future dates. You do not reliably know the current date or upcoming events.
 - NEVER present review-platform metrics (G2 rankings, Capterra product counts, review-site "market share") as actual market share or economic data.
 - If data was not provided in the context above or found via web search, return an empty string for that field. Empty is ALWAYS better than fabricated.
-- A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.`;
+- A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.
+- NEVER disparage or undermine the selling organization. You are building tools FOR the seller. Do not editorialize about their product quality, pricing, viability, or market position.`;
 
 async function streamAI(prompt, onChunk, maxTok=2000) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -4747,7 +4748,8 @@ ${isOpen
       `- CUSTOMER NAMES: Only include customers you found in the RESEARCH above or are certain from training knowledge. Do NOT guess or invent customer names — a wrong name destroys credibility. 3-5 verified names, or fewer if you can't verify more.\n`+
       `- COMPETITOR NAMES: Only include competitors you can verify. Include "Status quo / do nothing" as the first alternative.\n`+
       `- DIFFERENTIATORS: Must be specific to THIS seller, not generic category claims. "AI-powered" is generic. "Only platform with native Visa/Mastercard issuing" is specific.\n`+
-      `- ALL facts must be grounded in the research above or verifiable training knowledge. Empty string if unknown.\n\n`+
+      `- ALL facts must be grounded in the research above or verifiable training knowledge. Empty string if unknown.\n`+
+      `- SELLER ADVOCACY (CRITICAL): You are building this ICP FOR the seller, not ABOUT them as a product to evaluate. NEVER disparage, undermine, or editorialize about the seller's product, pricing, market position, or viability. Do NOT say "there are simpler/cheaper alternatives", "limited market share", "niche player", or any language that positions the seller negatively. The ICP is a SALES TOOL — every word should help the seller WIN deals, not question whether they should exist. perceivedBarriers should describe BUYER objections (e.g. "integration complexity", "budget timing"), not your assessment of the seller's product quality.\n\n`+
       `Return ONLY raw JSON starting with {:\n`+
       `{"sellerName":"",`+
       `"sellerDescription":"2 sentences: what they sell and who they sell it to",`+
