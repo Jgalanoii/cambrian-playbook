@@ -21,11 +21,18 @@ function HubSpotSection({ sbToken }) {
 
   const startConnect = () => {
     setLoading(true);
+    // Open the tab NOW (inside click handler) so the browser allows it.
+    // Then navigate it to the HubSpot OAuth URL once the API responds.
+    const tab = window.open("about:blank", "_blank");
     fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "start" }) })
       .then(r => r.json())
-      .then(d => { if (d.url) window.open(d.url, "_blank"); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(d => {
+        if (d.url && tab) { tab.location.href = d.url; }
+        else if (tab) { tab.close(); }
+        setLoading(false);
+      })
+      .catch(() => { if (tab) tab.close(); setLoading(false); });
   };
 
   const disconnect = () => {
