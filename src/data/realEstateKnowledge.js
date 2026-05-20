@@ -56,7 +56,7 @@ COMMERCIAL KEY FACTS:
 - Retail: quietly best-performing core sector; years of underbuilding = structurally tight conditions.
 
 LAND WHOLESALING (if prospect is a wholesaler or land investor):
-- Model: tie up land with assignable PSA at 40-60% of FMV; assign to builder/developer for fee.
+- Model: tie up land with assignable PSA at 40-60% of FMV; assign to builder/developer for fee. [verified 05/2026, Cambrian operator knowledge]
 - Economics: mid-market deals $50K-$300K purchase, $7K-$15K fee, 45-90 day cycle. [verified 05/2026, Cambrian operator knowledge]
 - Key edges: direct seller pipeline at scale, builder relationships ("Builder-First" model), or subdivide expertise.
 - Pain points: lead quality/CAC inflation, disposition speed, buyer concentration, compliance, scaling beyond founder.
@@ -93,7 +93,7 @@ CAPITAL & INVESTMENT (Q2 2026 REFRESH):
 - Voices to track: Jon Gray (Blackstone president — most-cited CRE recovery voice), Manus Clancy (Trepp — CMBS delinquency), CBRE Econometric Advisors, PIMCO real estate research, NAIOP.
 
 KNOWN TRAPS — DATA THAT GOES STALE FASTEST (re-verify quarterly):
-- Mortgage rates: move weekly; 30yr fixed can shift 50+ bps in a quarter. Always hedge with "as of [date]." [Source: Freddie Mac PMMS]
+- Mortgage rates: move weekly; 30yr fixed can shift 50+ bps in a quarter. Always hedge with "as of [date]." [verified 05/2026, Freddie Mac PMMS]
 - Cap rates: lag transactions by 1-2 quarters; CBRE and NCREIF report on different cycles. Never cite a cap rate without specifying vintage. [Source: CBRE, NCREIF]
 - CRE transaction volumes: quarterly swing wildly on a few mega-deals; YoY comparisons mislead when base quarter was anomalous (e.g., Q4 2022 freeze). [Source: CBRE, MSCI Real Capital Analytics]
 - Vacancy rates: industrial and multifamily vacancies are moving targets — pipeline deliveries shift them 50-100 bps per quarter. Office vacancy is structural and slower-moving but varies sharply by market. [Source: CBRE, Moody's, CoStar]

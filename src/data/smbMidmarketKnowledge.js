@@ -91,14 +91,14 @@ SEGMENT-AWARE BRIEF CALIBRATION:
 - PE-backed: lead with sponsor name, hold cycle position, operating partner priorities, EBITDA impact framing
 
 KNOWN TRAPS (meta-knowledge — where this layer's data goes stale or gets misinterpreted):
-- SMB count (~33.2M) includes sole proprietors and non-employer firms. The count of SMBs with EMPLOYEES is ~6.1M. Use the right denominator for the context.
+- SMB count (~33.2M) includes sole proprietors and non-employer firms. The count of SMBs with EMPLOYEES is ~6.1M [verified 05/2026, SBA Office of Advocacy]. Use the right denominator for the context.
 - NCMM "mid-market" definition ($10M-$1B revenue) is narrower than many industry definitions. Some sources define mid-market as $50M-$1B. Always state which definition is in use.
 - Mid-market revenue growth (10.7%) and employment growth (7.3%) are NCMM survey-based, not census data. Sample skews toward engaged middle-market executives. [verified 05/2026, NCMM Middle Market Indicator Q4 2025]
 - The "5th largest economy" comparison for mid-market is NCMM marketing language. Directionally correct but not a formal GDP comparison.
-- GF Data mid-market PE multiples (~7.0x) are for completed transactions in their database. Selection bias: GF Data skews toward lower-mid-market. Upper mid-market PE deals routinely trade at 10-14x.
+- GF Data mid-market PE multiples (~7.0x) are for completed transactions in their database. Selection bias: GF Data skews toward lower-mid-market. Upper mid-market PE deals routinely trade at 10-14x [verified 05/2026, PitchBook / GF Data].
 - Embedded finance market projections ($1.4T) span 5-10 year forecasts with enormous uncertainty bands. The $111B "current" figure is itself an estimate. [verified 05/2026, Lightyear Capital / Bain 2024]
 - The 56% "already offer embedded finance" stat defines embedded finance broadly (including payment acceptance). If defined narrowly (BaaS, embedded lending), the penetration is much lower. [verified 05/2026, Plaid Fintech Effect Report 2024]
-- AI adoption stats (85% enthusiastic, 73% impact) are from vendor-sponsored surveys. Interpret as directional, not precise.
+- AI adoption stats (85% enthusiastic, 73% impact) are from vendor-sponsored surveys. Interpret as directional, not precise. [verified 05/2026, Sage SMB AI Adoption Survey 2025]
 - SMB buying triggers (funding events, hiring spikes) are observable but LAGGING indicators — the initiative was decided weeks/months before the signal appears externally.
 - PE hold cycle position (Year 1-2 standup, Year 2-3 scale, Year 3-5 optimize) is a generalization. Actual timelines vary by fund strategy, sector, and market conditions.
 `;

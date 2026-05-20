@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "source_id": "sec_company_tickers",
+    "source_url": "https://www.sec.gov/files/company_tickers.json",
+    "retrieved": "2026-04-21",
+    "format_note": "Partial capture — first ~1,050 entries of ~10K total. Run `python ingest.py --source sec_company_tickers` for the current full dataset.",
+    "schema": {
+      "key": "string ordinal index from source",
+      "value": {
+        "cik_str": "integer SEC Central Index Key (pad to 10 digits when querying data.sec.gov endpoints)",
+        "ticker": "string stock ticker",
+        "title": "string EDGAR conformed company name"
+      }
+    }
+  },
+  "sample": {
+    "0": {"cik_str": 1045810, "ticker": "NVDA", "title": "NVIDIA CORP"},
+    "1": {"cik_str": 1652044, "ticker": "GOOGL", "title": "Alphabet Inc."},
+    "2": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."},
+    "10": {"cik_str": 19617, "ticker": "JPM", "title": "JPMORGAN CHASE & CO"},
+    "14": {"cik_str": 1403161, "ticker": "V", "title": "VISA INC."},
+    "19": {"cik_str": 1141391, "ticker": "MA", "title": "Mastercard Inc"},
+    "24": {"cik_str": 70858, "ticker": "BAC", "title": "BANK OF AMERICA CORP /DE/"},
+    "40": {"cik_str": 895421, "ticker": "MS", "title": "MORGAN STANLEY"},
+    "50": {"cik_str": 72971, "ticker": "WFC", "title": "WELLS FARGO & COMPANY/MN"},
+    "127": {"cik_str": 927628, "ticker": "COF", "title": "CAPITAL ONE FINANCIAL CORP"},
+    "348": {"cik_str": 1633917, "ticker": "PYPL", "title": "PayPal Holdings, Inc."},
+    "378": {"cik_str": 1512673, "ticker": "XYZ", "title": "Block, Inc."},
+    "448": {"cik_str": 798354, "ticker": "FISV", "title": "FISERV INC"},
+    "550": {"cik_str": 1136893, "ticker": "FIS", "title": "Fidelity National Information Services, Inc."},
+    "561": {"cik_str": 1818874, "ticker": "SOFI", "title": "SoFi Technologies, Inc."},
+    "591": {"cik_str": 1175454, "ticker": "CPAY", "title": "CORPAY, INC."},
+    "633": {"cik_str": 1820953, "ticker": "AFRM", "title": "Affirm Holdings, Inc."},
+    "637": {"cik_str": 1123360, "ticker": "GPN", "title": "GLOBAL PAYMENTS INC"},
+    "715": {"cik_str": 1650164, "ticker": "TOST", "title": "Toast, Inc."},
+    "918": {"cik_str": 779152, "ticker": "JKHY", "title": "JACK HENRY & ASSOCIATES INC"}
+  },
+  "_note": "Above is a curated subset showing the shape of the data with fintech/payments entities highlighted. The real file contains all ~10K public companies. When you run the ingestor, it will pull the full current file and normalize every row to the common Company schema."
+}

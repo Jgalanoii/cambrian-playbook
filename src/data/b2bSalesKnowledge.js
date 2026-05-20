@@ -55,10 +55,10 @@ REVOPS: Connects marketing pipeline + sales conversion + CS retention into one m
 DIAGNOSTIC: Sales motion diagnosed through ICP fit, pipeline coverage, stage conversion, cycle time, win rate variance, ASP trend, discount rate, and NRR. Most prospects fail 5+ of these.
 
 KNOWN TRAPS (meta-knowledge — where this layer's data goes stale or gets misinterpreted):
-- The Gartner "74% unhealthy conflict" stat (n=632) is from a B2B buyer survey, not an observational study. Self-reported conflict levels may differ from actual behavior.
+- The Gartner "74% unhealthy conflict" stat (n=632) is from a B2B buyer survey, not an observational study. Self-reported conflict levels may differ from actual behavior. [verified 05/2026, Gartner May 2025]
 - "61% prefer rep-free buying" does NOT mean buyers want no human contact. It means they prefer self-directed research before engaging reps. Misusing this stat to justify eliminating sales teams is a common error.
 - The Challenger Sale loyalty stat (53% from sales experience) is from original CEB research replicated in 2016 and 2019. The methodology has been debated — it measures stated preference, not revealed preference.
-- Forrester's "92% start with a vendor in mind" and "86% of purchases stall" are from a large sample (n=11,352) but skew toward enterprise/mid-market buyers. SMB buying may not follow the same pattern.
+- Forrester's "92% start with a vendor in mind" and "86% of purchases stall" are from a large sample (n=11,352) but skew toward enterprise/mid-market buyers. SMB buying may not follow the same pattern. [verified 05/2026, Forrester 2024]
 - Pipeline coverage benchmarks (3-5x) vary dramatically by ACV, cycle length, and conversion rates. A 3x coverage ratio at $500K ACV is very different from 3x at $20K ACV.
 - McKinsey's $0.8T-$1.2T GenAI productivity estimate is a TOTAL ADDRESSABLE IMPACT figure, not realized value. It assumes full adoption across all sales and marketing functions globally. [verified 05/2026, McKinsey 2024]
 - The "19% actively implementing GenAI" stat is from a 2024 survey. This number is likely materially higher by mid-2026 — use as a floor, not current state. [verified 05/2026, McKinsey Global B2B Pulse]

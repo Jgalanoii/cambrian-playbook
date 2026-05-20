@@ -86,8 +86,8 @@ LOYALTY RESEARCH (Q2 2026 REFRESH — peer-reviewed):
 
 INCENTIVE COMPENSATION RESEARCH (Q2 2026 REFRESH — replaces dated Shaffer & Arkes 2009 anchor):
 - Cash is most efficient at increasing response rates (RR 1.25) vs vouchers (RR 1.19) vs lotteries (RR 1.12) — Wang et al. 2023 meta-analysis, 46 RCTs, 109,648 participants, 14 countries. Directly contradicts conventional wisdom in some loyalty-adjacent industries. [verified 05/2026, Wang et al. 2023]
-- Conditional incentives are more cost-effective than unconditional; unconditional have largest absolute effect (Imperial College / Elliott et al. 2025, JMIR).
-- Raising incentives mid-field has materially larger effects on previous non-respondents than respondents (Cabrera-Alvarez & Lynn 2025, UK Understanding Society panel RCT — cleanest 2025 result on conditional escalation).
+- Conditional incentives are more cost-effective than unconditional; unconditional have largest absolute effect (Imperial College / Elliott et al. 2025, JMIR). [verified 05/2026, Elliott et al. 2025]
+- Raising incentives mid-field has materially larger effects on previous non-respondents than respondents (Cabrera-Alvarez & Lynn 2025, UK Understanding Society panel RCT — cleanest 2025 result on conditional escalation). [verified 05/2026, Cabrera-Alvarez & Lynn 2025]
 - Average survey response rates climbed from 48% (2005) to 68% (2020) — Holtom, Baruch, Aguinis & Ballinger 2022, Human Relations, 1,014 surveys. Canonical reference for response-rate norms. [verified 05/2026, Holtom et al. 2022]
 - ESOMAR 37 (2025 edition) now explicitly addresses participant validation, fraud prevention, and incentive changes mid-fielding. AAPOR endorses ISO Standard 20252 (200+ certified research orgs worldwide).
 - Operator implication: the Antavo 74% disengagement cliff + Wang meta-analysis together make a tight case for redesigning loyalty-program activation around frontloaded conditional incentives.

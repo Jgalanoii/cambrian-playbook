@@ -50,7 +50,7 @@ MEDICAL & HEALTHCARE PAYMENTS CONTEXT (use when target or seller is at the inter
 THE CONNECTING RAIL: The filtered-spend Visa/Mastercard prepaid card is the dominant mechanism through which MA supplemental benefits, Medicaid HRSN services, employer FSA/HSA dollars, and food-as-medicine programs flow to consumers. MCC restrictions, real-time basket-level validation, and UPC-level filtering enforce benefit rules at point of sale. BHN's Hawk Marketplace, Tango Card's reward-redemption rails, and the broader prepaid network are direct architectural cousins of this stack.
 
 CMS REGULATORY FRAMEWORK:
-- Medicare Advantage plans receive federal rebate dollars for supplemental benefits — ~$337B over last 10 years, $67B in 2024 alone (MedPAC June 2025). Over 99% of MA plans offer at least one supplemental benefit; median 23 per plan [verified 05/2026, KFF].
+- Medicare Advantage plans receive federal rebate dollars for supplemental benefits — ~$337B over last 10 years, $67B in 2024 alone [verified 05/2026, MedPAC June 2025]. Over 99% of MA plans offer at least one supplemental benefit; median 23 per plan [verified 05/2026, KFF].
 - Two authorities: (1) Primarily Health Related Supplemental Benefits (broadened 2018/2019) and (2) SSBCI (Special Supplemental Benefits for the Chronically Ill, authorized by Bipartisan Budget Act 2018) — requires "reasonable expectation of improving health or overall function."
 - CMS-4205-F (CY2025 Final Rule): mandated real-time POS verification for debit cards administering supplemental benefits — electronically link cards to plan-covered items through real-time point-of-sale verification. This is what drives all current investment in basket-level adjudication tech.
 - CY2027 Final Rule (April 2, 2026): rolled back consumer protections (rescinded mid-year unused benefits notification, did NOT ban flex card marketing) but RETAINED technology mandates (real-time POS verification, SSBCI evidence standards). Regulatory direction: loosening on consumer protections, retaining infrastructure mandates — operator-favorable for vendor ecosystem.
@@ -81,7 +81,7 @@ SNAP/EBT & NUTRITION INCENTIVES:
 - EBT processors: Conduent, FIS, Solutran/WEX ($340M acquisition 2022) [verified 05/2026, WEX IR].
 
 FOOD AS MEDICINE — MEDICAID 1115 WAIVERS:
-- CMS approved 10 state waivers expanding Food as Medicine by Nov 2024; 19 approved or pending addressing nutrition overall (Hanson et al. 2024, Health Affairs Scholar). 11 submitted/approved since 2021 [verified 05/2026, Health Affairs Scholar].
+- CMS approved 10 state waivers expanding Food as Medicine by Nov 2024; 19 approved or pending addressing nutrition overall [verified 05/2026, Hanson et al. 2024, Health Affairs Scholar]. 11 submitted/approved since 2021 [verified 05/2026, Health Affairs Scholar].
 - FIM service categories: medically tailored meals (9 of 10 waivers), medically supportive groceries (8), produce prescriptions (7), medically supportive meals (7), medically tailored groceries (6).
 - CRITICAL 2025 REVERSAL: CMS rescinded guidance on Health-Related Social Needs (March 2025) and is reviewing 1115 waivers. Six of eight states named in review currently implement FIM programs. Federal matching-fund risk has materially increased. State-level activity (Oklahoma SB 806, Massachusetts expansion) partially offsets.
 - Reimbursement: capitated MA plans (SSBCI route, plan absorbs cost), Medicaid MCO (PMPM or per-episode), direct grants (GusNIP, philanthropy).

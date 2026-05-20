@@ -55,8 +55,8 @@ GENERAL PRINCIPLES — HOW C-SUITE BUYERS DIFFER FROM LINE BUYERS (structural):
 - Executives buy OUTCOMES, not features. They think in business cases, not product demos.
 - Their time horizon is 1-3 years (strategic plan cycle), not quarters.
 - They delegate evaluation to their team but make or break the final decision based on strategic alignment, risk, and peer/board credibility.
-- Average tenure for a C-suite executive is 4.9 years [Heidrick & Struggles, Route to the Top 2024]. A new exec in the first 90-180 days is the highest-probability buying window — they have a mandate to change things and political capital to spend.
-- 69% of CEOs say technology decisions are now "too important to delegate to IT" [IBM CEO Study 2024]. Cross-functional buying committees are the norm; even a "CIO decision" has CFO, COO, and business-line stakeholders.
+- Average tenure for a C-suite executive is 4.9 years [verified 05/2026, Heidrick & Struggles, Route to the Top 2024]. A new exec in the first 90-180 days is the highest-probability buying window — they have a mandate to change things and political capital to spend.
+- 69% of CEOs say technology decisions are now "too important to delegate to IT" [verified 05/2026, IBM CEO Study 2024]. Cross-functional buying committees are the norm; even a "CIO decision" has CFO, COO, and business-line stakeholders.
 - C-suite buyers pattern-match to peer narratives. "Here is what a [same-role] at a [comparable company] achieved" is the single most effective opening frame.
 
 ═══════════════════════════════════════════════════════════════
@@ -91,7 +91,7 @@ WHAT THEY FEAR:
 Uncontrolled spend that erodes margins. Surprises in the forecast. Regulatory non-compliance (SOX, tax, audit). Technology investments that become shelfware — sunk cost with no measurable return. Being the one who approved a large spend that failed visibly.
 
 BUDGET AUTHORITY:
-Can typically approve operational expenditures within board-approved budget thresholds (often $250K-$1M unilaterally depending on company size). Capital expenditures above threshold require board or committee approval. Has veto power over any significant spend as the financial gatekeeper. Influences all major purchasing decisions even when not the primary buyer [Deloitte CxO Signals 2024].
+Can typically approve operational expenditures within board-approved budget thresholds (often $250K-$1M unilaterally depending on company size). Capital expenditures above threshold require board or committee approval. Has veto power over any significant spend as the financial gatekeeper. Influences all major purchasing decisions even when not the primary buyer [verified 05/2026, Deloitte CxO Signals 2024].
 
 ═══════════════════════════════════════════════════════════════
 CRO — CHIEF REVENUE OFFICER
@@ -126,7 +126,7 @@ WHAT THEY FEAR:
 Missing the number. Pipeline that looks full but does not convert. Reps who cannot sell consultatively. Churn that erodes growth. Being blindsided by a quarter that falls apart in week 10. Losing top performers to competitors. The board losing confidence in the revenue plan.
 
 BUDGET AUTHORITY:
-Owns the sales and often marketing budget — typically 20-40% of revenue in SaaS companies [Forrester, The CRO Mandate 2024]. Can approve sales tools, enablement platforms, and revenue tech within budget. Large platform decisions (CRM replacement, major data buys) may require CFO/CEO co-approval. Headcount decisions within plan are autonomous; incremental headcount requires CFO alignment.
+Owns the sales and often marketing budget — typically 20-40% of revenue in SaaS companies [verified 05/2026, Forrester, The CRO Mandate 2024]. Can approve sales tools, enablement platforms, and revenue tech within budget. Large platform decisions (CRM replacement, major data buys) may require CFO/CEO co-approval. Headcount decisions within plan are autonomous; incremental headcount requires CFO alignment.
 
 ═══════════════════════════════════════════════════════════════
 CIO — CHIEF INFORMATION OFFICER
@@ -161,7 +161,7 @@ WHAT THEY FEAR:
 Outages and breaches that make headlines. Runaway cloud costs. Shadow IT proliferating outside their governance. Being seen as a bottleneck to the business. Technology debt compounding until systems are unreplaceable. Vendor lock-in that constrains future decisions.
 
 BUDGET AUTHORITY:
-Owns the IT budget — typically 3-8% of revenue depending on industry [Gartner IT Spending Forecast]. Can approve technology purchases within budget plan, typically up to $500K-$2M depending on company size. Enterprise platform decisions (ERP, CRM, core systems) require cross-functional committee and CFO/CEO approval. Has strong influence over any technology-adjacent purchase even if budget sits elsewhere. 64% of CIOs report increased budget authority over the past three years [Gartner CIO Agenda 2025].
+Owns the IT budget — typically 3-8% of revenue depending on industry [verified 05/2026, Gartner IT Spending Forecast]. Can approve technology purchases within budget plan, typically up to $500K-$2M depending on company size. Enterprise platform decisions (ERP, CRM, core systems) require cross-functional committee and CFO/CEO approval. Has strong influence over any technology-adjacent purchase even if budget sits elsewhere. 64% of CIOs report increased budget authority over the past three years [verified 05/2026, Gartner CIO Agenda 2025].
 
 ═══════════════════════════════════════════════════════════════
 CISO — CHIEF INFORMATION SECURITY OFFICER
@@ -194,10 +194,10 @@ HOW TO APPROACH:
 Lead with risk reduction, not features. CISOs evaluate through a risk lens: what threat does this mitigate, at what cost, and how does it integrate with their existing security stack? They are skeptical by training — overblown claims trigger distrust. Show compliance alignment (which frameworks you support), integration with their SIEM/SOAR, and evidence of your own security posture (SOC 2, pen test results). Reference specific threat categories relevant to their industry.
 
 WHAT THEY FEAR:
-A breach on their watch — career-ending and personally liable in some regulatory regimes. Sophisticated supply-chain attacks they cannot see. Board and CEO losing patience with security spend that "never shows ROI." Shadow IT and unmanaged SaaS expanding the attack surface. Regulatory fines and enforcement actions. Talent shortage making it impossible to staff the security team [IANS/Artico CISO Survey 2024].
+A breach on their watch — career-ending and personally liable in some regulatory regimes. Sophisticated supply-chain attacks they cannot see. Board and CEO losing patience with security spend that "never shows ROI." Shadow IT and unmanaged SaaS expanding the attack surface. Regulatory fines and enforcement actions. Talent shortage making it impossible to staff the security team [verified 05/2026, IANS/Artico CISO Survey 2024].
 
 BUDGET AUTHORITY:
-Security budgets have grown to 5-15% of IT spend [Gartner Security Spending 2024], but CISOs often do not control the full budget — portions sit with IT, engineering, or compliance. Can typically approve point solutions and tooling within allocated budget ($100K-$500K range). Platform-level security investments require CIO and CFO alignment. Increasingly reports directly to CEO or board rather than through CIO, which has expanded their influence.
+Security budgets have grown to 5-15% of IT spend [verified 05/2026, Gartner Security Spending 2024], but CISOs often do not control the full budget — portions sit with IT, engineering, or compliance. Can typically approve point solutions and tooling within allocated budget ($100K-$500K range). Platform-level security investments require CIO and CFO alignment. Increasingly reports directly to CEO or board rather than through CIO, which has expanded their influence.
 
 ═══════════════════════════════════════════════════════════════
 CHRO — CHIEF HUMAN RESOURCES OFFICER
@@ -234,7 +234,7 @@ WHAT THEY FEAR:
 Losing key talent to competitors. A toxic culture event that becomes public (Glassdoor, social media, press). Regulatory exposure on compensation, classification, or DEI. An HR tech stack that is fragmented and does not give them a single view of the workforce. Being unable to hire fast enough to support growth. The board questioning whether people strategy is rigorous enough.
 
 BUDGET AUTHORITY:
-Owns the HR/people budget including technology, L&D, benefits administration, and recruitment. Spend is typically $1,000-$3,500 per employee per year for HR technology [Deloitte Human Capital Trends 2024]. Can approve within budget autonomously. Benefits redesign and major HCM platform changes require CFO and CEO co-approval. Has significant influence on total compensation and headcount budgets but shares authority with CFO.
+Owns the HR/people budget including technology, L&D, benefits administration, and recruitment. Spend is typically $1,000-$3,500 per employee per year for HR technology [verified 05/2026, Deloitte Human Capital Trends 2024]. Can approve within budget autonomously. Benefits redesign and major HCM platform changes require CFO and CEO co-approval. Has significant influence on total compensation and headcount budgets but shares authority with CFO.
 
 ═══════════════════════════════════════════════════════════════
 COO — CHIEF OPERATING OFFICER
@@ -301,13 +301,13 @@ LANGUAGE THEY USE:
 "Demand gen," "pipeline contribution," "brand equity," "share of voice," "content strategy," "ABM (account-based marketing)," "intent data," "attribution," "multi-touch attribution," "CAC," "CLV," "conversion rate," "funnel velocity," "GTM motion," "product-led growth," "community-led growth."
 
 HOW TO APPROACH:
-Lead with pipeline and revenue impact — CMOs are under intense pressure to prove marketing's contribution to revenue, not just activity metrics. Show attribution clarity: how does your solution connect to pipeline and revenue? CMOs are drowning in tools — 68% say their martech stack is too complex [Gartner CMO Spend Survey 2024]. Position as consolidation or amplification, not another tool. Use case studies with clear before-and-after revenue metrics.
+Lead with pipeline and revenue impact — CMOs are under intense pressure to prove marketing's contribution to revenue, not just activity metrics. Show attribution clarity: how does your solution connect to pipeline and revenue? CMOs are drowning in tools — 68% say their martech stack is too complex [verified 05/2026, Gartner CMO Spend Survey 2024]. Position as consolidation or amplification, not another tool. Use case studies with clear before-and-after revenue metrics.
 
 WHAT THEY FEAR:
-Being seen as a "cost center" rather than a revenue driver. CMO tenure is the shortest in the C-suite — median 3.3 years [Spencer Stuart CMO Tenure Study]. Martech sprawl that consumes budget without measurable return. The attribution gap: marketing generates demand but cannot prove it. Brand damage from a social media crisis, messaging misfire, or competitor narrative. AI disrupting content, SEO, and demand gen channels.
+Being seen as a "cost center" rather than a revenue driver. CMO tenure is the shortest in the C-suite — median 3.3 years [verified 05/2026, Spencer Stuart CMO Tenure Study]. Martech sprawl that consumes budget without measurable return. The attribution gap: marketing generates demand but cannot prove it. Brand damage from a social media crisis, messaging misfire, or competitor narrative. AI disrupting content, SEO, and demand gen channels.
 
 BUDGET AUTHORITY:
-Marketing budgets have compressed to 7.7% of revenue in 2024, down from 11%+ in 2020 [Gartner CMO Spend Survey 2024]. CMOs control this budget but face intense CFO scrutiny on every dollar. Can approve marketing technology and campaign spend within allocated budget. Major brand investments, agency retainers, and platform changes often require CFO sign-off. Martech now consumes 25.4% of the total marketing budget — the largest single line item [Gartner CMO Spend Survey 2024].
+Marketing budgets have compressed to 7.7% of revenue in 2024, down from 11%+ in 2020 [verified 05/2026, Gartner CMO Spend Survey 2024]. CMOs control this budget but face intense CFO scrutiny on every dollar. Can approve marketing technology and campaign spend within allocated budget. Major brand investments, agency retainers, and platform changes often require CFO sign-off. Martech now consumes 25.4% of the total marketing budget — the largest single line item [verified 05/2026, Gartner CMO Spend Survey 2024].
 
 ═══════════════════════════════════════════════════════════════
 CDO — CHIEF DIGITAL OFFICER
@@ -343,7 +343,7 @@ WHAT THEY FEAR:
 Digital transformation becoming "digital theater" — lots of activity, no business impact. Organizational resistance to change. Losing the political mandate if early initiatives do not show results. The CIO/CDO overlap creating confusion about who owns what. Being measured on "innovation" without a clear P&L or contribution metric. The role being eliminated or absorbed once the "transformation" is declared complete.
 
 BUDGET AUTHORITY:
-Highly variable — some CDOs control a dedicated digital budget (1-5% of revenue), while others influence spend that sits in IT, marketing, or business lines. Can typically approve digital initiatives and pilot funding ($100K-$1M). Larger digital platform investments require CEO, CFO, and CIO alignment. In organizations that take digital seriously, the CDO sits on the investment committee for all technology-adjacent spend [McKinsey Digital 2024].
+Highly variable — some CDOs control a dedicated digital budget (1-5% of revenue), while others influence spend that sits in IT, marketing, or business lines. Can typically approve digital initiatives and pilot funding ($100K-$1M). Larger digital platform investments require CEO, CFO, and CIO alignment. In organizations that take digital seriously, the CDO sits on the investment committee for all technology-adjacent spend [verified 05/2026, McKinsey Digital 2024].
 
 ═══════════════════════════════════════════════════════════════
 CTO — CHIEF TECHNOLOGY OFFICER
@@ -379,7 +379,7 @@ WHAT THEY FEAR:
 Architecture decisions that create irreversible lock-in. Scaling failures that bring down the product during growth. Technical debt compounding until velocity collapses. Losing top engineering talent. Building something that should have been bought (or vice versa). A breach or outage rooted in an architectural weakness they inherited.
 
 BUDGET AUTHORITY:
-Owns the R&D / engineering budget — typically 15-25% of revenue in technology companies, 5-10% in non-tech companies. Can approve tooling, infrastructure, and build-vs-buy decisions within budget. Major platform decisions and large vendor commitments require CEO and CFO co-approval. Has strong veto power over any technology that touches the product or platform, even if budget sits elsewhere.
+Owns the R&D / engineering budget — typically 15-25% of revenue in technology companies, 5-10% in non-tech companies [verified 05/2026, Gartner IT Spending Forecast / KeyBanc SaaS Benchmarks]. Can approve tooling, infrastructure, and build-vs-buy decisions within budget. Major platform decisions and large vendor commitments require CEO and CFO co-approval. Has strong veto power over any technology that touches the product or platform, even if budget sits elsewhere.
 
 ═══════════════════════════════════════════════════════════════
 CPO — CHIEF PRODUCT OFFICER

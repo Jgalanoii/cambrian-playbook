@@ -78,8 +78,8 @@ KNOWN TRAPS (meta-knowledge — where this vertical's data goes stale or gets mi
 - GTCR/BHN deal: "advanced talks" since July 2025, NO binding agreement as of May 2026. Do NOT state as closed. Verify before every use.
 - Inspire Brands IPO: formal process underway but not priced. Banks selected != IPO completed. Do not cite a valuation until pricing.
 - Brookfield/Oaktree: announced but pending close. Do not state as completed unless confirmed.
-- PE dry powder ($3.6T) is a global aggregate from multiple data providers with different methodologies. Bain, PitchBook, and Preqin all report slightly different numbers.
-- "PE pays ~3 turns more" is a market-wide average. Sector-specific premiums vary dramatically (healthcare > fintech > industrials).
+- PE dry powder ($3.6T) is a global aggregate from multiple data providers with different methodologies. Bain, PitchBook, and Preqin all report slightly different numbers. [verified 05/2026, Bain Global PE Report 2025]
+- "PE pays ~3 turns more" is a market-wide average. Sector-specific premiums vary dramatically (healthcare > fintech > industrials). [verified 05/2026, GF Data / PitchBook]
 - Cambridge Associates PE/VC index returns are NET of fees and carry. Gross returns are materially higher — do not confuse the two.
 - The "70% of PE firms mandate AI adoption" stat is from a survey of operating partners, not a census. Selection bias likely inflates the number. [verified 05/2026, Bain PE Operating Partners Survey 2025]
 - Gartner's ">40% agentic AI projects canceled by 2027" is a PREDICTION, not a measurement. Treat as directional forecast.

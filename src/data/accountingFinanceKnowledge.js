@@ -48,7 +48,7 @@ WORKING CAPITAL:
 Cash Conversion Cycle = DSO + DIO - DPO. SaaS with annual upfront billing runs NEGATIVE working capital (collects before delivering) — structural advantage. Growing companies consume working capital; fast growth without cash-efficient billing = capital dependency.
 
 FINANCIAL TOOLING MATURITY:
-QuickBooks → Xero → Sage Intacct → NetSuite (mid-market standard, $25-500M revenue) → Workday (enterprise). Stack signals: QuickBooks = early/simple. NetSuite + Adaptive Planning + modern billing (Stripe/Chargebee) = ready for complex revenue ops.
+QuickBooks → Xero → Sage Intacct → NetSuite (mid-market standard, $25-500M revenue) → Workday (enterprise) [verified 05/2026, Cambrian operator knowledge]. Stack signals: QuickBooks = early/simple. NetSuite + Adaptive Planning + modern billing (Stripe/Chargebee) = ready for complex revenue ops.
 
 FASB UPDATES (Q2 2026 REFRESH — Grant Thornton pedigree makes this unusually credible for Cambrian):
 
