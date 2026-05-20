@@ -11692,7 +11692,7 @@ ${isOpen
                 {brief && !brief._loadingSections?.overview && !brief._loadingSections?.deepIntel && (()=>{
                   const summary = buildSessionSummary();
                   if (!summary) return null;
-                  const isOpen = openBB.sessionSummary;
+                  const isOpen = bbIsOpen("sessionSummary");
                   return <div className="bb" style={{borderColor:"var(--tan-0)",borderWidth:2}}>
                     <div className="bb-hdr" onClick={()=>toggleBB("sessionSummary")}>
                       <div className="bb-icon" style={{fontSize:10}}>📋</div>
