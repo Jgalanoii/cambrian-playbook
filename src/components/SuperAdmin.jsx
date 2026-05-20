@@ -48,9 +48,14 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
       .finally(() => { setLoading(false); setRefreshing(false); });
   };
 
+  const initialLoadRef = React.useRef(true);
   useEffect(() => {
     if (!isSuperuser) return;
-    fetchData(true); // initial load shows spinner
+    // Only show full-page spinner on first load — subsequent refreshes
+    // (e.g., sbToken change) use the subtle refresh indicator instead.
+    fetchData(initialLoadRef.current);
+    initialLoadRef.current = false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sbToken]);
 
   // Close action menu on click outside

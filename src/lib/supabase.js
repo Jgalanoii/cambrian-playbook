@@ -115,13 +115,15 @@ export async function sbGetUser(token) {
 }
 
 export async function sbSessions(method, path, token, body) {
+  // For upserts (on_conflict), add resolution=merge-duplicates to avoid 409
+  const isUpsert = path.includes('on_conflict');
   const r = await fetch(SB_URL + '/rest/v1/' + path, {
     method,
     headers: {
       'apikey': SB_KEY,
       'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json',
-      'Prefer': 'return=representation',
+      'Prefer': isUpsert ? 'return=representation,resolution=merge-duplicates' : 'return=representation',
     },
     body: body ? JSON.stringify(body) : undefined,
   });
