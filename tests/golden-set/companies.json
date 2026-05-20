@@ -409,7 +409,7 @@
       "vertical": "agriculture",
       "purpose": "Data-scarce sentinel — largest private US company by revenue",
       "facts": [
-        { "field": "industry", "tier": 1, "value": "Agriculture", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "cargill.com" },
+        { "field": "industry", "tier": 1, "value": "Agriculture", "match": "set_membership", "accepted": ["agriculture", "agribusiness", "food", "grain", "commodity"], "verified": "2026-05-19", "source": "cargill.com" },
         { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Wikipedia" },
         { "field": "hq_location", "tier": 1, "value": "Minneapolis", "match": "fuzzy_location", "verified": "2026-05-19", "source": "cargill.com" }
       ],
