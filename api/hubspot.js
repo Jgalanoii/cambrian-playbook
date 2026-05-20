@@ -117,30 +117,11 @@ export default async function handler(req, res) {
       const portalInfo = await getPortalInfo(tokenData.access_token);
       await saveTokenForUser(userId, { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expiresIn: tokenData.expires_in, portalId: portalInfo?.portalId, scopes: portalInfo?.scopes });
       console.log(`[hubspot] Connected user ${userId} to portal ${portalInfo?.portalId}`);
-      // Return a self-closing page instead of redirecting to the app.
-      // The OAuth flow runs in a new tab — we close it and let the
-      // original tab detect the connection via status check.
-      res.setHeader("Content-Type", "text/html");
-      return res.send(`<!DOCTYPE html><html><head><title>HubSpot Connected</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3">
-        <div style="text-align:center;padding:40px">
-          <div style="font-size:48px;margin-bottom:16px">&#10003;</div>
-          <h2 style="color:#2E6B2E;margin:0 0 8px">HubSpot Connected</h2>
-          <p style="color:#666;margin:0 0 16px">You can close this tab and return to Cambrian Catalyst.</p>
-          <p style="color:#999;font-size:12px">This tab will close automatically...</p>
-        </div>
-        <script>setTimeout(function(){window.close()},2000)</script>
-      </body></html>`);
+      // Redirect back to the app — the original tab polls for connection status
+      return res.redirect(302, `${APP_URL}?hubspot=connected`);
     } catch (e) {
       console.error("[hubspot] Callback error:", e.message);
-      res.setHeader("Content-Type", "text/html");
-      return res.send(`<!DOCTYPE html><html><head><title>HubSpot Error</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3">
-        <div style="text-align:center;padding:40px">
-          <div style="font-size:48px;margin-bottom:16px">&#10007;</div>
-          <h2 style="color:#c00;margin:0 0 8px">Connection Failed</h2>
-          <p style="color:#666;margin:0 0 16px">Close this tab, go back to Settings, and try again.</p>
-          <p style="color:#999;font-size:11px">${e.message?.slice(0, 100) || "Unknown error"}</p>
-        </div>
-      </body></html>`);
+      return res.redirect(302, `${APP_URL}?hubspot=error&reason=server_error`);
     }
   }
 
