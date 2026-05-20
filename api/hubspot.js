@@ -40,42 +40,11 @@ async function findCompanyByDomain(userId, domain) {
   return data?.results?.[0] || null;
 }
 
-// Map Cambrian industry labels to HubSpot's standard industry enum values
-const INDUSTRY_MAP = {
-  "banking": "BANKING", "insurance": "INSURANCE", "healthcare": "HOSPITAL_HEALTH_CARE",
-  "retail": "RETAIL", "e-commerce": "RETAIL", "technology": "COMPUTER_SOFTWARE", "saas": "COMPUTER_SOFTWARE",
-  "fintech": "FINANCIAL_SERVICES", "financial services": "FINANCIAL_SERVICES", "finance": "FINANCIAL_SERVICES",
-  "consumer goods": "CONSUMER_GOODS", "cpg": "CONSUMER_GOODS",
-  "hospitality": "HOSPITALITY", "travel": "HOSPITALITY",
-  "manufacturing": "INDUSTRIAL_AUTOMATION", "professional services": "MANAGEMENT_CONSULTING",
-  "consulting": "MANAGEMENT_CONSULTING", "education": "HIGHER_EDUCATION", "edtech": "E_LEARNING",
-  "energy": "OIL_GAS", "utilities": "UTILITIES", "telecom": "TELECOMMUNICATIONS",
-  "media": "ONLINE_MEDIA", "entertainment": "ENTERTAINMENT", "real estate": "REAL_ESTATE",
-  "government": "GOVERNMENT_ADMINISTRATION", "pharmaceuticals": "PHARMACEUTICALS",
-  "automotive": "AUTOMOTIVE", "agriculture": "FARMING", "nonprofit": "NONPROFIT_ORGANIZATION_MANAGEMENT",
-  "construction": "CONSTRUCTION", "logistics": "LOGISTICS_SUPPLY_CHAIN",
-  "rewards": "MARKETING_ADVERTISING", "incentives": "MARKETING_ADVERTISING",
-  "digital rewards": "MARKETING_ADVERTISING",
-};
-function mapIndustry(raw) {
-  if (!raw) return null;
-  const lower = raw.toLowerCase().trim();
-  // Direct match
-  if (INDUSTRY_MAP[lower]) return INDUSTRY_MAP[lower];
-  // Partial match — find the first key that appears in the raw string
-  for (const [key, val] of Object.entries(INDUSTRY_MAP)) {
-    if (lower.includes(key)) return val;
-  }
-  return null;
-}
-
 async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   const domain = cleanDomain(company.domain);
   const properties = { name: company.name || "", domain };
-
-  // Industry — map to HubSpot's enum values
-  const hsIndustry = mapIndustry(company.industry) || mapIndustry(summary?.companySnapshot);
-  if (hsIndustry) properties.industry = hsIndustry;
+  // Industry — skip the enum property (HubSpot's values are strict and our
+  // labels don't match). Industry info goes in the description instead.
 
   // Employees — parse to number
   if (company.employees) {
@@ -105,12 +74,11 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
     if (s.headquarters.includes(",")) properties.state = s.headquarters.split(",").slice(1).join(",").trim();
   }
   if (s.website) properties.website = s.website.startsWith("http") ? s.website : `https://${s.website}`;
-  if (s.companySnapshot) properties.description = s.companySnapshot.slice(0, 2000);
-  if (s.ownership) {
-    const ow = (s.ownership || "").toLowerCase();
-    if (ow.includes("public")) properties.type = "PUBLIC_COMPANY";
-    else if (ow.includes("private") || ow.includes("pe-backed") || ow.includes("vc-backed")) properties.type = "PRIVATE_COMPANY";
+  if (s.companySnapshot) {
+    const industryLabel = company.industry ? `Industry: ${company.industry}. ` : "";
+    properties.description = (industryLabel + s.companySnapshot).slice(0, 2000);
   }
+  // Ownership type goes in description — HubSpot's "type" enum is strict
 
   console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" industry="${hsIndustry||"unmapped"}" owner="${ownerId||"none"}"`);
 
