@@ -878,7 +878,7 @@ async function claudeFetch(body, { retries = 3, extraHeaders = {} } = {}) {
       if (attempt < retries - 1) await sleep(2000 * (attempt + 1));
     }
   }
-  return { error: { type: "unavailable", message: "Our AI engine is temporarily unavailable — try again in a moment." } };
+  return { error: { type: "unavailable", message: "Even the best need a breather. Our AI engine is recharging — try again in a moment." } };
 }
 
 // ── UNIVERSAL ANTI-HALLUCINATION GUARD ──────────────────────────────────
@@ -3290,7 +3290,7 @@ const FAQ_ITEMS = [
   { q: "How do I export my work?", a: "Click the Export button on any page to save as PDF or CSV. Export is available on paid plans." },
   { q: "What is the pre-call hypothesis?", a: "A structured framework (Reality → Impact → Vision → Entry Points → Route) that builds a testable hypothesis before each call. You go in with a point of view, then update it based on what you learn — so every conversation builds on the last." },
   { q: "How do I save my session?", a: "Sessions auto-save every 30 seconds. You can also press Cmd+S or click the Save button. Saved sessions are accessible from the sessions panel." },
-  { q: "What is Cambrian Max?", a: "Premium mode that uses a more powerful AI model (Opus) for deeper, richer intelligence. Available on paid plans." },
+  { q: "What is RIVER?", a: "RIVER is our sales methodology framework: Reality (what's happening now) → Impact (what it costs) → Vision (what good looks like) → Entry Points (who to engage) → Route (how to close). It structures your entire deal motion from first call to close." },
   { q: "How accurate is the executive research?", a: "Executive names are verified via web search. For well-known companies, accuracy is high. Always verify before your call — click any executive card to edit." },
 ];
 
@@ -3465,6 +3465,7 @@ export default function App(){
   const[superAdminOpen,setSuperAdminOpen]=useState(false); // superuser analytics
   // reportPanelOpen removed — consolidated into UserDashboard (orgPanelOpen)
   const[moreMenuOpen,setMoreMenuOpen]=useState(false); // header overflow menu
+  const[helpOpen,setHelpOpen]=useState(false); // header help dropdown
   const[quickBriefInput,setQuickBriefInput]=useState(""); // a la carte brief company name
   const[favorites,setFavorites]=useState([]); // [{id, type, label, content, company, step, timestamp}]
   const[favPanelOpen,setFavPanelOpen]=useState(false);
@@ -7326,7 +7327,8 @@ ${isOpen
   }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
-  const STEPS=["Start","Define Your Buyer","Add Companies","Best Matches","Account Review","Research Brief","Call Prep","Live Call","Post-Call","How You Help"];
+  const STEPS=["Start","Define Your Buyer","Add Companies","Best Matches","Account Review","Research Brief","Call Prep","Live Call","Post-Call"];
+  const STEP_TIPS=["Set up your selling org","Build your ICP and find RFP opportunities","Upload a list or generate AI-matched targets","See which accounts fit your ICP best","Select accounts and set deal context","Full company intelligence — click any field to edit","RIVER hypothesis, talk tracks, and coaching","Capture discovery in real time","Deal routing, CRM note, and follow-up email"];
   const chatContextLabel = selectedAccount?.company
     ? `${STEPS[step]} · ${selectedAccount.company}`
     : STEPS[step];
@@ -7892,6 +7894,42 @@ ${isOpen
         </div>
       )}
 
+      {/* First-timer welcome overlay */}
+      {(()=>{
+        const key = "cambrian_welcome_v1";
+        const [show, setShow] = React.useState(!localStorage.getItem(key) && savedSessions.length === 0);
+        if (!show) return null;
+        return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}}
+          onClick={()=>{localStorage.setItem(key,"1");setShow(false);}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:16,padding:"40px 48px",maxWidth:480,width:"90%",textAlign:"center",boxShadow:"0 16px 64px rgba(0,0,0,0.2)"}}>
+            <div style={{fontSize:36,marginBottom:12}}>👋</div>
+            <div style={{fontFamily:"Lora,serif",fontSize:24,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>Welcome to Cambrian Catalyst</div>
+            <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7,marginBottom:24}}>
+              Sales intelligence that makes you the most prepared person in every room. Here's how it works:
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12,textAlign:"left",marginBottom:28,padding:"0 8px"}}>
+              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>1</span>
+                <div><strong>Enter your company</strong> — we research your website, build your ICP, and identify who you should be selling to.</div>
+              </div>
+              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>2</span>
+                <div><strong>Pick your targets</strong> — import a list or let us generate ICP-matched companies with fit scores.</div>
+              </div>
+              <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>3</span>
+                <div><strong>Get sales-ready</strong> — full company briefs, call prep, live coaching, and post-call analysis. Everything exports to your CRM.</div>
+              </div>
+            </div>
+            <button onClick={()=>{localStorage.setItem(key,"1");setShow(false);}}
+              style={{padding:"12px 36px",borderRadius:8,border:"none",background:"var(--tan-0)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              Let's go
+            </button>
+            <div style={{fontSize:11,color:"var(--ink-3)",marginTop:12}}>Press <strong>?</strong> anytime for help · <strong>Cmd+K</strong> to search</div>
+          </div>
+        </div>;
+      })()}
+
       <div className="app"
         data-focus={step===7 ? "call" : undefined}
         >
@@ -7936,7 +7974,7 @@ ${isOpen
                     disabled={!canNav && step!==i}
                     onClick={()=>canNav&&setStep(i)}
                     aria-current={step===i?"step":undefined}
-                    title={canNav?`Go to ${s}`:step===i?`Current step: ${s}`:"Complete earlier steps first"}>
+                    title={STEP_TIPS[i] || s}>
                     <div className={`step-num ${celebrateStep===i?"just-completed":""}`}>{step>i?"✓":i+1}</div>
                     <div className="step-label">{s}</div>
                   </button>
@@ -7964,6 +8002,35 @@ ${isOpen
               style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"#555",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Session"+(savedSessions.length===1?"":"s"):"Sessions"}
             </button>}
+
+            {/* Help button — step tips + FAQ */}
+            {step>0&&<div style={{position:"relative"}}>
+              <button onClick={()=>setHelpOpen(h=>!h)}
+                style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:helpOpen?"var(--navy)":"var(--surface)",cursor:"pointer",fontSize:12,color:helpOpen?"#fff":"var(--ink-2)",fontWeight:700}}>
+                ?
+              </button>
+              {helpOpen&&(
+                <>
+                  <div onClick={()=>setHelpOpen(false)} style={{position:"fixed",inset:0,zIndex:999}}/>
+                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",width:340,maxHeight:"70vh",overflow:"auto",zIndex:1000,padding:"16px 20px"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:10}}>{STEPS[step]} — What to do here</div>
+                    <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.7,marginBottom:14}}>
+                      {(PAGE_GUIDES[step]||[]).map((tip,i)=><div key={i} style={{marginBottom:6}}>• {tip}</div>)}
+                    </div>
+                    <div style={{borderTop:"1px solid var(--line-0)",paddingTop:12,marginTop:4}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>FAQ</div>
+                      {FAQ_ITEMS.map((item,i)=><div key={i} style={{marginBottom:10}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--ink-1)"}}>{item.q}</div>
+                        <div style={{fontSize:11,color:"var(--ink-3)",lineHeight:1.5,marginTop:2}}>{item.a}</div>
+                      </div>)}
+                    </div>
+                    <div style={{borderTop:"1px solid var(--line-0)",paddingTop:10,marginTop:4,fontSize:11,color:"var(--ink-3)"}}>
+                      Need more help? Ask Milton — he knows everything about your session.
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>}
 
             {/* More menu (⋯) — Search, Dark mode, Resources, Reports, Org, Contact, Admin */}
             <div style={{position:"relative"}}>
