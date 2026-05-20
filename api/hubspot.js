@@ -348,6 +348,29 @@ export default async function handler(req, res) {
         }
       }
 
+      // Gate Map
+      if (s.gateMap) {
+        h.push(`<h3>Approval Gate Map</h3>`);
+        if (s.gateMap.sellerGates?.summary) {
+          h.push(`<p><strong>Seller Side:</strong> ${e(s.gateMap.sellerGates.summary)}</p>`);
+          if (s.gateMap.sellerGates.gates?.length) {
+            h.push(`<ul>`);
+            s.gateMap.sellerGates.gates.filter(g=>g?.gate).forEach(g => h.push(`<li><strong>${e(g.gate)}</strong> (${e(g.owner||"")}) — ${e(g.artifact||"")} [${e(g.timeline||"")}]</li>`));
+            h.push(`</ul>`);
+          }
+        }
+        if (s.gateMap.buyerGates?.summary) {
+          h.push(`<p><strong>Buyer Side:</strong> ${e(s.gateMap.buyerGates.summary)}</p>`);
+          if (s.gateMap.buyerGates.gates?.length) {
+            h.push(`<ul>`);
+            s.gateMap.buyerGates.gates.filter(g=>g?.gate).forEach(g => h.push(`<li><strong>${e(g.gate)}</strong> (${e(g.owner||"")}) — ${e(g.artifact||"")} [${e(g.timeline||"")}]</li>`));
+            h.push(`</ul>`);
+          }
+        }
+        if (s.gateMap.criticalPath) h.push(`<p><strong>Critical Path:</strong> ${e(s.gateMap.criticalPath)}</p>`);
+        if (s.gateMap.mapAdvice) h.push(`<p><strong>This Week:</strong> ${e(s.gateMap.mapAdvice)}</p>`);
+      }
+
       // Watch-outs
       if (s.watchOuts?.length) {
         h.push(`<h3>Watch-Outs</h3><ul>`);

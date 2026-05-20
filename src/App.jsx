@@ -238,6 +238,7 @@ const BLANK_BRIEF = {
   financialDeepDive:null, // {revenueTrend, marginTrend, segmentBreakdown, earningsInsight, capitalPriorities, guidanceQuote}
   competitivePositioning:null, // {marketPosition, primaryCompetitors:[{name,strength,weakness,recentMove}], whereWinning, whereLosing, displacementAngle}
   boardAndInvestors:null, // {boardMembers:[{name,title,background,significance}], leadInvestors, investmentThesis, boardMandate}
+  gateMap:null, // {sellerGates, buyerGates} — approval paths for both sides of the deal
   // Data confidence — anti-hallucination provenance tracking
   _dataConfidence:null, // "high" | "medium" | "low" — computed after all sections resolve
   _sectionsGrounded:0, // count of sections that used web search successfully
@@ -1996,8 +1997,36 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     }catch{return null;}
   })();
 
+  // MICRO 10: Gate Map — approval paths for both seller and buyer side
+  const p10 = (async()=>{
+    try {
+      const dealSize = sellerICP?.icp?.dealSize || "";
+      const d = await claudeFetch({
+        model:activeModel(), max_tokens:2000,
+        messages:[{role:"user",content:
+          `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n\n`+
+          `SELLER CONTEXT: ${sellerICP?.sellerDescription || sellerUrl}. Deal size: ${dealSize}. Stage: ${sellerICP?.icp?.salesCycle || "unknown"}.\n`+
+          `TARGET CONTEXT: ${co} — Industry: ${member.ind || "unknown"}. Size: ${member.employees || "unknown"} employees.\n\n`+
+          (KL_APPROVAL_GATES ? `APPROVAL GATES KNOWLEDGE:\n${KL_APPROVAL_GATES.slice(0, 3000)}\n\n` : "") +
+          `Return raw JSON with TWO sections:\n`+
+          `{"gateMap":{\n`+
+          `"sellerGates":{"summary":"1-2 sentences: what the SELLER's own organization will likely require to approve this deal (deal desk, discount authority, legal review, etc.)","gates":[{"gate":"Gate name (e.g. Deal Desk Review)","owner":"Who owns this gate (e.g. RevOps / Sales Manager)","trigger":"What triggers this gate (e.g. discount >10% or non-standard terms)","artifact":"What you need to prepare (e.g. competitive context, margin analysis)","timeline":"Typical timeline (e.g. 2-5 business days)"}]},\n`+
+          `"buyerGates":{"summary":"1-2 sentences: what the BUYER (${co}) will likely require internally to approve this purchase — based on their industry, size, and the deal value","gates":[{"gate":"Gate name (e.g. Procurement Review)","owner":"Who at ${co} owns this gate (by role, not name)","trigger":"What triggers this gate","artifact":"What the seller needs to provide to clear this gate","timeline":"Typical timeline"},{"gate":"","owner":"","trigger":"","artifact":"","timeline":""}]},\n`+
+          `"criticalPath":"1-2 sentences: which gate is most likely to stall or kill this deal and what to do about it",\n`+
+          `"mapAdvice":"1 sentence: the single most important action the seller should take THIS WEEK to de-risk the approval sequence"}}`
+        }],
+      });
+      const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+      for(let i=textBlocks.length-1;i>=0;i--){
+        const parsed=extractJsonWithKey(textBlocks[i],"gateMap");
+        if(parsed?.gateMap) return parsed;
+      }
+      return null;
+    }catch{return null;}
+  })();
+
   // Merge deep intelligence layers
-  const mergeDeepIntel = (r7, r8, r9) => (prev) => {
+  const mergeDeepIntel = (r7, r8, r9, r10) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), deepIntel:false}};
     if (r7?.competitivePositioning) {
@@ -2016,6 +2045,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     }
     if (r8?.boardAndInvestors) next.boardAndInvestors = r8.boardAndInvestors;
     if (r9?.financialDeepDive) next.financialDeepDive = r9.financialDeepDive;
+    if (r10?.gateMap) next.gateMap = r10.gateMap;
     return next;
   };
 
@@ -2023,7 +2053,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // Hypothesis only needs these — no reason to wait for slow web_search
   // calls (p2 executives, p5 live search, p6 roles). Shaves 5-10s off hypothesis start.
   const earlyDone = Promise.allSettled([p1, p3, p4]);
-  const deepIntelDone = Promise.allSettled([p7, p8, p9]);
+  const deepIntelDone = Promise.allSettled([p7, p8, p9, p10]);
 
   return {
     skeleton,
@@ -2034,10 +2064,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       solutions: p4.then(mergeSolutions).catch(e => mergeSolutions(null)),
       live:      p5.then(mergeLive).catch(e => mergeLive(null)),
       roles:     p6.then(mergeRoles).catch(e => mergeRoles(null)),
-      deepIntel: deepIntelDone.then(([r7,r8,r9]) => mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null)),
+      deepIntel: deepIntelDone.then(([r7,r8,r9,r10]) => mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null, r10?.status==="fulfilled"?r10.value:null)),
     },
     earlyDone,
-    allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6,p7,p8,p9]),
+    allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10]),
   };
 }
 
@@ -7078,6 +7108,9 @@ ${isOpen
         headline: h.headline, relevance: h.relevance || "",
       })),
 
+      // ── Gate Map
+      gateMap: brief.gateMap || null,
+
       // ── Watch-Outs
       watchOuts: a(brief.watchOuts).filter(Boolean),
     };
@@ -7208,6 +7241,16 @@ ${isOpen
     if (summary.recentHeadlines.length) {
       addSection("RECENT HEADLINES");
       summary.recentHeadlines.forEach(h => lines.push(`${h.headline}${h.relevance ? ` — ${h.relevance}` : ""}`));
+    }
+
+    if (summary.gateMap) {
+      addSection("APPROVAL GATE MAP");
+      if (summary.gateMap.sellerGates?.summary) lines.push(`Seller Side: ${summary.gateMap.sellerGates.summary}`);
+      (summary.gateMap.sellerGates?.gates||[]).filter(g=>g?.gate).forEach(g => lines.push(`  ${g.gate} (${g.owner||"?"}) — ${g.artifact||""} [${g.timeline||""}]`));
+      if (summary.gateMap.buyerGates?.summary) lines.push(`\nBuyer Side: ${summary.gateMap.buyerGates.summary}`);
+      (summary.gateMap.buyerGates?.gates||[]).filter(g=>g?.gate).forEach(g => lines.push(`  ${g.gate} (${g.owner||"?"}) — ${g.artifact||""} [${g.timeline||""}]`));
+      if (summary.gateMap.criticalPath) lines.push(`\nCritical Path: ${summary.gateMap.criticalPath}`);
+      if (summary.gateMap.mapAdvice) lines.push(`This Week: ${summary.gateMap.mapAdvice}`);
     }
 
     if (summary.watchOuts.length) {
@@ -11603,6 +11646,75 @@ ${isOpen
                         </div>
                       ) : null}
                     </div></div>
+                  </div>
+                )}
+
+                {/* Gate Map — approval paths for seller + buyer */}
+                {brief.gateMap && (
+                  <div className="bb" style={{borderColor:"var(--navy)",borderWidth:2}}>
+                    <div className="bb-hdr" onClick={()=>toggleBB("gateMap")}>
+                      <div className="bb-icon" style={{fontSize:14}}>🚦</div>
+                      <div style={{flex:1}}>
+                        <div className="bb-title">Approval Gate Map</div>
+                        <div className="bb-sub">What both sides need to get this deal done</div>
+                      </div>
+                      <span className="bb-arrow">{bbIsOpen("gateMap")?"▾":"▸"}</span>
+                    </div>
+                    {bbIsOpen("gateMap") && (
+                      <div className="bb-body" style={{padding:"16px 20px"}}>
+                        {/* Seller-side gates */}
+                        {brief.gateMap.sellerGates && (
+                          <div style={{marginBottom:20}}>
+                            <div style={{fontSize:12,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Your Internal Gates (Seller Side)</div>
+                            {brief.gateMap.sellerGates.summary && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>{brief.gateMap.sellerGates.summary}</div>}
+                            {(brief.gateMap.sellerGates.gates||[]).filter(g=>g?.gate).map((g,i)=>(
+                              <div key={i} style={{padding:"8px 12px",background:"var(--bg-0)",borderRadius:8,marginBottom:6,fontSize:12}}>
+                                <div style={{fontWeight:700,color:"var(--ink-0)",marginBottom:3}}>{g.gate}</div>
+                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 16px",fontSize:11,color:"var(--ink-2)"}}>
+                                  {g.owner && <div><strong>Owner:</strong> {g.owner}</div>}
+                                  {g.timeline && <div><strong>Timeline:</strong> {g.timeline}</div>}
+                                  {g.trigger && <div><strong>Trigger:</strong> {g.trigger}</div>}
+                                  {g.artifact && <div><strong>Prepare:</strong> {g.artifact}</div>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Buyer-side gates */}
+                        {brief.gateMap.buyerGates && (
+                          <div style={{marginBottom:16}}>
+                            <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Their Approval Path (Buyer Side)</div>
+                            {brief.gateMap.buyerGates.summary && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>{brief.gateMap.buyerGates.summary}</div>}
+                            {(brief.gateMap.buyerGates.gates||[]).filter(g=>g?.gate).map((g,i)=>(
+                              <div key={i} style={{padding:"8px 12px",background:"var(--bg-0)",borderRadius:8,marginBottom:6,fontSize:12}}>
+                                <div style={{fontWeight:700,color:"var(--ink-0)",marginBottom:3}}>{g.gate}</div>
+                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 16px",fontSize:11,color:"var(--ink-2)"}}>
+                                  {g.owner && <div><strong>Owner:</strong> {g.owner}</div>}
+                                  {g.timeline && <div><strong>Timeline:</strong> {g.timeline}</div>}
+                                  {g.trigger && <div><strong>Trigger:</strong> {g.trigger}</div>}
+                                  {g.artifact && <div><strong>Prepare:</strong> {g.artifact}</div>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Critical path + advice */}
+                        {brief.gateMap.criticalPath && (
+                          <div style={{padding:"10px 14px",background:"var(--red-bg)",borderRadius:8,marginBottom:8}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Critical Path Risk</div>
+                            <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.6}}>{brief.gateMap.criticalPath}</div>
+                          </div>
+                        )}
+                        {brief.gateMap.mapAdvice && (
+                          <div style={{padding:"10px 14px",background:"var(--green-bg)",borderRadius:8}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>This Week's Priority</div>
+                            <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.6}}>{brief.gateMap.mapAdvice}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
