@@ -5991,8 +5991,9 @@ ${isOpen
           if (ceoExec && allText) {
             const ceoName = ceoExec.name;
             // Look for "CEO [Name]" or "[Name], CEO" patterns that don't match
-            const ceoMentions = allText.match(/(?:CEO|chief executive officer)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/gi) || [];
-            const nameMentions = allText.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?:,\s*)?(?:CEO|chief executive officer)/gi) || [];
+            // Case-sensitive: look for "CEO FirstName LastName" where names are capitalized
+            const ceoMentions = allText.match(/(?:CEO|Chief Executive Officer)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/g) || [];
+            const nameMentions = allText.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?:,\s*)?(?:CEO|Chief Executive Officer)/g) || [];
             const allMentions = [...ceoMentions, ...nameMentions].map(m => m.replace(/CEO|chief executive officer|,/gi, "").trim()).filter(Boolean);
 
             const conflicts = allMentions.filter(m => {
@@ -8226,6 +8227,30 @@ ${isOpen
               </div>
             </div>
           </>
+        )}
+
+        {/* NAVIGATION BAR — back/forward arrows + New Session */}
+        {step>0&&(
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 20px",borderBottom:"1px solid var(--line-0)",fontSize:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>setStep(Math.max(0,step-1))} disabled={step<=0}
+                style={{padding:"4px 12px",borderRadius:6,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:step>0?"var(--ink-1)":"var(--ink-3)",cursor:step>0?"pointer":"not-allowed",fontWeight:700,fontSize:13,opacity:step>0?1:0.4}}>
+                ← Back
+              </button>
+              <span style={{color:"var(--ink-3)",fontWeight:600}}>{STEPS[step]}</span>
+              <button onClick={()=>{
+                const maxStep = postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1;
+                if(step<maxStep)setStep(step+1);
+              }} disabled={step>=(postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1)}
+                style={{padding:"4px 12px",borderRadius:6,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"var(--ink-1)",cursor:"pointer",fontWeight:700,fontSize:13,opacity:step<(postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1)?1:0.4}}>
+                Next →
+              </button>
+            </div>
+            <button onClick={()=>{if(window.confirm("Start a new session? Current work is auto-saved.")){clearSession();window.location.reload();}}}
+              style={{padding:"4px 12px",borderRadius:6,border:"1.5px solid var(--red)",background:"none",color:"var(--red)",cursor:"pointer",fontWeight:600,fontSize:11}}>
+              + New Session
+            </button>
+          </div>
         )}
 
         {/* SESSION BAR — plain-English status */}
