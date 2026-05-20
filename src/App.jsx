@@ -2752,11 +2752,6 @@ function PasswordGate({ onAuth }) {
               {mode==="signup"?"Start free — 3 full runs, no credit card":mode==="reset"?"Reset your password":"Welcome back"}
             </div>
             {authForm}
-            <div style={{textAlign:"center",marginTop:12}}>
-              <button className="pw-guest" onClick={()=>setGuestOk(true)}>
-                Continue as guest · work won't be saved
-              </button>
-            </div>
           </div>
         </div>
       </div>
