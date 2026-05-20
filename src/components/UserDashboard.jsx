@@ -489,18 +489,6 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                 <div style={{ height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
                   <div style={{ height: "100%", borderRadius: 4, transition: "width 0.3s", background: usageColor, width: usagePct + "%" }} />
                 </div>
-                {(orgCtx?.max_run_limit || 0) > 0 && (
-                  <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 6 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>Max Runs</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>{orgCtx?.max_run_count || 0} / {orgCtx.max_run_limit}</div>
-                    </div>
-                    <div style={{ height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: 4, background: "var(--violet)", transition: "width 0.3s",
-                        width: Math.min(100, Math.round((orgCtx.max_run_count || 0) / (orgCtx.max_run_limit || 1) * 100)) + "%" }} />
-                    </div>
-                  </>
-                )}
               </div>
 
               {/* Recent sessions table */}
@@ -819,7 +807,7 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                     {orgCtx?.plan || "trial"}
                   </span>
                   <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>
-                    {orgCtx?.run_limit || 5} runs/month{(orgCtx?.max_run_limit || 0) > 0 ? ` + ${orgCtx.max_run_limit} Max runs` : ""}
+                    {orgCtx?.run_limit || 5} runs/month
                   </div>
                 </div>
 

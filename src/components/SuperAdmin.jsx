@@ -20,7 +20,6 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
     { id: "team", name: "Team", tokens: 250, maxTokens: 50, price: 799, costPerToken: 1.16 },
     { id: "enterprise", name: "Enterprise", tokens: 1000, maxTokens: 200, price: 2500, costPerToken: 1.16 },
   ]);
-  const [opusRatio, setOpusRatio] = useState(75);
   const [planSaveMsg, setPlanSaveMsg] = useState("");
   // ── GLOBAL FILTERS ──
   const [dateRange, setDateRange] = useState("all"); // today | 7d | 30d | 90d | all
@@ -157,12 +156,6 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
   const hasActiveFilters = dateRange !== "all" || userTypeFilter !== "all" || roleFilter || planFilter || searchQuery;
 
-  // Cost calculation based on Opus ratio
-  const calcCostPerToken = () => {
-    const haikuCost = 0.20; // per brief, Haiku
-    const opusCost = 1.48;  // per brief, Opus
-    return (opusRatio / 100) * opusCost + ((100 - opusRatio) / 100) * haikuCost;
-  };
 
   const applyPlanToOrg = async (orgId, planId) => {
     const plan = plans.find(p => p.id === planId);
@@ -1529,7 +1522,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               {/* Totals */}
               <div style={{ display: "flex", gap: 16, marginTop: 16, padding: "12px 16px", background: "var(--bg-1)", borderRadius: 10 }}>
                 <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>total tokens</span></div>
-                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "var(--violet)" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>max tokens</span></div>
+                <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif", color: "var(--violet)" }}>{s.total_max_runs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>tokens</span></div>
                 <div><span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Lora,serif" }}>{s.total_orgs}</span> <span style={{ fontSize: 11, color: "var(--ink-3)" }}>orgs</span></div>
               </div>
             </div>
@@ -1538,22 +1531,6 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
           {/* ═══ PRICING ═══ */}
           {tab === "pricing" && (
             <div>
-              {/* Opus ratio slider */}
-              <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px", marginBottom: 20 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)" }}>Opus Usage Ratio</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--violet)" }}>{opusRatio}% Opus / {100 - opusRatio}% Haiku</div>
-                </div>
-                <input type="range" min={0} max={100} step={5} value={opusRatio}
-                  onChange={e => { const v = Number(e.target.value); setOpusRatio(v); setPlans(p => p.map(pl => ({ ...pl, costPerToken: (v / 100) * 1.48 + ((100 - v) / 100) * 0.20 }))); }}
-                  style={{ width: "100%", accentColor: "var(--violet)" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--ink-3)" }}>
-                  <span>100% Haiku ($0.20/brief)</span>
-                  <span>Blended: ${calcCostPerToken().toFixed(2)}/brief</span>
-                  <span>100% Opus ($1.48/brief)</span>
-                </div>
-              </div>
-
               {/* Plan configuration table */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>Plan Configuration</div>
               <table className="admin-table" style={{ marginBottom: 16 }}>
@@ -1605,7 +1582,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   })}
                 </tbody>
               </table>
-              <button onClick={() => setPlans(p => [...p, { id: `custom-${Date.now()}`, name: "Custom", tokens: 50, maxTokens: 10, price: 199, costPerToken: calcCostPerToken() }])}
+              <button onClick={() => setPlans(p => [...p, { id: `custom-${Date.now()}`, name: "Custom", tokens: 50, maxTokens: 10, price: 199, costPerToken: 0.20 }])}
                 style={{ fontSize: 11, fontWeight: 600, padding: "5px 14px", borderRadius: 8, border: "1.5px solid var(--line-0)", background: "var(--surface)", cursor: "pointer", color: "var(--ink-2)" }}>
                 + Add Plan
               </button>

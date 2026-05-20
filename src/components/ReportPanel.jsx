@@ -162,20 +162,6 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                         background: orgCtx.run_count >= orgCtx.run_limit ? "var(--red)" : orgCtx.run_count >= orgCtx.run_limit * 0.8 ? "var(--amber)" : "var(--green)",
                         width: Math.min(100, Math.round(orgCtx.run_count / orgCtx.run_limit * 100)) + "%" }} />
                     </div>
-                    {(orgCtx.max_run_limit || 0) > 0 && (
-                      <>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 6 }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>Cambrian Max Runs</div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--violet)" }}>
-                            {orgCtx.max_run_count || 0} / {orgCtx.max_run_limit}
-                          </div>
-                        </div>
-                        <div style={{ height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
-                          <div style={{ height: "100%", borderRadius: 4, background: "var(--violet)", transition: "width 0.3s",
-                            width: Math.min(100, Math.round((orgCtx.max_run_count || 0) / (orgCtx.max_run_limit || 1) * 100)) + "%" }} />
-                        </div>
-                      </>
-                    )}
                   </div>
                 )}
 
@@ -354,10 +340,10 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                 </div>
 
                 {/* Usage bars */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+                <div style={{ marginBottom: 20 }}>
                   <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)" }}>Standard Runs</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)" }}>Runs Used</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: orgCtx.run_count >= orgCtx.run_limit ? "var(--red)" : "var(--green)" }}>
                         {orgCtx.run_count} / {orgCtx.run_limit}
                       </div>
@@ -369,21 +355,6 @@ export default function ReportPanel({ orgCtx, savedSessions, sbUser, onClose }) 
                     </div>
                     <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4 }}>
                       {Math.max(0, orgCtx.run_limit - orgCtx.run_count)} runs remaining this month
-                    </div>
-                  </div>
-                  <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 18px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--violet)" }}>Max Runs</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--violet)" }}>
-                        {orgCtx.max_run_count || 0} / {orgCtx.max_run_limit || 0}
-                      </div>
-                    </div>
-                    <div style={{ height: 10, borderRadius: 5, background: "var(--bg-2)", overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: 5, background: "var(--violet)", transition: "width 0.3s",
-                        width: (orgCtx.max_run_limit || 0) > 0 ? Math.min(100, Math.round((orgCtx.max_run_count || 0) / orgCtx.max_run_limit * 100)) + "%" : "0%" }} />
-                    </div>
-                    <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4 }}>
-                      {(orgCtx.max_run_limit || 0) > 0 ? `${Math.max(0, orgCtx.max_run_limit - (orgCtx.max_run_count || 0))} Max runs remaining` : "Not available on current plan"}
                     </div>
                   </div>
                 </div>
