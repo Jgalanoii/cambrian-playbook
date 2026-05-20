@@ -23,14 +23,28 @@ function HubSpotSection({ sbToken }) {
     setLoading(true);
     // Open the tab NOW (inside click handler) so the browser allows it.
     // Then navigate it to the HubSpot OAuth URL once the API responds.
+    // When the user returns, poll for connection status.
     const tab = window.open("about:blank", "_blank");
     fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "start" }) })
       .then(r => r.json())
       .then(d => {
-        if (d.url && tab) { tab.location.href = d.url; }
-        else if (tab) { tab.close(); }
-        setLoading(false);
+        if (d.url && tab) {
+          tab.location.href = d.url;
+          // Poll for connection after user completes OAuth in the other tab
+          const poll = setInterval(() => {
+            fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+              body: JSON.stringify({ action: "status" }) })
+              .then(r => r.json()).then(s => {
+                if (s?.connected) { clearInterval(poll); setStatus(s); setLoading(false); }
+              }).catch(() => {});
+          }, 3000);
+          // Stop polling after 2 minutes
+          setTimeout(() => { clearInterval(poll); setLoading(false); }, 120000);
+        } else {
+          if (tab) tab.close();
+          setLoading(false);
+        }
       })
       .catch(() => { if (tab) tab.close(); setLoading(false); });
   };
