@@ -410,8 +410,8 @@
       "purpose": "Data-scarce sentinel — largest private US company by revenue",
       "facts": [
         { "field": "industry", "tier": 1, "value": "Agriculture", "match": "set_membership", "accepted": ["agriculture", "agribusiness", "food", "grain", "commodity"], "verified": "2026-05-19", "source": "cargill.com" },
-        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Wikipedia" },
-        { "field": "hq_location", "tier": 1, "value": "Minneapolis", "match": "fuzzy_location", "verified": "2026-05-19", "source": "cargill.com" }
+        { "field": "ownership_type", "tier": 1, "value": "Private", "match": "set_membership", "accepted": ["private", "family-owned", "family owned", "member-owned", "privately held"], "verified": "2026-05-20", "source": "Cargill is private, family-controlled (Cargill-MacMillan family owns 90%+)" },
+        { "field": "hq_location", "tier": 1, "value": "Minnetonka", "match": "set_membership", "accepted": ["Minneapolis", "Minnetonka", "Minnesota", "MN", "Wayzata"], "verified": "2026-05-20", "source": "Cargill HQ moved to Minnetonka suburb; some sources still say Minneapolis" }
       ],
       "invariants": ["no_placeholders"],
       "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded", "IPO"]
