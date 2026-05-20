@@ -80,7 +80,7 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   }
   // Ownership type goes in description — HubSpot's "type" enum is strict
 
-  console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" industry="${hsIndustry||"unmapped"}" owner="${ownerId||"none"}"`);
+  console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" owner="${ownerId||"none"}"`);
 
   const existing = domain ? await findCompanyByDomain(userId, domain) : null;
   if (existing) {
