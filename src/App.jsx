@@ -6860,6 +6860,280 @@ ${isOpen
     })));
   };
 
+  // ── FULL SESSION SUMMARY ──────────────────────────────────────────────
+  // Pulls the most impactful data from every section into a single executive
+  // report. This is the backbone for CRM push and structured export.
+  const buildSessionSummary = () => {
+    if (!brief || !selectedAccount) return null;
+    const co = selectedAccount.company;
+    const fit = fitScores[co];
+    const s = (v) => (typeof v === "string" ? v : "") || "";
+    const a = (v) => Array.isArray(v) ? v : [];
+
+    return {
+      // ── Header
+      targetCompany: co,
+      targetDomain: selectedAccount.company_url || brief.website || "",
+      sellerName: sellerICP?.sellerName || sellerUrl || "",
+      generatedAt: new Date().toISOString(),
+      dataConfidence: brief._dataConfidence || "",
+      sectionsGrounded: brief._sectionsGrounded || 0,
+
+      // ── Quick Take
+      topFinding: s(brief.tldr?.topFinding),
+      topOpportunity: s(brief.tldr?.topOpportunity),
+      topRisk: s(brief.tldr?.topRisk),
+
+      // ── Company Profile
+      companySnapshot: s(brief.companySnapshot),
+      revenue: s(brief.revenue),
+      employeeCount: s(brief.employeeCount),
+      headquarters: s(brief.headquarters),
+      ownership: s(brief.publicPrivate),
+      fundingProfile: s(brief.fundingProfile),
+      founded: s(brief.founded),
+      website: s(brief.website),
+
+      // ── Executives (top 4)
+      executives: a(brief.keyExecutives).filter(e => e?.name).slice(0, 4).map(e => ({
+        name: e.name, title: e.title, angle: e.angle || "",
+      })),
+
+      // ── Strategy & Positioning
+      elevatorPitch: s(brief.elevatorPitch),
+      strategicTheme: s(brief.strategicTheme),
+      openingAngle: s(brief.openingAngle),
+      sellerOpportunity: s(brief.sellerOpportunity),
+
+      // ── Market Sentiment
+      glassdoorRating: s(brief.publicSentiment?.glassdoorRating),
+      onlineSentiment: s(brief.publicSentiment?.onlineSentiment),
+      standoutReview: brief.publicSentiment?.standoutReview?.text ? {
+        text: brief.publicSentiment.standoutReview.text,
+        source: brief.publicSentiment.standoutReview.source || "",
+        sentiment: brief.publicSentiment.standoutReview.sentiment || "",
+      } : null,
+
+      // ── Solutions (top 2)
+      solutions: a(brief.solutionMapping).filter(s => s?.product).slice(0, 2).map(s => ({
+        product: s.product, jobToBeDone: s.jobToBeDone || "", painRelieved: s.painRelieved || "",
+        measurableOutcome: s.measurableOutcome || "", provenWith: s.provenWith || "",
+      })),
+
+      // ── Competitive Landscape
+      marketPosition: s(brief.competitivePositioning?.marketPosition),
+      competitors: a(brief.competitors).filter(Boolean).slice(0, 3),
+      primaryCompetitors: a(brief.competitivePositioning?.primaryCompetitors).slice(0, 2).map(c => ({
+        name: c.name || "", strength: c.strength || "", weakness: c.weakness || "",
+      })),
+      displacementAngle: s(brief.competitivePositioning?.displacementAngle),
+
+      // ── Financial Intelligence
+      revenueTrend: s(brief.financialDeepDive?.revenueTrend),
+      capitalPriorities: s(brief.financialDeepDive?.capitalPriorities),
+      guidanceQuote: s(brief.financialDeepDive?.guidanceQuote),
+
+      // ── Board & Investors
+      leadInvestors: s(brief.boardAndInvestors?.leadInvestors),
+      investmentThesis: s(brief.boardAndInvestors?.investmentThesis),
+      boardMandate: s(brief.boardAndInvestors?.boardMandate),
+
+      // ── Hiring Signals
+      hiringSummary: s(brief.openRoles?.summary),
+      topRoles: a(brief.openRoles?.roles).filter(r => r?.title).slice(0, 3).map(r => ({
+        title: r.title, dept: r.dept || "", signal: r.signal || "",
+      })),
+
+      // ── Tech Stack
+      techStack: brief.techStack || {},
+
+      // ── Culture & Workforce
+      cultureProfile: brief.cultureProfile || {},
+      workforceProfile: brief.workforceProfile || {},
+
+      // ── Key Contacts
+      keyContacts: a(brief.keyContacts).filter(c => c?.title).slice(0, 3).map(c => ({
+        name: c.name || "", title: c.title, angle: c.angle || "",
+      })),
+
+      // ── Fit Score
+      fitScore: fit?.score ?? null,
+      fitLabel: fit?.label || "",
+      fitReason: s(fit?.reason),
+      customerSimilarity: s(fit?.customerSimilarity),
+      incumbentRisk: s(fit?.incumbentRisk),
+
+      // ── RIVER Hypothesis (if generated)
+      hypothesis: riverHypo ? {
+        reality: s(typeof riverHypo.reality === "string" ? riverHypo.reality : riverHypo.reality?.insight),
+        impact: s(typeof riverHypo.impact === "string" ? riverHypo.impact : riverHypo.impact?.quantifiedCost),
+        vision: s(typeof riverHypo.vision === "string" ? riverHypo.vision : riverHypo.vision?.desiredState),
+        route: s(typeof riverHypo.route === "string" ? riverHypo.route : riverHypo.route?.recommendation),
+      } : null,
+
+      // ── Discovery Questions (top 3)
+      discoveryQuestions: a(brief.fiveQuestions).filter(q => q?.question).slice(0, 3).map(q => ({
+        question: q.question, rationale: q.rationale || "",
+      })),
+
+      // ── Post-Call (if completed)
+      postCallSummary: postCall ? {
+        dealRoute: postCall.dealRoute || "",
+        dealRouteReason: postCall.dealRouteReason || "",
+        dealRisk: postCall.dealRisk || "",
+        callSummary: postCall.callSummary || "",
+        nextSteps: a(postCall.nextSteps).filter(Boolean),
+        crmNote: postCall.crmNote || "",
+      } : null,
+
+      // ── Signals
+      recentSignals: a(brief.recentSignals).filter(Boolean).slice(0, 3),
+      growthSignals: a(brief.growthSignals).filter(Boolean).slice(0, 3),
+      recentHeadlines: a(brief.recentHeadlines).filter(h => h?.headline).slice(0, 3).map(h => ({
+        headline: h.headline, relevance: h.relevance || "",
+      })),
+
+      // ── Watch-Outs
+      watchOuts: a(brief.watchOuts).filter(Boolean),
+    };
+  };
+
+  // Plain-text formatter for clipboard copy
+  const sessionSummaryToText = (summary) => {
+    if (!summary) return "";
+    const lines = [];
+    const hr = "━".repeat(50);
+    const add = (label, val) => { if (val) lines.push(`${label}: ${val}`); };
+    const addSection = (title) => { lines.push("", hr, title, hr); };
+
+    lines.push(`EXECUTIVE SESSION SUMMARY — ${summary.targetCompany}`);
+    lines.push(`Selling as: ${summary.sellerName} | Generated: ${new Date(summary.generatedAt).toLocaleDateString()}`);
+    if (summary.dataConfidence) lines.push(`Data Confidence: ${summary.dataConfidence} (${summary.sectionsGrounded}/9 sections web-verified)`);
+
+    if (summary.topFinding || summary.topOpportunity || summary.topRisk) {
+      addSection("QUICK TAKE");
+      if (summary.topFinding) lines.push(`Finding: ${summary.topFinding}`);
+      if (summary.topOpportunity) lines.push(`Opportunity: ${summary.topOpportunity}`);
+      if (summary.topRisk) lines.push(`Risk: ${summary.topRisk}`);
+    }
+
+    addSection("COMPANY PROFILE");
+    add("Snapshot", summary.companySnapshot);
+    add("Revenue", summary.revenue); add("Employees", summary.employeeCount);
+    add("HQ", summary.headquarters); add("Ownership", summary.ownership);
+    add("Funding", summary.fundingProfile); add("Founded", summary.founded);
+
+    if (summary.executives.length) {
+      addSection("KEY EXECUTIVES");
+      summary.executives.forEach(e => lines.push(`${e.name} — ${e.title}${e.angle ? ` | ${e.angle}` : ""}`));
+    }
+
+    addSection("STRATEGY & POSITIONING");
+    add("Strategic Theme", summary.strategicTheme);
+    add("Opening Angle", summary.openingAngle);
+    add("Seller Opportunity", summary.sellerOpportunity);
+    if (summary.elevatorPitch) { lines.push("", "ELEVATOR PITCH:"); lines.push(summary.elevatorPitch); }
+
+    if (summary.glassdoorRating || summary.onlineSentiment) {
+      addSection("MARKET SENTIMENT");
+      add("Glassdoor", summary.glassdoorRating);
+      add("Sentiment", summary.onlineSentiment);
+      if (summary.standoutReview) add("Standout Review", `"${summary.standoutReview.text}" — ${summary.standoutReview.source}`);
+    }
+
+    if (summary.solutions.length) {
+      addSection("SOLUTION FIT");
+      summary.solutions.forEach((s, i) => {
+        lines.push(`${i + 1}. ${s.product}: ${s.jobToBeDone}`);
+        if (s.measurableOutcome) lines.push(`   Outcome: ${s.measurableOutcome}`);
+        if (s.provenWith) lines.push(`   Proven: ${s.provenWith}`);
+      });
+    }
+
+    if (summary.marketPosition || summary.primaryCompetitors.length) {
+      addSection("COMPETITIVE LANDSCAPE");
+      add("Market Position", summary.marketPosition);
+      summary.primaryCompetitors.forEach(c => lines.push(`vs ${c.name}: Strength=${c.strength} | Weakness=${c.weakness}`));
+      add("Displacement Angle", summary.displacementAngle);
+    }
+
+    if (summary.revenueTrend || summary.capitalPriorities) {
+      addSection("FINANCIAL INTELLIGENCE");
+      add("Revenue Trend", summary.revenueTrend);
+      add("Capital Priorities", summary.capitalPriorities);
+      add("Guidance", summary.guidanceQuote);
+    }
+
+    if (summary.leadInvestors || summary.boardMandate) {
+      addSection("BOARD & INVESTORS");
+      add("Lead Investors", summary.leadInvestors);
+      add("Investment Thesis", summary.investmentThesis);
+      add("Board Mandate", summary.boardMandate);
+    }
+
+    if (summary.hiringSummary) {
+      addSection("HIRING SIGNALS");
+      lines.push(summary.hiringSummary);
+      summary.topRoles.forEach(r => lines.push(`  ${r.title} (${r.dept}) — ${r.signal}`));
+    }
+
+    const ts = summary.techStack;
+    if (ts && Object.values(ts).some(v => v)) {
+      addSection("TECH STACK");
+      ["crm","erp","hris","marketing","payments","analytics","infrastructure"].forEach(k => { if (ts[k]) add(k.toUpperCase(), ts[k]); });
+    }
+
+    if (summary.keyContacts.length) {
+      addSection("KEY CONTACTS");
+      summary.keyContacts.forEach(c => lines.push(`${c.name || "[Verify]"} — ${c.title}${c.angle ? ` | ${c.angle}` : ""}`));
+    }
+
+    if (summary.fitScore !== null) {
+      addSection("FIT SCORE");
+      lines.push(`${summary.fitScore}/100 — ${summary.fitLabel}`);
+      add("Reason", summary.fitReason);
+      add("Customer Similarity", summary.customerSimilarity);
+      add("Incumbent Risk", summary.incumbentRisk);
+    }
+
+    if (summary.hypothesis) {
+      addSection("RIVER HYPOTHESIS");
+      add("Reality", summary.hypothesis.reality);
+      add("Impact", summary.hypothesis.impact);
+      add("Vision", summary.hypothesis.vision);
+      add("Route", summary.hypothesis.route);
+    }
+
+    if (summary.discoveryQuestions.length) {
+      addSection("TOP DISCOVERY QUESTIONS");
+      summary.discoveryQuestions.forEach((q, i) => lines.push(`${i + 1}. ${q.question}${q.rationale ? ` (${q.rationale})` : ""}`));
+    }
+
+    if (summary.postCallSummary) {
+      addSection("POST-CALL");
+      add("Deal Route", `${summary.postCallSummary.dealRoute} — ${summary.postCallSummary.dealRouteReason}`);
+      add("Deal Risk", summary.postCallSummary.dealRisk);
+      add("Summary", summary.postCallSummary.callSummary);
+      if (summary.postCallSummary.nextSteps.length) {
+        lines.push("Next Steps:");
+        summary.postCallSummary.nextSteps.forEach((s, i) => lines.push(`  ${i + 1}. ${s}`));
+      }
+    }
+
+    if (summary.recentHeadlines.length) {
+      addSection("RECENT HEADLINES");
+      summary.recentHeadlines.forEach(h => lines.push(`${h.headline}${h.relevance ? ` — ${h.relevance}` : ""}`));
+    }
+
+    if (summary.watchOuts.length) {
+      addSection("WATCH-OUTS");
+      summary.watchOuts.forEach(w => lines.push(`- ${w}`));
+    }
+
+    lines.push("", hr, `Generated by Cambrian Catalyst — ${new Date().toLocaleDateString()}`, hr);
+    return lines.join("\n");
+  };
+
   // ── PRE-FETCH: executives search fires when account is selected (step 4)
   // So by the time the user clicks "Build Brief" (step 5), exec data is
   // already cached. Eliminates the ~10-15s web_search bottleneck from p2.
@@ -11365,6 +11639,168 @@ ${isOpen
                     </button>
                   </div>
                 )}
+
+                {/* ── FULL SESSION SUMMARY — executive report ── */}
+                {brief && !brief._loadingSections?.overview && !brief._loadingSections?.deepIntel && (()=>{
+                  const summary = buildSessionSummary();
+                  if (!summary) return null;
+                  const isOpen = openBB.sessionSummary;
+                  return <div className="bb" style={{borderColor:"var(--tan-0)",borderWidth:2}}>
+                    <div className="bb-hdr" onClick={()=>toggleBB("sessionSummary")}>
+                      <div className="bb-icon" style={{fontSize:10}}>📋</div>
+                      <div style={{flex:1}}>
+                        <div className="bb-title">Full Session Summary</div>
+                        <div className="bb-sub">Executive report — all sections, one view. Copy or export for CRM.</div>
+                      </div>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <button className="copy-btn" onClick={e=>{
+                          e.stopPropagation();
+                          const text = sessionSummaryToText(summary);
+                          navigator.clipboard?.writeText(text);
+                          setEditToast("Session summary copied to clipboard");
+                        }}>Copy Summary</button>
+                        <button className="copy-btn" onClick={e=>{
+                          e.stopPropagation();
+                          downloadStageData("Session-Summary", summary);
+                        }}>Export JSON</button>
+                        <span className="bb-arrow">{isOpen?"▾":"▸"}</span>
+                      </div>
+                    </div>
+                    {isOpen && <div className="bb-body" style={{padding:"16px 20px",fontSize:12,lineHeight:1.7}}>
+                      {/* Quick Take */}
+                      {(summary.topFinding || summary.topOpportunity || summary.topRisk) && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Quick Take</div>
+                        {summary.topFinding && <div style={{marginBottom:4}}><span style={{background:"var(--navy)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>FINDING</span>{summary.topFinding}</div>}
+                        {summary.topOpportunity && <div style={{marginBottom:4}}><span style={{background:"var(--green)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>OPP</span>{summary.topOpportunity}</div>}
+                        {summary.topRisk && <div><span style={{background:"var(--red)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>RISK</span>{summary.topRisk}</div>}
+                      </div>}
+
+                      {/* Company Profile */}
+                      <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Company Profile</div>
+                        {summary.companySnapshot && <div style={{marginBottom:6,color:"var(--ink-1)"}}>{summary.companySnapshot}</div>}
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"4px 16px",fontSize:11,color:"var(--ink-2)"}}>
+                          {summary.revenue && <div><strong>Revenue:</strong> {summary.revenue}</div>}
+                          {summary.employeeCount && <div><strong>Employees:</strong> {summary.employeeCount}</div>}
+                          {summary.headquarters && <div><strong>HQ:</strong> {summary.headquarters}</div>}
+                          {summary.ownership && <div><strong>Ownership:</strong> {summary.ownership}</div>}
+                          {summary.fundingProfile && <div><strong>Funding:</strong> {summary.fundingProfile}</div>}
+                          {summary.founded && <div><strong>Founded:</strong> {summary.founded}</div>}
+                        </div>
+                      </div>
+
+                      {/* Executives */}
+                      {summary.executives.length > 0 && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Key Executives</div>
+                        {summary.executives.map((e,i) => <div key={i} style={{marginBottom:3}}><strong>{e.name}</strong> — {e.title}{e.angle ? <span style={{color:"var(--ink-3)"}}> | {e.angle.slice(0,120)}</span> : ""}</div>)}
+                      </div>}
+
+                      {/* Strategy */}
+                      <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Strategy & Positioning</div>
+                        {summary.strategicTheme && <div style={{marginBottom:4}}><strong>Theme:</strong> {summary.strategicTheme}</div>}
+                        {summary.openingAngle && <div style={{marginBottom:4}}><strong>Opening:</strong> {summary.openingAngle}</div>}
+                        {summary.sellerOpportunity && <div><strong>Seller Opportunity:</strong> {summary.sellerOpportunity}</div>}
+                      </div>
+
+                      {/* Solutions */}
+                      {summary.solutions.length > 0 && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Solution Fit</div>
+                        {summary.solutions.map((s,i) => <div key={i} style={{marginBottom:6,padding:"6px 10px",background:"var(--bg-0)",borderRadius:6}}>
+                          <div><strong>{s.product}</strong>: {s.jobToBeDone}</div>
+                          {s.measurableOutcome && <div style={{fontSize:11,color:"var(--green)"}}>Target: {s.measurableOutcome}</div>}
+                        </div>)}
+                      </div>}
+
+                      {/* Competitive */}
+                      {(summary.marketPosition || summary.primaryCompetitors.length > 0) && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Competitive Landscape</div>
+                        {summary.marketPosition && <div style={{marginBottom:4}}>{summary.marketPosition}</div>}
+                        {summary.primaryCompetitors.map((c,i) => <div key={i} style={{fontSize:11,color:"var(--ink-2)"}}>vs <strong>{c.name}</strong>: +{c.weakness} / -{c.strength}</div>)}
+                        {summary.displacementAngle && <div style={{marginTop:4,fontStyle:"italic",color:"var(--ink-2)"}}>Displacement: {summary.displacementAngle}</div>}
+                      </div>}
+
+                      {/* Financial */}
+                      {(summary.revenueTrend || summary.capitalPriorities) && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Financial Intelligence</div>
+                        {summary.revenueTrend && <div style={{marginBottom:3}}><strong>Trend:</strong> {summary.revenueTrend}</div>}
+                        {summary.capitalPriorities && <div style={{marginBottom:3}}><strong>Capital:</strong> {summary.capitalPriorities}</div>}
+                        {summary.guidanceQuote && <div style={{fontStyle:"italic",color:"var(--ink-2)"}}>"{summary.guidanceQuote}"</div>}
+                      </div>}
+
+                      {/* Board & Investors */}
+                      {(summary.leadInvestors || summary.boardMandate) && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Board & Investors</div>
+                        {summary.leadInvestors && <div style={{marginBottom:3}}><strong>Investors:</strong> {summary.leadInvestors}</div>}
+                        {summary.investmentThesis && <div style={{marginBottom:3}}><strong>Thesis:</strong> {summary.investmentThesis}</div>}
+                        {summary.boardMandate && <div><strong>Mandate:</strong> {summary.boardMandate}</div>}
+                      </div>}
+
+                      {/* Hiring + Tech */}
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+                        {summary.hiringSummary && <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Hiring Signals</div>
+                          <div style={{fontSize:11,color:"var(--ink-2)"}}>{summary.hiringSummary}</div>
+                          {summary.topRoles.map((r,i) => <div key={i} style={{fontSize:10,color:"var(--ink-3)",marginTop:2}}>{r.title} ({r.dept})</div>)}
+                        </div>}
+                        {Object.values(summary.techStack).some(v=>v) && <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Tech Stack</div>
+                          {["crm","erp","hris","marketing","payments","analytics","infrastructure"].map(k => summary.techStack[k] ? <div key={k} style={{fontSize:10,color:"var(--ink-2)"}}><strong>{k.toUpperCase()}:</strong> {summary.techStack[k]}</div> : null)}
+                        </div>}
+                      </div>
+
+                      {/* Fit Score */}
+                      {summary.fitScore !== null && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Fit Score</div>
+                        <div><strong>{summary.fitScore}/100 — {summary.fitLabel}</strong></div>
+                        {summary.fitReason && <div style={{fontSize:11,color:"var(--ink-2)"}}>{summary.fitReason}</div>}
+                      </div>}
+
+                      {/* Hypothesis */}
+                      {summary.hypothesis && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>RIVER Hypothesis</div>
+                        {summary.hypothesis.reality && <div style={{marginBottom:2}}><strong>Reality:</strong> {summary.hypothesis.reality.slice(0,200)}</div>}
+                        {summary.hypothesis.impact && <div style={{marginBottom:2}}><strong>Impact:</strong> {summary.hypothesis.impact.slice(0,200)}</div>}
+                        {summary.hypothesis.vision && <div style={{marginBottom:2}}><strong>Vision:</strong> {summary.hypothesis.vision.slice(0,200)}</div>}
+                        {summary.hypothesis.route && <div><strong>Route:</strong> {summary.hypothesis.route.slice(0,200)}</div>}
+                      </div>}
+
+                      {/* Discovery */}
+                      {summary.discoveryQuestions.length > 0 && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Top Discovery Questions</div>
+                        {summary.discoveryQuestions.map((q,i) => <div key={i} style={{marginBottom:4}}>{i+1}. {q.question}</div>)}
+                      </div>}
+
+                      {/* Post-Call */}
+                      {summary.postCallSummary && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Post-Call Analysis</div>
+                        <div style={{marginBottom:4}}><strong>Route:</strong> {summary.postCallSummary.dealRoute} — {summary.postCallSummary.dealRouteReason}</div>
+                        {summary.postCallSummary.callSummary && <div style={{marginBottom:4}}><strong>Summary:</strong> {summary.postCallSummary.callSummary.slice(0,300)}</div>}
+                        {summary.postCallSummary.nextSteps.length > 0 && <div>
+                          <strong>Next Steps:</strong>
+                          {summary.postCallSummary.nextSteps.map((s,i) => <div key={i} style={{marginLeft:12}}>{i+1}. {s}</div>)}
+                        </div>}
+                      </div>}
+
+                      {/* Signals */}
+                      {(summary.recentSignals.length > 0 || summary.growthSignals.length > 0) && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Signals</div>
+                        {summary.recentSignals.map((s,i) => <div key={"r"+i} style={{fontSize:11,color:"var(--ink-2)"}}>- {s}</div>)}
+                        {summary.growthSignals.map((s,i) => <div key={"g"+i} style={{fontSize:11,color:"var(--green)"}}>+ {s}</div>)}
+                      </div>}
+
+                      {/* Watch-Outs */}
+                      {summary.watchOuts.length > 0 && <div>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Watch-Outs</div>
+                        {summary.watchOuts.map((w,i) => <div key={i} style={{fontSize:11,color:"var(--red)"}}>- {w}</div>)}
+                      </div>}
+
+                      <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid var(--line-0)",fontSize:10,color:"var(--ink-3)",textAlign:"center"}}>
+                        Generated by Cambrian Catalyst | {summary.dataConfidence ? `${summary.dataConfidence} confidence (${summary.sectionsGrounded}/9 sections)` : ""} | {new Date().toLocaleDateString()}
+                      </div>
+                    </div>}
+                  </div>;
+                })()}
 
                 {/* Research another company — on ALL briefs */}
                 <div style={{background:"var(--bg-0)",border:"1.5px solid var(--line-0)",borderRadius:"var(--r-md)",padding:"16px 20px",marginTop:8,marginBottom:16}}>
