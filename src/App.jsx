@@ -3496,6 +3496,7 @@ export default function App(){
   // reportPanelOpen removed — consolidated into UserDashboard (orgPanelOpen)
   const[moreMenuOpen,setMoreMenuOpen]=useState(false); // header overflow menu
   const[helpOpen,setHelpOpen]=useState(false); // header help dropdown
+  const[welcomeShown,setWelcomeShown]=useState(()=>!!localStorage.getItem("cambrian_welcome_v1")); // first-timer welcome
   const[quickBriefInput,setQuickBriefInput]=useState(""); // a la carte brief company name
   const[favorites,setFavorites]=useState([]); // [{id, type, label, content, company, step, timestamp}]
   const[favPanelOpen,setFavPanelOpen]=useState(false);
@@ -7957,12 +7958,9 @@ ${isOpen
       )}
 
       {/* First-timer welcome overlay */}
-      {(()=>{
-        const key = "cambrian_welcome_v1";
-        const [show, setShow] = React.useState(!localStorage.getItem(key) && savedSessions.length === 0);
-        if (!show) return null;
-        return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}}
-          onClick={()=>{localStorage.setItem(key,"1");setShow(false);}}>
+      {!welcomeShown && savedSessions.length === 0 && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center"}}
+          onClick={()=>{localStorage.setItem("cambrian_welcome_v1","1");setWelcomeShown(true);}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:16,padding:"40px 48px",maxWidth:480,width:"90%",textAlign:"center",boxShadow:"0 16px 64px rgba(0,0,0,0.2)"}}>
             <div style={{fontSize:36,marginBottom:12}}>👋</div>
             <div style={{fontFamily:"Lora,serif",fontSize:24,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>Welcome to Cambrian Catalyst</div>
@@ -7983,14 +7981,14 @@ ${isOpen
                 <div><strong>Get sales-ready</strong> — full company briefs, call prep, live coaching, and post-call analysis. Everything exports to your CRM.</div>
               </div>
             </div>
-            <button onClick={()=>{localStorage.setItem(key,"1");setShow(false);}}
+            <button onClick={()=>{localStorage.setItem("cambrian_welcome_v1","1");setWelcomeShown(true);}}
               style={{padding:"12px 36px",borderRadius:8,border:"none",background:"var(--tan-0)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
               Let's go
             </button>
             <div style={{fontSize:11,color:"var(--ink-3)",marginTop:12}}>Press <strong>?</strong> anytime for help · <strong>Cmd+K</strong> to search</div>
           </div>
-        </div>;
-      })()}
+        </div>
+      )}
 
       <div className="app"
         data-focus={step===7 ? "call" : undefined}
