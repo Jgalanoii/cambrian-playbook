@@ -8108,7 +8108,7 @@ ${isOpen
           <div style={{display:"flex",flexDirection:"column",gap:2}}>
             <div className="logo">Cambrian <span>Catalyst</span></div>
             <div style={{fontSize:9,letterSpacing:"0.7px",color:"var(--ink-3)",fontWeight:700,textTransform:"uppercase"}}>
-              Sales Intelligence Platform
+              Smart People Go Further
             </div>
           </div>
           {/* Stepper: hidden on welcome screen (step 0) and in Quick Brief mode.
@@ -8429,7 +8429,7 @@ ${isOpen
           <div className="page" style={{maxWidth:1200,paddingTop:40}}>
             <div className="setup-card" style={{maxWidth:800,margin:"0 auto"}}>
               <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
-              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Sales Intelligence Platform</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Smart People Go Further</div>
               <div style={{textAlign:"center",marginBottom:10}}>
                 <span style={{display:"inline-block",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
@@ -10724,7 +10724,7 @@ ${isOpen
               </div>
             </div>
             <div className="page-sub">
-              {briefLoading?"Hang tight — live research in progress.":"Built from live research and proprietary intelligence. All fields are editable. When you walk in this prepared, the conversation is better for everyone in the room."}
+              {briefLoading?"Hang tight — live research in progress.":"Discovery doesn't have to suck. Built from live research and proprietary intelligence. All fields are editable. When you walk in this prepared, the conversation is better for everyone in the room."}
             </div>
 
             {/* ICP changed since brief was built */}
@@ -12415,7 +12415,7 @@ ${isOpen
             <div className="incall-header">
               <div>
                 <div className="incall-title">🎙 Live Discovery · {selectedAccount?.company}</div>
-                <div className="incall-meta">{contactRole||selectedAccount?.ind} · {selectedCohort?.name} · RIVER Discovery Framework</div>
+                <div className="incall-meta">{contactRole||selectedAccount?.ind} · {selectedCohort?.name} · Discovery doesn't have to suck.</div>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
