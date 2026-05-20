@@ -474,13 +474,21 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                       </tr>
                     </thead>
                     <tbody>
-                      {(savedSessions || []).slice(0, 8).map(s => (
-                        <tr key={s.id}>
-                          <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{s.name || "Untitled"}</td>
-                          <td style={{ color: "var(--ink-3)", fontSize: 11 }}>{s.seller_url || "--"}</td>
-                          <td style={{ color: "var(--ink-3)" }}>{timeAgo(s.updated_at)}</td>
-                        </tr>
-                      ))}
+                      {(savedSessions || []).slice(0, 8).map(s => {
+                        const isRecent = (Date.now() - new Date(s.updated_at).getTime()) < 86400000;
+                        return (
+                          <tr key={s.id}>
+                            <td>
+                              <div style={{ fontWeight: 700, color: "var(--ink-0)", fontSize: 13 }}>{s.name || "Untitled"}</div>
+                            </td>
+                            <td style={{ color: "var(--ink-3)", fontSize: 11 }}>{s.seller_url || "--"}</td>
+                            <td>
+                              <div style={{ fontWeight: 600, color: isRecent ? "var(--green)" : "var(--ink-1)", fontSize: 12 }}>{timeAgo(s.updated_at)}</div>
+                              <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 1 }}>{new Date(s.updated_at).toLocaleDateString()}</div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 ) : (
@@ -552,7 +560,14 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                             {status}
                           </span>
                         </td>
-                        <td style={{ color: "var(--ink-3)" }}>{lastActive ? timeAgo(lastActive) : "--"}</td>
+                        <td>
+                          {lastActive ? (
+                            <>
+                              <div style={{ fontWeight: 600, color: "var(--ink-1)", fontSize: 12 }}>{timeAgo(lastActive)}</div>
+                              <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 1 }}>{new Date(lastActive).toLocaleDateString()}</div>
+                            </>
+                          ) : <span style={{ color: "var(--ink-3)" }}>--</span>}
+                        </td>
                         {isAdmin && (
                           <td style={{ position: "relative" }}>
                             {m.id !== sbUser?.id && (
@@ -726,79 +741,92 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
               <div className="admin-section-title">Settings</div>
               <div className="admin-section-sub">Organization details and plan information</div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {/* Company name */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>Company Name</div>
-                  {isAdmin ? (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input value={orgName} onChange={e => setOrgName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") saveOrgName(); e.stopPropagation(); }}
-                        style={{ flex: 1, fontSize: 14, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }} />
-                      <button onClick={saveOrgName}
-                        style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {/* Organization Details card */}
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "18px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 14 }}>Organization Details</div>
+
+                  {/* Company name */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Company Name</div>
+                    {isAdmin ? (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input value={orgName} onChange={e => setOrgName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") saveOrgName(); e.stopPropagation(); }}
+                          style={{ flex: 1, fontSize: 14, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8, background: "var(--surface)" }} />
+                        <button onClick={saveOrgName}
+                          style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 14, color: "var(--ink-1)" }}>{orgCtx?.name || "--"}</div>
+                    )}
+                  </div>
+
+                  {/* Company website */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Company Website</div>
+                    <div style={{ fontSize: 10, color: "var(--ink-3)", marginBottom: 6 }}>Pre-fills new sessions and helps match new teammates automatically</div>
+                    {isAdmin ? (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input value={orgSellerUrl} onChange={e => setOrgSellerUrl(e.target.value)} placeholder="https://yourcompany.com"
+                          style={{ flex: 1, fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8, background: "var(--surface)" }}
+                          onKeyDown={e => { if (e.key === "Enter") saveOrgSellerUrl(); e.stopPropagation(); }} />
+                        <button onClick={saveOrgSellerUrl}
+                          style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 13, color: "var(--ink-1)" }}>{orgCtx?.seller_url || "Not set"}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Plan & Usage card */}
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "18px 20px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 14 }}>Plan & Usage</div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
+                    {/* Your role */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 5 }}>Your Role</div>
+                      <span className="admin-badge" style={{ background: r(orgCtx?.userRole).bg, color: r(orgCtx?.userRole).color, fontSize: 10, padding: "3px 10px" }}>
+                        {r(orgCtx?.userRole).label}
+                      </span>
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 14, color: "var(--ink-1)" }}>{orgCtx?.name || "--"}</div>
-                  )}
-                </div>
 
-                {/* Company website */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Company Website</div>
-                  <div style={{ fontSize: 10, color: "var(--ink-3)", marginBottom: 6 }}>Your company's website -- pre-fills new sessions and helps match new teammates automatically</div>
-                  {isAdmin ? (
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input value={orgSellerUrl} onChange={e => setOrgSellerUrl(e.target.value)} placeholder="https://yourcompany.com"
-                        style={{ flex: 1, fontSize: 13, padding: "8px 12px", border: "1.5px solid var(--line-0)", borderRadius: 8 }}
-                        onKeyDown={e => { if (e.key === "Enter") saveOrgSellerUrl(); e.stopPropagation(); }} />
-                      <button onClick={saveOrgSellerUrl}
-                        style={{ padding: "8px 16px", borderRadius: 8, background: "var(--ink-0)", color: "var(--surface)", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                    {/* Plan */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 5 }}>Plan</div>
+                      <span className="admin-badge" style={{
+                        background: orgCtx?.plan === "paid" ? "var(--green-bg)" : "var(--amber-bg)",
+                        color: orgCtx?.plan === "paid" ? "var(--green)" : "var(--amber)",
+                        fontSize: 10, padding: "3px 10px",
+                      }}>
+                        {orgCtx?.plan || "trial"}
+                      </span>
+                      <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>
+                        {orgCtx?.run_limit || 5} runs/month
+                      </div>
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 13, color: "var(--ink-1)" }}>{orgCtx?.seller_url || "Not set"}</div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Your role */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>Your Role</div>
-                  <span className="admin-badge" style={{ background: r(orgCtx?.userRole).bg, color: r(orgCtx?.userRole).color }}>
-                    {r(orgCtx?.userRole).label}
-                  </span>
-                </div>
-
-                {/* Plan */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>Plan</div>
-                  <span className="admin-badge" style={{
-                    background: orgCtx?.plan === "paid" ? "var(--green-bg)" : "var(--amber-bg)",
-                    color: orgCtx?.plan === "paid" ? "var(--green)" : "var(--amber)",
-                  }}>
-                    {orgCtx?.plan || "trial"}
-                  </span>
-                  <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>
-                    {orgCtx?.run_limit || 5} runs/month
+                  {/* Run usage */}
+                  <div style={{ background: "var(--surface)", borderRadius: 8, padding: "12px 14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)" }}>Run Usage</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: usageColor }}>{orgCtx?.run_count || 0} / {orgCtx?.run_limit || 5}</div>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 4, transition: "width 0.3s", background: usageColor, width: usagePct + "%" }} />
+                    </div>
                   </div>
                 </div>
 
-                {/* Run usage */}
-                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "14px 18px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)" }}>Run Usage</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: usageColor }}>{orgCtx?.run_count || 0} / {orgCtx?.run_limit || 5}</div>
-                  </div>
-                  <div style={{ height: 8, borderRadius: 4, background: "var(--bg-2)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 4, transition: "width 0.3s", background: usageColor, width: usagePct + "%" }} />
-                  </div>
-                </div>
-
-                {/* CRM Integration */}
-                <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 16 }}>
+                {/* CRM Integration card */}
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "18px 20px" }}>
                   <HubSpotSection sbToken={sbToken} onStatusChange={onHubspotChange} />
                 </div>
 
-                {/* Refer & Earn */}
-                <div style={{ borderTop: "1px solid var(--line-0)", paddingTop: 16 }}>
+                {/* Refer & Earn card */}
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "18px 20px" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Refer & Earn</div>
                   <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 8 }}>
                     Share your referral link. When someone signs up and runs their first brief, your org gets <strong>+1 bonus run</strong> (up to 5/month).
@@ -845,7 +873,7 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                       <th>Session</th>
                       <th>User</th>
                       <th>Seller URL</th>
-                      <th>Last Updated</th>
+                      <th style={{ width: 130 }}>Last Updated</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -856,10 +884,13 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                         const member = members.find(m => m.id === s.user_id);
                         return (
                           <tr key={s.id}>
-                            <td style={{ textAlign: "center" }}>
-                              {isRecent && <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }} />}
+                            <td style={{ textAlign: "center", width: 24 }}>
+                              {isRecent && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "var(--green)", boxShadow: "0 0 4px var(--green)" }} />}
                             </td>
-                            <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{s.name || "Untitled"}</td>
+                            <td>
+                              <div style={{ fontWeight: 700, color: "var(--ink-0)", fontSize: 13 }}>{s.name || "Untitled"}</div>
+                              {s.seller_url && <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 1 }}>{s.seller_url}</div>}
+                            </td>
                             <td>
                               <div style={{ fontSize: 12, color: "var(--ink-1)", fontWeight: 600 }}>{member?.name || member?.email || "Unknown"}</div>
                               {member?.role && (
@@ -869,7 +900,10 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                               )}
                             </td>
                             <td style={{ color: "var(--ink-3)", fontSize: 11 }}>{s.seller_url || "--"}</td>
-                            <td style={{ color: "var(--ink-3)" }}>{timeAgo(s.updated_at)}</td>
+                            <td>
+                              <div style={{ fontWeight: 600, color: isRecent ? "var(--green)" : "var(--ink-1)", fontSize: 12 }}>{timeAgo(s.updated_at)}</div>
+                              <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 1 }}>{new Date(s.updated_at).toLocaleDateString()}</div>
+                            </td>
                           </tr>
                         );
                       })}

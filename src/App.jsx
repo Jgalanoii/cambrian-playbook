@@ -2174,31 +2174,66 @@ function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outco
 }
 
 // ── BRIEF LOADER ─────────────────────────────────────────────────────────────
-const LOADER_QUIPS = [
-  "Doing the homework you definitely weren't going to do...",
-  "Figuring out what keeps their CFO up at night...",
-  "Reading the 10-K so you look like a genius...",
-  "Making you the most dangerous person in the room...",
-  "Finding the angle they didn't know they had...",
-  "Connecting dots across the org chart...",
-  "Building your unfair advantage...",
-  "Translating their problems into your opportunity...",
-  "Turning public intel into private insight...",
-  "Triangulating their priorities...",
-  "Reverse-engineering their buying criteria...",
-  "Mapping their world to your solutions...",
-  "Becoming an expert in 30 seconds...",
-  "Surfacing the signal buried in the noise...",
-  "Crafting the brief they didn't know they needed...",
-  "Almost there — this is the good part...",
-  "Preparing your strongest opening...",
-  "Making sure you walk in ready...",
-  "Making sure your prospect doesn't have to explain the basics...",
-  "Your prospect is going to wonder how you knew all this...",
-  "Building the brief that turns 'tell me about your company' into 'I noticed you just...'",
-  "This is the part where you stop guessing and start knowing...",
-  "When you know more, the conversation is better for everyone...",
-];
+const LOADER_QUIPS = {
+  default: [
+    "Doing the homework you definitely weren't going to do...",
+    "Making you the most dangerous person in the room...",
+    "Building your unfair advantage...",
+    "Turning public intel into private insight...",
+    "Becoming an expert in 30 seconds...",
+    "Almost there — this is the good part...",
+    "This is the part where you stop guessing and start knowing...",
+    "When you know more, the conversation is better for everyone...",
+    "Your prospect is going to wonder how you knew all this...",
+  ],
+  icp: [
+    "Figuring out who you should actually be selling to...",
+    "Researching your website so you don't have to explain yourself...",
+    "Separating your ideal buyers from the time-wasters...",
+    "Building a profile that would make a strategy consultant jealous...",
+    "Finding the buyers who will actually pick up the phone...",
+  ],
+  scoring: [
+    "Sorting the hell-yeses from the maybes...",
+    "Running every company through three dimensions of fit...",
+    "Figuring out which accounts are worth your Monday morning...",
+    "Separating pipeline gold from fool's gold...",
+    "Scoring harder than your fantasy league...",
+  ],
+  brief: [
+    "Figuring out what keeps their CFO up at night...",
+    "Reading the 10-K so you look like a genius...",
+    "Finding the angle they didn't know they had...",
+    "Connecting dots across the org chart...",
+    "Translating their problems into your opportunity...",
+    "Triangulating their priorities...",
+    "Reverse-engineering their buying criteria...",
+    "Mapping their world to your solutions...",
+    "Surfacing the signal buried in the noise...",
+    "Crafting the brief they didn't know they needed...",
+    "Preparing your strongest opening...",
+    "Making sure you walk in ready...",
+    "Making sure your prospect doesn't have to explain the basics...",
+    "Building the brief that turns 'tell me about your company' into 'I noticed you just...'",
+  ],
+  hypothesis: [
+    "Building a game plan that survives first contact...",
+    "Crafting talk tracks that sound human, not scripted...",
+    "Preparing the insight that reframes their thinking...",
+    "Designing the opening that gets a reply...",
+    "Turning research into a conversation strategy...",
+  ],
+  postcall: [
+    "Analyzing what you captured against what was planned...",
+    "Routing this deal to the right next step...",
+    "Writing the follow-up email your prospect will actually read...",
+    "Turning raw notes into a CRM-ready package...",
+  ],
+};
+const getQuip = (context) => {
+  const pool = LOADER_QUIPS[context] || LOADER_QUIPS.default;
+  return pool[Math.floor(Math.random() * pool.length)];
+};
 // ── CHAT ASSISTANT PANEL (Pattern B) ─────────────────────────────────────────
 // Persistent right-rail chat with session context. Available on every stage.
 // The assistant knows: current step, selected account, brief, ICP, RIVER
@@ -2307,6 +2342,17 @@ function EmptyState({ icon, title, sub, action, actionLabel, children }) {
   );
 }
 
+// ── INFO TIP — hover tooltip for contextual help ────────────────────────────
+function InfoTip({ text }) {
+  const [show, setShow] = React.useState(false);
+  return (
+    <span style={{position:"relative",display:"inline-flex",cursor:"help",marginLeft:4}} onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)}>
+      <span style={{width:14,height:14,borderRadius:"50%",background:"var(--bg-2)",color:"var(--ink-3)",fontSize:9,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>i</span>
+      {show && <span style={{position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",background:"var(--ink-0)",color:"#fff",fontSize:11,lineHeight:1.5,padding:"8px 12px",borderRadius:8,whiteSpace:"normal",width:240,zIndex:100,boxShadow:"0 4px 16px rgba(0,0,0,0.2)",pointerEvents:"none"}}>{text}</span>}
+    </span>
+  );
+}
+
 // ── COMMAND PALETTE ──────────────────────────────────────────────────────────
 // Cmd-K / Ctrl-K overlay. Follows Linear/Notion/VS Code pattern. Actions are
 // a declarative registry built at render time inside the main component (so
@@ -2387,14 +2433,14 @@ function CommandPalette({ commands = [], onClose }) {
 }
 
 function BriefLoader({ company, status }) {
-  const [quip, setQuip] = useState(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
+  const [quip, setQuip] = useState(getQuip("brief"));
   const [fade, setFade] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setFade(false);
       setTimeout(() => {
-        setQuip(LOADER_QUIPS[Math.floor(Math.random()*LOADER_QUIPS.length)]);
+        setQuip(getQuip("brief"));
         setFade(true);
       }, 300);
     }, 3000);
@@ -10771,7 +10817,7 @@ ${isOpen
                     padding:"18px 22px",marginBottom:14,boxShadow:"0 2px 8px rgba(139,111,71,0.1)"
                   }}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>
-                      Quick Take — {selectedAccount?.company || "This Account"}
+                      Quick Take — {selectedAccount?.company || "This Account"}<InfoTip text="The top finding, opportunity, and risk — extracted from the full brief. Every claim comes from the research sections below, not invented."/>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
@@ -10808,7 +10854,7 @@ ${isOpen
                     background: brief._dataConfidence === "high" ? "var(--green-bg)" : brief._dataConfidence === "medium" ? "var(--amber-bg)" : "var(--red-bg)",
                     color: brief._dataConfidence === "high" ? "var(--green)" : brief._dataConfidence === "medium" ? "var(--amber)" : "var(--red)",
                   }}>
-                    <span>{brief._dataConfidence === "high" ? "High" : brief._dataConfidence === "medium" ? "Medium" : "Low"} Data Confidence</span>
+                    <span>{brief._dataConfidence === "high" ? "High" : brief._dataConfidence === "medium" ? "Medium" : "Low"} Data Confidence<InfoTip text="How many of the 9 brief sections were grounded by web search vs training data. High = 7+ verified, Medium = 4-6, Low = fewer than 4. Verify low-confidence facts before your call."/></span>
                     <span style={{fontWeight:400,opacity:0.8}}>
                       {brief._sectionsGrounded}/9 sections web-verified
                       {brief._dataConfidence !== "high" && " — verify key facts before the call"}
@@ -11661,7 +11707,7 @@ ${isOpen
                     <div className="bb-hdr" onClick={()=>toggleBB("gateMap")}>
                       <div className="bb-icon" style={{fontSize:14}}>🚦</div>
                       <div style={{flex:1}}>
-                        <div className="bb-title">Approval Gate Map</div>
+                        <div className="bb-title">Approval Gate Map<InfoTip text="Inferred approval bodies on both sides — what your org needs to approve this deal, and what the target company needs internally to say yes. Includes artifacts, timelines, and the critical path risk."/></div>
                         <div className="bb-sub">What both sides need to get this deal done</div>
                       </div>
                       <span className="bb-arrow">{bbIsOpen("gateMap")?"▾":"▸"}</span>
@@ -11912,7 +11958,7 @@ ${isOpen
                     <div className="bb-hdr" onClick={()=>toggleBB("sessionSummary")}>
                       <div className="bb-icon" style={{fontSize:10}}>📋</div>
                       <div style={{flex:1}}>
-                        <div className="bb-title">Full Session Summary</div>
+                        <div className="bb-title">Full Session Summary<InfoTip text="Pulls the most important data from every section into one executive report. Copy to clipboard, export as JSON, or push to HubSpot. Updates as you progress through the session."/></div>
                         <div className="bb-sub">Executive report — all sections, one view. Copy or export for CRM.</div>
                       </div>
                       <div style={{display:"flex",gap:6,alignItems:"center"}}>

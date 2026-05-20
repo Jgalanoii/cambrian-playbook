@@ -1109,11 +1109,20 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                   style={{ border: "1px solid var(--line-0)", background: "var(--surface)", fontSize: 11, width: "100%", padding: "4px 8px", borderRadius: 4, color: "var(--ink-1)" }} />
                               </td>
                               <td style={{ whiteSpace: "nowrap" }}>
-                                <span style={{ fontWeight: 600 }}>{o.run_count}</span>
-                                <span style={{ color: "var(--ink-3)" }}>/{o.run_limit}</span>
-                                {o.run_count >= o.run_limit && <span style={{ color: "var(--red)", fontWeight: 700, marginLeft: 4 }}>LIMIT</span>}
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  <span style={{ fontWeight: 700, fontSize: 13, color: o.run_count >= o.run_limit ? "var(--red)" : "var(--ink-0)" }}>{o.run_count}</span>
+                                  <span style={{ color: "var(--ink-3)", fontSize: 11 }}>/{o.run_limit}</span>
+                                  {o.run_count >= o.run_limit && <span style={{ fontSize: 9, fontWeight: 700, color: "var(--red)", background: "var(--red-bg)", padding: "1px 6px", borderRadius: 4 }}>LIMIT</span>}
+                                  {o.run_count > 0 && (
+                                    <button onClick={() => patchOrg({ run_count: 0, max_run_count: 0 }, `${o.name} runs reset to 0`)}
+                                      title="Reset runs to 0"
+                                      style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, border: "1px solid var(--amber)", background: "var(--amber-bg)", color: "var(--amber)", cursor: "pointer", marginLeft: 2 }}>
+                                      Reset
+                                    </button>
+                                  )}
+                                </div>
                               </td>
-                              <td style={{ textAlign: "center" }}>{members.length}</td>
+                              <td style={{ textAlign: "center", fontWeight: 600 }}>{members.length}</td>
                               <td style={{ position: "relative" }}>
                                 <button className="admin-dot-menu" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === menuKey ? null : menuKey); }}>
                                   &#x22EF;
