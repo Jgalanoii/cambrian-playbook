@@ -175,9 +175,11 @@ export async function refreshAccessToken(userId) {
   });
 
   if (!r.ok) {
-    console.error("[hubspot] Token refresh failed:", r.status);
+    const errBody = await r.text().catch(() => "");
+    console.error(`[hubspot] Token refresh failed: ${r.status} ${errBody.slice(0, 200)}`);
     // If refresh fails with 400/401, the refresh token is revoked — delete stored tokens
     if (r.status === 400 || r.status === 401) {
+      console.warn("[hubspot] Refresh token rejected — deleting stored tokens. User must reconnect.");
       await deleteTokenForUser(userId);
     }
     return null;

@@ -6669,11 +6669,19 @@ ${isOpen
         setCopied("hs_ok");setTimeout(()=>setCopied(""),4000);
         setChatMessages(prev=>[...prev,{role:"assistant",content:`Pushed to HubSpot: ${parts.join(", ")} created.`}]);
       }else{
-        if(d.error?.includes("expired")||d.error?.includes("reconnect")){setHubspotStatus({connected:false});}
+        console.error("[hubspot] Push failed:", r.status, JSON.stringify(d));
+        if(d.error?.includes("expired")||d.error?.includes("reconnect")||d.error?.includes("not_connected")||r.status===401||r.status===502){
+          setHubspotStatus({connected:false});
+          setChatMessages(prev=>[...prev,{role:"assistant",content:`HubSpot connection expired. Go to Settings → Disconnect → Reconnect HubSpot to fix.`}]);
+        } else {
+          setChatMessages(prev=>[...prev,{role:"assistant",content:`HubSpot push failed: ${d.error||"unknown error"}`}]);
+        }
         setCopied("hs_err");setTimeout(()=>setCopied(""),4000);
-        setChatMessages(prev=>[...prev,{role:"assistant",content:`HubSpot push failed: ${d.error||"unknown error"}`}]);
       }
-    }catch(e){setCopied("hs_err");setTimeout(()=>setCopied(""),3000);}
+    }catch(e){
+      console.error("[hubspot] Push error:", e.message);
+      setCopied("hs_err");setTimeout(()=>setCopied(""),3000);
+    }
     finally{setHubspotPushing("");}
   };
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
@@ -10518,16 +10526,19 @@ ${isOpen
                     </button>
                     {hubspotStatus?.connected&&<button onClick={()=>{
                       const summary = buildSessionSummary();
-                      if (!summary) return;
+                      // Fallback: if summary fails, send basic company data directly
+                      const companyData = summary
+                        ? {name:summary.targetCompany,domain:summary.targetDomain,industry:selectedAccount?.industry||selectedAccount?.ind,revenue:summary.revenue,employees:summary.employeeCount}
+                        : {name:selectedAccount?.company||"",domain:selectedAccount?.company_url||"",industry:selectedAccount?.industry||selectedAccount?.ind||"",revenue:brief?.revenue||"",employees:brief?.employeeCount||""};
+                      console.log("[hubspot] Push brief — company:", companyData.name, "domain:", companyData.domain, "summary:", !!summary);
                       pushToHubSpot("push_brief",{
-                        summary,
-                        // Legacy fields for backward compatibility
-                        company:{name:summary.targetCompany,domain:summary.targetDomain,industry:selectedAccount?.industry||selectedAccount?.ind,revenue:summary.revenue,employees:summary.employeeCount},
-                        executives:summary.executives,
-                        tldr:{topFinding:summary.topFinding,topOpportunity:summary.topOpportunity,topRisk:summary.topRisk},
-                        elevatorPitch:summary.elevatorPitch,
-                        strategicTheme:summary.strategicTheme,
-                        fiveQuestions:summary.discoveryQuestions,
+                        summary: summary || {},
+                        company: companyData,
+                        executives: summary?.executives || (brief?.keyExecutives||[]).filter(e=>e?.name).map(e=>({name:e.name,title:e.title})),
+                        tldr: summary ? {topFinding:summary.topFinding,topOpportunity:summary.topOpportunity,topRisk:summary.topRisk} : brief?.tldr,
+                        elevatorPitch: summary?.elevatorPitch || brief?.elevatorPitch || "",
+                        strategicTheme: summary?.strategicTheme || brief?.strategicTheme || "",
+                        fiveQuestions: summary?.discoveryQuestions || brief?.fiveQuestions || [],
                       });
                     }} disabled={!!hubspotPushing}
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":"var(--surface)",color:copied==="hs_ok"?"var(--green)":"#555",cursor:hubspotPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5}}>
