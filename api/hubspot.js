@@ -35,8 +35,8 @@ async function findCompanyByDomain(userId, domain) {
     method: "POST",
     body: { filterGroups: [{ filters: [{ propertyName: "domain", operator: "EQ", value: domain }] }], properties: ["name", "domain"], limit: 1 },
   });
-  if (!r.ok) return null;
-  const data = await r.json();
+  if (!r.ok) { console.error(`[hubspot] Company search failed: ${r.status} ${r.error||""}`); return null; }
+  const data = typeof r.json === "function" ? await r.json() : null;
   return data?.results?.[0] || null;
 }
 
@@ -86,17 +86,18 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   if (existing) {
     console.log(`[hubspot] Found existing company ${existing.id} for domain "${domain}" — updating`);
     const r = await hubspotFetch(userId, `/crm/v3/objects/companies/${existing.id}`, { method: "PATCH", body: { properties } });
-    if (!r.ok) { const errBody = await r.text().catch(()=>""); console.error(`[hubspot] Company update failed: ${r.status} ${errBody.slice(0,300)}`); }
-    return { id: (r.ok ? (await r.json()).id : existing.id), created: false };
+    if (!r.ok) { const errBody = typeof r.text === "function" ? await r.text().catch(()=>"") : (r.error||""); console.error(`[hubspot] Company update failed: ${r.status} ${errBody.slice(0,300)}`); }
+    return { id: (r.ok && typeof r.json === "function" ? (await r.json()).id : existing.id), created: false };
   }
   console.log(`[hubspot] No existing company for domain "${domain}" — creating new`);
   const r = await hubspotFetch(userId, "/crm/v3/objects/companies", { method: "POST", body: { properties } });
   if (!r.ok) {
-    const errBody = await r.text().catch(() => "");
+    const errBody = typeof r.text === "function" ? await r.text().catch(() => "") : (r.error || "");
     console.error(`[hubspot] Company create failed: ${r.status} ${errBody.slice(0, 500)}`);
     return { error: `HubSpot ${r.status}: ${errBody.slice(0, 200)}` };
   }
-  return { id: (await r.json()).id, created: true };
+  const data = typeof r.json === "function" ? await r.json() : {};
+  return { id: data.id, created: true };
 }
 
 async function createDeal(userId, { companyName, dealRoute, confidence, companyId }) {
@@ -104,8 +105,9 @@ async function createDeal(userId, { companyName, dealRoute, confidence, companyI
   if (confidence) properties.hs_deal_score = String(confidence);
   const associations = companyId ? [{ to: { id: companyId }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 5 }] }] : [];
   const r = await hubspotFetch(userId, "/crm/v3/objects/deals", { method: "POST", body: { properties, associations } });
-  if (!r.ok) { console.error("[hubspot] Deal create failed:", r.status); return null; }
-  return { id: (await r.json()).id };
+  if (!r.ok) { console.error("[hubspot] Deal create failed:", r.status, r.error||""); return null; }
+  const data = typeof r.json === "function" ? await r.json() : {};
+  return { id: data.id };
 }
 
 async function createNote(userId, { body, companyId, dealId }) {
@@ -113,8 +115,9 @@ async function createNote(userId, { body, companyId, dealId }) {
   if (companyId) associations.push({ to: { id: companyId }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 190 }] });
   if (dealId) associations.push({ to: { id: dealId }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 214 }] });
   const r = await hubspotFetch(userId, "/crm/v3/objects/notes", { method: "POST", body: { properties: { hs_timestamp: new Date().toISOString(), hs_note_body: body }, associations } });
-  if (!r.ok) { console.error("[hubspot] Note create failed:", r.status); return null; }
-  return { id: (await r.json()).id };
+  if (!r.ok) { console.error("[hubspot] Note create failed:", r.status, r.error||""); return null; }
+  const data = typeof r.json === "function" ? await r.json() : {};
+  return { id: data.id };
 }
 
 async function createTasks(userId, { steps, dealId, companyId }) {
