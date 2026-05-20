@@ -1,10 +1,10 @@
 {
   "mode": "lite",
-  "timestamp": "2026-05-20T17:14:36.451Z",
+  "timestamp": "2026-05-20T21:44:40.656Z",
   "summary": {
     "totalFacts": 93,
-    "passedFacts": 91,
-    "failedFacts": 2,
+    "passedFacts": 89,
+    "failedFacts": 4,
     "totalInvariants": 38,
     "passedInvariants": 38,
     "failedInvariants": 0
@@ -39,13 +39,13 @@
               "field": "revenue",
               "tier": 2,
               "pass": true,
-              "detail": "162,000,000,000 vs 182,000,000,000 (11.0% diff, threshold 50%)"
+              "detail": "256,520,000,000 vs 182,000,000,000 (40.9% diff, threshold 50%)"
             },
             {
               "field": "employee_count",
               "tier": 2,
               "pass": true,
-              "detail": "313,000 vs 318,000 (1.6% diff, threshold 10%)"
+              "detail": "318,512 vs 318,000 (0.2% diff, threshold 10%)"
             },
             {
               "field": "founded",
@@ -64,7 +64,7 @@
             {
               "name": "exec_consistency",
               "pass": true,
-              "detail": "no CEO in executives — skipped"
+              "detail": "CEO \"Jamie Dimon\" consistent across sections"
             },
             {
               "name": "no_placeholders",
@@ -138,7 +138,7 @@
             {
               "name": "exec_consistency",
               "pass": true,
-              "detail": "CEO \"John Furner\" consistent across sections"
+              "detail": "CEO \"David Guggina\" consistent across sections"
             },
             {
               "name": "no_placeholders",
@@ -365,7 +365,7 @@
             {
               "name": "exec_consistency",
               "pass": true,
-              "detail": "no CEO in executives — skipped"
+              "detail": "CEO \"Satya Nadella\" consistent across sections"
             },
             {
               "name": "no_placeholders",
@@ -558,7 +558,7 @@
             {
               "name": "exec_consistency",
               "pass": true,
-              "detail": "no CEO in executives — skipped"
+              "detail": "CEO \"Raj Subramaniam\" consistent across sections"
             },
             {
               "name": "no_placeholders",
@@ -668,20 +668,20 @@
             {
               "field": "industry",
               "tier": 1,
-              "pass": false,
-              "detail": "\"Agriculture\" not found in \"Cargill is an agribusiness company that provides products and services in the food, financial produc\""
+              "pass": true,
+              "detail": "matched accepted set"
             },
             {
               "field": "ownership_type",
               "tier": 1,
-              "pass": true,
-              "detail": "contains \"Private\""
+              "pass": false,
+              "detail": "\"Private\" not found in \"Member-owned (family having connections to descendants of the founder owning over 90% of the company\""
             },
             {
               "field": "hq_location",
               "tier": 1,
-              "pass": true,
-              "detail": "contains \"Minneapolis\""
+              "pass": false,
+              "detail": "\"Minneapolis\" not found in \"Minnetonka, Minnesota\""
             },
             {
               "field": "_forbidden_strings",
@@ -697,7 +697,7 @@
               "detail": "no placeholders found"
             }
           ],
-          "factsPass": 3,
+          "factsPass": 2,
           "factsTotal": 4,
           "invariantsPass": 1,
           "invariantsTotal": 1
@@ -994,8 +994,8 @@
             {
               "field": "_forbidden_strings",
               "tier": 1,
-              "pass": true,
-              "detail": "no forbidden strings found"
+              "pass": false,
+              "detail": "FOUND forbidden: NASDAQ:"
             }
           ],
           "invariants": [
@@ -1005,7 +1005,7 @@
               "detail": "no placeholders found"
             }
           ],
-          "factsPass": 2,
+          "factsPass": 1,
           "factsTotal": 2,
           "invariantsPass": 1,
           "invariantsTotal": 1
