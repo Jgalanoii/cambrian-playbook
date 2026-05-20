@@ -427,6 +427,6 @@ export default async function handler(req, res) {
     if (e.message?.includes("not_connected") || e.message?.includes("token_expired")) {
       return res.status(401).json({ error: "HubSpot connection expired. Please reconnect in Settings." });
     }
-    return res.status(500).json({ error: "Failed to push to HubSpot" });
+    return res.status(500).json({ error: `HubSpot error: ${e.message || "unknown"}` });
   }
 }
