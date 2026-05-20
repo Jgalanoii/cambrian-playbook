@@ -6707,6 +6707,25 @@ ${isOpen
     }
     finally{setHubspotPushing("");}
   };
+
+  // Unified session push — works from any step, sends whatever data exists
+  const pushSessionToHubSpot = () => {
+    const summary = buildSessionSummary();
+    const companyData = summary
+      ? {name:summary.targetCompany,domain:summary.targetDomain,industry:selectedAccount?.industry||selectedAccount?.ind,revenue:summary.revenue,employees:summary.employeeCount}
+      : {name:selectedAccount?.company||"",domain:selectedAccount?.company_url||"",industry:selectedAccount?.industry||selectedAccount?.ind||"",revenue:brief?.revenue||"",employees:brief?.employeeCount||""};
+    console.log("[hubspot] Push session — company:", companyData.name, "stage:", postCall?"post-call":riverHypo?"hypothesis":"brief");
+    pushToHubSpot("push_brief",{
+      summary: summary || {},
+      company: companyData,
+      executives: summary?.executives || (brief?.keyExecutives||[]).filter(e=>e?.name).map(e=>({name:e.name,title:e.title})),
+      tldr: summary ? {topFinding:summary.topFinding,topOpportunity:summary.topOpportunity,topRisk:summary.topRisk} : brief?.tldr,
+      elevatorPitch: summary?.elevatorPitch || brief?.elevatorPitch || "",
+      strategicTheme: summary?.strategicTheme || brief?.strategicTheme || "",
+      fiveQuestions: summary?.discoveryQuestions || brief?.fiveQuestions || [],
+    });
+  };
+
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
   // ── CUSTOMER-FACING POST-CALL BRIEF ─────────────────────────────────────
   const escHtml=(s)=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -10607,23 +10626,7 @@ ${isOpen
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--tan-0)",borderRadius:8,background:"var(--tan-bg,#faf6f0)",color:"var(--tan-0)",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                       📋 Copy Summary
                     </button>
-                    {hubspotStatus?.connected&&<button onClick={()=>{
-                      const summary = buildSessionSummary();
-                      // Fallback: if summary fails, send basic company data directly
-                      const companyData = summary
-                        ? {name:summary.targetCompany,domain:summary.targetDomain,industry:selectedAccount?.industry||selectedAccount?.ind,revenue:summary.revenue,employees:summary.employeeCount}
-                        : {name:selectedAccount?.company||"",domain:selectedAccount?.company_url||"",industry:selectedAccount?.industry||selectedAccount?.ind||"",revenue:brief?.revenue||"",employees:brief?.employeeCount||""};
-                      console.log("[hubspot] Push brief — company:", companyData.name, "domain:", companyData.domain, "summary:", !!summary);
-                      pushToHubSpot("push_brief",{
-                        summary: summary || {},
-                        company: companyData,
-                        executives: summary?.executives || (brief?.keyExecutives||[]).filter(e=>e?.name).map(e=>({name:e.name,title:e.title})),
-                        tldr: summary ? {topFinding:summary.topFinding,topOpportunity:summary.topOpportunity,topRisk:summary.topRisk} : brief?.tldr,
-                        elevatorPitch: summary?.elevatorPitch || brief?.elevatorPitch || "",
-                        strategicTheme: summary?.strategicTheme || brief?.strategicTheme || "",
-                        fiveQuestions: summary?.discoveryQuestions || brief?.fiveQuestions || [],
-                      });
-                    }} disabled={!!hubspotPushing}
+                    {hubspotStatus?.connected&&<button onClick={pushSessionToHubSpot} disabled={!!hubspotPushing}
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":"var(--surface)",color:copied==="hs_ok"?"var(--green)":"#555",cursor:hubspotPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5}}>
                       {hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":"Push to HubSpot"}
                     </button>}
@@ -12149,6 +12152,10 @@ ${isOpen
                 {riverHypoLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
               </button>
               <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
+              {hubspotStatus?.connected&&<button className="btn btn-secondary" onClick={pushSessionToHubSpot} disabled={!!hubspotPushing}
+                style={{display:"flex",alignItems:"center",gap:5}}>
+                {hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":"Push to HubSpot"}
+              </button>}
               <button className="btn btn-green btn-lg" onClick={()=>{setActiveRiver(0);setStep(7);}}>
                 Start In-Call →
               </button>
@@ -12580,7 +12587,7 @@ ${isOpen
                     ) : postCall.nextSteps?.map((s,i)=>(i+1)+". "+s).join("\n")}
                   </div>
                 </div>
-                <div className="post-sec"><div className="post-lbl">CRM Note <button className="copy-btn" onClick={()=>copyText(postCall.crmNote,"crm")}>{copied==="crm"?"Copied ✓":"Copy"}</button>{hubspotStatus?.connected&&<button className="copy-btn" style={{marginLeft:4,background:hubspotPushing==="push_postcall"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":copied==="hs_err"?"#fee":""}} onClick={()=>pushToHubSpot("push_postcall",{company:{name:selectedAccount?.company,domain:selectedAccount?.company_url||"",industry:selectedAccount?.industry||selectedAccount?.ind},crmNote:postCall.crmNote,callSummary:postCall.callSummary,dealRoute:postCall.dealRoute,dealRouteReason:postCall.dealRouteReason,dealRisk:postCall.dealRisk,nextSteps:postCall.nextSteps||[],emailSubject:postCall.emailSubject,emailBody:postCall.emailBody,confidence:confidence})} disabled={!!hubspotPushing}>{hubspotPushing==="push_postcall"?"Pushing...":copied==="hs_ok"?"Pushed ✓":copied==="hs_err"?"Failed":"Push to HubSpot"}</button>}</div><div className="post-content">{postCall.crmNote}</div></div>
+                <div className="post-sec"><div className="post-lbl">CRM Note <button className="copy-btn" onClick={()=>copyText(postCall.crmNote,"crm")}>{copied==="crm"?"Copied ✓":"Copy"}</button>{hubspotStatus?.connected&&<button className="copy-btn" style={{marginLeft:4,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":copied==="hs_err"?"#fee":""}} onClick={pushSessionToHubSpot} disabled={!!hubspotPushing}>{hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":copied==="hs_err"?"Failed":"Push to HubSpot"}</button>}</div><div className="post-content">{postCall.crmNote}</div></div>
                 <div className="post-sec"><div className="post-lbl">Call Summary <button className="copy-btn" onClick={()=>copyText(postCall.callSummary,"summary")}>{copied==="summary"?"Copied ✓":"Copy"}</button></div><div className="post-content">{postCall.callSummary}</div></div>
                 <div className="post-sec">
                   <div className="post-lbl">Follow-Up Email <button className="copy-btn" onClick={()=>copyText("Subject: "+postCall.emailSubject+"\n\n"+postCall.emailBody,"email")}>{copied==="email"?"Copied ✓":"Copy Email"}</button></div>
