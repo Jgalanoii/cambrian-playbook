@@ -4695,6 +4695,17 @@ ${isOpen
   const sanitizeICP = (parsed) => {
     if (!parsed?.icp) return parsed;
     const out = { ...parsed, icp: { ...parsed.icp } };
+    // Strip error messages from seller-facing fields
+    const ERROR_PATTERNS = /unable to|could not|cannot|not found|not available|not specified|error|failed to/i;
+    if (out.sellerDescription && ERROR_PATTERNS.test(out.sellerDescription)) {
+      console.warn("[icp] Stripped error message from sellerDescription:", out.sellerDescription.slice(0, 80));
+      out.sellerDescription = "";
+    }
+    if (out.sellerName && ERROR_PATTERNS.test(out.sellerName)) {
+      console.warn("[icp] Stripped error message from sellerName:", out.sellerName);
+      out.sellerName = "";
+    }
+    // Strip seller-disparaging disqualifiers
     if (out.icp.disqualifiers) {
       const before = out.icp.disqualifiers.length;
       out.icp.disqualifiers = out.icp.disqualifiers.filter(d => !isDisparaging(d));
@@ -8117,7 +8128,7 @@ ${isOpen
           <div className="session-bar">
             {sellerUrl !== "research-only" ? (
               <>
-                <span>Selling for</span><span className="session-url">{sellerICP?.sellerName || sellerUrl}</span>
+                <span>Selling for</span><span className="session-url">{(sellerICP?.sellerName && !/unable|unknown|not found|could not/i.test(sellerICP.sellerName)) ? sellerICP.sellerName : sellerUrl}</span>
                 {products.filter(p=>p.name.trim()).length>0&&(
                   <span style={{fontSize:10,color:"var(--tan-0)",fontWeight:600}}>
                     {products.filter(p=>p.name.trim()).length} product{products.filter(p=>p.name.trim()).length>1?"s":""} loaded
