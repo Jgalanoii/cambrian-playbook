@@ -8429,7 +8429,7 @@ ${isOpen
           <div className="page" style={{maxWidth:1200,paddingTop:40}}>
             <div className="setup-card" style={{maxWidth:800,margin:"0 auto"}}>
               <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
-              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Smart People Go Further</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Smart People Go Further. Evolve How You Sell.</div>
               <div style={{textAlign:"center",marginBottom:10}}>
                 <span style={{display:"inline-block",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
