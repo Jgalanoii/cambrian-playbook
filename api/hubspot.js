@@ -46,14 +46,21 @@ async function upsertCompany(userId, company) {
   if (company.industry) properties.industry = company.industry;
   if (company.employees) properties.numberofemployees = String(company.employees).replace(/[^0-9]/g, "");
   if (company.revenue) { const rev = String(company.revenue).replace(/[^0-9.]/g, ""); if (rev) properties.annualrevenue = rev; }
+  console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" properties:`, JSON.stringify(properties));
 
-  const existing = await findCompanyByDomain(userId, domain);
+  const existing = domain ? await findCompanyByDomain(userId, domain) : null;
   if (existing) {
+    console.log(`[hubspot] Found existing company ${existing.id} for domain "${domain}" — updating`);
     const r = await hubspotFetch(userId, `/crm/v3/objects/companies/${existing.id}`, { method: "PATCH", body: { properties } });
     return { id: (r.ok ? (await r.json()).id : existing.id), created: false };
   }
+  console.log(`[hubspot] No existing company for domain "${domain}" — creating new`);
   const r = await hubspotFetch(userId, "/crm/v3/objects/companies", { method: "POST", body: { properties } });
-  if (!r.ok) { console.error("[hubspot] Company create failed:", r.status); return null; }
+  if (!r.ok) {
+    const errBody = await r.text().catch(() => "");
+    console.error(`[hubspot] Company create failed: ${r.status} ${errBody.slice(0, 300)}`);
+    return null;
+  }
   return { id: (await r.json()).id, created: true };
 }
 
@@ -166,6 +173,8 @@ export default async function handler(req, res) {
     if (action === "push_postcall") {
       if (!data?.company?.name) return res.status(400).json({ error: "Company name required" });
       const { company, crmNote, dealRoute, dealRisk, nextSteps, confidence } = data;
+      console.log(`[hubspot] push_postcall for company: "${company.name}" domain: "${company.domain}"`);
+
       const created = { companies: 0, deals: 0, notes: 0, tasks: 0 };
 
       const companyResult = await upsertCompany(userId, company);
@@ -189,10 +198,14 @@ export default async function handler(req, res) {
     if (action === "push_brief") {
       if (!data?.company?.name) return res.status(400).json({ error: "Company name required" });
       const { company, executives, tldr, elevatorPitch, strategicTheme, fiveQuestions } = data;
+      console.log(`[hubspot] push_brief for company: "${company.name}" domain: "${company.domain}" industry: "${company.industry}"`);
       const created = { companies: 0, contacts: 0, notes: 0 };
 
       const companyResult = await upsertCompany(userId, company);
-      if (!companyResult) return res.status(502).json({ error: "Failed to create company in HubSpot" });
+      if (!companyResult) {
+        console.error(`[hubspot] upsertCompany failed for "${company.name}" (${company.domain})`);
+        return res.status(502).json({ error: `Failed to create company "${company.name}" in HubSpot. Check that your HubSpot connection is still active in Settings.` });
+      }
       if (companyResult.created) created.companies = 1;
 
       if (executives?.length) {
