@@ -4661,6 +4661,37 @@ ${isOpen
     return `icp:${ICP_CACHE_VERSION}:${userScope}:${normalizedUrl}`;
   };
 
+  // ── SELLER ADVOCACY FILTER ──────────────────────────────────────────
+  // Code-level defense: strips any ICP content that disparages the seller.
+  // The model repeatedly ignores prompt instructions not to do this, so
+  // we catch it in code before it reaches state or cache.
+  const DISPARAGE_PATTERNS = [
+    /simpler.*(?:cheaper|less expensive).*(?:alternative|option|solution)/i,
+    /cheaper.*(?:simpler|easier).*(?:alternative|option|solution)/i,
+    /(?:simpler|cheaper|less expensive)\s+alternatives?\s+exist/i,
+    /is\s+overkill/i,
+    /too\s+(?:expensive|costly|complex)\s+for/i,
+    /limited\s+market\s+(?:share|presence|traction)/i,
+    /niche\s+player/i,
+    /lacks?\s+(?:scale|brand\s+recognition|market\s+dominance)/i,
+    /not\s+(?:competitive|viable)\s+(?:against|compared|versus)/i,
+  ];
+  const isDisparaging = (text) => typeof text === "string" && DISPARAGE_PATTERNS.some(p => p.test(text));
+  const sanitizeICP = (parsed) => {
+    if (!parsed?.icp) return parsed;
+    const out = { ...parsed, icp: { ...parsed.icp } };
+    if (out.icp.disqualifiers) {
+      const before = out.icp.disqualifiers.length;
+      out.icp.disqualifiers = out.icp.disqualifiers.filter(d => !isDisparaging(d));
+      if (out.icp.disqualifiers.length < before) console.warn(`[icp] Stripped ${before - out.icp.disqualifiers.length} seller-disparaging disqualifier(s)`);
+    }
+    if (out.icp.perceivedBarriers && isDisparaging(out.icp.perceivedBarriers)) {
+      out.icp.perceivedBarriers = out.icp.perceivedBarriers.split(/[.;]/).filter(s => !isDisparaging(s)).join(". ").trim();
+      console.warn("[icp] Stripped seller-disparaging perceivedBarriers");
+    }
+    return out;
+  };
+
   const buildSellerICP = async(rawUrl, {forceRefresh=false}={}) => {
     const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
 
@@ -4671,14 +4702,14 @@ ${isOpen
         const cached = localStorage.getItem(icpCacheKey(url));
         if(cached){
           const parsed = JSON.parse(cached);
-          if(parsed?.sellerName||parsed?.icp){ setSellerICP(parsed); return; }
+          if(parsed?.sellerName||parsed?.icp){ setSellerICP(sanitizeICP(parsed)); return; }
         }
       }catch{}
       // 2. Check org-level Supabase cache (cross-device, cross-session)
       if(orgCtx?.icp && orgCtx?.seller_url) {
         const orgUrl = orgCtx.seller_url.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
         if(orgUrl === url.toLowerCase() && (orgCtx.icp.sellerName || orgCtx.icp.icp)) {
-          setSellerICP(orgCtx.icp);
+          setSellerICP(sanitizeICP(orgCtx.icp));
           // Backfill localStorage for faster subsequent loads
           try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(orgCtx.icp)); }catch{}
           return;
@@ -4813,6 +4844,10 @@ ${isOpen
         try{
           const parsed = JSON.parse(m[0]);
           if(parsed.sellerName||parsed.icp){
+            // Sanitize: strip seller-disparaging language from disqualifiers/barriers
+            const sanitized = sanitizeICP(parsed);
+            Object.assign(parsed, sanitized);
+
             // ICP confidence based on research depth
             const confidence = researchCtx.length > 1000 ? "high" : researchCtx.length > 300 ? "medium" : "low";
             parsed._confidence = confidence;
