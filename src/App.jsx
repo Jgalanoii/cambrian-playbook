@@ -94,6 +94,9 @@ let KL_EXEC_PERSPECTIVES = ""; // Executive Perspectives — role-keyed C-suite 
 let KL_EXEC_PERSPECTIVES_DISCOVERY = "";
 let KL_APPROVAL_GATES = ""; // Approval Gates — steering committees, deal desk, gate mapping
 let KL_APPROVAL_GATES_DISCOVERY = "";
+let KL_RETAIL = ""; // Retail & E-commerce
+let KL_RETAIL_SCORING = null;
+let KL_RETAIL_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -170,6 +173,9 @@ async function fetchKnowledgeLayer() {
     KL_EXEC_PERSPECTIVES_DISCOVERY = d.executivePerspectivesDiscovery || "";
     KL_APPROVAL_GATES = d.approvalGates || "";
     KL_APPROVAL_GATES_DISCOVERY = d.approvalGatesDiscovery || "";
+    KL_RETAIL = d.retailIndustry || "";
+    KL_RETAIL_SCORING = d.retailScoring || null;
+    KL_RETAIL_DISCOVERY = d.retailDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -819,6 +825,16 @@ function getInvestorInjection(sellerICP, targetIndustry) {
   return "\n" + KL_INVESTOR;
 }
 
+// ── RETAIL & E-COMMERCE INJECTION ──────────────────────────────────────
+const RETAIL_KW = ["retail", "e-commerce", "ecommerce", "store", "shop", "merchandise", "grocery", "department store", "supermarket", "consumer retail", "dTC", "direct to consumer", "marketplace", "omnichannel"];
+function getRetailInjection(sellerICP, targetIndustry) {
+  if (!KL_RETAIL) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (RETAIL_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_RETAIL;
+}
+
 // ── INSURANCE INDUSTRY INJECTION ───────────────────────────────────────
 // Triggers for carriers, MGAs, brokers, reinsurers, insurtechs, and
 // insurance-adjacent services. Core keywords trigger on 1 match;
@@ -1409,6 +1425,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getCharitableInjection(sellerICP, member.ind) +
     getSmbMidmarketInjection(sellerICP, member.ind, member) +
     getInsuranceInjection(sellerICP, member.ind) +
+    getRetailInjection(sellerICP, member.ind) +
     (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
     (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
     `DEAL: ${dealCtx}\n\n`;
@@ -4340,6 +4357,11 @@ ${scaleGuidance}
             `High-fit: ${KL_INSURANCE_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_INSURANCE_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") +
+        (KL_RETAIL_SCORING && getRetailInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nRETAIL/E-COMMERCE VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_RETAIL_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_RETAIL_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`
           : "") +
@@ -6479,6 +6501,7 @@ ${isOpen
       (KL_MEDICAL_PAYMENTS_DISCOVERY && getMedicalPaymentsInjection(sellerICP, member?.ind) ? KL_MEDICAL_PAYMENTS_DISCOVERY + "\n" : "") +
       (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
       (KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY + "\n" : "") +
+      (KL_RETAIL_DISCOVERY && getRetailInjection(sellerICP, member?.ind) ? KL_RETAIL_DISCOVERY + "\n" : "") +
       (KL_EXEC_PERSPECTIVES_DISCOVERY ? KL_EXEC_PERSPECTIVES_DISCOVERY + "\n" : "") +
       (KL_APPROVAL_GATES_DISCOVERY ? KL_APPROVAL_GATES_DISCOVERY + "\n" : "") +
 

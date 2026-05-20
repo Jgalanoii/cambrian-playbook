@@ -38,6 +38,7 @@ import { SMB_MIDMARKET_INJECTION, SMB_MIDMARKET_SCORING, SMB_MIDMARKET_DISCOVERY
 import { INSURANCE_INDUSTRY_INJECTION, INSURANCE_SCORING_CONTEXT, INSURANCE_DISCOVERY_INJECTION, INSURANCE_PLAYBOOK } from "../src/data/insuranceKnowledge.js";
 import { EXECUTIVE_PERSPECTIVES_INJECTION, EXECUTIVE_PERSPECTIVES_SCORING, EXECUTIVE_PERSPECTIVES_DISCOVERY } from "../src/data/executivePerspectivesKnowledge.js";
 import { APPROVAL_GATES_INJECTION, APPROVAL_GATES_DISCOVERY, APPROVAL_GATES_SCORING } from "../src/data/approvalGatesKnowledge.js";
+import { RETAIL_INDUSTRY_INJECTION, RETAIL_SCORING_CONTEXT, RETAIL_DISCOVERY_INJECTION } from "../src/data/retailKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -263,6 +264,10 @@ export default async function handler(req, res) {
       approvalGates: APPROVAL_GATES_INJECTION,
       approvalGatesDiscovery: APPROVAL_GATES_DISCOVERY,
       approvalGatesScoring: APPROVAL_GATES_SCORING,
+      // Retail & E-commerce
+      retailIndustry: RETAIL_INDUSTRY_INJECTION,
+      retailScoring: RETAIL_SCORING_CONTEXT,
+      retailDiscovery: RETAIL_DISCOVERY_INJECTION,
       // Advanced frameworks (paid only)
       pricingNegotiation: PRICING_NEGOTIATION,
       archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
