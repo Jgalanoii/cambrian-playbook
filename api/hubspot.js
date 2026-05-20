@@ -131,11 +131,7 @@ export default async function handler(req, res) {
       const ownerInfo = await getOwnerByToken(tokenData.access_token);
       await saveTokenForUser(userId, { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expiresIn: tokenData.expires_in, portalId: portalInfo?.portalId, scopes: portalInfo?.scopes, ownerId: ownerInfo?.ownerId });
       console.log(`[hubspot] Connected user ${userId} to portal ${portalInfo?.portalId}, owner ${ownerInfo?.ownerId || "unknown"}`);
-      res.setHeader("Content-Type", "text/html");
-      return res.send(`<!DOCTYPE html><html><head><title>Connected</title></head>
-        <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3">
-        <div style="text-align:center"><h2 style="color:#2E6B2E;margin:0 0 8px">Connected to HubSpot</h2>
-        <p style="color:#666;margin:0">Go back to Cambrian Catalyst and click <strong>"Done — check connection"</strong></p></div></body></html>`);
+      return res.redirect(302, `${APP_URL}?hubspot=connected`);
     } catch (e) {
       console.error("[hubspot] Callback error:", e.message);
       return res.redirect(302, `${APP_URL}?hubspot=error&reason=server_error`);

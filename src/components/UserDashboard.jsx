@@ -19,20 +19,13 @@ function HubSpotSection({ sbToken, onStatusChange }) {
       .then(r => r.json()).then(s => { setStatus(s); onStatusChange?.(s); }).catch(() => setStatus({ connected: false }));
   }, [sbToken]);
 
-  const [authUrl, setAuthUrl] = useState(null);
   const startConnect = () => {
     setLoading(true);
     fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
       body: JSON.stringify({ action: "start" }) })
       .then(r => r.json())
-      .then(d => { if (d.url) setAuthUrl(d.url); setLoading(false); })
+      .then(d => { if (d.url) window.location.href = d.url; else setLoading(false); })
       .catch(() => setLoading(false));
-  };
-  const checkConnection = () => {
-    fetch("/api/hubspot", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-      body: JSON.stringify({ action: "status" }) })
-      .then(r => r.json()).then(s => { setStatus(s); if (s?.connected) { setAuthUrl(null); onStatusChange?.(s); } })
-      .catch(() => {});
   };
 
   const disconnect = () => {
@@ -66,26 +59,10 @@ function HubSpotSection({ sbToken, onStatusChange }) {
           <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 8 }}>
             Connect HubSpot to push briefs, deal routes, and CRM notes directly — no downloads, no copy-paste.
           </div>
-          {!authUrl ? (
-            <button onClick={startConnect} disabled={loading || status === null}
-              style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ff7a59", color: "#fff", fontSize: 12, fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: (loading || status === null) ? 0.6 : 1 }}>
-              {loading ? "Preparing..." : status === null ? "Loading..." : "Connect HubSpot"}
-            </button>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <a href={authUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display: "inline-block", padding: "8px 18px", borderRadius: 8, background: "#ff7a59", color: "#fff", fontSize: 12, fontWeight: 700, textDecoration: "none", textAlign: "center" }}>
-                Open HubSpot to authorize &rarr;
-              </a>
-              <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.5 }}>
-                Complete all steps in HubSpot, then come back and click:
-              </div>
-              <button onClick={checkConnection}
-                style={{ padding: "6px 14px", borderRadius: 6, border: "1.5px solid var(--green)", background: "var(--green-bg)", color: "var(--green)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                Done — check connection
-              </button>
-            </div>
-          )}
+          <button onClick={startConnect} disabled={loading || status === null}
+            style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ff7a59", color: "#fff", fontSize: 12, fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: (loading || status === null) ? 0.6 : 1 }}>
+            {loading ? "Connecting..." : status === null ? "Loading..." : "Connect HubSpot"}
+          </button>
         </div>
       )}
     </div>
