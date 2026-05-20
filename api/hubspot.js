@@ -235,7 +235,8 @@ export default async function handler(req, res) {
       const e = (t) => (t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); // escape HTML
       const h = []; // html parts
       h.push(`<h2>Cambrian Catalyst — Session Summary</h2>`);
-      h.push(`<p style="color:#666;font-size:12px">${e(s.sellerName || "")} → ${e(s.targetCompany || company.name)} | ${new Date().toLocaleDateString()}</p>`);
+      const sellerLabel = s.sellerName || data.strategicTheme ? "" : ""; // omit if unknown
+      h.push(`<p style="color:#666;font-size:12px">${s.sellerName ? e(s.sellerName) + " → " : ""}${e(s.targetCompany || company.name)} | ${new Date().toLocaleDateString()}</p>`);
 
       // Quick Take
       if (s.topFinding || s.topOpportunity || s.topRisk) {
