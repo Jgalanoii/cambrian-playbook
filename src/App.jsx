@@ -97,6 +97,12 @@ let KL_APPROVAL_GATES_DISCOVERY = "";
 let KL_RETAIL = ""; // Retail & E-commerce
 let KL_RETAIL_SCORING = null;
 let KL_RETAIL_DISCOVERY = "";
+let KL_PROF_SERVICES = ""; // Professional Services
+let KL_PROF_SERVICES_SCORING = null;
+let KL_PROF_SERVICES_DISCOVERY = "";
+let KL_MANUFACTURING = ""; // Manufacturing
+let KL_MANUFACTURING_SCORING = null;
+let KL_MANUFACTURING_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -176,6 +182,12 @@ async function fetchKnowledgeLayer() {
     KL_RETAIL = d.retailIndustry || "";
     KL_RETAIL_SCORING = d.retailScoring || null;
     KL_RETAIL_DISCOVERY = d.retailDiscovery || "";
+    KL_PROF_SERVICES = d.professionalServices || "";
+    KL_PROF_SERVICES_SCORING = d.professionalServicesScoring || null;
+    KL_PROF_SERVICES_DISCOVERY = d.professionalServicesDiscovery || "";
+    KL_MANUFACTURING = d.manufacturing || "";
+    KL_MANUFACTURING_SCORING = d.manufacturingScoring || null;
+    KL_MANUFACTURING_DISCOVERY = d.manufacturingDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -835,6 +847,26 @@ function getRetailInjection(sellerICP, targetIndustry) {
   return "\n" + KL_RETAIL;
 }
 
+// ── PROFESSIONAL SERVICES INJECTION ────────────────────────────────────
+const PROF_SERVICES_KW = ["consulting", "professional services", "advisory", "audit", "accounting firm", "law firm", "legal services", "staffing", "managed services", "big 4", "management consulting"];
+function getProfServicesInjection(sellerICP, targetIndustry) {
+  if (!KL_PROF_SERVICES) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (PROF_SERVICES_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_PROF_SERVICES;
+}
+
+// ── MANUFACTURING INJECTION ───────────────────────────────────────────
+const MANUFACTURING_KW = ["manufacturing", "factory", "plant", "oem", "contract manufacturer", "job shop", "industrial", "production", "assembly", "fabrication", "machining"];
+function getManufacturingInjection(sellerICP, targetIndustry) {
+  if (!KL_MANUFACTURING) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (MANUFACTURING_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_MANUFACTURING;
+}
+
 // ── INSURANCE INDUSTRY INJECTION ───────────────────────────────────────
 // Triggers for carriers, MGAs, brokers, reinsurers, insurtechs, and
 // insurance-adjacent services. Core keywords trigger on 1 match;
@@ -1426,6 +1458,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getSmbMidmarketInjection(sellerICP, member.ind, member) +
     getInsuranceInjection(sellerICP, member.ind) +
     getRetailInjection(sellerICP, member.ind) +
+    getProfServicesInjection(sellerICP, member.ind) +
+    getManufacturingInjection(sellerICP, member.ind) +
     (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
     (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
     `DEAL: ${dealCtx}\n\n`;
@@ -4362,6 +4396,16 @@ ${scaleGuidance}
             `High-fit: ${KL_RETAIL_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_RETAIL_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") +
+        (KL_PROF_SERVICES_SCORING && getProfServicesInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nPROFESSIONAL SERVICES VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_PROF_SERVICES_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_PROF_SERVICES_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_MANUFACTURING_SCORING && getManufacturingInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nMANUFACTURING VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_MANUFACTURING_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_MANUFACTURING_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`
           : "") +
@@ -6502,6 +6546,8 @@ ${isOpen
       (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
       (KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY + "\n" : "") +
       (KL_RETAIL_DISCOVERY && getRetailInjection(sellerICP, member?.ind) ? KL_RETAIL_DISCOVERY + "\n" : "") +
+      (KL_PROF_SERVICES_DISCOVERY && getProfServicesInjection(sellerICP, member?.ind) ? KL_PROF_SERVICES_DISCOVERY + "\n" : "") +
+      (KL_MANUFACTURING_DISCOVERY && getManufacturingInjection(sellerICP, member?.ind) ? KL_MANUFACTURING_DISCOVERY + "\n" : "") +
       (KL_EXEC_PERSPECTIVES_DISCOVERY ? KL_EXEC_PERSPECTIVES_DISCOVERY + "\n" : "") +
       (KL_APPROVAL_GATES_DISCOVERY ? KL_APPROVAL_GATES_DISCOVERY + "\n" : "") +
 

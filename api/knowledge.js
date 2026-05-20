@@ -39,6 +39,8 @@ import { INSURANCE_INDUSTRY_INJECTION, INSURANCE_SCORING_CONTEXT, INSURANCE_DISC
 import { EXECUTIVE_PERSPECTIVES_INJECTION, EXECUTIVE_PERSPECTIVES_SCORING, EXECUTIVE_PERSPECTIVES_DISCOVERY } from "../src/data/executivePerspectivesKnowledge.js";
 import { APPROVAL_GATES_INJECTION, APPROVAL_GATES_DISCOVERY, APPROVAL_GATES_SCORING } from "../src/data/approvalGatesKnowledge.js";
 import { RETAIL_INDUSTRY_INJECTION, RETAIL_SCORING_CONTEXT, RETAIL_DISCOVERY_INJECTION } from "../src/data/retailKnowledge.js";
+import { PROFESSIONAL_SERVICES_INJECTION, PROFESSIONAL_SERVICES_SCORING, PROFESSIONAL_SERVICES_DISCOVERY } from "../src/data/professionalServicesKnowledge.js";
+import { MANUFACTURING_INJECTION, MANUFACTURING_SCORING, MANUFACTURING_DISCOVERY } from "../src/data/manufacturingKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -268,6 +270,14 @@ export default async function handler(req, res) {
       retailIndustry: RETAIL_INDUSTRY_INJECTION,
       retailScoring: RETAIL_SCORING_CONTEXT,
       retailDiscovery: RETAIL_DISCOVERY_INJECTION,
+      // Professional Services
+      professionalServices: PROFESSIONAL_SERVICES_INJECTION,
+      professionalServicesScoring: PROFESSIONAL_SERVICES_SCORING,
+      professionalServicesDiscovery: PROFESSIONAL_SERVICES_DISCOVERY,
+      // Manufacturing
+      manufacturing: MANUFACTURING_INJECTION,
+      manufacturingScoring: MANUFACTURING_SCORING,
+      manufacturingDiscovery: MANUFACTURING_DISCOVERY,
       // Advanced frameworks (paid only)
       pricingNegotiation: PRICING_NEGOTIATION,
       archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
