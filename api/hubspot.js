@@ -99,38 +99,64 @@ async function createTasks(userId, { steps, dealId, companyId }) {
 
 export default async function handler(req, res) {
   // ── GET: OAuth callback from HubSpot ─────────────────────────────────
+  // Two-step callback: HubSpot redirects here with ?code=...&state=...
+  // Step 1 (no ?confirmed): Show a page asking user to click "Complete Connection"
+  //   This gives them time to finish HubSpot's consent flow (e.g. "I accept the risk")
+  // Step 2 (?confirmed=1): Actually exchange the code for tokens
   if (req.method === "GET") {
     if (!isConfigured()) return res.redirect(302, `${APP_URL}?hubspot=error&reason=not_configured`);
-    const { code, state } = req.query || {};
+    const { code, state, confirmed } = req.query || {};
     if (!state || !code) return res.redirect(302, `${APP_URL}?hubspot=error&reason=missing_params`);
 
     const statePayload = verifyState(state);
     if (!statePayload?.userId) return res.redirect(302, `${APP_URL}?hubspot=error&reason=invalid_state`);
     if (statePayload.ts && Date.now() - statePayload.ts > 600_000) return res.redirect(302, `${APP_URL}?hubspot=error&reason=expired`);
 
+    // Step 1: Show confirmation page — don't exchange yet
+    if (!confirmed) {
+      const confirmUrl = `${APP_URL}/api/hubspot?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}&confirmed=1`;
+      res.setHeader("Content-Type", "text/html");
+      return res.send(`<!DOCTYPE html><html><head><title>Complete Connection</title></head>
+        <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
+        <div style="text-align:center;max-width:400px">
+          <h2 style="margin:0 0 12px">Almost there</h2>
+          <p style="color:#666;line-height:1.6;margin:0 0 24px">If HubSpot asked you to confirm anything (like typing "I accept the risk"), make sure you've completed that first.</p>
+          <a href="${confirmUrl}" style="display:inline-block;padding:12px 32px;border-radius:8px;background:#ff7a59;color:#fff;font-size:14px;font-weight:700;text-decoration:none">Complete Connection</a>
+          <p style="color:#999;font-size:11px;margin-top:16px">Click the button above once you've finished on HubSpot.</p>
+        </div></body></html>`);
+    }
+
+    // Step 2: Exchange code for tokens
     const userId = statePayload.userId;
     const redirectUri = `${APP_URL}/api/hubspot`;
 
     try {
       const tokenData = await exchangeCodeForTokens(code, redirectUri);
-      if (!tokenData?.access_token) return res.redirect(302, `${APP_URL}?hubspot=error&reason=token_exchange`);
+      if (!tokenData?.access_token) {
+        res.setHeader("Content-Type", "text/html");
+        return res.send(`<!DOCTYPE html><html><head><title>Error</title></head>
+          <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
+          <div style="text-align:center"><h1 style="color:#c00">Connection Failed</h1>
+          <p style="color:#666">The authorization code may have expired. Go back to Settings and try again.</p></div></body></html>`);
+      }
       const portalInfo = await getPortalInfo(tokenData.access_token);
       await saveTokenForUser(userId, { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expiresIn: tokenData.expires_in, portalId: portalInfo?.portalId, scopes: portalInfo?.scopes });
       console.log(`[hubspot] Connected user ${userId} to portal ${portalInfo?.portalId}`);
-      // Static success page — no redirect, no auto-close, no JavaScript.
-      // The user closes this tab when ready. The original tab polls for status.
       res.setHeader("Content-Type", "text/html");
       return res.send(`<!DOCTYPE html><html><head><title>Connected</title></head>
         <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
-        <div style="text-align:center"><h1 style="color:#2E6B2E">HubSpot Connected</h1>
-        <p>Close this tab and return to Cambrian Catalyst.</p></div></body></html>`);
+        <div style="text-align:center">
+          <h1 style="color:#2E6B2E">HubSpot Connected</h1>
+          <p style="color:#666">Close this tab and return to Cambrian Catalyst.</p>
+          <p style="color:#999;font-size:11px">Then click "I've completed authorization — check connection" in Settings.</p>
+        </div></body></html>`);
     } catch (e) {
       console.error("[hubspot] Callback error:", e.message);
       res.setHeader("Content-Type", "text/html");
       return res.send(`<!DOCTYPE html><html><head><title>Error</title></head>
         <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
         <div style="text-align:center"><h1 style="color:#c00">Connection Failed</h1>
-        <p>Close this tab, return to Settings, and try again.</p></div></body></html>`);
+        <p style="color:#666">Close this tab, return to Settings, and try again.</p></div></body></html>`);
     }
   }
 
