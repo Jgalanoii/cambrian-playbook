@@ -112,17 +112,26 @@ export default async function handler(req, res) {
     if (!statePayload?.userId) return res.redirect(302, `${APP_URL}?hubspot=error&reason=invalid_state`);
     if (statePayload.ts && Date.now() - statePayload.ts > 600_000) return res.redirect(302, `${APP_URL}?hubspot=error&reason=expired`);
 
-    // Step 1: Show confirmation page — don't exchange yet
+    // Step 1: Show confirmation page — don't exchange yet.
+    // HubSpot may redirect here before the user finishes their consent flow
+    // (e.g. "I accept the risk" prompt). This page lets them go back to
+    // HubSpot to finish, then come back here to complete the connection.
     if (!confirmed) {
       const confirmUrl = `${APP_URL}/api/hubspot?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}&confirmed=1`;
       res.setHeader("Content-Type", "text/html");
       return res.send(`<!DOCTYPE html><html><head><title>Complete Connection</title></head>
         <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
-        <div style="text-align:center;max-width:400px">
-          <h2 style="margin:0 0 12px">Almost there</h2>
-          <p style="color:#666;line-height:1.6;margin:0 0 24px">If HubSpot asked you to confirm anything (like typing "I accept the risk"), make sure you've completed that first.</p>
+        <div style="text-align:center;max-width:440px;padding:20px">
+          <h2 style="margin:0 0 16px">Finish HubSpot Authorization</h2>
+          <p style="color:#666;line-height:1.7;margin:0 0 20px">HubSpot may have asked you to verify or type a confirmation. If you weren't able to finish, go back and complete it now.</p>
+          <div style="margin-bottom:24px">
+            <a href="https://app.hubspot.com" target="_blank" rel="noopener noreferrer"
+              style="display:inline-block;padding:10px 24px;border-radius:8px;border:2px solid #ff7a59;background:white;color:#ff7a59;font-size:13px;font-weight:700;text-decoration:none">
+              Open HubSpot to finish verification &rarr;
+            </a>
+          </div>
+          <p style="color:#666;line-height:1.7;margin:0 0 20px">Once you've completed everything on HubSpot's side, click below to save the connection.</p>
           <a href="${confirmUrl}" style="display:inline-block;padding:12px 32px;border-radius:8px;background:#ff7a59;color:#fff;font-size:14px;font-weight:700;text-decoration:none">Complete Connection</a>
-          <p style="color:#999;font-size:11px;margin-top:16px">Click the button above once you've finished on HubSpot.</p>
         </div></body></html>`);
     }
 
