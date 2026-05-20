@@ -98,9 +98,6 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   // Owner — makes the company show up in "My companies"
   if (ownerId) properties.hubspot_owner_id = ownerId;
 
-  // Lifecycle stage — mark as opportunity since we're actively researching them
-  properties.lifecyclestage = "opportunity";
-
   // Enrich from session summary
   const s = summary || {};
   if (s.headquarters) {
@@ -128,8 +125,8 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   const r = await hubspotFetch(userId, "/crm/v3/objects/companies", { method: "POST", body: { properties } });
   if (!r.ok) {
     const errBody = await r.text().catch(() => "");
-    console.error(`[hubspot] Company create failed: ${r.status} ${errBody.slice(0, 300)}`);
-    return null;
+    console.error(`[hubspot] Company create failed: ${r.status} ${errBody.slice(0, 500)}`);
+    return { error: `HubSpot ${r.status}: ${errBody.slice(0, 200)}` };
   }
   return { id: (await r.json()).id, created: true };
 }
@@ -240,6 +237,14 @@ export default async function handler(req, res) {
 
     // ── OAuth: disconnect ──────────────────────────────────────────────
     if (action === "disconnect") {
+      // Revoke the token on HubSpot's side so re-authorization shows the full consent flow
+      const tokens = await getTokenForUser(userId);
+      if (tokens?.refreshToken) {
+        try {
+          await fetch("https://api.hubapi.com/oauth/v1/refresh-tokens/" + encodeURIComponent(tokens.refreshToken), { method: "DELETE" });
+          console.log("[hubspot] Revoked refresh token on HubSpot side");
+        } catch (e) { console.warn("[hubspot] Token revocation failed:", e.message); }
+      }
       await deleteTokenForUser(userId);
       return res.json({ ok: true });
     }
@@ -283,9 +288,10 @@ export default async function handler(req, res) {
 
       // 1. Upsert company with owner + all enriched properties in one call
       const companyResult = await upsertCompany(userId, company, { ownerId, summary: s });
-      if (!companyResult) {
-        console.error(`[hubspot] upsertCompany failed for "${company.name}" (${company.domain})`);
-        return res.status(502).json({ error: `Failed to create company "${company.name}" in HubSpot. Check that your HubSpot connection is still active in Settings.` });
+      if (!companyResult || companyResult.error) {
+        const detail = companyResult?.error || "Unknown error";
+        console.error(`[hubspot] upsertCompany failed for "${company.name}" (${company.domain}): ${detail}`);
+        return res.status(502).json({ error: `HubSpot push failed for "${company.name}": ${detail}` });
       }
       if (companyResult.created) created.companies = 1;
 
