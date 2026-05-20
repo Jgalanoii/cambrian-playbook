@@ -4776,8 +4776,8 @@ ${isOpen
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
       `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
       `"customerExamples":["Customer names from the Phase 1 research above ONLY — do NOT add names from training knowledge. If research found no customers, return empty array."],`+
-      `"relevantEvents":[{"name":"Industry conference name — ONLY conferences you found in the Phase 1 research above or that are well-established annual events (Money20/20, NRF Big Show, HIMSS, etc.)","date":"Empty string — do NOT guess dates. Dates change yearly and your training data is stale.","city":"Empty string — do NOT guess cities. Locations change yearly.","url":"Official website URL if you are CERTAIN, otherwise empty string"}]}}`+
-      `\n\nFor relevantEvents: Return ONLY well-known, established industry conferences that you are CERTAIN exist (e.g. Money20/20, SHRM Annual, NRF Big Show, HIMSS, RSA Conference). Do NOT guess dates, cities, or URLs — leave those as empty strings. The UI will link to search results. 3 verified event names with empty dates is better than 5 events with fabricated dates. NEVER invent a conference name.`;
+      `"relevantEvents":[]}`+
+      `\n\nLeave relevantEvents as an empty array — events are populated by a separate web-search call that verifies dates and URLs.`;
 
     try{
       const d2 = await claudeFetch({
@@ -4847,6 +4847,52 @@ ${isOpen
       }
     }catch(e){ console.warn("ICP build phase 2 failed:",e.message); }
     setIcpLoading(false);
+
+    // ── EVENTS ENRICHMENT (separate web-search call) ────────────────
+    // Fires after ICP is set. Uses web search to find REAL conference
+    // dates, cities, and URLs — never fabricated from training data.
+    // Runs in background; ICP renders immediately, events fill in later.
+    try {
+      const icpNow = sellerICP || {};
+      const industries = icpNow.icp?.industries || [];
+      if (industries.length > 0) {
+        const searchQ = industries.slice(0, 3).join(" OR ") + " conference 2026 2027";
+        console.log("[icp] Enriching events via web search:", searchQ);
+        const eventsResult = await claudeFetch({
+          model: activeModel(),
+          max_tokens: 1200,
+          temperature: 0,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+          messages: [{ role: "user", content:
+            `Search for upcoming industry conferences and trade shows relevant to these industries: ${industries.join(", ")}.\n\n` +
+            `SEARCH STRATEGY:\n` +
+            `1. Search: "${industries[0]} conference 2026 2027"\n` +
+            `2. Search: "${industries.slice(0, 2).join(" ")} trade show expo 2026"\n\n` +
+            `Return 3-5 REAL upcoming conferences with verified dates and URLs from your search results.\n` +
+            `CRITICAL: Only include events you found in search results. Every date and URL must come from a real web page. If search didn't return a date for an event, leave date as empty string.\n\n` +
+            `Return ONLY raw JSON:\n` +
+            `{"events":[{"name":"Conference Name","date":"e.g. Oct 26-29, 2026 — from search results only","city":"City, State/Country — from search results only","url":"Official website URL from search results"}]}`
+          }],
+        });
+        if (!eventsResult.error) {
+          const textBlocks = (eventsResult.content || []).filter(b => b.type === "text").map(b => (b.text || "").replace(/<\/?cite[^>]*>/g, ""));
+          for (let i = textBlocks.length - 1; i >= 0; i--) {
+            const parsed = extractJsonWithKey(textBlocks[i], "events");
+            if (parsed?.events?.length) {
+              console.log(`[icp] Events enriched: ${parsed.events.length} conferences found`);
+              const mapped = parsed.events.filter(e => e?.name).map(e => ({
+                name: e.name, date: e.date || "", city: e.city || "", url: e.url || "",
+              }));
+              setSellerICP(prev => {
+                if (!prev?.icp) return prev;
+                return { ...prev, icp: { ...prev.icp, relevantEvents: mapped } };
+              });
+              break;
+            }
+          }
+        }
+      }
+    } catch (e) { console.warn("[icp] Events enrichment failed:", e.message); }
   };
 
   // ── INPUT QUALITY VALIDATOR ─────────────────────────────────────────────
