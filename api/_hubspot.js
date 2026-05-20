@@ -103,13 +103,14 @@ export async function getTokenForUser(userId) {
       expiresAt: new Date(row.expires_at),
       portalId: row.portal_id,
       scopes: row.scopes,
+      ownerId: row.owner_id || null,
     };
   } catch {
     return null; // corrupted tokens — treat as disconnected
   }
 }
 
-export async function saveTokenForUser(userId, { accessToken, refreshToken, expiresIn, portalId, scopes }) {
+export async function saveTokenForUser(userId, { accessToken, refreshToken, expiresIn, portalId, scopes, ownerId }) {
   const atEnc = encrypt(accessToken);
   // CRITICAL: Use the SAME IV for both tokens so getTokenForUser can decrypt
   // both with the single stored token_iv. Previously rtReenc used a different
@@ -138,6 +139,7 @@ export async function saveTokenForUser(userId, { accessToken, refreshToken, expi
       portal_id: portalId || null,
       scopes: scopes || null,
       expires_at: expiresAt,
+      owner_id: ownerId || null,
       updated_at: new Date().toISOString(),
     });
   } else {
@@ -150,6 +152,7 @@ export async function saveTokenForUser(userId, { accessToken, refreshToken, expi
       portal_id: portalId || null,
       scopes: scopes || null,
       expires_at: expiresAt,
+      owner_id: ownerId || null,
     });
   }
 }
@@ -272,6 +275,36 @@ export async function getPortalInfo(accessToken) {
   if (!r.ok) return null;
   const data = await r.json();
   return { portalId: String(data.hub_id), scopes: (data.scopes || []).join(",") };
+}
+
+// ── Owner lookup — find the HubSpot owner ID for the authenticated user ──
+export async function getOwnerByToken(accessToken) {
+  // The /crm/v3/owners endpoint returns owners. Use the token's user info
+  // to find the matching owner by email.
+  try {
+    // First get the token's user email
+    const tokenInfo = await fetch(`${HS_API_BASE}/oauth/v1/access-tokens/${accessToken}`);
+    if (!tokenInfo.ok) return null;
+    const info = await tokenInfo.json();
+    const userEmail = info.user;
+    if (!userEmail) return null;
+
+    // Search owners by email
+    const ownersRes = await fetch(`${HS_API_BASE}/crm/v3/owners/?email=${encodeURIComponent(userEmail)}&limit=1`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!ownersRes.ok) return null;
+    const owners = await ownersRes.json();
+    if (owners.results?.length) {
+      const owner = owners.results[0];
+      console.log(`[hubspot] Found owner: ${owner.email} → ID ${owner.id}`);
+      return { ownerId: String(owner.id), ownerEmail: owner.email, ownerName: `${owner.firstName || ""} ${owner.lastName || ""}`.trim() };
+    }
+    return null;
+  } catch (e) {
+    console.warn("[hubspot] Owner lookup failed:", e.message);
+    return null;
+  }
 }
 
 // ── Config check ───────────────────────────────────────────────────────

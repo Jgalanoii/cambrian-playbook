@@ -10,7 +10,7 @@
 import { isAllowedOrigin, verifyJwt, decodeJwtPayload, checkRateLimit } from "./_guard.js";
 import {
   isConfigured, buildAuthUrl, signState, verifyState,
-  exchangeCodeForTokens, getPortalInfo, saveTokenForUser,
+  exchangeCodeForTokens, getPortalInfo, getOwnerByToken, saveTokenForUser,
   getTokenForUser, deleteTokenForUser, hubspotFetch,
 } from "./_hubspot.js";
 
@@ -40,13 +40,21 @@ async function findCompanyByDomain(userId, domain) {
   return data?.results?.[0] || null;
 }
 
-async function upsertCompany(userId, company) {
+async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   const domain = cleanDomain(company.domain);
   const properties = { name: company.name || "", domain };
   if (company.industry) properties.industry = company.industry;
   if (company.employees) properties.numberofemployees = String(company.employees).replace(/[^0-9]/g, "");
   if (company.revenue) { const rev = String(company.revenue).replace(/[^0-9.]/g, ""); if (rev) properties.annualrevenue = rev; }
-  console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" properties:`, JSON.stringify(properties));
+  // Assign owner — this makes the company show up in "My companies" for the user
+  if (ownerId) properties.hubspot_owner_id = ownerId;
+  // Enrich from session summary
+  const s = summary || {};
+  if (s.headquarters) { properties.city = s.headquarters.split(",")[0]?.trim(); if (s.headquarters.includes(",")) properties.state = s.headquarters.split(",").slice(1).join(",").trim(); }
+  if (s.founded) properties.founded_year = String(s.founded).replace(/[^0-9]/g, "").slice(0, 4);
+  if (s.website) properties.website = s.website.startsWith("http") ? s.website : `https://${s.website}`;
+  if (s.companySnapshot) properties.description = s.companySnapshot.slice(0, 2000);
+  console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" owner="${ownerId||"none"}"`);
 
   const existing = domain ? await findCompanyByDomain(userId, domain) : null;
   if (existing) {
@@ -119,8 +127,9 @@ export default async function handler(req, res) {
         return res.redirect(302, `${APP_URL}?hubspot=error&reason=token_exchange`);
       }
       const portalInfo = await getPortalInfo(tokenData.access_token);
-      await saveTokenForUser(userId, { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expiresIn: tokenData.expires_in, portalId: portalInfo?.portalId, scopes: portalInfo?.scopes });
-      console.log(`[hubspot] Connected user ${userId} to portal ${portalInfo?.portalId}`);
+      const ownerInfo = await getOwnerByToken(tokenData.access_token);
+      await saveTokenForUser(userId, { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expiresIn: tokenData.expires_in, portalId: portalInfo?.portalId, scopes: portalInfo?.scopes, ownerId: ownerInfo?.ownerId });
+      console.log(`[hubspot] Connected user ${userId} to portal ${portalInfo?.portalId}, owner ${ownerInfo?.ownerId || "unknown"}`);
       res.setHeader("Content-Type", "text/html");
       return res.send(`<!DOCTYPE html><html><head><title>Connected</title></head>
         <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3">
@@ -210,27 +219,19 @@ export default async function handler(req, res) {
       console.log(`[hubspot] push_brief for TARGET company: "${company.name}" domain: "${company.domain}" industry: "${company.industry}"`);
       const created = { companies: 0, notes: 0 };
 
-      // 1. Upsert company — this creates the TARGET company in HubSpot
-      const companyResult = await upsertCompany(userId, company);
+      // Get the user's HubSpot owner ID so the company is assigned to them
+      const tokens = await getTokenForUser(userId);
+      const ownerId = tokens?.ownerId || null;
+
+      // 1. Upsert company with owner + all enriched properties in one call
+      const companyResult = await upsertCompany(userId, company, { ownerId, summary: s });
       if (!companyResult) {
         console.error(`[hubspot] upsertCompany failed for "${company.name}" (${company.domain})`);
         return res.status(502).json({ error: `Failed to create company "${company.name}" in HubSpot. Check that your HubSpot connection is still active in Settings.` });
       }
       if (companyResult.created) created.companies = 1;
 
-      // 2. Update company with enriched properties from the session summary
-      const enrichProps = {};
-      if (s.headquarters) enrichProps.city = s.headquarters.split(",")[0]?.trim();
-      if (s.headquarters?.includes(",")) enrichProps.state = s.headquarters.split(",").slice(1).join(",").trim();
-      if (s.founded) enrichProps.founded_year = String(s.founded).replace(/[^0-9]/g, "").slice(0, 4);
-      if (s.website) enrichProps.website = s.website.startsWith("http") ? s.website : `https://${s.website}`;
-      if (s.companySnapshot) enrichProps.description = s.companySnapshot.slice(0, 2000);
-      if (company.industry) enrichProps.industry = company.industry;
-      if (Object.keys(enrichProps).length) {
-        await hubspotFetch(userId, `/crm/v3/objects/companies/${companyResult.id}`, { method: "PATCH", body: { properties: enrichProps } });
-      }
-
-      // 3. Build HTML note — clean, data-rich, scannable
+      // 2. Build HTML note — clean, data-rich, scannable
       // No contact creation — executives are researched names, not verified contacts
       const e = (t) => (t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); // escape HTML
       const h = []; // html parts
