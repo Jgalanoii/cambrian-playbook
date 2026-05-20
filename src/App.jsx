@@ -1438,7 +1438,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"revenue":"e.g. $2.4B (FY2024) — use ONLY figures from web search or Apollo data. Empty string if not found.","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"e.g. ~200,000",`+
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if you are certain it's correct (e.g. linkedin.com/company/gusto). A wrong LinkedIn link is worse than no link. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
-    `"competitors":["Competitor 1","Competitor 2","Competitor 3"],`+
+    `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
     (partial) => {
       if (!onStream || partial.length < 40) return;
@@ -1918,10 +1918,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           deepIntelIdentity+
           `Research the competitive landscape of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
+          `COMPETITOR ACCURACY (CRITICAL): Only list companies that DIRECTLY compete with ${co} in the SAME product category. A competitor must offer a substitute product that a buyer would evaluate alongside ${co}. Companies in adjacent categories (analytics, CRM, data platforms, etc.) are NOT competitors unless they directly compete for the same budget and use case. If web search returns no clear competitors, return fewer entries or empty array — do NOT fill with companies from your training data that seem vaguely related. A wrong competitor name makes the rep look uninformed.\n\n`+
           `Return raw JSON:\n`+
           `{"competitivePositioning":{`+
           `"marketPosition":"2-3 sentences: where ${co} sits in the market. Category leadership or challenger status, analyst positioning (Gartner MQ, Forrester Wave if applicable). CRITICAL: Do NOT cite G2 Grid rankings, review-site 'market share' percentages, or product-listing counts as real market share. G2/Capterra/TrustRadius rank by reviews and traffic, NOT by actual revenue or market share. If the only market-share data available is from a review platform, omit it.",`+
-          `"primaryCompetitors":[{"name":"Competitor name","strength":"Their #1 advantage over ${co}","weakness":"Where ${co} beats them","recentMove":"Latest competitive action (launch, acquisition, pivot, loss)"}],`+
+          `"primaryCompetitors":[{"name":"ONLY companies found in your web search results that directly compete with ${co} in the same category. Empty array if search found no clear competitors.","strength":"Their #1 advantage over ${co}","weakness":"Where ${co} beats them","recentMove":"Latest competitive action — empty if unknown"}],`+
           `"whereWinning":"1-2 sentences: deal types, segments, or use cases where ${co} consistently wins and why",`+
           `"whereLosing":"1-2 sentences: where they lose deals and to whom — be specific about WHY (price, feature, relationship, incumbent)",`+
           `"displacementAngle":"1 sentence: if you were competing against ${co}, what's the angle that works? What assumption about them can be challenged?"}}`
