@@ -117,11 +117,20 @@ export default async function handler(req, res) {
       const portalInfo = await getPortalInfo(tokenData.access_token);
       await saveTokenForUser(userId, { accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expiresIn: tokenData.expires_in, portalId: portalInfo?.portalId, scopes: portalInfo?.scopes });
       console.log(`[hubspot] Connected user ${userId} to portal ${portalInfo?.portalId}`);
-      // Redirect back to the app — the original tab polls for connection status
-      return res.redirect(302, `${APP_URL}?hubspot=connected`);
+      // Static success page — no redirect, no auto-close, no JavaScript.
+      // The user closes this tab when ready. The original tab polls for status.
+      res.setHeader("Content-Type", "text/html");
+      return res.send(`<!DOCTYPE html><html><head><title>Connected</title></head>
+        <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
+        <div style="text-align:center"><h1 style="color:#2E6B2E">HubSpot Connected</h1>
+        <p>Close this tab and return to Cambrian Catalyst.</p></div></body></html>`);
     } catch (e) {
       console.error("[hubspot] Callback error:", e.message);
-      return res.redirect(302, `${APP_URL}?hubspot=error&reason=server_error`);
+      res.setHeader("Content-Type", "text/html");
+      return res.send(`<!DOCTYPE html><html><head><title>Error</title></head>
+        <body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9f7f3;color:#333">
+        <div style="text-align:center"><h1 style="color:#c00">Connection Failed</h1>
+        <p>Close this tab, return to Settings, and try again.</p></div></body></html>`);
     }
   }
 
