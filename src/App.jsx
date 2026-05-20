@@ -4129,6 +4129,7 @@ ${scaleGuidance}
       const prompt =
         `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
         `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n`+
+      `CRITICAL: The ONLY way to compute a score is dim1 + dim2 + dim3 using the FIXED VALUES in the tables below. Vertical calibration context (percentages like "70-80%") is background knowledge only — it does NOT override the point tables. Never adjust a dimension score to match a calibration percentage.\n`+
         `CRITICAL: You MUST return a score for EVERY company listed below. If industry says "Unknown", use your training knowledge to identify the company's real industry. Every company in the list MUST appear in your output — never skip a company.\n\n`+
         `━━━ DIMENSION 1: ICP ALIGNMENT (40 points max) ━━━\n`+
         `Pick dim1 using this 3-step lookup. Do NOT do arithmetic — just pick the value from each row.\n\n`+
@@ -4184,6 +4185,8 @@ ${scaleGuidance}
         `- 'incumbentRisk' is 1-2 sentences: name the incumbent vendor ONLY if certain, and assess switching cost in business terms.\n`+
         `- Do NOT use "tier", "wall", "band", "bucket", "dimension", "score", "points", "bracket" in any customer-facing field.\n\n`+
         `SELLER: ${sellerCtx.slice(0,500)}\n${icpContext}\n`+
+        `\n━━━ VERTICAL CONTEXT (background knowledge — do NOT override dim1/dim2/dim3 fixed values) ━━━\n`+
+        `The percentages below are historical averages for CONTEXT. They tell you what kind of company tends to score well, but the ACTUAL score is always dim1+dim2+dim3 from the fixed tables above. NEVER set a total score to match a calibration percentage.\n`+
         (KL_PAYMENTS_SCORING && getPaymentsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nPAYMENTS VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_PAYMENTS_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
@@ -4245,7 +4248,7 @@ ${scaleGuidance}
             `High-friction: ${KL_INSURANCE_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
-          ? `\nSMB/MID-MARKET CALIBRATION: Adjust scoring by company size. SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Score higher when company size matches seller's sweet spot.\n`
+          ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`
           : "") +
         (getInvestorInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nINVESTOR/PE/VC CALIBRATION: PE-backed companies have 3-5yr hold timelines creating urgency. Operating partners influence tooling decisions. VC-backed companies prioritize growth rate over profitability. Frame fit through EBITDA impact for PE, NRR/ARR for VC, multi-decade value for family office.\n`
@@ -4288,11 +4291,19 @@ ${scaleGuidance}
 
       const map = {};
       const memberUpdates = {};
+      // Snap a dimension score to the nearest allowed fixed value.
+      // This prevents the model from interpolating between fixed points.
+      const DIM1_VALID = [10, 12, 13, 15, 20, 22, 23, 25, 26, 28, 29, 31, 32, 34, 35, 37, 38, 40]; // stepA(10/20/26/32) + stepB(0/2/5) + stepC(0/1/3)
+      const DIM2_VALID = [3, 10, 15, 17, 27]; // fixed lookup values
+      const DIM3_VALID = [10, 20, 26]; // fixed lookup values
+      const snap = (val, allowed) => allowed.reduce((best, v) => Math.abs(v - val) < Math.abs(best - val) ? v : best, allowed[0]);
+
       result.scores.forEach(s => {
         // Compute total from per-dimension scores with user-adjustable weights
-        const rawD1 = Math.max(0, Math.min(40, Number(s.dim1) || 0));
-        const rawD2 = Math.max(0, Math.min(30, Number(s.dim2) || 0));
-        const rawD3 = Math.max(0, Math.min(30, Number(s.dim3) || 0));
+        // Snap to nearest fixed value to prevent interpolation variance
+        const rawD1 = snap(Math.max(0, Math.min(40, Number(s.dim1) || 0)), DIM1_VALID);
+        const rawD2 = snap(Math.max(0, Math.min(30, Number(s.dim2) || 0)), DIM2_VALID);
+        const rawD3 = snap(Math.max(0, Math.min(30, Number(s.dim3) || 0)), DIM3_VALID);
         // Apply weights: normalize raw scores to 0-1, then scale by weight
         const d1 = (rawD1 / 40) * fitWeights.dim1;
         const d2 = (rawD2 / 30) * fitWeights.dim2;
