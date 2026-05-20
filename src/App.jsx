@@ -6253,12 +6253,13 @@ ${isOpen
                 sellerCtxForQs +
                 acctDocsForQs +
                 `RULES:\n`+
-                `- Each question must reference a SPECIFIC finding from the research above (cite it)\n`+
+                `- Each question must reference a SPECIFIC finding from the RESEARCH FINDINGS section above. If a finding doesn't exist in the text above, do NOT cite it.\n`+
+                `- The "source" field must quote or paraphrase an actual sentence from the research. If you cannot point to a real finding, use a structural question about their industry instead.\n`+
                 `- Questions must be open-ended (no yes/no)\n`+
                 `- Sequence from rapport-building (Q1) to insight-revealing (Q5)\n`+
                 `- Design to surface unspoken priorities, budget signals, or competitive dynamics\n`+
                 `- Be conversational — these should feel natural to say out loud\n`+
-                `- NEVER invent facts not present in the research\n`+
+                `- NEVER invent facts, statistics, competitor names, or executive names not present in the research\n`+
                 `- NEVER mention the seller's products by name — probe for pain, not pitch\n\n`+
                 `Return ONLY raw JSON: {"fiveQuestions":[{"question":"...","rationale":"Why this question matters — one sentence","source":"Which finding from the research this references"}]}`,
                 { maxTokens: 1200 }
@@ -6337,6 +6338,9 @@ ${isOpen
     // cite NAMED customers from the proof pack, not invent generic claims.
     const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
 
+    // Customer list for grounded talk track references
+    const customerList = (sellerICP?.icp?.customerExamples || []).filter(Boolean);
+
     // Build negotiation framework context from imported knowledge layer
     const joltCtx = KL_JOLT.steps.map(s=>`${s.letter}=${s.action}: ${s.description}`).join(". ");
     const challengerCtx = `${KL_CHALLENGER.mobilizer?.definition || ""}. ${KL_CHALLENGER.mobilizer?.identify || ""}. Teaching: ${KL_CHALLENGER.teachingAngle}`;
@@ -6406,11 +6410,11 @@ ${isOpen
           takeRiskOff:"Specific pilot scope, SLA, reference customer, or phased rollout that removes their risk",
         },
         talkTracks:[
-          {stage:"Opening",line:"1-2 natural sentences. Teach the Challenger insight about "+co+"'s industry. Reference a NAMED CUSTOMER from the proof pack as a brief social-proof anchor when natural."},
+          {stage:"Opening",line:"1-2 natural sentences. Teach the Challenger insight about "+co+"'s industry."+(customerList.length ? " If natural, reference one of these SPECIFIC customers from the proof pack: "+customerList.slice(0,5).join(", ")+". Do NOT invent customer names — only use names from this list." : " Do NOT reference any customer names — the proof pack has none listed.")},
           {stage:"Discovery",line:"One short question about their PAST BEHAVIOR around this problem — not about the future or our product. Use their language."},
           {stage:"Impact",line:"One question that tests if this is a must-have: 'If you had to go back to [old way] tomorrow, what would that mean for [specific team/metric]?'"},
           {stage:"Vision",line:"One sentence. What good looks like in their words — specific and measurable. Frame using a success factor from the proof pack."},
-          {stage:"Route",line:"Name the decision clearly and offer one specific recommendation grounded in a named customer's path: 'Based on what you've told me, here's how [Named Customer] approached this — I'd recommend starting with [specific pilot]. Here's why...'"},
+          {stage:"Route",line:"Name the decision clearly and offer one specific recommendation."+(customerList.length ? " You may reference how "+customerList[0]+" approached this — but ONLY use names from the proof pack list above." : " Do NOT reference customer names — describe the approach generically.")},
         ],
       });
 
@@ -6641,9 +6645,9 @@ ${isOpen
       `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"adoptionProfile":"Innovator or Early Adopter or Early Majority or Late Majority",`+`"adoptionImplication":"1 sentence: what their adoption profile means for messaging, proof points, and sales approach",`+`"pmfAssessment":{"targetCustomerFit":"Strong/Partial/Weak — is this genuinely the ICP?","underservedNeedFit":"Strong/Partial/Weak — is the need real and unmet?","valuePropositionFit":"Strong/Partial/Weak — does our value prop land clearly?","overallPMFSignal":"Strong/Emerging/Weak — overall PMF signal from this discovery"},`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
       `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
       `"architectureGaps":[{"gap":"What the customer needs that we didn't fully address","recommendation":"How to bridge it — our product, partnership, or configuration"}],`+
-      `"implementationRoadmap":"2-3 sentence recommended phasing: what to implement first and why, framed around their desired outcomes",`+
+      `"implementationRoadmap":"2-3 sentence recommended phasing based ONLY on what was discussed in discovery. Do NOT invent timelines or milestones — if no implementation details were discussed, say 'Implementation phasing to be determined based on discovery.'",`+
       `"integrationComplexity":"Low / Medium / High with 1-sentence explanation",`+
-      `"successMetrics":["Specific measurable outcome 1 tied to their stated goals","Metric 2","Metric 3"],`+
+      `"successMetrics":["Outcome tied to a goal the prospect ACTUALLY STATED in discovery — do NOT invent metrics they didn't mention","Metric 2 from discovery","Metric 3 or empty if not discussed"],`+
       `"discoveryGaps":["Specific info the rep needs to capture on the next call to strengthen this assessment"],`+
       `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`;
 
@@ -6731,7 +6735,11 @@ ${isOpen
       (filledPct < 30 ? `WARNING: Very sparse discovery data. The rep captured almost nothing. In callSummary, note that the deal cannot be properly routed without more discovery — recommend they go back for a follow-up call to fill gaps before advancing.\n` : "") +
       `\n`+
 
-      `ACCURACY: Base every claim in callSummary, crmNote, and emailBody on what was actually captured above. NEVER invent things the prospect said, metrics they shared, or commitments they made. If a RIVER field says "Not captured", do not fill in what you think they might have said — reflect the gap.\n\n`+
+      `ACCURACY (CRITICAL — the rep will send this to a real person):\n`+
+      `- Base EVERY claim on what was ACTUALLY CAPTURED above. If a field is empty or says "Not captured", that topic was NOT discussed — do NOT invent what you think they might have said.\n`+
+      `- NEVER attribute quotes, metrics, commitments, or specific statements to the prospect unless they appear VERBATIM in the captured data above.\n`+
+      `- If discovery was sparse (<30% filled), say so in the summary: "Limited discovery captured — follow-up needed to confirm priorities."\n`+
+      `- The emailBody must only reference things that were actually discussed. A follow-up that references a conversation that didn't happen destroys trust instantly.\n\n`+
       KL_OFFER_FIT +
       `ROUTING CRITERIA:\n`+
       `FAST_TRACK: champion identified + budget confirmed + clear timeline + value is 3-5x price\n`+
@@ -6748,7 +6756,7 @@ ${isOpen
       `"customerNextSteps":["What THEY (the prospect) agreed to do — e.g. schedule follow-up with CFO, share requirements doc"],`+
       `"crmNote":"CRM-ready note — 4-5 sentences covering state, pain, vision, process, next action",`+
       `"emailSubject":"Follow-up email subject line",`+
-      `"emailBody":"Full follow-up email — professional, outcome-focused, references specific things discussed, clear CTA"}`;
+      `"emailBody":"Follow-up email — professional, references ONLY things that were actually discussed (from the captured data above). If discovery was sparse, keep the email short and generic rather than inventing specific details. Clear CTA."}`;
 
     // Stream post-call so user sees deal route appear first
     const result = await streamAI(postCallPrompt, (partial) => {
