@@ -41,6 +41,7 @@ import { APPROVAL_GATES_INJECTION, APPROVAL_GATES_DISCOVERY, APPROVAL_GATES_SCOR
 import { RETAIL_INDUSTRY_INJECTION, RETAIL_SCORING_CONTEXT, RETAIL_DISCOVERY_INJECTION } from "../src/data/retailKnowledge.js";
 import { PROFESSIONAL_SERVICES_INJECTION, PROFESSIONAL_SERVICES_SCORING, PROFESSIONAL_SERVICES_DISCOVERY } from "../src/data/professionalServicesKnowledge.js";
 import { MANUFACTURING_INJECTION, MANUFACTURING_SCORING, MANUFACTURING_DISCOVERY } from "../src/data/manufacturingKnowledge.js";
+import { PE_HOLDCO_INJECTION, PE_HOLDCO_DISCOVERY, PE_HOLDCO_SCORING } from "../src/data/peHoldcoKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -278,6 +279,10 @@ export default async function handler(req, res) {
       manufacturing: MANUFACTURING_INJECTION,
       manufacturingScoring: MANUFACTURING_SCORING,
       manufacturingDiscovery: MANUFACTURING_DISCOVERY,
+      // PE-Backed Holding Company & Post-Merger Commercial Integration
+      peHoldco: PE_HOLDCO_INJECTION,
+      peHoldcoScoring: PE_HOLDCO_SCORING,
+      peHoldcoDiscovery: PE_HOLDCO_DISCOVERY,
       // Advanced frameworks (paid only)
       pricingNegotiation: PRICING_NEGOTIATION,
       archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,

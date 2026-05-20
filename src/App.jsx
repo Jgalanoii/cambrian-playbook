@@ -103,6 +103,8 @@ let KL_PROF_SERVICES_DISCOVERY = "";
 let KL_MANUFACTURING = ""; // Manufacturing
 let KL_MANUFACTURING_SCORING = null;
 let KL_MANUFACTURING_DISCOVERY = "";
+let KL_PE_HOLDCO = ""; // PE-backed holdco / post-merger commercial integration
+let KL_PE_HOLDCO_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -188,6 +190,8 @@ async function fetchKnowledgeLayer() {
     KL_MANUFACTURING = d.manufacturing || "";
     KL_MANUFACTURING_SCORING = d.manufacturingScoring || null;
     KL_MANUFACTURING_DISCOVERY = d.manufacturingDiscovery || "";
+    KL_PE_HOLDCO = d.peHoldco || "";
+    KL_PE_HOLDCO_DISCOVERY = d.peHoldcoDiscovery || "";
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -1462,6 +1466,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getManufacturingInjection(sellerICP, member.ind) +
     (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
     (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
+    (KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : "") +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -6550,6 +6555,7 @@ ${isOpen
       (KL_MANUFACTURING_DISCOVERY && getManufacturingInjection(sellerICP, member?.ind) ? KL_MANUFACTURING_DISCOVERY + "\n" : "") +
       (KL_EXEC_PERSPECTIVES_DISCOVERY ? KL_EXEC_PERSPECTIVES_DISCOVERY + "\n" : "") +
       (KL_APPROVAL_GATES_DISCOVERY ? KL_APPROVAL_GATES_DISCOVERY + "\n" : "") +
+      (KL_PE_HOLDCO_DISCOVERY ? KL_PE_HOLDCO_DISCOVERY + "\n" : "") +
 
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+

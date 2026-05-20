@@ -23,7 +23,8 @@
     "approvalGatesKnowledge.js",
     "retailKnowledge.js",
     "professionalServicesKnowledge.js",
-    "manufacturingKnowledge.js"
+    "manufacturingKnowledge.js",
+    "peHoldcoKnowledge.js"
   ],
 
   "_partialVerticalFiles": "INJECTION required; SCORING/DISCOVERY optional. These are cross-cutting layers that legitimately ship without a SCORING_CONTEXT.",
