@@ -2897,11 +2897,11 @@ function PasswordGate({ onAuth }) {
             <div style={{display:"flex",flexDirection:"column",gap:8,fontSize:13,color:"var(--ink-2)"}}>
               <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                 <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>1</span>
-                <span><strong>Enter your company</strong> — we build your ICP automatically</span>
+                <span><strong>Enter your company</strong> — Cambrian builds your ICP automatically</span>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                 <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>2</span>
-                <span><strong>Pick your targets</strong> — import a list or let us generate matches</span>
+                <span><strong>Pick your targets</strong> — import a list or let AI generate matches</span>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                 <span style={{background:"var(--tan-0)",color:"#fff",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>3</span>
@@ -7555,8 +7555,8 @@ ${isOpen
   }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
-  const STEPS=["Start","Define Your Buyer","Build Prospect Lists","Fit Check","Account Review","Research Brief","Call Prep","Live Call","Post-Call"];
-  const STEP_TIPS=["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Deal routing, CRM note, follow-up email, and solutioning"];
+  const STEPS=["Start","Define Your Buyer","Build Prospect Lists","Fit Check","Account Review","Research Brief","Call Prep","Live Call","Post-Call","Solution Fit"];
+  const STEP_TIPS=["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Deal routing, CRM note, follow-up email, and solutioning","Solution architecture review, stakeholder mapping, next steps"];
   const chatContextLabel = selectedAccount?.company
     ? `${STEPS[step]} · ${selectedAccount.company}`
     : STEPS[step];
@@ -7638,8 +7638,8 @@ ${isOpen
       `9. CORRECTION REDIRECT: When a user tells you something is WRONG about the outputs (ICP, brief, scoring, hypothesis, etc.), do NOT try to fix it in chat. Instead, redirect them to the correct place in the app where their edit will propagate through all downstream outputs:`,
       `   - ICP is wrong (industries, personas, disqualifiers, size, etc.) → "Good catch — go to Step 2 (ICP & RFPs) and click that field to edit it. Your change will flow into every score, brief, and hypothesis automatically."`,
       `   - Brief content is wrong (company facts, executives, strategy) → "Click that section in the brief to edit it directly — your correction gets tracked and used in all downstream outputs."`,
-      `   - Fit score seems off → "Use the Intel Adjustment button (⚡) next to the company on Step 3 to add what you know. That modifier flows through the whole pipeline."`,
-      `   - Target list issues → "Head back to Step 3 (Import) and use the Disqualify button to remove bad fits, or add companies via Quick Entry."`,
+      `   - Fit score seems off → "Use the Intel Adjustment button (⚡) next to the company on Fit Check (Step 4) to add what you know. That modifier flows through the whole pipeline."`,
+      `   - Target list issues → "Head back to Build Prospect Lists (Step 3) and use the Disqualify button to remove bad fits, or add companies via Quick Entry."`,
       `   - Hypothesis or talk track is off → "You can edit the hypothesis directly on Step 6 — click any text. Or regenerate with updated brief data."`,
       `   WHY: Changes made in chat stay in chat. Changes made in the app propagate through scoring, briefs, hypothesis, discovery, and post-call analysis. ALWAYS redirect corrections to the app.`,
       `   TONE: Don't be dismissive — acknowledge the correction is valuable, then guide them. "That's exactly the kind of intel that makes your briefs sharper — go drop it into [location] and the whole pipeline updates."`,
@@ -7657,7 +7657,7 @@ ${isOpen
       `\nTOOL CAPABILITIES (know what the tool can do — guide reps to use these features):`,
       `- BUILD TARGET ACCOUNTS: The Import page has a "Build my target accounts" button that generates 20 ICP-matched companies automatically via web search. If a rep asks for a target list, ALWAYS direct them to this feature. Never tell them to go build a list elsewhere.`,
       `- ICP DELTA ANALYSIS: On the ICP page, reps can paste their internal ICP and compare it against the public-facing ICP the tool built. Highlights gaps and opportunities.`,
-      `- CAMBRIAN MAX: Premium mode (Opus) produces deeper, richer intelligence. Gated by plan — trial users get Haiku only.`,
+      `- INTELLIGENCE DEPTH: All users get the best available AI intelligence — quality is baked in, not toggled.`,
       `- OPEN POSITIONS: The brief automatically searches for open job listings at target companies to reveal hiring priorities.`,
       `- DISCOVERY QUESTIONS: Product-specific sales + architecture questions generated for each RIVER stage — shown during in-call.`,
       `- PDF EXPORT: Every page can be saved as PDF via the print button.`,
@@ -7820,8 +7820,8 @@ ${isOpen
     // Navigation
     { id:"nav-session", icon:"🏠", label:"Go to Session",       section:"Navigate", action:()=>setStep(0) },
     { id:"nav-icp",     icon:"🎯", label:"Go to ICP & RFPs",   section:"Navigate", action:()=>setStep(1) },
-    { id:"nav-import",  icon:"📂", label:"Go to Import",       section:"Navigate", action:()=>setStep(2) },
-    { id:"nav-accounts",icon:"📊", label:"Go to Accounts",     section:"Navigate", action:()=>setStep(3) },
+    { id:"nav-import",  icon:"📂", label:"Go to Build Prospect Lists", section:"Navigate", action:()=>setStep(2) },
+    { id:"nav-accounts",icon:"📊", label:"Go to Fit Check",    section:"Navigate", action:()=>setStep(3) },
     { id:"nav-review",  icon:"👁", label:"Go to Account Review",section:"Navigate", action:()=>setStep(4) },
     { id:"nav-brief",   icon:"📋", label:"Go to Brief",        section:"Navigate", action:()=>setStep(5) },
     { id:"nav-hypo",    icon:"🧪", label:"Go to Hypothesis",   section:"Navigate", action:()=>setStep(6) },
@@ -8209,7 +8209,7 @@ ${isOpen
                   <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",width:340,maxHeight:"70vh",overflow:"auto",zIndex:1000,padding:"16px 20px"}}>
                     <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:10}}>{STEPS[step]} — What to do here</div>
                     <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.7,marginBottom:14}}>
-                      {(PAGE_GUIDES[step]||[]).map((tip,i)=><div key={i} style={{marginBottom:6}}>• {tip}</div>)}
+                      {(PAGE_GUIDES[step]?.items||[]).map((tip,i)=><div key={i} style={{marginBottom:6}}>• {tip}</div>)}
                     </div>
                     <div style={{borderTop:"1px solid var(--line-0)",paddingTop:12,marginTop:4}}>
                       <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>FAQ</div>
@@ -9886,7 +9886,7 @@ ${isOpen
               <button className="btn btn-primary btn-lg"
                 onClick={()=>setStep(2)}
                 disabled={!sellerICP&&!icpLoading}>
-                {icpLoading&&!sellerICP?"Building ICP...":"Continue to Import →"}
+                {icpLoading&&!sellerICP?"Building ICP...":"Add Prospects →"}
               </button>
             </div>
             )}
@@ -9894,7 +9894,7 @@ ${isOpen
             <div style={{display:"flex",justifyContent:"space-between",marginTop:16,paddingTop:16,borderTop:"1px solid var(--line-0)"}}>
               <button className="btn btn-secondary" onClick={()=>setIcpTab("icp")}>← Back to ICP</button>
               <button className="btn btn-primary btn-lg" onClick={()=>setStep(2)}>
-                Continue to Import →
+                Add Prospects →
               </button>
             </div>
             )}
@@ -10706,10 +10706,12 @@ ${isOpen
                       <input type="text" placeholder="Custom outcome…" value={customOutcome||""}
                         style={{flex:1,fontSize:12,padding:"6px 10px"}}
                         onChange={e=>setCustomOutcome&&setCustomOutcome(e.target.value)}
-                        onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setSelectedOutcomes(p=>[...p,e.target.value.trim()]);e.target.value="";}}}
+                        onKeyDown={e=>{if(e.key==="Enter"&&(customOutcome||"").trim()&&selectedOutcomes.length<3){setSelectedOutcomes(p=>[...p,(customOutcome||"").trim()]);setCustomOutcome("");}}}
+                        disabled={selectedOutcomes.length>=3}
                       />
                       <button className="btn btn-secondary btn-sm"
-                        onClick={()=>{const v=document.querySelector("input[placeholder=\"Custom outcome…\"]")?.value?.trim();if(v){setSelectedOutcomes(p=>[...p,v]);}}}>
+                        disabled={selectedOutcomes.length>=3||!(customOutcome||"").trim()}
+                        onClick={()=>{if((customOutcome||"").trim()&&selectedOutcomes.length<3){setSelectedOutcomes(p=>[...p,(customOutcome||"").trim()]);setCustomOutcome("");}}}>
                         Add
                       </button>
                     </div>
@@ -12452,7 +12454,7 @@ ${isOpen
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
                 <div style={{fontSize:12,color:"#aaa"}}>confidence</div>
-                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(5)}>← Hypothesis</button>
+                <button className="btn btn-secondary btn-sm" onClick={()=>setStep(6)}>← Hypothesis</button>
                 <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
                 <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
                   {postLoading?"Routing...":"End Call →"}

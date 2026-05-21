@@ -5,46 +5,47 @@
    values in CSS or inline styles without first adding the
    corresponding token here. See CHANGELOG.md v105 notes. */
 :root {
-  /* surfaces */
-  --bg-0:       #F7F6F2;   /* app background */
-  --bg-1:       #FAF8F4;   /* raised surface · hover */
-  --bg-2:       #F0EDE6;   /* muted chip · subtle tint */
+  /* surfaces — clean, cool, modern */
+  --bg-0:       #F5F6F8;   /* app background */
+  --bg-1:       #F9FAFB;   /* raised surface · hover */
+  --bg-2:       #ECEEF2;   /* muted chip · subtle tint */
   --surface:    #ffffff;
 
-  /* ink */
-  --ink-0:      #1a1a18;   /* primary */
-  --ink-1:      #555555;   /* secondary */
-  --ink-2:      #888888;   /* tertiary */
-  --ink-3:      #b8b6ae;   /* quaternary / placeholder */
+  /* ink — midnight base, not brown-black */
+  --ink-0:      #1a1a2e;   /* primary */
+  --ink-1:      #4a4a5a;   /* secondary */
+  --ink-2:      #7a7a8a;   /* tertiary */
+  --ink-3:      #a8a8b8;   /* quaternary / placeholder */
 
-  /* brand — "tan" is the signature Cambrian accent */
-  --tan-0:      #8B6F47;   /* primary brand */
-  --tan-1:      #7A6040;   /* hover · dark */
-  --tan-2:      #D4C4A8;   /* accent border */
-  --tan-3:      #F0EDE6;   /* soft tint bg */
-  --tan-ink:    #7A5C30;   /* text on tan tint */
+  /* brand — coral: energetic, modern, memorable */
+  --tan-0:      #E85D3A;   /* primary brand — warm coral */
+  --tan-1:      #D14E2D;   /* hover · dark */
+  --tan-2:      #F5B8A8;   /* accent border */
+  --tan-3:      #FEF0EC;   /* soft tint bg */
+  --tan-ink:    #C04525;   /* text on brand tint */
+  --tan-bg:     #FEF0EC;
 
-  /* semantic */
-  --navy:       #1B3A6B;
-  --navy-dark:  #152d54;
-  --green:      #2E6B2E;
-  --green-dark: #245424;
-  --red:        #9B2C2C;
-  --amber:      #BA7517;
-  --purple:     #6B3A7A;
+  /* semantic — brighter, more alive */
+  --navy:       #2D3A8C;   /* deep blue-purple */
+  --navy-dark:  #1E2A6E;
+  --green:      #0EA47A;   /* fresh teal */
+  --green-dark: #0B8462;
+  --red:        #E03E3E;   /* vibrant red */
+  --amber:      #F59E0B;   /* bright amber */
+  --purple:     #7C3AED;   /* vivid purple */
   --violet:     #8B5CF6;
 
-  --green-bg:   #EEF5EE;
-  --red-bg:     #FDE8E8;
-  --amber-bg:   #FEF6E4;
-  --navy-bg:    #EEF5F9;
-  --purple-bg:  #F3EEF9;
+  --green-bg:   #ECFDF5;
+  --red-bg:     #FEF2F2;
+  --amber-bg:   #FFFBEB;
+  --navy-bg:    #EEF0FA;
+  --purple-bg:  #F5F3FF;
   --violet-bg:  rgba(139, 92, 246, 0.08);
 
-  /* lines */
-  --line-0:     #E8E6DF;   /* default border */
-  --line-1:     #F0EDE6;   /* subtle row separator */
-  --line-2:     #D4D0C8;   /* stronger border */
+  /* lines — cooler, crisper */
+  --line-0:     #E2E4EA;   /* default border */
+  --line-1:     #ECEEF2;   /* subtle row separator */
+  --line-2:     #CBD0D8;   /* stronger border */
 
   /* radius */
   --r-sm:       6px;       /* chips, tags, small fields */
@@ -53,11 +54,11 @@
   --r-pill:     999px;
 
   /* elevation */
-  --sh-1:       0 1px 3px rgba(26,26,24,0.06);
-  --sh-2:       0 4px 12px rgba(26,26,24,0.08);
-  --sh-3:       0 14px 40px rgba(26,26,24,0.12);
-  --sh-ring:    0 0 0 3px rgba(139,111,71,0.12);
-  --sh-focus:   0 0 0 4px rgba(26,26,24,0.08);
+  --sh-1:       0 1px 3px rgba(26,26,46,0.06);
+  --sh-2:       0 4px 12px rgba(26,26,46,0.08);
+  --sh-3:       0 14px 40px rgba(26,26,46,0.12);
+  --sh-ring:    0 0 0 3px rgba(232,93,58,0.15);
+  --sh-focus:   0 0 0 4px rgba(232,93,58,0.10);
 
   /* spacing scale (4px grid — use for new code; legacy has ad-hoc values) */
   --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;

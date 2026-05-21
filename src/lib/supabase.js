@@ -41,7 +41,7 @@ export async function sbRefreshSession() {
   // Dedup: if a refresh is already in-flight, return the same promise
   if (_refreshPromise) return _refreshPromise;
 
-  const refreshToken = sessionStorage.getItem('sb_refresh_token');
+  const refreshToken = sessionStorage.getItem('sb_refresh_token') || localStorage.getItem('sb_refresh_token');
   if (!refreshToken) return null;
 
   _refreshPromise = (async () => {
@@ -69,11 +69,11 @@ export function sbRestoreSession() {
   const token = sessionStorage.getItem('sb_token') || localStorage.getItem('sb_token');
   if (!token) return null;
 
-  // Check expiry
-  const expiresAt = Number(sessionStorage.getItem('sb_token_expires') || 0);
+  // Check expiry (check both storages for cross-tab resilience)
+  const expiresAt = Number(sessionStorage.getItem('sb_token_expires') || localStorage.getItem('sb_token_expires') || 0);
   if (expiresAt && Date.now() > expiresAt) {
     // Token expired — try refresh
-    const refreshToken = sessionStorage.getItem('sb_refresh_token');
+    const refreshToken = sessionStorage.getItem('sb_refresh_token') || localStorage.getItem('sb_refresh_token');
     if (refreshToken) return { token: null, needsRefresh: true };
     return null;
   }
@@ -98,6 +98,8 @@ export function sbClearTokens() {
   sessionStorage.removeItem('sb_refresh_token');
   sessionStorage.removeItem('sb_token_expires');
   localStorage.removeItem('sb_token');
+  localStorage.removeItem('sb_refresh_token');
+  localStorage.removeItem('sb_token_expires');
   if (_refreshTimer) { clearTimeout(_refreshTimer); _refreshTimer = null; }
 }
 

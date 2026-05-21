@@ -6,7 +6,7 @@
 // Handles: encryption, token CRUD, auto-refresh, authenticated fetch.
 // All tokens are AES-256-GCM encrypted at rest in Supabase.
 
-import { createCipheriv, createDecipheriv, randomBytes, createHmac } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, createHmac, timingSafeEqual } from "crypto";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -26,6 +26,8 @@ const SCOPES = [
   "crm.objects.companies.write",
   "crm.objects.deals.read",
   "crm.objects.deals.write",
+  "crm.objects.notes.write",
+  "crm.objects.tasks.write",
 ].join(" ");
 
 // ── Encryption helpers ─────────────────────────────────────────────────
@@ -70,7 +72,10 @@ export function verifyState(state) {
   if (!encoded || !sig) return null;
   const data = Buffer.from(encoded, "base64url").toString();
   const expected = createHmac("sha256", HS_CLIENT_SECRET).update(data).digest("hex");
-  if (sig !== expected) return null;
+  // Timing-safe comparison to prevent HMAC side-channel attacks
+  const sigBuf = Buffer.from(sig, "utf8");
+  const expBuf = Buffer.from(expected, "utf8");
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) return null;
   try { return JSON.parse(data); } catch { return null; }
 }
 
