@@ -29,8 +29,9 @@ function extractNumber(s) {
   if (thousandMatch) return parseFloat(thousandMatch[1]) * 1e3;
 
   // Plain number: "318512", "~10,140", "$45.5"
-  const plain = str.replace(/[^0-9.]/g, "");
-  return plain ? parseFloat(plain) : NaN;
+  // Extract the FIRST number-like sequence, not all digits in the string
+  const plainMatch = str.match(/~?\s*([\d]+(?:[\d]*)?(?:\.[\d]+)?)/);
+  return plainMatch ? parseFloat(plainMatch[1]) : NaN;
 }
 
 const rules = {
