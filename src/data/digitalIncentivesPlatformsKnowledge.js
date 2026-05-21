@@ -109,7 +109,7 @@ Key dynamic: Position A players are being squeezed between Position B (faster, c
 === INVESTOR CONVERSATION FRAMING ===
 What VCs and PE investors focus on when evaluating digital incentives platforms:
 
-TAM credibility: Is the addressable market the full $24B global B2B, or a constrained slice? Investors discount platforms that claim full TAM but serve one vertical or geography. Credible TAM narrows to served segments (e.g., $3-5B for API aggregation in North America).
+TAM credibility: Is the addressable market the full $24B global B2B [verified 05/2026, Incentive Research Foundation / industry estimates], or a constrained slice? Investors discount platforms that claim full TAM but serve one vertical or geography. Credible TAM narrows to served segments (e.g., $3-5B for API aggregation in North America).
 
 Net Revenue Retention (NRR): best-in-class platforms show 110-130% NRR driven by same-customer program expansion (adding use cases, countries, or recipients). Below 100% NRR signals commoditization. [verified 05/2026, Cambrian operator knowledge / PE benchmarking]
 

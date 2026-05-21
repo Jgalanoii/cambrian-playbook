@@ -61,7 +61,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   manufacturing: {
     name: "Manufacturing / Industrial",
-    keywords: ["manufacturing", "industrial", "factory", "plant", "oem", "discrete", "process", "automotive", "aerospace", "construction", "agriculture", "energy", "utilities", "mes", "scada", "plc", "industry4.0"],
+    keywords: ["industrial", "factory", "plant", "discrete", "process", "automotive", "aerospace", "construction", "agriculture", "energy", "utilities", "plc", "industry4.0"],
     personas: ["CFO", "COO", "VP Operations", "VP Supply Chain", "Plant Manager", "Continuous Improvement Manager", "OT Team", "Quality Director", "EHS Manager", "Plant IT", "Controls Engineer", "Manufacturing Engineer"],
     triggers: ["Supply chain disruption (shortage, tariff, geopolitics)", "ERP upgrade (SAP S/4HANA, Oracle Fusion, Epicor)", "Plant expansion/greenfield facility", "M&A integration (standardize across acquired plants)", "Regulatory action (FDA warning, recall, ISO non-conformance)", "Labor shortage driving automation buying", "Quality event (major recall, OEE miss, customer escalation)", "Industry 4.0 / digital transformation mandate (board or PE)", "Customer compliance demand (new certification, traceability, EDI)", "Executive change (new COO, VP Ops — first 6 months)"],
     disqualifiers: ["Treating manufacturing as one market (discrete ≠ process ≠ hybrid)", "Pitching software-only ROI (must use mfg KPIs: OEE, yield, scrap)", "No plant floor experience or references", "Corporate-only selling (plants resist mandated tools)", "No legacy OT integration (PLC/SCADA/historian)", "Missing regulatory validation (FDA Part 11, IQ/OQ/PQ)", "No on-prem/edge deployment option for production-critical tools"],
@@ -91,7 +91,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   "professional-services": {
     name: "Professional Services & Consulting",
-    keywords: ["consulting", "professional services", "advisory", "fractional", "agency", "boutique", "management consulting", "gtm", "revops", "demand-gen", "sales-enablement"],
+    keywords: ["consulting", "professional services", "advisory", "fractional", "agency", "boutique", "gtm", "revops", "demand-gen", "sales-enablement"],
     personas: ["CEO/Founder", "CRO", "CMO", "CFO", "PE Operating Partner", "Board Chair", "Investors", "Head of RevOps", "Head of GTM", "COO", "CTO"],
     triggers: ["New executive hire (first 6 months — TOP trigger)", "Funding round closed (3-6 months post — scaling pressure)", "Missed quarter (CEO urgency for outside voice)", "Board mandate ('hire someone to help with X')", "PE acquisition/add-on (operating partner playbook)", "Executive departure (fractional fills gap for 6-12 months)", "GTM motion change (product/segment/geography/channel)", "Pre-raise preparation (GTM story, metrics, positioning cleanup)", "M&A/exit preparation (due-diligence readiness)", "Strategic inflection (category entry, competitive response, pivot)", "Board-observed performance gap (CAC ballooning, conversion plateau)"],
     disqualifiers: ["Undifferentiated positioning ('growth advisor')", "No productization (every engagement unique = no leverage)", "No case studies (case studies ARE the marketing)", "Broadening ICP to fill pipeline (desperation signal)", "Organization not receptive to outside help / resents consultants", "Founder not experiencing a named trigger ('probably should think about X' rarely converts)", "No discretionary budget; carved-out budgets close slower"],

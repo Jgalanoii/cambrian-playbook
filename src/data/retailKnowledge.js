@@ -125,7 +125,7 @@ REGULATORY LANDSCAPE (structural -- durable):
 
 KNOWN TRAPS -- COMMON HALLUCINATION / REASONING ERRORS:
 - Treating "retail" as one market -- grocery economics differ entirely from luxury differ entirely from DTC. Always subdivide by format first.
-- Assuming e-commerce dominance -- ~75% of retail still happens in physical stores. Omnichannel, not pure-play digital, is the reality for most retailers.
+- Assuming e-commerce dominance -- ~75% of retail still happens in physical stores [verified 05/2026, US Census Bureau Quarterly Retail E-Commerce Sales]. Omnichannel, not pure-play digital, is the reality for most retailers.
 - Conflating gross margin across formats -- a 30% margin is excellent in grocery and poor in luxury. Always contextualize margin by format.
 - Overstating DTC viability -- rising CAC, logistics cost, and return rates have challenged many DTC-only models. The "DTC revolution" narrative has moderated significantly.
 - Assuming Amazon data is public -- Amazon reports North America and International segments, not granular US retail/marketplace splits. Third-party estimates (eMarketer, Marketplace Pulse) vary. Caveat Amazon-specific figures.
