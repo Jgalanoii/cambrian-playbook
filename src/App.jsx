@@ -2872,6 +2872,7 @@ function PasswordGate({ onAuth }) {
         <div style={{maxWidth:960,margin:"0 auto",display:"flex",gap:40,alignItems:"flex-start",flexWrap:"wrap"}}>
           {/* Left — value prop */}
           <div style={{flex:"1 1 400px",minWidth:280}}>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}}>Smart People Go Further. Evolve How You Sell.</div>
             <div style={{fontFamily:"Lora,serif",fontSize:32,fontWeight:700,color:"var(--ink-0)",lineHeight:1.25,marginBottom:16}}>
               Your prospects can tell<br/>when you didn't<br/>do your homework.
             </div>
@@ -2922,11 +2923,12 @@ function PasswordGate({ onAuth }) {
       {/* ── WHAT YOU GET ── */}
       <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:6}}>Discovery doesn't have to suck.</div>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
             More intel in 15 minutes than your team gets in 4 hours
           </div>
           <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:600,margin:"0 auto",lineHeight:1.6}}>
-            Nine phases of live research, AI-powered analysis, and proven frameworks. Not a ChatGPT summary with a logo on it.
+            Nine steps of live research, AI-powered analysis, and proven frameworks. Not a ChatGPT summary with a logo on it.
           </div>
         </div>
 
@@ -3042,6 +3044,7 @@ function PasswordGate({ onAuth }) {
       {/* ── BOTTOM CTA ── */}
       <div style={{background:"var(--ink-0)",padding:"40px 20px",textAlign:"center"}}>
         <div style={{maxWidth:500,margin:"0 auto"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}}>Smart People Go Further.</div>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--surface)",marginBottom:8}}>
             Your competitors are still Googling.<br/>You could be closing.
           </div>
@@ -3393,17 +3396,17 @@ const PAGE_GUIDES = {
     "Switch to RFP Intel tab to see matching public procurement opportunities",
     "Paste your internal ICP in the Delta Analysis section to compare against public positioning",
   ]},
-  2: { title: "Import Accounts", items: [
-    "Three ways to add accounts: Upload CSV/Excel, Quick Entry (type names), or Build Target Accounts (AI generates 25-30 ICP-matched companies)",
+  2: { title: "Build Prospect Lists", items: [
+    "Three ways to add prospects: Upload CSV/Excel, Quick Entry (type names), or Build Target Accounts (AI generates 25-30 ICP-matched companies)",
     "Build Target Accounts uses your ICP to find real companies — select industries, headcount, and revenue to filter",
     "CSV uploads auto-map columns — company name, industry, URL, employees, and ownership are detected",
-    "All accounts are automatically scored for ICP fit after import",
+    "All prospects are automatically scored for ICP fit after import",
   ]},
-  3: { title: "Account Review", items: [
-    "Accounts are scored on three dimensions: ICP Alignment, Customer Similarity, and Competitive Landscape",
+  3: { title: "Fit Check", items: [
+    "Every prospect scored on three dimensions: ICP Alignment, Customer Similarity, and Competitive Landscape",
     "Strong Fit (75%+) = high-confidence targets · Potential Fit (55-74%) = worth pursuing · Stretch (<55%) = needs insider knowledge",
     "Click '+' next to any score to add Intel Adjustments — insider knowledge that modifies the AI score",
-    "Click Review → to set up an account for brief generation",
+    "Click Review → to set up a prospect for brief generation",
   ]},
   4: { title: "Account Setup", items: [
     "Select target outcomes — these guide the brief's strategic focus",
@@ -4144,7 +4147,7 @@ ${scaleGuidance}
         messages: [{ role: "user", content: prompt }],
       });
       if (d?.error) {
-        setTargetGenError("Generation failed: " + (d.error.message || "API error"));
+        setTargetGenError("That didn't land. " + (d.error.message || "Give it another shot — sometimes the AI needs a second swing."));
         setTargetGenLoading(false);
         return;
       }
@@ -4172,13 +4175,13 @@ ${scaleGuidance}
       }
       if (!parsed?.accounts?.length) {
         console.warn("[generateTargets] Parse failed. Raw response:", textBlocks.join("\n").slice(0, 500));
-        setTargetGenError("Couldn't parse generated targets — try again. If this persists, try a different industry or company size.");
+        setTargetGenError("The results came back a little scrambled. Give it another shot — or try narrowing your industry or company size.");
         setTargetGenLoading(false);
         return;
       }
       const generated = parsed.accounts.filter(a => a?.company?.trim());
       if (!generated.length) {
-        setTargetGenError("Generation returned no usable accounts — try again.");
+        setTargetGenError("No accounts came through this time. Try again — or tweak your ICP to cast a wider net.");
         setTargetGenLoading(false);
         return;
       }
@@ -4218,7 +4221,7 @@ ${scaleGuidance}
       });
     } catch (e) {
       console.error("generateTargets error:", e);
-      setTargetGenError("Unexpected error: " + e.message);
+      setTargetGenError("Something unexpected happened — " + e.message + ". Try again in a moment.");
     } finally {
       setTargetGenLoading(false);
     }
@@ -4739,7 +4742,7 @@ ${isOpen
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
           messages: [{ role: "user", content: buildPrompt(kind) }],
         });
-        if (d.error) return { kind, error: d.error.message || "API error" };
+        if (d.error) return { kind, error: d.error.message || "The AI engine stumbled. Give it another shot." };
 
         const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
         const fullText = textBlocks.join(" ").toLowerCase();
@@ -7552,8 +7555,8 @@ ${isOpen
   }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
-  const STEPS=["Start","Define Your Buyer","Add Companies","Best Matches","Account Review","Research Brief","Call Prep","Live Call","Post-Call"];
-  const STEP_TIPS=["Set up your selling org","Build your ICP and find RFP opportunities","Upload a list or generate AI-matched targets","See which accounts fit your ICP best","Select accounts and set deal context","Full company intelligence — click any field to edit","RIVER hypothesis, talk tracks, and coaching","Capture discovery in real time","Deal routing, CRM note, and follow-up email"];
+  const STEPS=["Start","Define Your Buyer","Build Prospect Lists","Fit Check","Account Review","Research Brief","Call Prep","Live Call","Post-Call"];
+  const STEP_TIPS=["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Deal routing, CRM note, follow-up email, and solutioning"];
   const chatContextLabel = selectedAccount?.company
     ? `${STEPS[step]} · ${selectedAccount.company}`
     : STEPS[step];
@@ -8194,8 +8197,8 @@ ${isOpen
               📂 {savedSessions.length>0?savedSessions.length+" Session"+(savedSessions.length===1?"":"s"):"Sessions"}
             </button>}
 
-            {/* Help button — step tips + FAQ */}
-            {step>0&&<div style={{position:"relative"}}>
+            {/* Help button — step tips + FAQ (visible on ALL steps) */}
+            <div style={{position:"relative"}}>
               <button onClick={()=>setHelpOpen(h=>!h)}
                 style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:helpOpen?"var(--navy)":"var(--surface)",cursor:"pointer",fontSize:12,color:helpOpen?"#fff":"var(--ink-2)",fontWeight:700}}>
                 ?
@@ -8221,7 +8224,7 @@ ${isOpen
                   </div>
                 </>
               )}
-            </div>}
+            </div>
 
             {/* More menu (⋯) — Search, Dark mode, Resources, Reports, Org, Contact, Admin */}
             <div style={{position:"relative"}}>
@@ -10822,6 +10825,13 @@ ${isOpen
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--tan-0)",borderRadius:8,background:"var(--tan-bg,#faf6f0)",color:"var(--tan-0)",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                       📋 Copy Summary
                     </button>
+                    <button onClick={()=>{
+                      setCollapsedBB(prev => { const next = new Set(prev); next.delete("sessionSummary"); return next; });
+                      setTimeout(()=>{ document.getElementById("session-summary-section")?.scrollIntoView({behavior:"smooth",block:"start"}); },100);
+                    }}
+                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--navy,#1B3A6B)",borderRadius:8,background:"var(--navy-bg,#E8EDF5)",color:"var(--navy,#1B3A6B)",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                      📄 View Summary
+                    </button>
                     {hubspotStatus?.connected&&<button onClick={pushSessionToHubSpot} disabled={!!hubspotPushing}
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":"var(--surface)",color:copied==="hs_ok"?"var(--green)":"#555",cursor:hubspotPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5}}>
                       {hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":"Push to HubSpot"}
@@ -12055,7 +12065,7 @@ ${isOpen
                   const summary = buildSessionSummary();
                   if (!summary) return null;
                   const isOpen = bbIsOpen("sessionSummary");
-                  return <div className="bb" style={{borderColor:"var(--tan-0)",borderWidth:2}}>
+                  return <div id="session-summary-section" className="bb" style={{borderColor:"var(--tan-0)",borderWidth:2}}>
                     <div className="bb-hdr" onClick={()=>toggleBB("sessionSummary")}>
                       <div className="bb-icon" style={{fontSize:10}}>📋</div>
                       <div style={{flex:1}}>

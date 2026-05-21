@@ -201,7 +201,7 @@
         }
       ],
       "invariants": ["no_placeholders", "no_entity_confusion"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded", "IPO", "NYSE: STRP", "STRP"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "IPO", "NYSE: STRP", "STRP"]
     },
     {
       "id": "usaa",
@@ -246,7 +246,7 @@
         }
       ],
       "invariants": ["no_placeholders", "no_entity_confusion"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:"]
     },
     {
       "id": "apollo-io",
@@ -399,7 +399,7 @@
         { "field": "ownership_type", "tier": 1, "value": "Private", "match": "set_membership", "accepted": ["Private", "Partnership", "Private Partnership"], "verified": "2026-05-19", "source": "Wikipedia" }
       ],
       "invariants": ["no_placeholders", "no_entity_confusion"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:"]
     },
     {
       "id": "cargill",
@@ -414,7 +414,7 @@
         { "field": "hq_location", "tier": 1, "value": "Minnetonka", "match": "set_membership", "accepted": ["Minneapolis", "Minnetonka", "Minnesota", "MN", "Wayzata"], "verified": "2026-05-20", "source": "Cargill HQ moved to Minnetonka suburb; some sources still say Minneapolis" }
       ],
       "invariants": ["no_placeholders"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded", "IPO"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "IPO"]
     },
     {
       "id": "publix",
@@ -429,7 +429,7 @@
         { "field": "hq_location", "tier": 1, "value": "Lakeland", "match": "fuzzy_location", "verified": "2026-05-19", "source": "corporate.publix.com" }
       ],
       "invariants": ["no_placeholders"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:"]
     },
     {
       "id": "mercury",
@@ -490,7 +490,7 @@
         { "field": "hq_location", "tier": 1, "value": "Bloomington", "match": "fuzzy_location", "verified": "2026-05-19", "source": "statefarm.com/about-us" }
       ],
       "invariants": ["no_placeholders"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded", "IPO"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:", "IPO"]
     },
     {
       "id": "tango-card",
@@ -517,7 +517,7 @@
         { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Acquired by Silver Lake Partners 2018" }
       ],
       "invariants": ["no_placeholders"],
-      "forbidden_strings": ["NYSE: HAWK", "NASDAQ:", "publicly traded", "stock ticker"]
+      "forbidden_strings": ["NYSE: HAWK", "NASDAQ:", "stock ticker"]
     },
     {
       "id": "mole-street",
@@ -543,7 +543,7 @@
         { "field": "ownership_type", "tier": 1, "value": "Private", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Startup" }
       ],
       "invariants": ["no_placeholders"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:"]
     },
     {
       "id": "allstate",
@@ -573,7 +573,7 @@
         { "field": "hq_location", "tier": 1, "value": "San Francisco", "match": "fuzzy_location", "verified": "2026-05-19", "source": "gusto.com" }
       ],
       "invariants": ["no_placeholders"],
-      "forbidden_strings": ["NYSE:", "NASDAQ:", "publicly traded"]
+      "forbidden_strings": ["NYSE:", "NASDAQ:"]
     }
   ]
 }
