@@ -372,8 +372,22 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
     },
   ];
 
+  // Flat list of all visible nav items for mobile tabs
+  const allNavItems = navGroups.flatMap(g => g.items);
+
   return (
     <div className="admin-shell">
+      {/* ── Mobile tab bar (replaces sidebar on ≤768px) ── */}
+      <div className="admin-mobile-tabs">
+        {allNavItems.map(item => (
+          <button key={item.id}
+            className={tab === item.id ? "active" : ""}
+            onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+
       {/* ── Header ── */}
       <div className="admin-header">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -572,7 +586,7 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                           <td style={{ position: "relative" }}>
                             {m.id !== sbUser?.id && (
                               <>
-                                <button className="admin-dot-menu" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === m.id ? null : m.id); }}>
+                                <button className="admin-dot-menu" aria-label="Actions" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === m.id ? null : m.id); }}>
                                   &#8943;
                                 </button>
                                 {openMenu === m.id && (

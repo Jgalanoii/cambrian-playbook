@@ -878,7 +878,36 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .admin-metric { background: var(--bg-1); border-radius: 8px; padding: 12px 14px; text-align: center; }
 .admin-metric-num { font-size: 24px; font-weight: 700; font-family: 'Lora', serif; line-height: 1; }
 .admin-metric-label { font-size: 9px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 4px; }
+.admin-mobile-tabs {
+  display: none;
+}
 @media (max-width: 768px) {
   .admin-sidebar { display: none; }
   .admin-content { padding: 12px 16px; }
+  .admin-mobile-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line-0);
+    background: var(--surface);
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-mobile-tabs button {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    border: 1.5px solid var(--line-0);
+    background: var(--surface);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .admin-mobile-tabs button.active {
+    background: var(--tan-0);
+    color: var(--surface);
+    border-color: var(--tan-0);
+  }
 }

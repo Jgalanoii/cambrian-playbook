@@ -305,8 +305,22 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
     return null;
   };
 
+  // Flat list of all nav items for mobile tabs
+  const allNavItems = navGroups.flatMap(g => g.items);
+
   return (
     <div className="admin-shell">
+      {/* ── Mobile tab bar (replaces sidebar on ≤768px) ── */}
+      <div className="admin-mobile-tabs">
+        {allNavItems.map(item => (
+          <button key={item.id}
+            className={tab === item.id ? "active" : ""}
+            onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+
       {/* ── Header ── */}
       <div className="admin-header">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -964,7 +978,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                           })()}
                         </td>
                         <td style={{ position: "relative" }}>
-                          <button className="admin-dot-menu" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === u.id ? null : u.id); }}>
+                          <button className="admin-dot-menu" aria-label="Actions" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === u.id ? null : u.id); }}>
                             &#x22EF;
                           </button>
                           {openMenu === u.id && (
@@ -1137,7 +1151,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                               </td>
                               <td style={{ textAlign: "center", fontWeight: 600 }}>{members.length}</td>
                               <td style={{ position: "relative" }}>
-                                <button className="admin-dot-menu" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === menuKey ? null : menuKey); }}>
+                                <button className="admin-dot-menu" aria-label="Actions" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === menuKey ? null : menuKey); }}>
                                   &#x22EF;
                                 </button>
                                 {openMenu === menuKey && (

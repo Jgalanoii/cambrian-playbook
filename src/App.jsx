@@ -2335,7 +2335,7 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
           <div className="chat-header-title">💬 Milton</div>
           {contextLabel && <div className="chat-context-badge">{contextLabel}</div>}
         </div>
-        <button className="chat-header-close" onClick={onClose} title="Close">✕</button>
+        <button className="chat-header-close" onClick={onClose} title="Close" aria-label="Close">✕</button>
       </div>
       <div className="chat-messages">
         {messages.length === 0 && (
@@ -2535,7 +2535,7 @@ function BriefLoader({ company, status }) {
       }}>
         {quip}
       </div>
-      <div style={{fontSize:10,color:"#bbb",textAlign:"center",marginTop:8}}>
+      <div style={{fontSize:10,color:"var(--ink-3)",textAlign:"center",marginTop:8}}>
         Researching {company}...
       </div>
     </div>
@@ -3131,7 +3131,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
   const SRC_COLORS = ["#2E6B2E","#8B6F47","#1B3A6B","#6B3A3A","#3A6B6B","#6B6B3A"];
   const PP_COLORS  = ["#1B3A6B","#2E6B2E","#8B6F47","#9B2C2C","#6B3A7A"];
   const GEO_COLORS = ["#2E6B2E","#1B3A6B","#8B6F47","#9B2C2C"];
-  const EMP_COLORS = ["#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","#aaa"];
+  const EMP_COLORS = ["#4A7A9B","#6B8E6B","#9B6B8E","#7A7A4A","var(--ink-3)"];
 
   const MiniPie = ({title, data, colors}) => data.length<2?null:(
     <div className="pie-card">
@@ -3195,19 +3195,19 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
                 <tr key={i} style={{cursor:"pointer"}} onClick={()=>onPickAccount&&onPickAccount(m)}>
                   <td style={{fontWeight:600,color:"var(--ink-0)"}}>
                     {m.company}
-                    {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
+                    {m.company_url&&<div style={{fontSize:11,color:"var(--ink-3)",fontWeight:400}}>🌐 {m.company_url}</div>}
                   </td>
-                  <td style={{color:"#555"}}>{m.ind||"—"}</td>
-                  <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
+                  <td style={{color:"var(--ink-1)"}}>{m.ind||"—"}</td>
+                  <td style={{color:"var(--ink-1)",fontSize:12}}>{m.employees||"—"}</td>
                   <td style={{fontSize:12}}>
                     {m.publicPrivate?(()=>{
                       const ot=(fitScores[m.company]?.ownershipType)||"";
-                      const c=ot==="public"?"var(--navy)":ot==="pe"?"#6B3A3A":ot==="vc"?"var(--green)":"#555";
+                      const c=ot==="public"?"var(--navy)":ot==="pe"?"#6B3A3A":ot==="vc"?"var(--green)":"var(--ink-1)";
                       const bg=ot==="public"?"var(--navy-bg)":ot==="pe"?"var(--red-bg)":ot==="vc"?"var(--green-bg)":"var(--bg-0)";
                       return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:8,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.publicPrivate}</span>;
                     })():"—"}
                   </td>
-                  <td style={{color:"#555",fontSize:12}}>{m.geography||"—"}</td>
+                  <td style={{color:"var(--ink-1)",fontSize:12}}>{m.geography||"—"}</td>
                   <td>{fitScores&&fitScores[m.company]?(
                     <div style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:"var(--r-md)",
                       background:fitScores[m.company].bg,color:fitScores[m.company].color,
@@ -3215,7 +3215,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
                       title={[fitScores[m.company].reason, fitScores[m.company].customerSimilarity, fitScores[m.company].incumbentRisk, fitScores[m.company].score < 65 ? "Stretch target — may be viable with additional relationship context or intel" : ""].filter(Boolean).join(" · ")}>
                       {fitScores[m.company].score}% · {fitScores[m.company].label}
                     </div>
-                  ):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:"—"}</td>
+                  ):fitScoring?<span style={{fontSize:11,color:"var(--ink-3)"}}>scoring…</span>:"—"}</td>
                   <td><button className="btn btn-primary btn-sm" onClick={e=>{e.stopPropagation();onPickAccount&&onPickAccount(m);}}>Research →</button></td>
                 </tr>
               ))}
@@ -3240,7 +3240,7 @@ function RiverFieldCard({fieldKey, label, icon, sub, color, value, onChange}){
         <div style={{fontSize:18,lineHeight:1}}>{icon}</div>
         <div style={{flex:1}}>
           <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:600,color:"var(--ink-0)"}}>{label}</div>
-          <div style={{fontSize:11,color:"#999",marginTop:1}}>{sub}</div>
+          <div style={{fontSize:11,color:"var(--ink-3)",marginTop:1}}>{sub}</div>
         </div>
         {needsExpand&&(
           <button onClick={()=>setExpanded(e=>!e)}
@@ -3251,7 +3251,7 @@ function RiverFieldCard({fieldKey, label, icon, sub, color, value, onChange}){
       </div>
       <div className="bb-body" style={{paddingTop:0}}>
         {!expanded?(
-          <div style={{fontSize:14,color:"#333",lineHeight:1.65}}>
+          <div style={{fontSize:14,color:"var(--ink-0)",lineHeight:1.65}}>
             {summary}
             {needsExpand&&(
               <button onClick={()=>setExpanded(true)}
@@ -3331,8 +3331,8 @@ function ExportMenu({ onPDF, onCSV, label = "Export", style = {}, locked = false
   }, [open]);
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
-      <button onClick={() => setOpen(!open)}
-        style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, border: "1.5px solid var(--line-0)", borderRadius: 8, background: locked ? "var(--bg-1)" : "var(--surface)", color: locked ? "var(--ink-3)" : "#555", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+      <button onClick={() => setOpen(!open)} aria-label="Export options"
+        style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, border: "1.5px solid var(--line-0)", borderRadius: 8, background: locked ? "var(--bg-1)" : "var(--surface)", color: locked ? "var(--ink-3)" : "var(--ink-1)", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
         {locked ? "🔒 " : ""}{label} <span style={{ fontSize: 9 }}>▼</span>
       </button>
       {open && (
@@ -3343,13 +3343,13 @@ function ExportMenu({ onPDF, onCSV, label = "Export", style = {}, locked = false
             </div>
           ) : (<>
           <button onClick={() => { onPDF(); setOpen(false); }}
-            style={{ display: "block", width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer", textAlign: "left", color: "#333" }}
+            style={{ display: "block", width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer", textAlign: "left", color: "var(--ink-0)" }}
             onMouseEnter={e => e.target.style.background = "var(--bg-0)"}
             onMouseLeave={e => e.target.style.background = "none"}>
             🖨 Export to PDF
           </button>
           <button onClick={() => { onCSV(); setOpen(false); }}
-            style={{ display: "block", width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer", textAlign: "left", color: "#333", borderTop: "1px solid var(--line-0)" }}
+            style={{ display: "block", width: "100%", padding: "10px 14px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer", textAlign: "left", color: "var(--ink-0)", borderTop: "1px solid var(--line-0)" }}
             onMouseEnter={e => e.target.style.background = "var(--bg-0)"}
             onMouseLeave={e => e.target.style.background = "none"}>
             📊 Export to CSV
@@ -3481,7 +3481,7 @@ function HelpGuide({ step, style = {} }) {
         <div style={{ marginTop: 8, background: "var(--navy-bg)", border: "1px solid #1B3A6B22", borderRadius: 10, padding: "12px 16px" }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--navy)", marginBottom: 8 }}>{guide.title}</div>
           {guide.items.map((item, i) => (
-            <div key={i} style={{ fontSize: 12, color: "#333", lineHeight: 1.6, paddingLeft: 12, position: "relative", marginBottom: 4 }}>
+            <div key={i} style={{ fontSize: 12, color: "var(--ink-0)", lineHeight: 1.6, paddingLeft: 12, position: "relative", marginBottom: 4 }}>
               <span style={{ position: "absolute", left: 0, color: "var(--navy)" }}>·</span> {item}
             </div>
           ))}
@@ -3493,7 +3493,7 @@ function HelpGuide({ step, style = {} }) {
           {FAQ_ITEMS.map((item, i) => (
             <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < FAQ_ITEMS.length - 1 ? "1px solid var(--line-0)" : "none" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-0)", marginBottom: 3 }}>{item.q}</div>
-              <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{item.a}</div>
+              <div style={{ fontSize: 12, color: "var(--ink-1)", lineHeight: 1.5 }}>{item.a}</div>
             </div>
           ))}
         </div>
@@ -3515,7 +3515,7 @@ class ErrorBoundary extends React.Component {
         <div style={{padding:40,maxWidth:600,margin:"60px auto",fontFamily:"DM Sans,sans-serif"}}>
           <div style={{background:"var(--red-bg)",border:"1px solid var(--red)",borderRadius:"var(--r-md)",padding:24}}>
             <div style={{fontSize:16,fontWeight:700,color:"var(--red)",marginBottom:8}}>Render Error</div>
-            <div style={{fontSize:13,color:"#555",marginBottom:16}}>{this.state.error?.message||"Unknown error"}</div>
+            <div style={{fontSize:13,color:"var(--ink-1)",marginBottom:16}}>{this.state.error?.message||"Unknown error"}</div>
             <button onClick={()=>this.setState({hasError:false,error:null})}
               style={{background:"var(--ink-0)",color:"var(--surface)",border:"none",padding:"8px 16px",borderRadius:8,cursor:"pointer",fontSize:13}}>
               Try Again
@@ -4499,7 +4499,7 @@ ${scaleGuidance}
         const color       = s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
         const bg          = s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
         const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
-        const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"#555":"#555";
+        const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"var(--ink-1)":"var(--ink-1)";
         // Match against original member names — API may return slightly different casing/suffix
         // Strip common suffixes for better fuzzy matching (Inc, Corp, LLC, Technologies, etc.)
         const normalize = (n) => (n||"").toLowerCase().replace(/[,.]?\s*(inc|corp|llc|ltd|co|technologies|technology|group|holdings|solutions|services|platform|software)\s*\.?$/i, "").trim();
@@ -7923,7 +7923,7 @@ ${isOpen
 
       {/* Chat assistant — floating toggle + slide-out panel (authenticated users only) */}
       {!chatOpen && sbUser && (
-        <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Ask Milton — your AI sales coach"
+        <button className="chat-toggle" onClick={()=>setChatOpen(true)} title="Ask Milton — your AI sales coach" aria-label="Open coaching chat"
           style={{display:"flex",alignItems:"center",gap:6,padding:"10px 14px",borderRadius:20,fontSize:13,fontWeight:600}}>
           💬 <span style={{fontSize:11,display:step===0?"inline":"none"}}>Ask Milton</span>
         </button>
@@ -7944,7 +7944,7 @@ ${isOpen
           {/* Header */}
           <div style={{padding:"16px 20px 12px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{fontFamily:"Lora,serif",fontSize:17,fontWeight:700,color:"var(--ink-0)"}}>Resources</div>
-            <button onClick={()=>setResourcesOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--ink-2)"}}>✕</button>
+            <button onClick={()=>setResourcesOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--ink-2)"}} aria-label="Close">✕</button>
           </div>
 
           {/* Tabs */}
@@ -8193,13 +8193,13 @@ ${isOpen
 
             {/* Sessions */}
             {sbUser&&<button onClick={()=>{loadSessions();setShowSessions(s=>!s);}}
-              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"#555",cursor:"pointer"}}>
+              style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"var(--ink-1)",cursor:"pointer"}}>
               📂 {savedSessions.length>0?savedSessions.length+" Session"+(savedSessions.length===1?"":"s"):"Sessions"}
             </button>}
 
             {/* Help button — step tips + FAQ (visible on ALL steps) */}
             <div style={{position:"relative"}}>
-              <button onClick={()=>setHelpOpen(h=>!h)}
+              <button onClick={()=>setHelpOpen(h=>!h)} aria-label="Help and tips"
                 style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:helpOpen?"var(--navy)":"var(--surface)",cursor:"pointer",fontSize:12,color:helpOpen?"#fff":"var(--ink-2)",fontWeight:700}}>
                 ?
               </button>
@@ -8228,7 +8228,7 @@ ${isOpen
 
             {/* More menu (⋯) — Search, Dark mode, Resources, Reports, Org, Contact, Admin */}
             <div style={{position:"relative"}}>
-              <button onClick={()=>setMoreMenuOpen(m=>!m)}
+              <button onClick={()=>setMoreMenuOpen(m=>!m)} aria-label="More options"
                 style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:moreMenuOpen?"var(--bg-1)":"var(--surface)",cursor:"pointer",fontSize:15,color:"var(--ink-2)",lineHeight:1,fontWeight:700}}>
                 ···
               </button>
@@ -8294,7 +8294,7 @@ ${isOpen
 
             {/* Sign out */}
             {sbUser&&<button onClick={()=>{sbClearTokens();window.location.reload();}}
-              style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"#aaa",cursor:"pointer"}}>
+              style={{fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"var(--ink-3)",cursor:"pointer"}}>
               {sbUser.user_metadata?.first_name||sbUser.email?.split('@')[0]} · Sign out
             </button>}
           </div>
@@ -8322,13 +8322,13 @@ ${isOpen
             <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
               <div style={{fontSize:28,marginBottom:12}}>💾</div>
               <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,marginBottom:8}}>Save your work</div>
-              <div style={{fontSize:14,color:"#555",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
+              <div style={{fontSize:14,color:"var(--ink-1)",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
               <button onClick={()=>{setShowSavePrompt(false);setAuthed(false);}}
                 style={{width:"100%",padding:"13px 0",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontFamily:"DM Sans,sans-serif",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",marginBottom:10}}>
                 Create Free Account →
               </button>
               <button onClick={()=>setShowSavePrompt(false)}
-                style={{width:"100%",padding:"11px 0",borderRadius:10,background:"var(--surface)",color:"#777",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid var(--line-0)",cursor:"pointer"}}>
+                style={{width:"100%",padding:"11px 0",borderRadius:10,background:"var(--surface)",color:"var(--ink-2)",fontFamily:"DM Sans,sans-serif",fontSize:14,border:"1.5px solid var(--line-0)",cursor:"pointer"}}>
                 I like living dangerously
               </button>
             </div>
@@ -8343,9 +8343,9 @@ ${isOpen
               <div style={{padding:"18px 18px 12px",borderBottom:"1px solid var(--line-0)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700}}>Saved Sessions</div>
-                  <div style={{fontSize:11,color:"#aaa"}}>{sbUser.email}</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)"}}>{sbUser.email}</div>
                 </div>
-                <button onClick={()=>setShowSessions(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa"}}>✕</button>
+                <button onClick={()=>setShowSessions(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--ink-3)"}} aria-label="Close">✕</button>
               </div>
               <div style={{padding:"8px 10px 0"}}>
                 <button onClick={()=>{clearSession();setShowSessions(false);}}
@@ -8354,7 +8354,7 @@ ${isOpen
                 </button>
               </div>
               <div style={{flex:1,overflowY:"auto",padding:10}}>
-                {savedSessions.length===0&&<div style={{textAlign:"center",color:"#aaa",fontSize:13,padding:"32px 0"}}>No saved sessions yet.</div>}
+                {savedSessions.length===0&&<div style={{textAlign:"center",color:"var(--ink-3)",fontSize:13,padding:"32px 0"}}>No saved sessions yet.</div>}
                 {savedSessions.map(s=>(
                   <div key={s.id} onClick={()=>restoreSession(s)}
                     style={{padding:"10px 12px",borderRadius:10,border:"1.5px solid "+(s.id===currentSessionId?"var(--ink-0)":"var(--line-0)"),background:s.id===currentSessionId?"var(--bg-1)":"var(--surface)",marginBottom:8,cursor:"pointer"}}>
@@ -8362,9 +8362,9 @@ ${isOpen
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
                         <div style={{fontSize:11,color:"var(--tan-0)"}}>{s.seller_url}</div>
-                        <div style={{fontSize:10,color:"#aaa"}}>{new Date(s.updated_at).toLocaleDateString()}</div>
+                        <div style={{fontSize:10,color:"var(--ink-3)"}}>{new Date(s.updated_at).toLocaleDateString()}</div>
                       </div>
-                      <button onClick={e=>{e.stopPropagation();deleteSession(s.id);}} style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:14}}>✕</button>
+                      <button onClick={e=>{e.stopPropagation();deleteSession(s.id);}} style={{background:"none",border:"none",color:"var(--line-2)",cursor:"pointer",fontSize:14}}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -8426,7 +8426,7 @@ ${isOpen
             {selectedAccount&&<><span>·</span><span>Researching: <strong>{selectedAccount.company}</strong></span></>}
             <span style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
               {lastSaved()&&(
-                <span style={{fontSize:9,color:"#aaa",fontStyle:"italic"}}>
+                <span style={{fontSize:9,color:"var(--ink-3)",fontStyle:"italic"}}>
                   💾 Saved {lastSaved()}
                 </span>
               )}
@@ -8434,7 +8434,7 @@ ${isOpen
                 <input type="file" accept=".pdf,.docx,.doc,.txt,.md,.pptx,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple style={{display:"none"}} onChange={e=>{handleDocFiles(e.target.files);e.target.value="";}}/>
                 + Add Docs
               </label>
-              {sellerDocs.length>0&&<span style={{fontSize:10,color:"#aaa"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
+              {sellerDocs.length>0&&<span style={{fontSize:10,color:"var(--ink-3)"}}>{sellerDocs.length} doc{sellerDocs.length>1?"s":""}</span>}
               <button style={{fontSize:10,color:"var(--red)",fontWeight:600,background:"none",border:"1px solid #9B2C2C44",borderRadius:6,padding:"2px 8px",cursor:"pointer"}}
                 onClick={()=>{if(window.confirm("Clear session and start over?")){clearSession();window.location.reload();}}}>
                 ✕ New Session
@@ -8606,12 +8606,12 @@ ${isOpen
 
                 {/* Seller Stage */}
                 <div style={{marginTop:12}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {["Bootstrapped","Angel","Seed","Series A","Series B","Series C","Series D+","PE-Backed","Public"].map(stage=>(
                       <button key={stage} onClick={()=>setSellerStage(stage)}
                         style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"var(--ink-0)":"var(--line-0)"),
-                          background:sellerStage===stage?"var(--ink-0)":"var(--surface)",color:sellerStage===stage?"#fff":"#555",
+                          background:sellerStage===stage?"var(--ink-0)":"var(--surface)",color:sellerStage===stage?"#fff":"var(--ink-1)",
                           fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.13s"}}>
                         {stage}
                       </button>
@@ -8632,8 +8632,8 @@ ${isOpen
                 </div>
                 {/* ICP Targeting Preferences — structured click menu */}
                 <div style={{marginTop:14}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>
-                    Target Customer Profile <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"#bbb"}}>select what you know — shapes ICP + targets</span>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>
+                    Target Customer Profile <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"var(--ink-3)"}}>select what you know — shapes ICP + targets</span>
                   </div>
 
                   {/* Multi-select helper */}
@@ -8652,26 +8652,26 @@ ${isOpen
                       const atLimit = !sel && (icpTargeting[field] || []).length >= max;
                       return <button key={val} onClick={() => toggleArr(field, val, max)} disabled={atLimit && !sel}
                         style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: atLimit && !sel ? "not-allowed" : "pointer", transition: "all 0.13s", opacity: atLimit && !sel ? 0.4 : 1,
-                          border: `1.5px solid ${sel ? color : "var(--line-0)"}`, background: sel ? color : "var(--surface)", color: sel ? "#fff" : "#555" }}>{val}</button>;
+                          border: `1.5px solid ${sel ? color : "var(--line-0)"}`, background: sel ? color : "var(--surface)", color: sel ? "#fff" : "var(--ink-1)" }}>{val}</button>;
                     };
                     return <>
 
                   {/* Segment — single select */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Market Segment <span style={{fontWeight:400,color:"#bbb"}}>pick 1</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Market Segment <span style={{fontWeight:400,color:"var(--ink-3)"}}>pick 1</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {["SMB","Mid-Market","Enterprise"].map(v=>{
                         const sel=icpTargeting.segment===v;
                         return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,segment:sel?"":v}))}
                           style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--ink-0)":"var(--line-0)"),background:sel?"var(--ink-0)":"var(--surface)",color:sel?"#fff":"#555"}}>{v}</button>;
+                            border:"1.5px solid "+(sel?"var(--ink-0)":"var(--line-0)"),background:sel?"var(--ink-0)":"var(--surface)",color:sel?"#fff":"var(--ink-1)"}}>{v}</button>;
                       })}
                     </div>
                   </div>
 
                   {/* Headcount — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Company Size <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Company Size <span style={{fontWeight:400,color:"var(--ink-3)"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {["1-49","50-499","500-4,999","5,000-49,999","50,000+"].map(v=>pill("headcount",v,"var(--navy)",3))}
                     </div>
@@ -8679,7 +8679,7 @@ ${isOpen
 
                   {/* Revenue — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Revenue Range <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Revenue Range <span style={{fontWeight:400,color:"var(--ink-3)"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {["<$1M","$1M-$10M","$10M-$100M","$100M-$1B","$1B+"].map(v=>pill("revenue",v,"var(--green)",3))}
                     </div>
@@ -8687,7 +8687,7 @@ ${isOpen
 
                   {/* Ownership — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Ownership Type <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Ownership Type <span style={{fontWeight:400,color:"var(--ink-3)"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {["Public","Private","PE-Backed","VC-Backed","Bootstrapped"].map(v=>pill("ownership",v,"var(--tan-0)",3))}
                     </div>
@@ -8695,7 +8695,7 @@ ${isOpen
 
                   {/* Geography — up to 3 */}
                   <div style={{marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Geography <span style={{fontWeight:400,color:"#bbb"}}>up to 3</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Geography <span style={{fontWeight:400,color:"var(--ink-3)"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {["USA","North America","EMEA","APAC","LATAM","Global"].map(v=>pill("geography",v,"var(--amber)",3))}
                     </div>
@@ -8703,13 +8703,13 @@ ${isOpen
 
                   {/* Exclude Industries — unlimited */}
                   <div style={{marginBottom:6}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Exclude Industries <span style={{fontWeight:400,color:"#bbb"}}>click to exclude</span></div>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Exclude Industries <span style={{fontWeight:400,color:"var(--ink-3)"}}>click to exclude</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                       {["Healthcare","Government","Education","Nonprofit","Energy","Defense","Agriculture","Real Estate","Construction","Mining","Telecom","Media & Entertainment","Automotive","Pharmaceuticals"].map(v=>{
                         const sel=(icpTargeting.excludes||[]).includes(v);
                         return <button key={v} onClick={()=>setIcpTargeting(p=>({...p,excludes:sel?(p.excludes||[]).filter(x=>x!==v):[...(p.excludes||[]),v]}))}
                           style={{padding:"4px 9px",borderRadius:20,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all 0.13s",
-                            border:"1.5px solid "+(sel?"var(--red)":"var(--line-0)"),background:sel?"var(--red-bg)":"var(--surface)",color:sel?"var(--red)":"#999",
+                            border:"1.5px solid "+(sel?"var(--red)":"var(--line-0)"),background:sel?"var(--red-bg)":"var(--surface)",color:sel?"var(--red)":"var(--ink-3)",
                             textDecoration:sel?"line-through":"none"}}>{v}</button>;
                       })}
                     </div>
@@ -8732,7 +8732,7 @@ ${isOpen
                   </>;})()}
                 </div>
 
-                <div style={{fontSize:11,color:"#aaa",marginTop:6}}>Cambrian will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
+                <div style={{fontSize:11,color:"var(--ink-3)",marginTop:6}}>Cambrian will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
                 {/* Manual scan button — fallback when onBlur doesn't fire (mobile, etc.) */}
                 {sellerInput.trim() && urlScanStatus !== "scanning" && !urlScanConfirmed && (
                   <button className="btn btn-secondary btn-sm" style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}
@@ -8749,7 +8749,7 @@ ${isOpen
               <div className="field-row" style={{marginBottom:0}}>
                 <div className="field-label" style={{marginBottom:8}}>
                   Internal Sales Materials
-                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — strongly recommended)</span>
+                  <span style={{color:"var(--ink-3)",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — strongly recommended)</span>
                 </div>
                 <div
                   className={`doc-upload-zone ${docDrag?"drag":""}`}
@@ -8794,7 +8794,7 @@ ${isOpen
               <div className="field-row" style={{marginBottom:0}}>
                 <div className="field-label" style={{marginBottom:8}}>
                   Proof Points
-                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — dramatically improves brief quality)</span>
+                  <span style={{color:"var(--ink-3)",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — dramatically improves brief quality)</span>
                 </div>
                 <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:10,lineHeight:1.5}}>
                   Add specific wins, metrics, and credentials. These get cited <strong>by name</strong> in briefs, hypotheses, and talk tracks — the difference between "we can help" and "here's exactly how we helped someone like you."
@@ -8836,7 +8836,7 @@ ${isOpen
               <div className="field-row">
                 <div className="field-label" style={{marginBottom:4}}>
                   What We Do NOT Do
-                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(critical for accuracy)</span>
+                  <span style={{color:"var(--ink-3)",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(critical for accuracy)</span>
                 </div>
                 <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6,marginBottom:8}}>
                   List capabilities, products, or services that are <strong>outside your scope</strong>. The brief will never suggest these as use cases — prevents embarrassing capability mismatches in front of prospects.
@@ -8871,7 +8871,7 @@ ${isOpen
               <div className="field-row" style={{marginBottom:0}}>
                 <div className="field-label" style={{marginBottom:4}}>
                   Product &amp; Solution URLs
-                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional · up to 5)</span>
+                  <span style={{color:"var(--ink-3)",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional · up to 5)</span>
                 </div>
 
                 {/* Scanning state */}
@@ -8890,10 +8890,10 @@ ${isOpen
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:12}}>
                       {productUrls.filter(u=>u.url).map((u,i)=>(
-                        <div key={i} style={{fontSize:12,color:"#333",display:"flex",alignItems:"center",gap:6}}>
+                        <div key={i} style={{fontSize:12,color:"var(--ink-0)",display:"flex",alignItems:"center",gap:6}}>
                           <span style={{color:"var(--green)",fontSize:14}}>🔗</span>
                           <span style={{fontWeight:600,color:"var(--green)",marginRight:4}}>{u.label||"Page "+(i+1)}</span>
-                          <span style={{color:"#777",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
+                          <span style={{color:"var(--ink-2)",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
                         </div>
                       ))}
                     </div>
@@ -8922,10 +8922,10 @@ ${isOpen
                       </button>
                     </div>
                     {productUrls.filter(u=>u.url).map((u,i)=>(
-                      <div key={i} style={{fontSize:12,color:"#333",display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                      <div key={i} style={{fontSize:12,color:"var(--ink-0)",display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
                         <span style={{color:"var(--green)",fontSize:12}}>✓</span>
                         <span style={{fontWeight:600,color:"var(--green)"}}>{u.label||"Page "+(i+1)}</span>
-                        <span style={{color:"#777",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
+                        <span style={{color:"var(--ink-2)",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
                       </div>
                     ))}
                   </div>
@@ -8935,10 +8935,10 @@ ${isOpen
                 {(urlScanStatus===""||urlScanStatus==="none"||!urlScanConfirmed)&&!urlScanConfirmed&&(
                   <>
                     {urlScanStatus==="none"&&(
-                      <div style={{fontSize:12,color:"#aaa",marginBottom:8}}>No product pages found automatically — add them below.</div>
+                      <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:8}}>No product pages found automatically — add them below.</div>
                     )}
                     {!urlScanConfirmed&&urlScanStatus===""&&(
-                      <div style={{fontSize:11,color:"#aaa",marginBottom:8}}>Add a URL for each product or service line. Cambrian will reference these for solution mapping.</div>
+                      <div style={{fontSize:11,color:"var(--ink-3)",marginBottom:8}}>Add a URL for each product or service line. Cambrian will reference these for solution mapping.</div>
                     )}
                     {productUrls.map((item,i)=>(
                       <div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"center"}}>
@@ -8977,9 +8977,9 @@ ${isOpen
               <div className="field-row" style={{marginBottom:0}}>
                 <div className="field-label" style={{marginBottom:8}}>
                   Products &amp; Solutions Catalog
-                  <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — drives curated recommendations)</span>
+                  <span style={{color:"var(--ink-3)",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:11,marginLeft:6}}>(optional — drives curated recommendations)</span>
                 </div>
-                <div style={{fontSize:11,color:"#777",marginBottom:10,lineHeight:1.5}}>
+                <div style={{fontSize:11,color:"var(--ink-2)",marginBottom:10,lineHeight:1.5}}>
                   Add your products or services so Cambrian can recommend the right fit for each prospect based on live research. Upload a product sheet or add them manually.
                 </div>
 
@@ -9025,15 +9025,15 @@ ${isOpen
                     {products.filter(p=>p.name.trim()).map((p,i)=>(
                       <span key={i} className="prod-chip"><span className="prod-chip-dot"/>{p.name}</span>
                     ))}
-                    <span style={{color:"#888"}}>— Cambrian will match these to each prospect</span>
+                    <span style={{color:"var(--ink-2)"}}>— Cambrian will match these to each prospect</span>
                   </div>
                 )}
               </div>
 
               {/* ICP builds in background — reviewed on next step */}
               {icpLoading&&!sellerICP&&(
-                <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#aaa",padding:"8px 0",marginTop:8}}>
-                  <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Building your ICP in the background...
+                <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--ink-3)",padding:"8px 0",marginTop:8}}>
+                  <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> {getQuip("icp")}
                 </div>
               )}
               {sellerICP&&!icpLoading&&(
@@ -9055,7 +9055,7 @@ ${isOpen
                     { label: "Proof points", done: sellerProofPoints.some(p=>p.content.trim()) },
                   ].map(item=>(
                     <div key={item.label} style={{fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4,
-                      color:item.done?"var(--green)":"#ccc",transition:"color 0.3s"}}>
+                      color:item.done?"var(--green)":"var(--line-2)",transition:"color 0.3s"}}>
                       <span style={{fontSize:13}}>{item.done?"✓":"○"}</span> {item.label}
                     </div>
                   ))}
@@ -9117,7 +9117,7 @@ ${isOpen
                     onClick={()=>{if(!icpLoading&&!checkNoChange("icp",getIcpSig,()=>buildSellerICP(sellerUrl,{forceRefresh:true})))buildSellerICP(sellerUrl,{forceRefresh:true});}}
                     disabled={icpLoading}
                     title="Force rebuild ICP (clears cache)"
-                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:icpLoading?"var(--bg-1)":"var(--surface)",color:icpLoading?"var(--ink-3)":"#555",cursor:icpLoading?"wait":"pointer"}}>
+                    style={{padding:"7px 12px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:icpLoading?"var(--bg-1)":"var(--surface)",color:icpLoading?"var(--ink-3)":"var(--ink-1)",cursor:icpLoading?"wait":"pointer"}}>
                     {icpLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
                   </button>
                   <div style={{display:"flex",gap:0,border:"1.5px solid var(--line-0)",borderRadius:8,overflow:"hidden"}}>
@@ -9126,7 +9126,7 @@ ${isOpen
                         onClick={()=>{setIcpTab(tab); if(tab==="rfp"&&!rfpData.open?.length&&!rfpData.closed?.length&&!rfpData.loading) fetchRFPIntel();}}
                         style={{padding:"7px 16px",fontSize:12,fontWeight:700,border:"none",
                           background:icpTab===tab?"var(--ink-0)":"var(--surface)",
-                          color:icpTab===tab?"#fff":"#555",cursor:"pointer",transition:"all 0.15s",position:"relative"}}>
+                          color:icpTab===tab?"#fff":"var(--ink-1)",cursor:"pointer",transition:"all 0.15s",position:"relative"}}>
                         {label}
                         {tab==="rfp"&&rfpData.loading&&(
                           <span style={{marginLeft:6,display:"inline-block",width:6,height:6,borderRadius:"50%",background:"var(--amber)",animation:"blink 1.2s ease-in-out infinite"}}/>
@@ -9141,8 +9141,8 @@ ${isOpen
             {icpLoading&&!sellerICP&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:"60px 0",textAlign:"center"}}>
                 <div className="load-spin" style={{width:32,height:32,borderWidth:3}}/>
-                <div style={{fontSize:15,color:"#555",fontWeight:500}}>Building your ICP for {sellerUrl}...</div>
-                <div style={{fontSize:13,color:"#aaa"}}>Researching positioning, buyer personas, pain points, and channels</div>
+                <div style={{fontSize:15,color:"var(--ink-1)",fontWeight:500}}>{getQuip("icp")}</div>
+                <div style={{fontSize:13,color:"var(--ink-3)"}}>Building your ICP for {sellerUrl}</div>
               </div>
             )}
 
@@ -9161,8 +9161,8 @@ ${isOpen
                 {rfpData.loading && !hasData && (
                   <div style={{textAlign:"center",padding:"40px 0"}}>
                     <div className="load-spin" style={{width:28,height:28,borderWidth:3,margin:"0 auto 12px"}}/>
-                    <div style={{fontSize:14,color:"#555"}}>Scanning RFP sources via live web search...</div>
-                    <div style={{fontSize:12,color:"#aaa",marginTop:4}}>Private: Ariba · Coupa · press releases &nbsp;·&nbsp; Gov: SAM.gov · FPDS-NG · TED Europa</div>
+                    <div style={{fontSize:14,color:"var(--ink-1)"}}>{getQuip("default")}</div>
+                    <div style={{fontSize:12,color:"var(--ink-3)",marginTop:4}}>Private: Ariba · Coupa · press releases &nbsp;·&nbsp; Gov: SAM.gov · FPDS-NG · TED Europa</div>
                   </div>
                 )}
                 {rfpData.error && !rfpData.loading && (
@@ -9183,7 +9183,7 @@ ${isOpen
 
                     {/* Filter toggle — counts combined across open + closed */}
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-                      <span style={{fontSize:12,fontWeight:700,color:"#555"}}>Show:</span>
+                      <span style={{fontSize:12,fontWeight:700,color:"var(--ink-1)"}}>Show:</span>
                       {(()=>{
                         const privateCount = everything.filter(r=>r.isGovernment===false).length;
                         const govCount     = everything.filter(r=>r.isGovernment===true).length;
@@ -9196,7 +9196,7 @@ ${isOpen
                             style={{padding:"5px 12px",fontSize:11,fontWeight:700,borderRadius:20,border:"1.5px solid",
                               borderColor:rfpFilter===val?"var(--ink-0)":"var(--line-0)",
                               background:rfpFilter===val?"var(--ink-0)":"var(--surface)",
-                              color:rfpFilter===val?"#fff":"#555",cursor:"pointer"}}>
+                              color:rfpFilter===val?"#fff":"var(--ink-1)",cursor:"pointer"}}>
                             {label}
                           </button>
                         ));
@@ -9208,7 +9208,7 @@ ${isOpen
                     <div style={{marginBottom:24}}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🟢 Open RFPs — Active Opportunities</div>
-                        <div style={{fontSize:11,color:"#aaa"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).length} shown)</div>
+                        <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).length} shown)</div>
                         {rfpData.loading && rfpData.open.length===0 && (
                           <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ still loading…</span>
                         )}
@@ -9235,9 +9235,9 @@ ${isOpen
                                       <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                     ) : r.title}
                                   </div>
-                                  <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
+                                  <div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div>
                                 </td>
-                                <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
+                                <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"var(--ink-3)"}}>{r.country}</span></td>
                                 <td><span style={{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",
                                   background:r.isGovernment?"var(--navy-bg)":"#F0FDF4",
                                   color:r.isGovernment?"var(--navy)":"#166534"}}>{r.source}</span></td>
@@ -9262,7 +9262,7 @@ ${isOpen
                       <div>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                           <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Closed RFPs — Last 18 Months (Incumbent Intel)</div>
-                          {rfpData.closed.length>0 && <div style={{fontSize:11,color:"#aaa"}}>({rfpData.closed.length} awards)</div>}
+                          {rfpData.closed.length>0 && <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.closed.length} awards)</div>}
                           {rfpData.loading && rfpData.closed.length===0 && (
                             <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ still loading…</span>
                           )}
@@ -9295,14 +9295,14 @@ ${isOpen
                                         <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                       ) : r.title}
                                     </div>
-                                    <div style={{fontSize:11,color:"#aaa"}}>{r.relevanceReason}</div>
+                                    <div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div>
                                   </td>
-                                  <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"#aaa"}}>{r.country}</span></td>
+                                  <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"var(--ink-3)"}}>{r.country}</span></td>
                                   <td style={{fontSize:12,fontWeight:600,color:r.awardedTo?"var(--tan-0)":"var(--ink-3)",fontStyle:r.awardedTo?"normal":"italic"}}>
                                     {r.awardedTo || "— unverified"}
                                   </td>
                                   <td style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
-                                  <td style={{fontSize:11,color:"#777",whiteSpace:"nowrap"}}>{r.awardDate}</td>
+                                  <td style={{fontSize:11,color:"var(--ink-2)",whiteSpace:"nowrap"}}>{r.awardDate}</td>
                                   <td style={{fontSize:11}}>{r.cohort}</td>
                                   <td>
                                     <div style={{fontSize:12,fontWeight:700,
@@ -9315,7 +9315,7 @@ ${isOpen
                             </tbody>
                           </table>
                         </div>
-                        <div style={{fontSize:11,color:"#aaa",marginTop:8,fontStyle:"italic",lineHeight:1.5}}>
+                        <div style={{fontSize:11,color:"var(--ink-3)",marginTop:8,fontStyle:"italic",lineHeight:1.5}}>
                           💡 Awarded To = your displacement target or channel partner opportunity. "— unverified" means search couldn't confirm the vendor; click the title link and check the source (FPDS-NG / USAspending / TED) directly.
                         </div>
                         </>)}
@@ -9503,15 +9503,15 @@ ${isOpen
                           </span>
                         ))}
                       </div>
-                      <div style={{fontSize:11,color:"#aaa"}}>
+                      <div style={{fontSize:11,color:"var(--ink-3)"}}>
                         Competitive alternatives:
                         <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
                           {(sellerICP.icp.competitiveAlternatives||[]).filter(Boolean).map((c,i)=>(
-                            <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"2px 8px",fontSize:11,color:"#555",display:"flex",alignItems:"center",gap:3}}>
+                            <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"2px 8px",fontSize:11,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:3}}>
                               <span contentEditable suppressContentEditableWarning
                                 onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==c)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}));}}
                                 style={{outline:"none",cursor:"text"}}>{c}</span>
-                              <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"#aaa",padding:0}}>✕</button>
+                              <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"var(--ink-3)",padding:0}}>✕</button>
                             </span>
                           ))}
                         </div>
@@ -9531,9 +9531,9 @@ ${isOpen
                       <div className="field-label" style={{marginBottom:4}}>Target Industries</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
                         {(sellerICP.icp.industries||[]).map((ind,i)=>(
-                          <span key={i} style={{background:"var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                          <span key={i} style={{background:"var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:4}}>
                             {ind}
-                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,industries:p.icp.industries.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,industries:p.icp.industries.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0}}>✕</button>
                           </span>
                         ))}
                       </div>
@@ -9571,24 +9571,24 @@ ${isOpen
                       <div className="field-label" style={{marginBottom:4}}>Ownership Types</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                         {(sellerICP.icp.ownershipTypes||[]).filter(Boolean).map((o,i)=>(
-                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:4}}>
                             {o}
-                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,ownershipTypes:p.icp.ownershipTypes.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,ownershipTypes:p.icp.ownershipTypes.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0}}>✕</button>
                           </span>
                         ))}
-                        {!(sellerICP.icp.ownershipTypes||[]).length&&<span style={{fontSize:12,color:"#aaa"}}>—</span>}
+                        {!(sellerICP.icp.ownershipTypes||[]).length&&<span style={{fontSize:12,color:"var(--ink-3)"}}>—</span>}
                       </div>
                     </div>
                     <div>
                       <div className="field-label" style={{marginBottom:4}}>Geographies</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                         {(sellerICP.icp.geographies||[]).filter(Boolean).map((g,i)=>(
-                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:4}}>
                             {g}
-                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,geographies:p.icp.geographies.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,geographies:p.icp.geographies.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0}}>✕</button>
                           </span>
                         ))}
-                        {!(sellerICP.icp.geographies||[]).length&&<span style={{fontSize:12,color:"#aaa"}}>—</span>}
+                        {!(sellerICP.icp.geographies||[]).length&&<span style={{fontSize:12,color:"var(--ink-3)"}}>—</span>}
                       </div>
                     </div>
                   </div>
@@ -9679,7 +9679,7 @@ ${isOpen
                       const roleBg = role?.toLowerCase().includes("economic")?"var(--navy-bg)":role?.toLowerCase().includes("champion")?"var(--green-bg)":role?.toLowerCase().includes("technical")?"var(--amber-bg)":"var(--bg-0)";
                       return (
                         <div key={i} style={{background:roleBg,border:"1px solid "+roleColor+"33",borderRadius:10,padding:"12px 14px",position:"relative"}}>
-                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,buyerPersonas:prev.icp.buyerPersonas.filter((_,j)=>j!==i)}}))} style={{position:"absolute",top:8,right:10,background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#aaa",padding:0}}>✕</button>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,buyerPersonas:prev.icp.buyerPersonas.filter((_,j)=>j!==i)}}))} style={{position:"absolute",top:8,right:10,background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--ink-3)",padding:0}}>✕</button>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                             <span style={{fontSize:16}}>{roleIcon}</span>
                             <div style={{flex:1}}>
@@ -9712,7 +9712,7 @@ ${isOpen
                     ].map(({key,label,sub,color,bg})=>(
                       <div key={key} style={{background:bg,border:"1px solid "+color+"33",borderRadius:10,padding:"12px 14px"}}>
                         <div style={{fontSize:11,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>{label}</div>
-                        <div style={{fontSize:10,color:"#aaa",marginBottom:8}}>{sub}</div>
+                        <div style={{fontSize:10,color:"var(--ink-3)",marginBottom:8}}>{sub}</div>
                         <EF value={sellerICP.icp[key]||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,[key]:v}}))} placeholder={sub}/>
                       </div>
                     ))}
@@ -9730,9 +9730,9 @@ ${isOpen
                       <div className="field-label" style={{marginBottom:6}}>Top Pains We Solve</div>
                       {(sellerICP.icp.topPains||[]).filter(Boolean).map((p,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"flex-start",gap:4,padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
-                          <span style={{fontSize:12,color:"#555",flexShrink:0}}>•</span>
+                          <span style={{fontSize:12,color:"var(--ink-1)",flexShrink:0}}>•</span>
                           <EF value={p} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topPains:prev.icp.topPains.map((x,j)=>j===i?v:x)}}))} single/>
-                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topPains:prev.icp.topPains.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0,flexShrink:0}}>✕</button>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topPains:prev.icp.topPains.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0,flexShrink:0}}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -9740,9 +9740,9 @@ ${isOpen
                       <div className="field-label" style={{marginBottom:6}}>Top Gains We Create</div>
                       {(sellerICP.icp.topGains||[]).filter(Boolean).map((g,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"flex-start",gap:4,padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
-                          <span style={{fontSize:12,color:"#555",flexShrink:0}}>•</span>
+                          <span style={{fontSize:12,color:"var(--ink-1)",flexShrink:0}}>•</span>
                           <EF value={g} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topGains:prev.icp.topGains.map((x,j)=>j===i?v:x)}}))} single/>
-                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topGains:prev.icp.topGains.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0,flexShrink:0}}>✕</button>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,topGains:prev.icp.topGains.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0,flexShrink:0}}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -9752,7 +9752,7 @@ ${isOpen
                         <div key={i} style={{display:"flex",alignItems:"flex-start",gap:4,padding:"4px 0",borderBottom:"1px solid var(--tan-3)"}}>
                           <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",flexShrink:0,paddingTop:2}}>{["Functional","Emotional","Social"][i]||""}</span>
                           <EF value={j} onChange={v=>setSellerICP(prev=>({...prev,icp:{...prev.icp,customerJobs:prev.icp.customerJobs.map((x,k)=>k===i?v:x)}}))} single/>
-                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,customerJobs:prev.icp.customerJobs.filter((_,k)=>k!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0,flexShrink:0}}>✕</button>
+                          <button onClick={()=>setSellerICP(prev=>({...prev,icp:{...prev.icp,customerJobs:prev.icp.customerJobs.filter((_,k)=>k!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0,flexShrink:0}}>✕</button>
                         </div>
                       ))}
                     </div>
@@ -9770,11 +9770,11 @@ ${isOpen
                       <div className="field-label" style={{marginBottom:6}}>Best Channels to Reach This Buyer</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                         {(sellerICP.icp.tractionChannels||[]).filter(Boolean).map((c,i)=>(
-                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                          <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:4}}>
                             <span contentEditable suppressContentEditableWarning
                               onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==c)setSellerICP(p=>({...p,icp:{...p.icp,tractionChannels:p.icp.tractionChannels.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,tractionChannels:p.icp.tractionChannels.filter((_,j)=>j!==i)}}));}}
                               style={{outline:"none",cursor:"text"}}>{c}</span>
-                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,tractionChannels:p.icp.tractionChannels.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                            <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,tractionChannels:p.icp.tractionChannels.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0}}>✕</button>
                           </span>
                         ))}
                       </div>
@@ -9784,11 +9784,11 @@ ${isOpen
                         <div className="field-label" style={{marginBottom:4}}>Known Customers</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                           {(sellerICP.icp.customerExamples||[]).filter(Boolean).map((c,i)=>(
-                            <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"#555",display:"flex",alignItems:"center",gap:4}}>
+                            <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"3px 10px",fontSize:12,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:4}}>
                               <span contentEditable suppressContentEditableWarning
                                 onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==c)setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.filter((_,j)=>j!==i)}}));}}
                                 style={{outline:"none",cursor:"text"}}>{c}</span>
-                              <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#aaa",padding:0}}>✕</button>
+                              <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0}}>✕</button>
                             </span>
                           ))}
                         </div>
@@ -9917,7 +9917,7 @@ ${isOpen
                 <button key={mode} onClick={()=>setImportMode(mode)}
                   style={{padding:"8px 20px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,
                     background:importMode===mode?"var(--surface)":"transparent",
-                    color:importMode===mode?"var(--ink-0)":"#999",
+                    color:importMode===mode?"var(--ink-0)":"var(--ink-3)",
                     boxShadow:importMode===mode?"0 1px 3px rgba(0,0,0,0.1)":"none",
                     transition:"all 0.15s"}}>
                   {label}
@@ -9936,7 +9936,7 @@ ${isOpen
                   <button className="btn btn-secondary" onClick={e=>{e.stopPropagation();fileRef.current.click();}}>Browse File</button>
                   <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>onFile(e.target.files[0])}/>
                 </div>
-                <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
+                <div style={{textAlign:"center",margin:"12px 0",color:"var(--line-2)",fontSize:13}}>— or —</div>
                 <div style={{textAlign:"center",marginBottom:14}}>
                   <button className="btn btn-secondary" onClick={()=>{
                     const hdrs=Object.keys(SAMPLE_ROWS[0]);
@@ -9963,7 +9963,7 @@ ${isOpen
                 {/* ── Find Targets — generate ICP-matched accounts ── */}
                 {sellerICP?.icp && (
                   <>
-                    <div style={{textAlign:"center",margin:"12px 0",color:"#ccc",fontSize:13}}>— or —</div>
+                    <div style={{textAlign:"center",margin:"12px 0",color:"var(--line-2)",fontSize:13}}>— or —</div>
                     <div style={{background:"linear-gradient(135deg, var(--bg-1) 0%, var(--surface) 100%)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"18px 20px",marginBottom:18}}>
                       <div style={{textAlign:"center"}}>
                         <div style={{fontSize:22,marginBottom:6}}>✨</div>
@@ -10135,7 +10135,7 @@ ${isOpen
               <div>
                 <div style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",gap:10,alignItems:"flex-start"}}>
                   <div style={{fontSize:18,flexShrink:0}}>💡</div>
-                  <div style={{fontSize:13,color:"#555",lineHeight:1.6}}>
+                  <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>
                     <strong>Website URLs give the best results.</strong> Paste any of: company website, LinkedIn company page, or just type the company name.
                     Name-only entries use training knowledge — great for well-known companies.
                   </div>
@@ -10162,7 +10162,7 @@ ${isOpen
                     />
                     <div style={{flex:1,position:"relative"}}>
                       <input type="text" value={entry.url} placeholder={entry._suggested ? entry._suggested : "website.com (auto-suggested on blur)"}
-                        style={{width:"100%",fontSize:14,color:entry.url?"#555":"#aaa"}}
+                        style={{width:"100%",fontSize:14,color:entry.url?"var(--ink-1)":"var(--ink-3)"}}
                         onChange={e=>setQuickEntries(prev=>prev.map((x,j)=>j===i?{...x,url:e.target.value}:x))}
                         onKeyDown={e=>{if(e.key==="Enter"&&i===quickEntries.length-1)setQuickEntries(p=>[...p,{name:"",url:""}]);}}
                       />
@@ -10176,7 +10176,7 @@ ${isOpen
                     </div>
                     {quickEntries.length>1&&(
                       <button onClick={()=>setQuickEntries(p=>p.filter((_,j)=>j!==i))}
-                        style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:18,padding:"0 4px",flexShrink:0}}>×</button>
+                        style={{background:"none",border:"none",color:"var(--line-2)",cursor:"pointer",fontSize:18,padding:"0 4px",flexShrink:0}}>×</button>
                     )}
                   </div>
                 ))}
@@ -10264,7 +10264,7 @@ ${isOpen
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
                 <div>
                   <div className="card-title" style={{margin:0}}>All Accounts ({cohorts.flatMap(c=>c.members).length})</div>
-                  <div style={{fontSize:12,color:"#aaa",marginTop:2}}>Click to select · up to 5 accounts · numbered in priority order{rows.length > cohorts.flatMap(c=>c.members).length ? ` · ${rows.length - cohorts.flatMap(c=>c.members).length} accounts not mapped` : ""}</div>
+                  <div style={{fontSize:12,color:"var(--ink-3)",marginTop:2}}>Click to select · up to 5 accounts · numbered in priority order{rows.length > cohorts.flatMap(c=>c.members).length ? ` · ${rows.length - cohorts.flatMap(c=>c.members).length} accounts not mapped` : ""}</div>
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                   {fitScoring&&<div style={{fontSize:12,color:"var(--tan-0)"}}>⏳ Evaluating fit...</div>}
@@ -10323,23 +10323,23 @@ ${isOpen
                           })}>
                           <td style={{fontWeight:600,color:"var(--ink-0)"}}>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <div style={{width:20,height:20,borderRadius:4,border:"2px solid "+(inQueue?"var(--ink-0)":"#ddd"),background:inQueue?"var(--ink-0)":"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"var(--tan-0)",fontWeight:700}}>
+                              <div style={{width:20,height:20,borderRadius:4,border:"2px solid "+(inQueue?"var(--ink-0)":"var(--line-0)"),background:inQueue?"var(--ink-0)":"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"var(--tan-0)",fontWeight:700}}>
                                 {inQueue?qPos+1:""}
                               </div>
                               <div>
                                 <div>{m.company}</div>
-                                {m.company_url&&<div style={{fontSize:11,color:"#aaa",fontWeight:400}}>🌐 {m.company_url}</div>}
+                                {m.company_url&&<div style={{fontSize:11,color:"var(--ink-3)",fontWeight:400}}>🌐 {m.company_url}</div>}
                               </div>
                             </div>
                           </td>
-                          <td style={{color:"#555"}}>{m.ind||"—"}</td>
-                          <td style={{color:"#555",fontSize:12}}>{m.employees||"—"}</td>
+                          <td style={{color:"var(--ink-1)"}}>{m.ind||"—"}</td>
+                          <td style={{color:"var(--ink-1)",fontSize:12}}>{m.employees||"—"}</td>
                           <td style={{fontSize:12}} onClick={e=>e.stopPropagation()}>
                             {(()=>{
                               const pp=fitScores[m.company]?.ownership||m.publicPrivate||"";
-                              if(!pp) return <span style={{color:"#aaa"}}>—</span>;
+                              if(!pp) return <span style={{color:"var(--ink-3)"}}>—</span>;
                               const low=pp.toLowerCase();
-                              const c=low.includes("public")?"var(--navy)":low.includes("pe-backed")||low.includes("pe backed")?"#6B3A3A":low.includes("vc")||low.includes("backed")?"var(--green)":low.includes("private")?"#555":"#555";
+                              const c=low.includes("public")?"var(--navy)":low.includes("pe-backed")||low.includes("pe backed")?"#6B3A3A":low.includes("vc")||low.includes("backed")?"var(--green)":low.includes("private")?"var(--ink-1)":"var(--ink-1)";
                               const bg=low.includes("public")?"var(--navy-bg)":low.includes("pe-backed")||low.includes("pe backed")?"var(--red-bg)":low.includes("vc")||low.includes("backed")?"var(--green-bg)":"var(--bg-0)";
                               return<span style={{background:bg,color:c,border:"1px solid "+c+"44",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{pp}</span>;
                             })()}
@@ -10356,7 +10356,7 @@ ${isOpen
                                     : `${fitScores[m.company].score}% · ${fitScores[m.company].label}${fitScores[m.company].score < 65 ? " · Stretch" : ""}`;
                                 })()}
                               </div>
-                            </>):fitScoring?<span style={{fontSize:11,color:"#aaa"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
+                            </>):fitScoring?<span style={{fontSize:11,color:"var(--ink-3)"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
                           </td>
                           <td onClick={e=>e.stopPropagation()}>
                             <button onClick={e=>{e.stopPropagation();setIntelModalTarget(m.company);}}
@@ -10397,7 +10397,7 @@ ${isOpen
             </div>
 
             {/* Scroll cue */}
-            <div style={{textAlign:"center",padding:"10px 0 20px",color:"#aaa",fontSize:13}}>
+            <div style={{textAlign:"center",padding:"10px 0 20px",color:"var(--ink-3)",fontSize:13}}>
               ↓ Cohort analysis below
             </div>
 
@@ -10786,7 +10786,7 @@ ${isOpen
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
                   {sellerUrl!=="research-only"&&(
                     <div style={{flex:1,minWidth:200}}>
-                      <div className="field-label" style={{marginBottom:4,fontSize:10}}>Primary Contact Role <span style={{color:"#aaa",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,marginLeft:4}}>(optional)</span></div>
+                      <div className="field-label" style={{marginBottom:4,fontSize:10}}>Primary Contact Role <span style={{color:"var(--ink-3)",fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,marginLeft:4}}>(optional)</span></div>
                       <input type="text" placeholder="e.g. VP Total Rewards, Head of People Ops..." value={contactRole} onChange={e=>setContactRole(e.target.value)}
                         style={{fontSize:13,padding:"7px 10px"}}/>
                     </div>
@@ -10799,22 +10799,29 @@ ${isOpen
                     )}
                     <button onClick={()=>{
                       const co = selectedAccount?.company || "Company";
-                      const lines = [
-                        `Sales Brief — ${co}`,
-                        brief.tldr?.topFinding ? `\nQUICK TAKE:\n• Finding: ${brief.tldr.topFinding}\n• Opportunity: ${brief.tldr.topOpportunity}\n• Risk: ${brief.tldr.topRisk}` : "",
-                        brief.companySnapshot ? `\nOVERVIEW: ${brief.companySnapshot}` : "",
-                        brief.revenue ? `Revenue: ${brief.revenue}` : "", brief.employeeCount ? `Employees: ${brief.employeeCount}` : "",
-                        brief.strategicTheme ? `\nSTRATEGY: ${brief.strategicTheme}` : "",
-                        brief.openingAngle ? `\nOPENING ANGLE: ${brief.openingAngle}` : "",
-                        brief.elevatorPitch ? `\nELEVATOR PITCH: "${brief.elevatorPitch}"` : "",
-                        (brief.keyExecutives||[]).filter(e=>e?.name).length > 0 ? `\nKEY EXECUTIVES:\n${(brief.keyExecutives||[]).filter(e=>e?.name).map(e=>`• ${e.name}, ${e.title}`).join("\n")}` : "",
-                        (brief.fiveQuestions||[]).length > 0 ? `\n5 QUESTIONS TO ASK:\n${brief.fiveQuestions.map((q,i)=>`${i+1}. ${q.question}`).join("\n")}` : "",
-                        `\n— Generated by Cambrian Catalyst (cambriancatalyst.ai)`,
-                      ].filter(Boolean).join("\n");
-                      navigator.clipboard?.writeText(lines);
-                      setEditToast("Brief copied to clipboard — paste anywhere");
+                      const _hr = "\u2501".repeat(50); const _l = []; const _s = (t) => { _l.push("", _hr, t, _hr); };
+                      _l.push(`SALES BRIEF \u2014 ${co}`);
+                      if (brief.tldr?.topFinding) { _s("QUICK TAKE"); if (brief.tldr.topFinding) _l.push(`Finding: ${brief.tldr.topFinding}`); if (brief.tldr.topOpportunity) _l.push(`Opportunity: ${brief.tldr.topOpportunity}`); if (brief.tldr.topRisk) _l.push(`Risk: ${brief.tldr.topRisk}`); }
+                      if (brief.companySnapshot||brief.revenue||brief.employeeCount) { _s("COMPANY SNAPSHOT"); if (brief.companySnapshot) _l.push(brief.companySnapshot); if (brief.revenue) _l.push(`Revenue: ${brief.revenue}`); if (brief.employeeCount) _l.push(`Employees: ${brief.employeeCount}`); if (brief.headquarters) _l.push(`HQ: ${brief.headquarters}`); if (brief.ownership) _l.push(`Ownership: ${brief.ownership}`); if (brief.fundingProfile) _l.push(`Funding: ${brief.fundingProfile}`); if (brief.founded) _l.push(`Founded: ${brief.founded}`); }
+                      if ((brief.keyExecutives||[]).filter(e=>e?.name).length>0) { _s("KEY EXECUTIVES"); (brief.keyExecutives||[]).filter(e=>e?.name).forEach(e=>_l.push(`${e.name} \u2014 ${e.title}${e.angle?` | ${e.angle}`:""}`)); }
+                      if (brief.strategicTheme||brief.openingAngle||brief.elevatorPitch) { _s("STRATEGY & POSITIONING"); if (brief.strategicTheme) _l.push(`Strategic Theme: ${brief.strategicTheme}`); if (brief.openingAngle) _l.push(`Opening Angle: ${brief.openingAngle}`); if (brief.elevatorPitch) { _l.push("","ELEVATOR PITCH:",brief.elevatorPitch); } }
+                      if ((brief.solutionMapping||[]).filter(s=>s?.product).length>0) { _s("SOLUTION MAPPING"); (brief.solutionMapping||[]).filter(s=>s?.product).forEach((s,i)=>{ _l.push(`${i+1}. ${s.product}: ${s.fit||s.jobToBeDone||""}`); if (s.jobToBeDone&&s.fit) _l.push(`   Job-to-be-Done: ${s.jobToBeDone}`); if (s.painRelieved) _l.push(`   Pain Relieved: ${s.painRelieved}`); if (s.gainCreated) _l.push(`   Gain Created: ${s.gainCreated}`); if (s.measurableOutcome) _l.push(`   Outcome: ${s.measurableOutcome}`); if (s.challengerInsight) _l.push(`   Insight: ${s.challengerInsight}`); }); }
+                      if (brief.publicSentiment&&(brief.publicSentiment.onlineSentiment||brief.publicSentiment.glassdoorRating||brief.publicSentiment.standoutReview?.text)) { _s("MARKET SENTIMENT"); if (brief.publicSentiment.glassdoorRating) _l.push(`Glassdoor: ${brief.publicSentiment.glassdoorRating}`); if (brief.publicSentiment.onlineSentiment) _l.push(`Sentiment: ${brief.publicSentiment.onlineSentiment}`); if (brief.publicSentiment.npsSignal) _l.push(`NPS Signal: ${brief.publicSentiment.npsSignal}`); if (brief.publicSentiment.standoutReview?.text) _l.push(`Standout Review: "${brief.publicSentiment.standoutReview.text}" \u2014 ${brief.publicSentiment.standoutReview.source||""}`); if (brief.publicSentiment.salesAngle||brief.publicSentiment.sentimentSummary) _l.push(`Sales Angle: ${brief.publicSentiment.salesAngle||brief.publicSentiment.sentimentSummary}`); }
+                      if ((brief.recentHeadlines||[]).filter(h=>h?.headline).length>0) { _s("RECENT HEADLINES"); (brief.recentHeadlines||[]).filter(h=>h?.headline).forEach(h=>_l.push(`\u2022 ${h.headline}${h.relevance?` \u2014 ${h.relevance}`:""}`)); }
+                      if ((brief.growthSignals||[]).filter(Boolean).length>0||(brief.recentSignals||[]).filter(Boolean).length>0) { _s("SIGNALS"); (brief.growthSignals||[]).filter(Boolean).forEach(s=>_l.push(`\u2191 ${s}`)); (brief.recentSignals||[]).filter(Boolean).forEach(s=>_l.push(`\u2022 ${s}`)); }
+                      if (brief.openRoles&&(brief.openRoles.summary||(brief.openRoles.roles||[]).some(r=>r?.title))) { _s("OPEN ROLES"); if (brief.openRoles.summary) _l.push(brief.openRoles.summary); (brief.openRoles.roles||[]).filter(r=>r?.title).forEach(r=>_l.push(`  ${r.title} (${r.dept||"Open"}) \u2014 ${r.signal||""}`)); }
+                      if (brief.competitivePositioning||(brief.competitors||[]).filter(Boolean).length>0) { _s("COMPETITIVE POSITIONING"); if (brief.competitivePositioning?.marketPosition) _l.push(`Market Position: ${brief.competitivePositioning.marketPosition}`); if (brief.competitivePositioning?.primaryCompetitors?.length>0) brief.competitivePositioning.primaryCompetitors.forEach(c=>_l.push(`vs ${c.name}: Strength=${c.strength||""} | Weakness=${c.weakness||""}`)); if ((brief.competitors||[]).filter(Boolean).length>0&&!brief.competitivePositioning?.primaryCompetitors?.length) _l.push(`Competitors: ${brief.competitors.filter(Boolean).join(", ")}`); if (brief.competitivePositioning?.whereWinning) _l.push(`Where Winning: ${brief.competitivePositioning.whereWinning}`); if (brief.competitivePositioning?.whereLosing) _l.push(`Where Losing: ${brief.competitivePositioning.whereLosing}`); if (brief.competitivePositioning?.displacementAngle) _l.push(`Displacement Angle: ${brief.competitivePositioning.displacementAngle}`); }
+                      if (brief.boardAndInvestors) { _s("BOARD & INVESTORS"); if (brief.boardAndInvestors.boardMembers?.length>0) brief.boardAndInvestors.boardMembers.forEach(b=>_l.push(`${b.name} \u2014 ${b.role||b.title||""}${b.background?` | ${b.background}`:""}`)); if (brief.boardAndInvestors.leadInvestors) _l.push(`Lead Investors: ${brief.boardAndInvestors.leadInvestors}`); if (brief.boardAndInvestors.investmentThesis) _l.push(`Investment Thesis: ${brief.boardAndInvestors.investmentThesis}`); if (brief.boardAndInvestors.boardMandate) _l.push(`Board Mandate: ${brief.boardAndInvestors.boardMandate}`); }
+                      if (brief.financialDeepDive) { _s("FINANCIAL DEEP DIVE"); if (brief.financialDeepDive.revenueTrend) _l.push(`Revenue Trend: ${brief.financialDeepDive.revenueTrend}`); if (brief.financialDeepDive.marginTrend) _l.push(`Margin Trend: ${brief.financialDeepDive.marginTrend}`); if (brief.financialDeepDive.segmentBreakdown) _l.push(`Segment Breakdown: ${brief.financialDeepDive.segmentBreakdown}`); if (brief.financialDeepDive.capitalPriorities) _l.push(`Capital Priorities: ${brief.financialDeepDive.capitalPriorities}`); if (brief.financialDeepDive.earningsInsight) _l.push(`Earnings Insight: ${brief.financialDeepDive.earningsInsight}`); if (brief.financialDeepDive.guidanceQuote) _l.push(`Guidance: "${brief.financialDeepDive.guidanceQuote}"`); }
+                      if (brief.gateMap) { _s("APPROVAL GATE MAP"); if (brief.gateMap.sellerGates) { _l.push("Seller Gates:"); if (brief.gateMap.sellerGates.summary) _l.push(`  ${brief.gateMap.sellerGates.summary}`); (brief.gateMap.sellerGates.gates||[]).filter(g=>g?.gate).forEach(g=>_l.push(`  \u2022 ${g.gate}: ${g.owner||""} \u2014 ${g.tactic||""}`)); } if (brief.gateMap.buyerGates) { _l.push("Buyer Gates:"); if (brief.gateMap.buyerGates.summary) _l.push(`  ${brief.gateMap.buyerGates.summary}`); (brief.gateMap.buyerGates.gates||[]).filter(g=>g?.gate).forEach(g=>_l.push(`  \u2022 ${g.gate}: ${g.owner||""} \u2014 ${g.tactic||""}`)); } if (brief.gateMap.criticalPath) _l.push(`Critical Path: ${brief.gateMap.criticalPath}`); if (brief.gateMap.mapAdvice) _l.push(`Advice: ${brief.gateMap.mapAdvice}`); }
+                      if (brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())) { _s("TECH STACK"); ["crm","erp","hris","marketing","payments","analytics","infrastructure"].forEach(k=>{ if (brief.techStack[k]?.trim()) _l.push(`${k.toUpperCase()}: ${brief.techStack[k]}`); }); }
+                      if ((brief.watchOuts||[]).filter(Boolean).length>0) { _s("WATCH-OUTS"); (brief.watchOuts||[]).filter(Boolean).forEach(w=>_l.push(`\u26A0 ${w}`)); }
+                      if ((brief.fiveQuestions||[]).length>0) { _s("5 QUESTIONS TO ASK"); brief.fiveQuestions.forEach((q,i)=>{ _l.push(`${i+1}. ${q.question}`); if (q.rationale) _l.push(`   Why: ${q.rationale}`); }); }
+                      _l.push("",`\u2014 Generated by Cambrian Catalyst (cambriancatalyst.ai)`);
+                      navigator.clipboard?.writeText(_l.filter(l=>l!==undefined).join("\n"));
+                      setEditToast("Full brief copied to clipboard \u2014 all 10 sections");
                     }}
-                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)",color:"#555",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:"var(--surface)",color:"var(--ink-1)",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                       📋 Copy Brief
                     </button>
                     <button onClick={()=>{
@@ -10835,7 +10842,7 @@ ${isOpen
                       📄 View Summary
                     </button>
                     {hubspotStatus?.connected&&<button onClick={pushSessionToHubSpot} disabled={!!hubspotPushing}
-                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":"var(--surface)",color:copied==="hs_ok"?"var(--green)":"#555",cursor:hubspotPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5}}>
+                      style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotPushing==="push_brief"?"var(--amber-bg)":copied==="hs_ok"?"var(--green-bg)":"var(--surface)",color:copied==="hs_ok"?"var(--green)":"var(--ink-1)",cursor:hubspotPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5}}>
                       {hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":"Push to HubSpot"}
                     </button>}
                     <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
@@ -11150,8 +11157,8 @@ ${isOpen
                           <div className="contact-av" style={{background:"#2C4A7A",color:"var(--surface)",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)"}}>{ex.name}</div>
-                            <div style={{fontSize:13,color:"#777",marginBottom:4}}>{ex.title}</div>
-                            {ex.background&&<div style={{fontSize:13,color:"#555",marginBottom:8,fontStyle:"italic"}}>{ex.background}</div>}
+                            <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:4}}>{ex.title}</div>
+                            {ex.background&&<div style={{fontSize:13,color:"var(--ink-1)",marginBottom:8,fontStyle:"italic"}}>{ex.background}</div>}
                             <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:4}}>Executive Perspective</div>
                             <EF
                               value={(ex.angle||"").replace(/^Executive Perspective:\s*/i,"").replace(/^Executive Perspective\s*[-—:]\s*/i,"")}
@@ -11216,7 +11223,7 @@ ${isOpen
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Growth Signals</div>
                           {(brief.growthSignals||[]).filter(Boolean).map((s,i)=>(
-                            <div key={i} style={{fontSize:12,color:"#333",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>📈 {s}</div>
+                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>📈 {s}</div>
                           ))}
                         </div>
                       )}
@@ -11224,7 +11231,7 @@ ${isOpen
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Recent Triggers</div>
                           {(brief.recentSignals||[]).filter(Boolean).map((s,i)=>(
-                            <div key={i} style={{fontSize:12,color:"#333",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>⚡ {s}</div>
+                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>⚡ {s}</div>
                           ))}
                         </div>
                       )}
@@ -11305,7 +11312,7 @@ ${isOpen
                                 <div key={i} style={{background:bg,border:"1px solid "+c+"44",borderRadius:10,padding:"10px 14px",textAlign:"center",minWidth:80}}>
                                   <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:c,marginBottom:4}}>{s.label}</div>
                                   <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:c,lineHeight:1}}>{s.val}</div>
-                                  {s.max&&<div style={{fontSize:9,color:"#aaa",marginTop:3}}>{s.max}</div>}
+                                  {s.max&&<div style={{fontSize:9,color:"var(--ink-3)",marginTop:3}}>{s.max}</div>}
                                 </div>
                               );
                             })}
@@ -11317,7 +11324,7 @@ ${isOpen
                       {brief.publicSentiment.npsSignal&&(
                         <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
                           <div style={{fontSize:10,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>📊 NPS / Customer Loyalty Signal</div>
-                          <div style={{fontSize:13,color:"#333",lineHeight:1.6}}>{brief.publicSentiment.npsSignal}</div>
+                          <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6}}>{brief.publicSentiment.npsSignal}</div>
                         </div>
                       )}
 
@@ -11341,7 +11348,7 @@ ${isOpen
                               {s.source&&<div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:5,color:borderColor}}>
                                 {isPos?"✓":""} {s.source}
                               </div>}
-                              <div style={{fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{s.text}"</div>
+                              <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6,fontStyle:"italic"}}>"{s.text}"</div>
                             </div>
                           )})()}
                         </div>
@@ -11370,8 +11377,8 @@ ${isOpen
                           <div className="contact-av" style={{background:"#2C4A7A",color:"var(--surface)",fontSize:11,fontWeight:700}}>{l.initials||l.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)"}}>{l.name}</div>
-                            <div style={{fontSize:10,color:"#777",marginBottom:3}}>{l.title}</div>
-                            {l.background&&<div style={{fontSize:10,color:"#aaa",fontStyle:"italic",marginBottom:3,lineHeight:1.4}}>{l.background}</div>}
+                            <div style={{fontSize:10,color:"var(--ink-2)",marginBottom:3}}>{l.title}</div>
+                            {l.background&&<div style={{fontSize:10,color:"var(--ink-3)",fontStyle:"italic",marginBottom:3,lineHeight:1.4}}>{l.background}</div>}
                             <EF value={l.angle||""} onChange={v=>patchBrief(b=>{if(!b.leadershipTeam)b.leadershipTeam=[];b.leadershipTeam[i]={...b.leadershipTeam[i],angle:v};})} single placeholder="Engagement angle..."/>
                           </div>
                         </div>
@@ -11417,19 +11424,19 @@ ${isOpen
                             {item.jobToBeDone&&(
                               <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
                                 <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Job-to-be-Done</div>
-                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.jobToBeDone}</div>
+                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.jobToBeDone}</div>
                               </div>
                             )}
                             {item.painRelieved&&(
                               <div style={{background:"#FDE8E844",borderRadius:8,padding:"8px 10px",border:"1px solid #9B2C2C22"}}>
                                 <div style={{fontSize:9,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Pain Relieved</div>
-                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.painRelieved}</div>
+                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.painRelieved}</div>
                               </div>
                             )}
                             {item.gainCreated&&(
                               <div style={{background:"var(--green-bg)",borderRadius:8,padding:"8px 10px",border:"1px solid #2E6B2E22"}}>
                                 <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Gain Created</div>
-                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.gainCreated}</div>
+                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.gainCreated}</div>
                               </div>
                             )}
                           </div>
@@ -11460,13 +11467,13 @@ ${isOpen
                             {item.measurableOutcome&&(
                               <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
                                 <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Target Outcome</div>
-                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.measurableOutcome}</div>
+                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.measurableOutcome}</div>
                               </div>
                             )}
                             {item.provenWith&&(
                               <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
                                 <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Proven With</div>
-                                <div style={{fontSize:12,color:"#333",lineHeight:1.5}}>{item.provenWith}</div>
+                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.provenWith}</div>
                               </div>
                             )}
                           </div>
@@ -11480,11 +11487,11 @@ ${isOpen
                         <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:10}}>🎯 Champion Intelligence</div>
                         <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
                           <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Who Moves Deals — Not Talkers or Blockers</div>
-                          <div style={{fontSize:13,color:"#333",lineHeight:1.6,marginBottom:8}}>{brief.mobilizer.description}</div>
+                          <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6,marginBottom:8}}>{brief.mobilizer.description}</div>
                           {brief.mobilizer.identifyingBehavior&&(
                             <div style={{marginBottom:8}}>
                               <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>How to Spot Them in a Meeting</div>
-                              <div style={{fontSize:12,color:"#555",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.identifyingBehavior}</div>
+                              <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.identifyingBehavior}</div>
                             </div>
                           )}
                           {brief.mobilizer.teachingAngle&&(
@@ -11512,7 +11519,7 @@ ${isOpen
                                   📊 {(cs.quantifiedOutcome||cs.result)}
                                 </div>
                               )}
-                              <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{cs.relevance}</div>
+                              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5}}>{cs.relevance}</div>
                             </div>
                           </div>
                         ))}
@@ -11548,11 +11555,11 @@ ${isOpen
                         ))}
                         {(brief.techStack.other||[]).filter(Boolean).map((t,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"4px 12px"}}>
-                            <span style={{fontSize:13,color:"#555"}}>{t}</span>
+                            <span style={{fontSize:13,color:"var(--ink-1)"}}>{t}</span>
                           </div>
                         ))}
                       </div>
-                      <div style={{fontSize:11,color:"#aaa",marginTop:4}}>Used for solution mapping and integration complexity assessment</div>
+                      <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4}}>Used for solution mapping and integration complexity assessment</div>
                     </div>
                   </div></div>
                 )}
@@ -11571,18 +11578,18 @@ ${isOpen
                         {(brief.workforceProfile?.knowledgeWorkerPct||brief.workforceProfile?.remotePolicy)&&(
                           <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
                             <div style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>👥 Workforce</div>
-                            {brief.workforceProfile.knowledgeWorkerPct&&<div style={{fontSize:12,color:"#333",marginBottom:3}}>Knowledge workers: <strong>{brief.workforceProfile.knowledgeWorkerPct}</strong></div>}
-                            {brief.workforceProfile.unionizedPct&&<div style={{fontSize:12,color:"#333",marginBottom:3}}>Unionized: <strong style={{color:brief.workforceProfile.unionizedPct.includes("high")||parseFloat(brief.workforceProfile.unionizedPct)>30?"var(--red)":"#333"}}>{brief.workforceProfile.unionizedPct}</strong></div>}
-                            {brief.workforceProfile.remotePolicy&&<div style={{fontSize:12,color:"#555"}}>{brief.workforceProfile.remotePolicy}</div>}
-                            {brief.workforceProfile.avgTenure&&<div style={{fontSize:11,color:"#aaa",marginTop:3}}>Avg tenure: {brief.workforceProfile.avgTenure}</div>}
+                            {brief.workforceProfile.knowledgeWorkerPct&&<div style={{fontSize:12,color:"var(--ink-0)",marginBottom:3}}>Knowledge workers: <strong>{brief.workforceProfile.knowledgeWorkerPct}</strong></div>}
+                            {brief.workforceProfile.unionizedPct&&<div style={{fontSize:12,color:"var(--ink-0)",marginBottom:3}}>Unionized: <strong style={{color:brief.workforceProfile.unionizedPct.includes("high")||parseFloat(brief.workforceProfile.unionizedPct)>30?"var(--red)":"var(--ink-0)"}}>{brief.workforceProfile.unionizedPct}</strong></div>}
+                            {brief.workforceProfile.remotePolicy&&<div style={{fontSize:12,color:"var(--ink-1)"}}>{brief.workforceProfile.remotePolicy}</div>}
+                            {brief.workforceProfile.avgTenure&&<div style={{fontSize:11,color:"var(--ink-3)",marginTop:3}}>Avg tenure: {brief.workforceProfile.avgTenure}</div>}
                           </div>
                         )}
                         {/* Culture */}
                         {brief.cultureProfile?.coreValues&&(
                           <div style={{background:"var(--bg-0)",borderRadius:8,padding:"10px 12px"}}>
                             <div style={{fontSize:10,fontWeight:700,color:"var(--purple)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>🎭 Culture</div>
-                            {brief.cultureProfile.coreValues&&<div style={{fontSize:12,color:"#333",marginBottom:4}}><strong>Values:</strong> {brief.cultureProfile.coreValues}</div>}
-                            {brief.cultureProfile.communicationStyle&&<div style={{fontSize:12,color:"#555",marginBottom:2}}><strong>Style:</strong> {brief.cultureProfile.communicationStyle}</div>}
+                            {brief.cultureProfile.coreValues&&<div style={{fontSize:12,color:"var(--ink-0)",marginBottom:4}}><strong>Values:</strong> {brief.cultureProfile.coreValues}</div>}
+                            {brief.cultureProfile.communicationStyle&&<div style={{fontSize:12,color:"var(--ink-1)",marginBottom:2}}><strong>Style:</strong> {brief.cultureProfile.communicationStyle}</div>}
                             {brief.cultureProfile.sellerLanguageHint&&(
                               <div style={{marginTop:6,padding:"5px 8px",background:"var(--purple-bg)",borderRadius:6,fontSize:11,color:"var(--purple)",fontStyle:"italic"}}>
                                 💬 {brief.cultureProfile.sellerLanguageHint}
@@ -11607,7 +11614,7 @@ ${isOpen
                                 </div>
                               ))}
                             </div>
-                            <div style={{fontSize:11,color:"#777",marginTop:6,fontStyle:"italic"}}>Are you displacing or landing adjacent? "Adjacent" is almost always the right first motion.</div>
+                            <div style={{fontSize:11,color:"var(--ink-2)",marginTop:6,fontStyle:"italic"}}>Are you displacing or landing adjacent? "Adjacent" is almost always the right first motion.</div>
                           </div>
                         )}
                       </div>
@@ -11901,7 +11908,7 @@ ${isOpen
                               {i>0&&<div style={{width:14,height:2,background:i<=activeIdx?colors[i]+"66":"var(--line-0)",borderRadius:1}}/>}
                               <div style={{padding:"4px 11px",borderRadius:20,fontSize:12,fontWeight:700,
                                 background:i===activeIdx?colors[i]:i<activeIdx?colors[i]+"22":"var(--tan-3)",
-                                color:i===activeIdx?"#fff":i<activeIdx?colors[i]:"#bbb",
+                                color:i===activeIdx?"#fff":i<activeIdx?colors[i]:"var(--ink-3)",
                                 border:"1.5px solid "+(i<=activeIdx?colors[i]:"var(--line-0)")}}>
                                 {stage}
                               </div>
@@ -11916,7 +11923,7 @@ ${isOpen
                           {brief.processMaturity.processGaps.filter(Boolean).map((g,i)=>(
                             <div key={i} style={{display:"flex",gap:7,marginBottom:5}}>
                               <div style={{width:5,height:5,borderRadius:"50%",background:"var(--amber)",flexShrink:0,marginTop:6}}/>
-                              <div style={{fontSize:13,color:"#555",lineHeight:1.5}}>{g}</div>
+                              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5}}>{g}</div>
                             </div>
                           ))}
                         </div>
@@ -12246,7 +12253,7 @@ ${isOpen
             )}
 
             {!briefLoading&&!brief&&(
-              <div style={{textAlign:"center",padding:"48px 20px",color:"#bbb"}}>
+              <div style={{textAlign:"center",padding:"48px 20px",color:"var(--ink-3)"}}>
                 <div style={{fontSize:13,marginBottom:14}}>Select a company to build a research brief.</div>
                 <button className="btn btn-secondary btn-sm" onClick={()=>setStep(4)}>← Select Company</button>
               </div>
@@ -12303,12 +12310,12 @@ ${isOpen
               <div className="load-box" style={{marginBottom:20}}>
                 <div className="load-status">
                   <div className="load-spin"/>
-                  Building RIVER hypothesis...
+                  {getQuip("hypothesis")}
                 </div>
                 <div style={{height:3,background:"var(--tan-3)",borderRadius:2,overflow:"hidden",marginTop:12}}>
                   <div style={{height:"100%",background:"linear-gradient(90deg,var(--tan-0),var(--navy),var(--green),var(--tan-0))",backgroundSize:"300% 100%",animation:"shimmer 2.5s linear infinite",borderRadius:2}}/>
                 </div>
-                <div style={{fontSize:11,color:"#aaa",textAlign:"center",marginTop:8}}>
+                <div style={{fontSize:11,color:"var(--ink-3)",textAlign:"center",marginTop:8}}>
                   This usually finishes before you're done reading the brief
                 </div>
               </div>
@@ -12453,7 +12460,7 @@ ${isOpen
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                 <div style={{fontFamily:"Lora,serif",fontSize:20,fontWeight:600,color:confColor(confidence)}}>{confidence}%</div>
-                <div style={{fontSize:12,color:"#aaa"}}>confidence</div>
+                <div style={{fontSize:12,color:"var(--ink-3)"}}>confidence</div>
                 <button className="btn btn-secondary btn-sm" onClick={()=>setStep(6)}>← Hypothesis</button>
                 <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
                 <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
@@ -12531,7 +12538,7 @@ ${isOpen
                     <div className="stage-card">
                       <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,marginBottom:16,color:"var(--ink-0)"}}>
                         🎯 Discovery Questions
-                        <span style={{fontSize:11,fontWeight:400,color:"#999",marginLeft:8,fontFamily:"DM Sans,sans-serif"}}>product-specific · tailored to {selectedAccount?.company}</span>
+                        <span style={{fontSize:11,fontWeight:400,color:"var(--ink-3)",marginLeft:8,fontFamily:"DM Sans,sans-serif"}}>product-specific · tailored to {selectedAccount?.company}</span>
                       </div>
 
                       {/* Static RIVER stage questions */}
@@ -12560,7 +12567,7 @@ ${isOpen
                             <div key={"s"+qi} className="dq-block" style={{borderLeftColor:"var(--navy)"}}>
                               <div className="dq-framework" style={{color:"var(--navy)"}}>📞 SALES · {dq.framework||"Active Listening"}</div>
                               <div className="dq-question">"{dq.q}"</div>
-                              {dq.intent&&<div style={{fontSize:11,color:"#777",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
+                              {dq.intent&&<div style={{fontSize:11,color:"var(--ink-2)",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
                               <div className="gate-note-lbl">What you're hearing</div>
                               <textarea className="dq-note"
                                 placeholder="Capture their exact words..."
@@ -12577,7 +12584,7 @@ ${isOpen
                             <div key={"a"+qi} className="dq-block" style={{borderLeftColor:"var(--green)",background:"var(--green-bg)"}}>
                               <div className="dq-framework" style={{color:"var(--green)"}}>🏗 ARCHITECTURE · {dq.lens||dq.framework||"SA Lens"}</div>
                               <div className="dq-question">"{dq.q}"</div>
-                              {dq.intent&&<div style={{fontSize:11,color:"#555",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
+                              {dq.intent&&<div style={{fontSize:11,color:"var(--ink-1)",marginBottom:8,fontStyle:"normal"}}>{dq.intent}</div>}
                               <div className="gate-note-lbl">What you're hearing</div>
                               <textarea className="dq-note"
                                 placeholder="Capture their exact words — feeds the Solution Fit review..."
@@ -12589,8 +12596,8 @@ ${isOpen
                       })()}
 
                       {!discoveryQs&&(
-                        <div style={{fontSize:12,color:"#aaa",fontStyle:"italic",textAlign:"center",padding:"12px 0"}}>
-                          Generating product-specific sales + architecture questions...
+                        <div style={{fontSize:12,color:"var(--ink-3)",fontStyle:"italic",textAlign:"center",padding:"12px 0"}}>
+                          {getQuip("default")}
                         </div>
                       )}
                     </div>
@@ -12608,10 +12615,10 @@ ${isOpen
                         <div key={oi} style={{marginBottom:10}}>
                           <button style={{width:"100%",textAlign:"left",padding:"10px 14px",borderRadius:8,border:"1px solid var(--line-0)",background:"var(--red-bg)",cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--red)",fontFamily:"DM Sans,sans-serif"}}
                             onClick={()=>setExpandedObjs(s=>({...s,[si+"-"+oi]:!s[si+"-"+oi]}))}>
-                            "{o.q}" <span style={{float:"right",color:"#bbb"}}>{expandedObjs[si+"-"+oi]?"▲":"▼"}</span>
+                            "{o.q}" <span style={{float:"right",color:"var(--ink-3)"}}>{expandedObjs[si+"-"+oi]?"▲":"▼"}</span>
                           </button>
                           {expandedObjs[si+"-"+oi]&&(
-                            <div style={{padding:"10px 14px",background:"var(--bg-0)",borderRadius:"0 0 8px 8px",border:"1px solid var(--line-0)",borderTop:"none",fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>
+                            <div style={{padding:"10px 14px",background:"var(--bg-0)",borderRadius:"0 0 8px 8px",border:"1px solid var(--line-0)",borderTop:"none",fontSize:13,color:"var(--ink-0)",lineHeight:1.6,fontStyle:"italic"}}>
                               {o.a}
                             </div>
                           )}
@@ -12654,14 +12661,14 @@ ${isOpen
                     placeholder="Free-form notes... Tab = timestamp"
                     value={notes} onChange={e=>setNotes(e.target.value)}
                     onKeyDown={e=>{if(e.key==="Tab"){e.preventDefault();const ts=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});const el=e.target;const b=el.value.slice(0,el.selectionStart);const a=el.value.slice(el.selectionStart);el.value=b+"\n["+ts+"] "+a;setNotes(el.value);}}}/>
-                  <div style={{fontSize:10,color:"#aaa",marginTop:4}}>Tab inserts timestamp · feeds post-call summary</div>
+                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:4}}>Tab inserts timestamp · feeds post-call summary</div>
                 </div>
 
                 {/* Opening Angle */}
                 {brief?.openingAngle&&(
                   <div className="incall-sidebar" style={{marginBottom:14,borderLeft:"3px solid var(--tan-0)"}}>
                     <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--tan-0)",marginBottom:6}}>Opening Angle</div>
-                    <div style={{fontSize:13,color:"#333",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
+                    <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6,fontStyle:"italic"}}>"{brief.openingAngle}"</div>
                   </div>
                 )}
 
@@ -12672,7 +12679,7 @@ ${isOpen
                     {(brief.solutionMapping||[]).filter(s=>s?.product).map((s,i)=>(
                       <div key={i} style={{marginBottom:8,paddingBottom:8,borderBottom:i<(brief.solutionMapping.filter(x=>x?.product).length-1)?"1px solid var(--tan-3)":"none"}}>
                         <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:2}}>{s.product}</div>
-                        <div style={{fontSize:11,color:"#666",lineHeight:1.5}}>{s.fit}</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>{s.fit}</div>
                       </div>
                     ))}
                   </div>
@@ -12683,7 +12690,7 @@ ${isOpen
                   <div className="incall-sidebar">
                     <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--red)",marginBottom:8}}>⚠ Watch-Outs</div>
                     {(brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
-                      <div key={i} style={{fontSize:12,color:"#555",paddingBottom:6,marginBottom:6,borderBottom:i<brief.watchOuts.filter(Boolean).length-1?"1px solid var(--tan-3)":"none",lineHeight:1.5}}>
+                      <div key={i} style={{fontSize:12,color:"var(--ink-1)",paddingBottom:6,marginBottom:6,borderBottom:i<brief.watchOuts.filter(Boolean).length-1?"1px solid var(--tan-3)":"none",lineHeight:1.5}}>
                         {w}
                       </div>
                     ))}
@@ -12701,14 +12708,14 @@ ${isOpen
                         return stages.map((s,i)=>(
                           <span key={s} style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10,
                             background:i===ai?colors[i]:i<ai?colors[i]+"22":"var(--tan-3)",
-                            color:i===ai?"#fff":i<ai?colors[i]:"#aaa",
+                            color:i===ai?"#fff":i<ai?colors[i]:"var(--ink-3)",
                             border:"1px solid "+(i<=ai?colors[i]:"var(--line-0)")}}>
                             {s}
                           </span>
                         ));
                       })()}
                     </div>
-                    <div style={{fontSize:12,color:"#555",lineHeight:1.5}}>{(brief.processMaturity.maturityNote||"").slice(0,120)}{(brief.processMaturity.maturityNote||"").length>120?"...":""}</div>
+                    <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5}}>{(brief.processMaturity.maturityNote||"").slice(0,120)}{(brief.processMaturity.maturityNote||"").length>120?"...":""}</div>
                   </div>
                 )}
               </div>
@@ -12796,7 +12803,7 @@ ${isOpen
 
             {postLoading&&(
               <div className="card">
-                <div style={{fontSize:13,color:"#777",marginBottom:12}}>Synthesizing RIVER capture and generating deal route...</div>
+                <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:12}}>Synthesizing RIVER capture and generating deal route...</div>
                 <div className="pulse-wrap">{[70,90,55,80,65,75,50].map((w,i)=><div key={i} className="pulse-line" style={{width:w+"%",animationDelay:(i*0.12)+"s"}}/>)}</div>              </div>
             )}
             {postCall&&!postLoading&&(
@@ -12810,7 +12817,7 @@ ${isOpen
                   <div className="route-lbl">Deal Route</div>
                   <div className="route-title">{routeLabel}</div>
                   <div className="route-desc">{postCall.dealRouteReason}</div>
-                  {postCall.dealRisk&&<div style={{marginTop:7,fontSize:11,color:"#555"}}>⚠ Top risk: {postCall.dealRisk}</div>}
+                  {postCall.dealRisk&&<div style={{marginTop:7,fontSize:11,color:"var(--ink-1)"}}>⚠ Top risk: {postCall.dealRisk}</div>}
                 </div>
 
                 {/* Deal Health by RIVER Stage */}
@@ -12965,7 +12972,7 @@ ${isOpen
                 <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,color:"var(--ink-0)"}}>Contact Us</div>
                 <div style={{fontSize:12,color:"var(--ink-3)",marginTop:2}}>Cambrian Catalyst LLC · Seattle, WA</div>
               </div>
-              <button onClick={()=>setContactOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#aaa"}}>✕</button>
+              <button onClick={()=>setContactOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--ink-3)"}} aria-label="Close">✕</button>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
               <a href="mailto:info@cambriancatalyst.com" style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:10,border:"1.5px solid var(--line-0)",textDecoration:"none",color:"var(--ink-0)",transition:"all 0.15s"}}
@@ -12975,7 +12982,7 @@ ${isOpen
                 <div>
                   <div style={{fontSize:13,fontWeight:700}}>General Inquiries & Sales</div>
                   <div style={{fontSize:12,color:"var(--ink-3)"}}>info@cambriancatalyst.com</div>
-                  <div style={{fontSize:11,color:"#aaa",marginTop:2}}>Pricing, partnerships, demos, and general questions</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)",marginTop:2}}>Pricing, partnerships, demos, and general questions</div>
                 </div>
               </a>
               <a href="mailto:support@cambriancatalyst.com" style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:10,border:"1.5px solid var(--line-0)",textDecoration:"none",color:"var(--ink-0)",transition:"all 0.15s"}}
@@ -12985,12 +12992,12 @@ ${isOpen
                 <div>
                   <div style={{fontSize:13,fontWeight:700}}>Support & Troubleshooting</div>
                   <div style={{fontSize:12,color:"var(--ink-3)"}}>support@cambriancatalyst.com</div>
-                  <div style={{fontSize:11,color:"#aaa",marginTop:2}}>Technical issues, bug reports, and account help</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)",marginTop:2}}>Technical issues, bug reports, and account help</div>
                 </div>
               </a>
             </div>
             <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--line-0)",textAlign:"center"}}>
-              <div style={{fontSize:11,color:"#aaa"}}>We typically respond within 1 business day.</div>
+              <div style={{fontSize:11,color:"var(--ink-3)"}}>We typically respond within 1 business day.</div>
             </div>
           </div>
         </>
@@ -13013,7 +13020,7 @@ ${isOpen
                   <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>★ Favorites</div>
                   <div style={{fontSize:11,color:"var(--ink-3)"}}>{favorites.length} saved item{favorites.length!==1?"s":""}</div>
                 </div>
-                <button onClick={()=>setFavPanelOpen(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--ink-3)"}}>×</button>
+                <button onClick={()=>setFavPanelOpen(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--ink-3)"}} aria-label="Close">×</button>
               </div>
               <div style={{flex:1,overflow:"auto",padding:16}}>
                 {favorites.length===0&&(
@@ -13041,7 +13048,7 @@ ${isOpen
                         </div>
                       </div>
                       <button onClick={e=>{e.stopPropagation();setFavorites(prev=>prev.filter(x=>x.id!==f.id));}}
-                        style={{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:14,padding:"2px",flexShrink:0}}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"var(--line-2)",fontSize:14,padding:"2px",flexShrink:0}}
                         title="Remove">✕</button>
                     </div>
                   </div>
@@ -13091,7 +13098,7 @@ ${isOpen
               ))}
             </div>
             <button onClick={()=>setDqModalTarget(null)}
-              style={{marginTop:12,width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
+              style={{marginTop:12,width:"100%",padding:"8px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer",color:"var(--ink-1)"}}>
               Cancel
             </button>
           </div>
@@ -13138,7 +13145,7 @@ ${isOpen
                 </button>
               )}
               <button onClick={e=>{e.stopPropagation();setIntelModalTarget(null);}}
-                style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer",color:"#555"}}>
+                style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:600,cursor:"pointer",color:"var(--ink-1)"}}>
                 Cancel
               </button>
               <button onClick={e=>{
@@ -13164,7 +13171,7 @@ ${isOpen
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:16,lineHeight:1.5}}>{confirmModal.message}</div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <button onClick={confirmModal.onCancel} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:13,fontWeight:600,cursor:"pointer",color:"#555"}}>Cancel</button>
+              <button onClick={confirmModal.onCancel} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:13,fontWeight:600,cursor:"pointer",color:"var(--ink-1)"}}>Cancel</button>
               <button onClick={confirmModal.onConfirm} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"var(--ink-0)",color:"var(--surface)",fontSize:13,fontWeight:600,cursor:"pointer"}}>Regenerate Anyway</button>
             </div>
           </div>
