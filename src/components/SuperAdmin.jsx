@@ -433,7 +433,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     return (
                       <tr key={i}>
                         <td>
-                          <span style={{ fontWeight: 600, color: "var(--ink-0)" }}>{displayName}</span>
+                          <span style={{ fontWeight: 700, color: "var(--ink-0)", fontSize: 13 }}>{displayName}</span>
                         </td>
                         <td style={{ fontSize: 11, color: "var(--ink-2)" }}>{a.user_name}</td>
                         <td style={{ fontSize: 11, color: "var(--ink-3)" }}>
@@ -601,7 +601,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                         <React.Fragment key={i}>
                         <tr onClick={() => setExpandedSession(isExpanded ? null : a.id)} style={{ cursor: "pointer", background: isExpanded ? "var(--green-bg)" : undefined }}>
                           <td>
-                            <div style={{ fontWeight: 600, color: "var(--ink-0)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <div style={{ fontWeight: 700, color: "var(--ink-0)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13 }}>
                               <span style={{ fontSize: 10, marginRight: 4, transition: "transform 0.2s", display: "inline-block", transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
                               {a.session_name}
                             </div>
@@ -907,18 +907,25 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                     return (
                       <tr key={u.id} style={u.email === SUPERUSER_EMAIL ? { background: "var(--bg-1)" } : undefined}>
                         <td>
-                          <div style={{ fontWeight: 600, color: "var(--ink-0)", display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ fontWeight: 700, color: "var(--ink-0)", display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
                             {u.name || u.email?.split("@")[0]}
                             {u.email === SUPERUSER_EMAIL && <span className="admin-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)" }}>SUPER</span>}
                           </div>
-                          <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{u.email}</div>
+                          <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 1 }}>{u.email}</div>
                         </td>
                         <td>
-                          <select value={u.role || "rep"} onChange={e => patchUser({ role: e.target.value }, `${u.email} \u2192 ${e.target.value}`)}>
-                            <option value="rep">Rep</option>
-                            <option value="manager">Manager</option>
-                            <option value="admin">Admin</option>
-                          </select>
+                          {(() => {
+                            const rm = { admin: { bg: "var(--navy-bg)", border: "var(--navy)" }, manager: { bg: "var(--amber-bg)", border: "var(--amber)" }, rep: { bg: "var(--green-bg)", border: "var(--green)" } };
+                            const rs = rm[u.role] || rm.rep;
+                            return (
+                              <select value={u.role || "rep"} onChange={e => patchUser({ role: e.target.value }, `${u.email} \u2192 ${e.target.value}`)}
+                                style={{ background: rs.bg, borderColor: rs.border, color: rs.border, fontWeight: 700 }}>
+                                <option value="rep">Rep</option>
+                                <option value="manager">Manager</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            );
+                          })()}
                         </td>
                         <td>
                           <select value={u.org_id || ""} onChange={e => patchUser({ org_id: e.target.value || null }, `${u.email} \u2192 ${e.target.value ? data.orgs.find(o => o.id === e.target.value)?.name : "no org"}`)}>
@@ -1088,11 +1095,15 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                   style={{ border: "1px solid var(--line-0)", background: "var(--surface)", fontWeight: 600, fontSize: 13, width: "100%", padding: "4px 8px", borderRadius: 4, color: "var(--ink-0)" }} />
                               </td>
                               <td>
+                                {(() => {
+                                  const pm = { trial: { bg: "var(--amber-bg)", border: "var(--amber)" }, starter: { bg: "var(--green-bg)", border: "var(--green)" }, pro: { bg: "var(--green-bg)", border: "var(--green)" }, team: { bg: "var(--navy-bg)", border: "var(--navy)" }, enterprise: { bg: "var(--violet-bg)", border: "var(--violet)" }, paid: { bg: "var(--green-bg)", border: "var(--green)" }, suspended: { bg: "var(--red-bg)", border: "var(--red)" } };
+                                  const ps = pm[o.plan] || pm.trial;
+                                  return (
                                 <select defaultValue={o.plan} onChange={e => {
                                   const plan = e.target.value;
                                   const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 } };
                                   patchOrg({ plan, ...(limits[plan] || {}) }, `${o.name} \u2192 ${plan}${limits[plan]?.run_limit ? ` (${limits[plan].run_limit} runs)` : ""}`);
-                                }}>
+                                }} style={{ background: ps.bg, borderColor: ps.border, color: ps.border, fontWeight: 700 }}>
                                   <option value="trial">Trial</option>
                                   <option value="starter">Starter</option>
                                   <option value="pro">Pro</option>
@@ -1101,6 +1112,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                                   <option value="paid">Paid</option>
                                   <option value="suspended">Suspended</option>
                                 </select>
+                                  );
+                                })()}
                               </td>
                               <td>
                                 <input defaultValue={o.seller_url || ""} placeholder="https://company.com"
