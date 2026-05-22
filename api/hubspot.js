@@ -93,6 +93,12 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
     const meta = [company.industry && `Industry: ${company.industry}`, s.ownership && `Ownership: ${s.ownership}`].filter(Boolean).join(". ");
     properties.description = (meta ? meta + ". " : "") + s.companySnapshot.slice(0, meta ? 2000 - meta.length - 2 : 2000);
   }
+  // Append fit score to description for HubSpot searchability
+  if (summary?.fitScore !== null && summary?.fitScore !== undefined) {
+    const fitLabel = summary.fitLabel || (summary.fitScore >= 70 ? "Strong" : summary.fitScore >= 40 ? "Moderate" : "Low");
+    const fitSuffix = ` | Cambrian Fit Score: ${summary.fitScore}/100 (${fitLabel})`;
+    properties.description = (properties.description || "") + fitSuffix;
+  }
 
   console.log(`[hubspot] upsertCompany: name="${company.name}" domain="${domain}" owner="${ownerId||"none"}"`);
 
@@ -114,8 +120,8 @@ async function upsertCompany(userId, company, { ownerId, summary } = {}) {
   return { id: data.id, created: true };
 }
 
-async function createDeal(userId, { companyName, dealRoute, confidence, companyId }) {
-  const properties = { dealname: `${companyName} — Cambrian`, dealstage: DEAL_STAGE_MAP[dealRoute] || "appointmentscheduled", pipeline: "default" };
+async function createDeal(userId, { companyName, dealRoute, confidence, companyId, dealSuffix }) {
+  const properties = { dealname: `${companyName} — ${dealSuffix || "Cambrian"}`, dealstage: DEAL_STAGE_MAP[dealRoute] || "appointmentscheduled", pipeline: "default" };
   if (confidence) properties.hs_deal_score = String(confidence);
   const associations = companyId ? [{ to: { id: companyId }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 5 }] }] : [];
   const r = await hubspotFetch(userId, "/crm/v3/objects/deals", { method: "POST", body: { properties, associations } });
@@ -143,6 +149,83 @@ async function createTasks(userId, { steps, dealId, companyId }) {
     if (companyId) associations.push({ to: { id: companyId }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 192 }] });
     const r = await hubspotFetch(userId, "/crm/v3/objects/tasks", { method: "POST", body: { properties: { hs_timestamp: new Date().toISOString(), hs_task_subject: step.slice(0, 200), hs_task_status: "NOT_STARTED", hs_task_priority: "MEDIUM", hs_task_type: "TODO" }, associations } });
     if (r.ok) created++;
+  }
+  return created;
+}
+
+async function findContactByName(userId, firstname, lastname, companyId) {
+  const filters = [
+    { propertyName: "firstname", operator: "EQ", value: firstname },
+    { propertyName: "lastname", operator: "EQ", value: lastname },
+  ];
+  const r = await hubspotFetch(userId, "/crm/v3/objects/contacts/search", {
+    method: "POST",
+    body: { filterGroups: [{ filters }], properties: ["firstname", "lastname", "jobtitle"], limit: 5 },
+  });
+  if (!r.ok) { console.error(`[hubspot] Contact search failed: ${r.status} ${r.error || ""}`); return null; }
+  const data = typeof r.json === "function" ? await r.json() : null;
+  if (!data?.results?.length) return null;
+
+  // If we have a companyId, prefer the contact already associated with this company
+  // Otherwise just return the first match
+  // (Association check would require an extra API call per result, so we trust name match)
+  return data.results[0];
+}
+
+async function createContact(userId, { firstname, lastname, jobtitle, companyName, companyId }) {
+  const properties = { firstname, lastname };
+  if (jobtitle) properties.jobtitle = jobtitle;
+  if (companyName) properties.company = companyName;
+
+  // associationTypeId 1 = Contact → Company (HUBSPOT_DEFINED)
+  const associations = companyId
+    ? [{ to: { id: companyId }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 1 }] }]
+    : [];
+
+  const r = await hubspotFetch(userId, "/crm/v3/objects/contacts", {
+    method: "POST",
+    body: { properties, associations },
+  });
+  if (!r.ok) {
+    const errBody = typeof r.text === "function" ? await r.text().catch(() => "") : (r.error || "");
+    console.error(`[hubspot] Contact create failed for "${firstname} ${lastname}": ${r.status} ${errBody.slice(0, 300)}`);
+    return null;
+  }
+  const data = typeof r.json === "function" ? await r.json() : {};
+  return { id: data.id, created: true };
+}
+
+async function pushExecutivesAsContacts(userId, { executives, companyName, companyId }) {
+  let created = 0;
+  const execs = (executives || []).slice(0, 5);
+  for (const ex of execs) {
+    if (!ex?.name) continue;
+    try {
+      // Split name into first/last — handle "First Last", "First M. Last", etc.
+      const nameParts = ex.name.trim().split(/\s+/);
+      const firstname = nameParts[0] || "";
+      const lastname = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+      if (!firstname) continue;
+
+      // Search for existing contact first
+      const existing = await findContactByName(userId, firstname, lastname, companyId);
+      if (existing) {
+        console.log(`[hubspot] Contact "${ex.name}" already exists (${existing.id}) — skipping`);
+        continue;
+      }
+
+      const result = await createContact(userId, {
+        firstname,
+        lastname,
+        jobtitle: ex.title || "",
+        companyName,
+        companyId,
+      });
+      if (result?.created) created++;
+    } catch (err) {
+      console.error(`[hubspot] Failed to push contact "${ex.name}": ${err.message}`);
+      // Don't fail the whole push — continue with next executive
+    }
   }
   return created;
 }
@@ -265,7 +348,7 @@ export default async function handler(req, res) {
       const { company, summary } = data;
       const s = summary || {}; // full session summary — rich payload
       console.log(`[hubspot] push_brief for TARGET company: "${company.name}" domain: "${company.domain}" industry: "${company.industry}"`);
-      const created = { companies: 0, notes: 0 };
+      const created = { companies: 0, notes: 0, contacts: 0, deals: 0 };
 
       // Get the user's HubSpot owner ID so the company is assigned to them
       const tokens = await getTokenForUser(userId);
@@ -281,7 +364,6 @@ export default async function handler(req, res) {
       if (companyResult.created) created.companies = 1;
 
       // 2. Build HTML note — clean, data-rich, scannable
-      // No contact creation — executives are researched names, not verified contacts
       const e = (t) => (t || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); // escape HTML
       const h = []; // html parts
       h.push(`<h2>Cambrian Catalyst — Session Summary</h2>`);
@@ -429,8 +511,39 @@ export default async function handler(req, res) {
 
       h.push(`<hr/><p style="color:#999;font-size:11px">Generated by Cambrian Catalyst${s.dataConfidence ? ` | ${s.dataConfidence} confidence` : ""} | ${new Date().toLocaleDateString()}</p>`);
 
-      const noteResult = await createNote(userId, { body: h.join(""), companyId: companyResult.id });
+      // 3. Deal creation (opt-in via data.createDeal)
+      let dealResult = null;
+      if (data.createDeal) {
+        try {
+          dealResult = await createDeal(userId, {
+            companyName: company.name,
+            dealRoute: "NURTURE", // early-stage discovery
+            confidence: s.fitScore || null,
+            companyId: companyResult.id,
+            dealSuffix: "Cambrian Discovery",
+          });
+          if (dealResult) created.deals = 1;
+        } catch (err) {
+          console.error(`[hubspot] Deal creation failed for "${company.name}": ${err.message}`);
+        }
+      }
+
+      // 4. Create note (associated with company + deal if created)
+      const noteResult = await createNote(userId, { body: h.join(""), companyId: companyResult.id, dealId: dealResult?.id });
       if (noteResult) created.notes = 1;
+
+      // 5. Push executives as contacts (opt-in via data.pushContacts)
+      if (data.pushContacts && s.executives?.length) {
+        try {
+          created.contacts = await pushExecutivesAsContacts(userId, {
+            executives: s.executives,
+            companyName: company.name,
+            companyId: companyResult.id,
+          });
+        } catch (err) {
+          console.error(`[hubspot] Executive contact push failed: ${err.message}`);
+        }
+      }
 
       return res.json({ ok: true, created });
     }

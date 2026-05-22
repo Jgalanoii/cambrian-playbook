@@ -107,6 +107,14 @@ let KL_PE_HOLDCO = ""; // PE-backed holdco / post-merger commercial integration
 let KL_PE_HOLDCO_DISCOVERY = "";
 let KL_DIG_INCENTIVES = ""; // Digital incentives platforms — market economics, stack taxonomy
 let KL_DIG_INCENTIVES_DISCOVERY = "";
+let KL_CANNABIS = ""; // Cannabis B2B (MSOs, dispensaries, 280E, seed-to-sale)
+let KL_CANNABIS_DISCOVERY = "";
+let KL_CRYPTO = ""; // Cryptocurrency & stablecoin (DeFi, custody, on/off-ramp)
+let KL_CRYPTO_DISCOVERY = "";
+let KL_GAMING = ""; // Gaming & sports betting (iGaming, sportsbook, tribal)
+let KL_GAMING_DISCOVERY = "";
+let KL_PREDICTION_MARKETS = ""; // Prediction markets (event contracts, Kalshi, Polymarket)
+let KL_PREDICTION_MARKETS_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -196,6 +204,15 @@ async function fetchKnowledgeLayer() {
     KL_PE_HOLDCO_DISCOVERY = d.peHoldcoDiscovery || "";
     KL_DIG_INCENTIVES = d.digitalIncentivesPlatforms || "";
     KL_DIG_INCENTIVES_DISCOVERY = d.digitalIncentivesPlatformsDiscovery || "";
+    // High-risk / regulated industry verticals
+    KL_CANNABIS = d.cannabisPlaybook?.layerContent || "";
+    KL_CANNABIS_DISCOVERY = (d.cannabisPlaybook?.discovery || []).join("\n");
+    KL_CRYPTO = d.cryptoStablecoinPlaybook?.layerContent || "";
+    KL_CRYPTO_DISCOVERY = (d.cryptoStablecoinPlaybook?.discovery || []).join("\n");
+    KL_GAMING = d.gamingPlaybook?.layerContent || "";
+    KL_GAMING_DISCOVERY = (d.gamingPlaybook?.discovery || []).join("\n");
+    KL_PREDICTION_MARKETS = d.predictionMarketsPlaybook?.layerContent || "";
+    KL_PREDICTION_MARKETS_DISCOVERY = (d.predictionMarketsPlaybook?.discovery || []).join("\n");
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -902,6 +919,46 @@ function getInsuranceInjection(sellerICP, targetIndustry) {
   return "";
 }
 
+// ── CANNABIS B2B INJECTION ────────────────────────────────────────────
+const CANNABIS_KW = ["cannabis", "dispensary", "mso", "marijuana", "cultivator", "280e", "plant-touching", "seed-to-sale", "hemp", "cbd", "thc", "adult-use", "medical cannabis"];
+function getCannabisInjection(sellerICP, targetIndustry) {
+  if (!KL_CANNABIS) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (CANNABIS_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_CANNABIS;
+}
+
+// ── CRYPTO / STABLECOIN INJECTION ─────────────────────────────────────
+const CRYPTO_KW = ["crypto", "cryptocurrency", "stablecoin", "blockchain", "defi", "usdc", "bitcoin", "usdt", "custody", "on-ramp", "off-ramp", "coinbase", "kraken", "circle", "tether"];
+function getCryptoInjection(sellerICP, targetIndustry) {
+  if (!KL_CRYPTO) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (CRYPTO_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_CRYPTO;
+}
+
+// ── GAMING & SPORTS BETTING INJECTION ─────────────────────────────────
+const GAMING_KW = ["gaming", "sports betting", "sportsbook", "igaming", "casino", "draftkings", "fanduel", "betmgm", "tribal gaming", "daily fantasy", "dfs", "online casino"];
+function getGamingInjection(sellerICP, targetIndustry) {
+  if (!KL_GAMING) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (GAMING_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_GAMING;
+}
+
+// ── PREDICTION MARKETS INJECTION ──────────────────────────────────────
+const PREDICTION_MARKETS_KW = ["prediction market", "kalshi", "polymarket", "event contract", "cftc", "designated contract market", "binary options", "event derivatives", "prediction exchange", "outcome market"];
+function getPredictionMarketsInjection(sellerICP, targetIndustry) {
+  if (!KL_PREDICTION_MARKETS) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (PREDICTION_MARKETS_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_PREDICTION_MARKETS;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -1479,6 +1536,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     getRetailInjection(sellerICP, member.ind) +
     getProfServicesInjection(sellerICP, member.ind) +
     getManufacturingInjection(sellerICP, member.ind) +
+    getCannabisInjection(sellerICP, member.ind) +
+    getCryptoInjection(sellerICP, member.ind) +
+    getGamingInjection(sellerICP, member.ind) +
+    getPredictionMarketsInjection(sellerICP, member.ind) +
     (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
     (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
     (KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : "") +
@@ -2423,6 +2484,37 @@ function InfoTip({ text }) {
       <span style={{width:14,height:14,borderRadius:"50%",background:"var(--bg-2)",color:"var(--ink-3)",fontSize:9,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>i</span>
       {show && <span style={{position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",background:"var(--ink-0)",color:"#fff",fontSize:11,lineHeight:1.5,padding:"8px 12px",borderRadius:8,whiteSpace:"normal",width:240,zIndex:100,boxShadow:"0 4px 16px rgba(0,0,0,0.2)",pointerEvents:"none"}}>{text}</span>}
     </span>
+  );
+}
+
+// ── STEP HINTS — first-timer contextual callouts ────────────────────────────
+// Shows once per step on first visit. Tracked in localStorage.
+const STEP_HINTS = {
+  0: { icon: "👋", text: "First time here? Enter your company URL below and Cambrian builds your entire sales intelligence pipeline. Takes about 30 seconds." },
+  1: { icon: "🎯", text: "This is your Ideal Customer Profile — built automatically from your website. Every field is editable. Your changes flow into all downstream output." },
+  2: { icon: "📂", text: "Three ways to add prospects: upload a CSV, type company names, or let AI generate 25-30 ICP-matched targets. All accounts get scored automatically." },
+  3: { icon: "📊", text: "Every account scored on three dimensions: ICP fit, customer similarity, and competitive landscape. Use these scores to focus on the right targets." },
+  4: { icon: "🔍", text: "Select up to 3 outcomes you want to achieve with this account. These shape the entire research brief, hypothesis, and coaching." },
+  5: { icon: "📋", text: "Your full research brief — 10 sections of live web intelligence. Click any field to edit it. Hit 'View Summary' in the action bar for the executive report." },
+  6: { icon: "🧪", text: "Your conversation game plan. Review the hypothesis, discovery questions, and talk tracks before the call. Everything here is editable." },
+  7: { icon: "🎙", text: "Capture discovery in real time. Answer the gate questions as you learn, take notes, and ask Milton for coaching — he has your full session context." },
+  8: { icon: "✅", text: "Deal assessment, CRM note, and follow-up email — all generated from your discovery. Push to HubSpot with one click." },
+};
+
+function StepHint({ step }) {
+  const key = `cambrian_hint_seen_${step}`;
+  const [visible, setVisible] = React.useState(() => {
+    try { return !localStorage.getItem(key); } catch { return false; }
+  });
+  if (!visible || !STEP_HINTS[step]) return null;
+  const dismiss = () => { try { localStorage.setItem(key, "1"); } catch {} setVisible(false); };
+  const { icon, text } = STEP_HINTS[step];
+  return (
+    <div style={{background:"var(--tan-3)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"12px 16px",marginBottom:16,display:"flex",gap:12,alignItems:"flex-start",animation:"cmd-fade-in 0.3s ease"}}>
+      <span style={{fontSize:20,flexShrink:0}}>{icon}</span>
+      <div style={{flex:1,fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{text}</div>
+      <button onClick={dismiss} aria-label="Dismiss hint" style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"var(--ink-3)",flexShrink:0,padding:"0 2px"}}>✕</button>
+    </div>
   );
 }
 
@@ -8446,6 +8538,9 @@ ${isOpen
         {/* Page guide + FAQ */}
         <HelpGuide step={step} style={{padding:"0 20px",maxWidth:1200,margin:"0 auto",marginTop:8}} />
 
+        {/* First-timer hint — shows once per step, dismissed permanently */}
+        <div style={{padding:"0 20px",maxWidth:1200,margin:"0 auto"}}><StepHint step={step} /></div>
+
         {/* Stage transition wrapper — key change triggers CSS enter animation */}
         <div key={stageKey} className="stage-transition-enter stage-transition-enter-active">
 
@@ -9898,10 +9993,6 @@ ${isOpen
               </button>
             </div>
             )}
-            {/* Bottom action bar */}
-            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
-              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport(icpTab==="rfp"?"RFP-Intel":"ICP", icpTab==="rfp"?rfpData:getICPCSVData())} />
-            </div>
           </div>
         )}
 
@@ -10235,8 +10326,19 @@ ${isOpen
         )}
 
         {/* ── STEP 3: FIT CHECK ── */}
-        {step===3&&(
+        {step===3&&(()=>{
+          const totalMembers = cohorts.flatMap(c => c.members).length;
+          return (
           <div className="page">
+            {totalMembers === 0 ? (
+              <EmptyState
+                icon="🔍"
+                title="No accounts to score"
+                sub="Your import came through but no accounts could be mapped. Head back to Build Prospect Lists and check your CSV column mapping — or try Build Target Accounts to generate matches from your ICP."
+              >
+                <button className="btn btn-primary" onClick={()=>setStep(2)}>← Back to Prospect Lists</button>
+              </EmptyState>
+            ) : (<>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div>
                 <div className="page-title">Fit Check — Your Best Matches</div>
@@ -10471,8 +10573,10 @@ ${isOpen
                 Select Account → {selectedCohort?`(${selectedCohort.name})`:""}
               </button>
             </div>
+            </>)}
           </div>
-        )}
+          );
+        })()}
 
         {/* ── STEP 4: ACCOUNT REVIEW — vertical stack, full-width ── */}
         {step===4&&selectedCohort&&(()=>{
