@@ -19,8 +19,10 @@ const HS_AUTH_URL = "https://app.hubspot.com/oauth/authorize";
 const HS_TOKEN_URL = "https://api.hubapi.com/oauth/v1/token";
 const HS_API_BASE = "https://api.hubapi.com";
 
-// These must EXACTLY match what's enabled in the HubSpot Developer App → Auth tab.
+// These must EXACTLY match the Required scopes in HubSpot Developer App → Auth tab.
+// Last synced: 2026-05-22 from screenshot (14 Required scopes)
 const SCOPES = [
+  "oauth",
   "crm.objects.contacts.read",
   "crm.objects.contacts.write",
   "crm.objects.companies.read",
@@ -30,10 +32,8 @@ const SCOPES = [
   "crm.objects.leads.read",
   "crm.objects.leads.write",
   "crm.objects.owners.read",
-  "crm.objects.products.read",
   "crm.schemas.companies.read",
   "crm.schemas.deals.read",
-  "crm.schemas.contacts.read",
   "crm.lists.read",
   "crm.lists.write",
 ].join(" ");
