@@ -8715,7 +8715,7 @@ ${isOpen
                 <div style={{marginTop:12}}>
                   <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                    {["Bootstrapped","Angel","Seed","Series A","Series B","Series C","Series D+","PE-Backed","Public"].map(stage=>(
+                    {["Bootstrapped","Angel","Seed","Series A","Series B","Series C","Series D+","PE-Backed","Private","Public"].map(stage=>(
                       <button key={stage} onClick={()=>setSellerStage(stage)}
                         style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"var(--ink-0)":"var(--line-0)"),
                           background:sellerStage===stage?"var(--ink-0)":"var(--surface)",color:sellerStage===stage?"#fff":"var(--ink-1)",
@@ -8733,6 +8733,7 @@ ${isOpen
                       {(sellerStage==="Series C"||sellerStage==="Series D+")&&"💡 Tip: You have enough logos and proof points for enterprise. Lead with case studies and SLA commitments."}
                       {sellerStage==="PE-Backed"&&"💡 Tip (3,366 PE scenarios): Your stability is your moat vs. VC-backed competitors. If EBITDA mandate: focus on mid-market expansion not SMB new logos. If SMB growth mandate: vertical match is everything — vertical SaaS PE + matched SMB vertical = 95% fit. MSP channel is best PE route to SMB at scale."}
                       {sellerStage==="Public"&&"💡 Tip: Financial transparency is a procurement advantage. Share your public financials proactively."}
+                      {sellerStage==="Private"&&"💡 Tip: Privately held means you control the roadmap and the timeline. Buyers trust that you won't pivot on them mid-contract to chase VC metrics."}
                       {sellerStage==="Bootstrapped"&&"💡 Tip: No investor pressure = flexibility on pricing and contract structure. Use this as a feature."}
                     </div>
                   )}
