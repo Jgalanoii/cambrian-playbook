@@ -19,28 +19,15 @@ const HS_AUTH_URL = "https://app.hubspot.com/oauth/authorize";
 const HS_TOKEN_URL = "https://api.hubapi.com/oauth/v1/token";
 const HS_API_BASE = "https://api.hubapi.com";
 
+// NOTE: These must EXACTLY match what's enabled in the HubSpot Developer App → Auth tab.
+// To add new scopes: 1) add them in HubSpot App Auth tab, 2) add here, 3) users reconnect.
 const SCOPES = [
-  // Core CRM objects
   "crm.objects.contacts.read",
   "crm.objects.contacts.write",
   "crm.objects.companies.read",
   "crm.objects.companies.write",
   "crm.objects.deals.read",
   "crm.objects.deals.write",
-  // Leads — push fit-scored accounts before they become deals
-  "crm.objects.leads.read",
-  "crm.objects.leads.write",
-  // Owners — assign deals and companies to the authenticated rep
-  "crm.objects.owners.read",
-  // Products — map solution mapping to HubSpot product catalog
-  "crm.objects.products.read",
-  // Schemas — discover custom properties for fit score, strategic theme, etc.
-  "crm.schemas.companies.read",
-  "crm.schemas.deals.read",
-  "crm.schemas.contacts.read",
-  // Lists — create cohort lists (Strong Fit / Potential / Stretch)
-  "crm.lists.read",
-  "crm.lists.write",
 ].join(" ");
 
 // ── Encryption helpers ─────────────────────────────────────────────────
