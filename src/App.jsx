@@ -4521,6 +4521,18 @@ ${scaleGuidance}
             `High-fit: ${KL_MANUFACTURING_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
             `High-friction: ${KL_MANUFACTURING_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") +
+        (getCannabisInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nCANNABIS/REGULATED INDUSTRY CONTEXT: Cannabis companies face 280E tax burden, banking access challenges, state-by-state licensing, and seed-to-sale compliance. MSOs operate across regulatory jurisdictions. Frame fit through compliance readiness and regulatory burden reduction.\n`
+          : "") +
+        (getCryptoInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nCRYPTO/STABLECOIN CONTEXT: Crypto companies face evolving SEC/CFTC/FinCEN regulation, custody requirements, AML/KYC obligations, and rapid market cycles. Stablecoin issuers and exchanges have different compliance profiles. Frame fit through regulatory readiness and institutional-grade infrastructure needs.\n`
+          : "") +
+        (getGamingInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nGAMING/SPORTS BETTING CONTEXT: Gaming companies operate under state-by-state licensing, responsible gaming mandates, and GeoComply requirements. Tribal gaming has sovereign jurisdiction considerations. Frame fit through compliance automation and multi-state operational efficiency.\n`
+          : "") +
+        (getPredictionMarketsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nPREDICTION MARKETS CONTEXT: Prediction market platforms operate under CFTC oversight as designated contract markets. Event contracts face federal preemption questions and state gambling law conflicts. Frame fit through regulatory compliance infrastructure and market integrity requirements.\n`
+          : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`
           : "") +
