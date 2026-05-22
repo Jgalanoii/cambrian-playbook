@@ -43,6 +43,10 @@ import { PROFESSIONAL_SERVICES_INJECTION, PROFESSIONAL_SERVICES_SCORING, PROFESS
 import { MANUFACTURING_INJECTION, MANUFACTURING_SCORING, MANUFACTURING_DISCOVERY } from "../src/data/manufacturingKnowledge.js";
 import { PE_HOLDCO_INJECTION, PE_HOLDCO_DISCOVERY, PE_HOLDCO_SCORING } from "../src/data/peHoldcoKnowledge.js";
 import { DIGITAL_INCENTIVES_PLATFORMS_INJECTION, DIGITAL_INCENTIVES_PLATFORMS_DISCOVERY, DIGITAL_INCENTIVES_PLATFORMS_SCORING } from "../src/data/digitalIncentivesPlatformsKnowledge.js";
+import { CANNABIS_PLAYBOOK } from "../src/data/cannabisKnowledge.js";
+import { CRYPTO_STABLECOIN_PLAYBOOK } from "../src/data/cryptoStablecoinKnowledge.js";
+import { GAMING_PLAYBOOK } from "../src/data/gamingKnowledge.js";
+import { PREDICTION_MARKETS_PLAYBOOK } from "../src/data/predictionMarketsKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -288,6 +292,11 @@ export default async function handler(req, res) {
       digitalIncentivesPlatforms: DIGITAL_INCENTIVES_PLATFORMS_INJECTION,
       digitalIncentivesPlatformsScoring: DIGITAL_INCENTIVES_PLATFORMS_SCORING,
       digitalIncentivesPlatformsDiscovery: DIGITAL_INCENTIVES_PLATFORMS_DISCOVERY,
+      // High-risk / regulated industry verticals
+      cannabisPlaybook: CANNABIS_PLAYBOOK,
+      cryptoStablecoinPlaybook: CRYPTO_STABLECOIN_PLAYBOOK,
+      gamingPlaybook: GAMING_PLAYBOOK,
+      predictionMarketsPlaybook: PREDICTION_MARKETS_PLAYBOOK,
       // Advanced frameworks (paid only)
       pricingNegotiation: PRICING_NEGOTIATION,
       archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,

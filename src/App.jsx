@@ -3389,7 +3389,7 @@ const PAGE_GUIDES = {
     "Add proof points (ROI metrics, awards, customer wins) — these are cited in every brief",
     "Select your funding stage to calibrate fit scoring thresholds",
   ]},
-  1: { title: "ICP & RFPs", items: [
+  1: { title: "Define Your Buyer", items: [
     "Your ICP is built automatically from your website — review and edit every field",
     "Click any field to edit — your corrections override AI-generated content in all downstream output",
     "Adjust Fit Scoring Weights to prioritize what matters most for your business",
@@ -7636,7 +7636,7 @@ ${isOpen
       `7. PROACTIVE: When the rep seems stuck, suggest what to do next on the current step.`,
       `8. GROUNDED: Cite the seller's named customers and differentiators naturally from the proof pack.`,
       `9. CORRECTION REDIRECT: When a user tells you something is WRONG about the outputs (ICP, brief, scoring, hypothesis, etc.), do NOT try to fix it in chat. Instead, redirect them to the correct place in the app where their edit will propagate through all downstream outputs:`,
-      `   - ICP is wrong (industries, personas, disqualifiers, size, etc.) → "Good catch — go to Step 2 (ICP & RFPs) and click that field to edit it. Your change will flow into every score, brief, and hypothesis automatically."`,
+      `   - ICP is wrong (industries, personas, disqualifiers, size, etc.) → "Good catch — go to Define Your Buyer (Step 2) and click that field to edit it. Your change will flow into every score, brief, and hypothesis automatically."`,
       `   - Brief content is wrong (company facts, executives, strategy) → "Click that section in the brief to edit it directly — your correction gets tracked and used in all downstream outputs."`,
       `   - Fit score seems off → "Use the Intel Adjustment button (⚡) next to the company on Fit Check (Step 4) to add what you know. That modifier flows through the whole pipeline."`,
       `   - Target list issues → "Head back to Build Prospect Lists (Step 3) and use the Disqualify button to remove bad fits, or add companies via Quick Entry."`,
@@ -7819,7 +7819,7 @@ ${isOpen
   const cmdCommands = [
     // Navigation
     { id:"nav-session", icon:"🏠", label:"Go to Session",       section:"Navigate", action:()=>setStep(0) },
-    { id:"nav-icp",     icon:"🎯", label:"Go to ICP & RFPs",   section:"Navigate", action:()=>setStep(1) },
+    { id:"nav-icp",     icon:"🎯", label:"Go to Define Your Buyer", section:"Navigate", action:()=>setStep(1) },
     { id:"nav-import",  icon:"📂", label:"Go to Build Prospect Lists", section:"Navigate", action:()=>setStep(2) },
     { id:"nav-accounts",icon:"📊", label:"Go to Fit Check",    section:"Navigate", action:()=>setStep(3) },
     { id:"nav-review",  icon:"👁", label:"Go to Account Review",section:"Navigate", action:()=>setStep(4) },
@@ -7855,8 +7855,8 @@ ${isOpen
       {/* Company disambiguation overlay */}
       {disambigOptions && (
         <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
-          onClick={()=>setDisambigOptions(null)}>
-          <div style={{background:"var(--surface)",borderRadius:12,padding:"24px 28px",maxWidth:500,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.2)"}}
+          onClick={()=>setDisambigOptions(null)} onKeyDown={e=>{if(e.key==="Escape")setDisambigOptions(null);}}>
+          <div tabIndex={-1} ref={el=>el&&el.focus()} style={{background:"var(--surface)",borderRadius:12,padding:"24px 28px",maxWidth:500,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.2)",outline:"none"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",marginBottom:4,fontFamily:"Lora,serif"}}>Confirm the company</div>
             <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:6}}>
@@ -8206,7 +8206,7 @@ ${isOpen
               {helpOpen&&(
                 <>
                   <div onClick={()=>setHelpOpen(false)} style={{position:"fixed",inset:0,zIndex:999}}/>
-                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",width:340,maxHeight:"70vh",overflow:"auto",zIndex:1000,padding:"16px 20px"}}>
+                  <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==="Escape")setHelpOpen(false);}} style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",width:340,maxHeight:"70vh",overflow:"auto",zIndex:1000,padding:"16px 20px",outline:"none"}}>
                     <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:10}}>{STEPS[step]} — What to do here</div>
                     <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.7,marginBottom:14}}>
                       {(PAGE_GUIDES[step]?.items||[]).map((tip,i)=><div key={i} style={{marginBottom:6}}>• {tip}</div>)}
@@ -8235,7 +8235,7 @@ ${isOpen
               {moreMenuOpen&&(
                 <>
                   <div onClick={()=>setMoreMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:999}}/>
-                  <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:220,maxWidth:"85vw",zIndex:1000,overflow:"hidden",padding:"4px 0"}}>
+                  <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==="Escape")setMoreMenuOpen(false);}} style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--surface)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:220,maxWidth:"85vw",zIndex:1000,overflow:"hidden",padding:"4px 0",outline:"none"}}>
                     {/* TOOLS */}
                     <div style={{padding:"4px 16px 2px",fontSize:9,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.5px"}}>Tools</div>
                     <button onClick={()=>{setCmdOpen(true);setMoreMenuOpen(false);}}
@@ -8319,7 +8319,7 @@ ${isOpen
         {showSavePrompt&&(
           <>
             <div onClick={()=>setShowSavePrompt(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:2000}}/>
-            <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+            <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==="Escape")setShowSavePrompt(false);}} style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)",outline:"none"}}>
               <div style={{fontSize:28,marginBottom:12}}>💾</div>
               <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,marginBottom:8}}>Save your work</div>
               <div style={{fontSize:14,color:"var(--ink-1)",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
@@ -8339,7 +8339,7 @@ ${isOpen
         {showSessions&&sbUser&&(
           <>
             <div onClick={()=>setShowSessions(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.2)",zIndex:999}}/>
-            <div style={{position:"fixed",top:0,right:0,height:"100vh",width:"min(320px, 92vw)",background:"var(--surface)",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1000,display:"flex",flexDirection:"column"}}>
+            <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==="Escape")setShowSessions(false);}} style={{position:"fixed",top:0,right:0,height:"100vh",width:"min(320px, 92vw)",background:"var(--surface)",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",zIndex:1000,display:"flex",flexDirection:"column",outline:"none"}}>
               <div style={{padding:"18px 18px 12px",borderBottom:"1px solid var(--line-0)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:700}}>Saved Sessions</div>
@@ -9072,7 +9072,7 @@ ${isOpen
           </div>
         )}
 
-        {/* ── STEP 1: ICP REVIEW ── */}
+        {/* ── STEP 1: DEFINE YOUR BUYER ── */}
         {step===1&&(
           <div className="page">
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:12}}>
@@ -9905,10 +9905,10 @@ ${isOpen
           </div>
         )}
 
-        {/* ── STEP 2: IMPORT ── */}
+        {/* ── STEP 2: BUILD PROSPECT LISTS ── */}
         {step===2&&(
           <div className="page">
-            <div className="page-title">Add Companies to Research</div>
+            <div className="page-title">Build Your Prospect List</div>
             <div className="page-sub">Upload a CRM export, or type in companies directly — great for conferences, warm intros, or quick meeting prep. We'll score how well each one fits your ideal buyer profile.</div>
 
             {/* Mode switcher */}
@@ -10125,7 +10125,7 @@ ${isOpen
                   </>
                 )}
                 {!sellerICP?.icp && !icpLoading && (
-                  <EmptyState icon="💡" title="Build your ICP first" sub="Complete Step 2 (ICP & RFPs) to unlock Build my target accounts — we'll generate 20 ICP-matched companies for you."/>
+                  <EmptyState icon="💡" title="Build your ICP first" sub="Complete Define Your Buyer (Step 2) to unlock Build my target accounts — we'll generate 20 ICP-matched companies for you."/>
                 )}
               </>
             )}
@@ -10234,13 +10234,13 @@ ${isOpen
           </div>
         )}
 
-        {/* ── STEP 2: TARGET ACCOUNT REVIEW ── */}
+        {/* ── STEP 3: FIT CHECK ── */}
         {step===3&&(
           <div className="page">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div>
-                <div className="page-title">Your Best Matches</div>
-                <div className="page-sub">All {rows.length} companies ranked by how well they fit your buyer profile. Click any company to build a deep research brief.</div>
+                <div className="page-title">Fit Check — Your Best Matches</div>
+                <div className="page-sub">Fit Check: all {rows.length} companies ranked by how well they fit your buyer profile. Click any company to build a deep research brief.</div>
               </div>
               <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Accounts", getAccountsCSVData())} />
             </div>
@@ -10735,7 +10735,7 @@ ${isOpen
           );
         })()}
 
-        {/* ── STEP 4: RIVER BRIEF ── */}
+        {/* ── STEP 5: RESEARCH BRIEF ── */}
         {step===5&&(
           <div className="page">
             {/* Brief header with logos */}
@@ -12261,7 +12261,7 @@ ${isOpen
           </div>
         )}
 
-        {/* ── STEP 5: RIVER HYPOTHESIS ── */}
+        {/* ── STEP 6: CALL PREP ── */}
         {step===6&&(
           <ErrorBoundary><div className="page">
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
@@ -12448,7 +12448,7 @@ ${isOpen
           </div></ErrorBoundary>
         )}
 
-        {/* ── STEP 6: IN-CALL NAVIGATOR ── */}
+        {/* ── STEP 7: LIVE CALL ── */}
         {step===7&&(
           <div className="incall-wrap">
 
@@ -12731,7 +12731,6 @@ ${isOpen
         )}
 
         {/* ── STEP 8: POST-CALL ── */}
-        {/* ── STEP 7: POST-CALL ── */}
         {step===8&&(
           <div className="page">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
@@ -12966,7 +12965,7 @@ ${isOpen
       {contactOpen && (
         <>
           <div onClick={()=>setContactOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
-          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"32px 36px",maxWidth:420,width:"90%",zIndex:9999,boxShadow:"0 8px 48px rgba(0,0,0,0.15)"}}>
+          <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==="Escape")setContactOpen(false);}} style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"32px 36px",maxWidth:420,width:"90%",zIndex:9999,boxShadow:"0 8px 48px rgba(0,0,0,0.15)",outline:"none"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
               <div>
                 <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,color:"var(--ink-0)"}}>Contact Us</div>
@@ -13181,8 +13180,8 @@ ${isOpen
       {/* Upgrade / Pricing modal */}
       {upgradeOpen && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.5)",overflow:"auto",padding:20}}
-          onClick={()=>setUpgradeOpen(false)}>
-          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",maxWidth:680,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.15)",overflow:"hidden"}}
+          onClick={()=>setUpgradeOpen(false)} onKeyDown={e=>{if(e.key==="Escape")setUpgradeOpen(false);}}>
+          <div tabIndex={-1} ref={el=>el&&el.focus()} style={{background:"var(--surface)",borderRadius:"var(--r-lg)",maxWidth:680,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.15)",overflow:"hidden",outline:"none"}}
             onClick={e=>e.stopPropagation()}>
 
             {/* Header */}
