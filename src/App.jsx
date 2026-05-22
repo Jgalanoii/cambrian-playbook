@@ -8,6 +8,20 @@ import SuperAdmin from "./components/SuperAdmin.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
 
+// ── Sortable column header for Fit Check table ──
+function FitSortTh({ sortKey, sortDir, onSort, colKey, children, style }) {
+  const active = sortKey === colKey;
+  return (
+    <th
+      style={{ cursor: "pointer", userSelect: "none", ...(active ? { color: "var(--ink-0)", fontWeight: 800, background: "rgba(0,0,0,0.02)" } : {}), ...style }}
+      onClick={() => onSort(colKey)}
+    >
+      {children}{" "}
+      <span style={{ color: "var(--ink-2)", fontSize: 10 }}>{active ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}</span>
+    </th>
+  );
+}
+
 // ── PRODUCTION CONSOLE GUARD ─────────────────────────────────────────────
 // Suppress all console output in production to prevent IP/trade secret
 // leakage via DevTools. Only keeps console.error for critical failures.
@@ -1892,12 +1906,14 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), executives:false}};
     if (r2?.keyExecutives?.length) next.keyExecutives = sanitizeWebResult(r2.keyExecutives);
+    else { next._failedSections = [...(prev._failedSections||[]), "executives"]; }
     if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
     return next;
   };
   const mergeStrategy = (r3) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), strategy:false}};
+    if (!r3) { next._failedSections = [...(prev._failedSections||[]), "strategy"]; }
     if (r3?.elevatorPitch) next.elevatorPitch = r3.elevatorPitch;
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
@@ -1918,6 +1934,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeSolutions = (r4) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), solutions:false}};
+    if (!r4) { next._failedSections = [...(prev._failedSections||[]), "solutions"]; }
     if (r4?.solutionMapping?.some(s=>s?.product)) next.solutionMapping = r4.solutionMapping;
     if (r4?.caseStudies?.some(c=>c?.title)) next.caseStudies = r4.caseStudies;
     if (r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts = r4.keyContacts;
@@ -2204,15 +2221,21 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const earlyDone = Promise.allSettled([p1, p3, p4]);
   const deepIntelDone = Promise.allSettled([p7, p8, p9, p10]);
 
+  // Error-logging catch — silent catches were hiding section failures (blank revenue, missing execs, etc.)
+  const catchLog = (name, merger) => (e) => {
+    console.error(`[brief] ${name} FAILED:`, e?.message || e);
+    return merger(null);
+  };
+
   return {
     skeleton,
     mergers: {
-      overview:  p1.then(mergeOverview).catch(e => mergeOverview(null)),
-      executives:p2.then(mergeExecs).catch(e => mergeExecs(null)),
-      strategy:  p3.then(mergeStrategy).catch(e => mergeStrategy(null)),
-      solutions: p4.then(mergeSolutions).catch(e => mergeSolutions(null)),
-      live:      p5.then(mergeLive).catch(e => mergeLive(null)),
-      roles:     p6.then(mergeRoles).catch(e => mergeRoles(null)),
+      overview:  p1.then(mergeOverview).catch(catchLog("p1-overview", mergeOverview)),
+      executives:p2.then(mergeExecs).catch(catchLog("p2-executives", mergeExecs)),
+      strategy:  p3.then(mergeStrategy).catch(catchLog("p3-strategy", mergeStrategy)),
+      solutions: p4.then(mergeSolutions).catch(catchLog("p4-solutions", mergeSolutions)),
+      live:      p5.then(mergeLive).catch(catchLog("p5-live", mergeLive)),
+      roles:     p6.then(mergeRoles).catch(catchLog("p6-roles", mergeRoles)),
       deepIntel: deepIntelDone.then(([r7,r8,r9,r10]) => mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null, r10?.status==="fulfilled"?r10.value:null)),
     },
     earlyDone,
@@ -3882,6 +3905,13 @@ export default function App(){
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
   const[fitScores,setFitScores]=useState({}); // {company: {score, label, reason, color}}
   const[fitScoring,setFitScoring]=useState(false);
+  // ── Fit Check table sort state ──
+  const[fitSortKey,setFitSortKey]=useState(null);
+  const[fitSortDir,setFitSortDir]=useState("asc");
+  const onFitSort=(key)=>{
+    if(fitSortKey===key) setFitSortDir(d=>d==="asc"?"desc":"asc");
+    else { setFitSortKey(key); setFitSortDir("asc"); }
+  };
   const[cohorts,setCohorts]=useState([]);
   const[selectedCohort,setSelectedCohort]=useState(null);
   const[selectedOutcomes,setSelectedOutcomes]=useState([]);
@@ -10539,21 +10569,34 @@ ${isOpen
                 <table className="tbl" style={{fontSize:13}}>
                   <thead style={{position:"sticky",top:0,zIndex:10,background:"var(--surface)"}}>
                     <tr>
-                      <th>Company</th>
-                      <th>Industry</th>
-                      <th>Org Size</th>
-                      <th>Ownership</th>
-                      <th>Fit Check</th>
+                      <FitSortTh sortKey={fitSortKey} sortDir={fitSortDir} onSort={onFitSort} colKey="company">Company</FitSortTh>
+                      <FitSortTh sortKey={fitSortKey} sortDir={fitSortDir} onSort={onFitSort} colKey="ind">Industry</FitSortTh>
+                      <FitSortTh sortKey={fitSortKey} sortDir={fitSortDir} onSort={onFitSort} colKey="employees">Org Size</FitSortTh>
+                      <FitSortTh sortKey={fitSortKey} sortDir={fitSortDir} onSort={onFitSort} colKey="_ownership">Ownership</FitSortTh>
+                      <FitSortTh sortKey={fitSortKey} sortDir={fitSortDir} onSort={onFitSort} colKey="_fitScore">Fit Check</FitSortTh>
                       <th>Intel</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...cohorts.flatMap(c=>c.members.map(m=>({...m,_cohort:c})))].sort((a,b)=>{
-                      const sa=fitScores[a.company]?.score??50;
-                      const sb=fitScores[b.company]?.score??50;
-                      return sb-sa;
-                    }).map((m,i)=>{
+                    {(()=>{
+                      const _fitRows=[...cohorts.flatMap(c=>c.members.map(m=>({...m,_cohort:c,_fitScore:fitScores[m.company]?.score??50,_ownership:fitScores[m.company]?.ownership||m.publicPrivate||""})))];
+                      // Parse employee counts for numeric sorting
+                      const parseNum=(v)=>{if(!v)return 0;if(typeof v==="number")return v;const s=String(v).replace(/,/g,"").trim();const m=s.match(/^([\d.]+)\s*([KkMmBb])?$/);if(m){const n=parseFloat(m[1]);const u=(m[2]||"").toUpperCase();return u==="K"?n*1e3:u==="M"?n*1e6:u==="B"?n*1e9:n;}return parseFloat(s)||0;};
+                      if(fitSortKey){
+                        _fitRows.sort((a,b)=>{
+                          let av=a[fitSortKey],bv=b[fitSortKey];
+                          if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;
+                          if(fitSortKey==="_fitScore")return fitSortDir==="asc"?av-bv:bv-av;
+                          if(fitSortKey==="employees"){const na=parseNum(av),nb=parseNum(bv);return fitSortDir==="asc"?na-nb:nb-na;}
+                          const sa=String(av).toLowerCase(),sb=String(bv).toLowerCase();
+                          return fitSortDir==="asc"?sa.localeCompare(sb):sb.localeCompare(sa);
+                        });
+                      }else{
+                        _fitRows.sort((a,b)=>{const sa=fitScores[a.company]?.score??50;const sb=fitScores[b.company]?.score??50;return sb-sa;});
+                      }
+                      return _fitRows;
+                    })().map((m,i)=>{
                       const inQueue=accountQueue.some(q=>q.company===m.company);
                       const qPos=accountQueue.findIndex(q=>q.company===m.company);
                       return(
@@ -11014,15 +11057,17 @@ ${isOpen
             {/* Brief content — renders as soon as brief is set (not null) */}
             {brief&&(
               <>
-                {(briefError || brief._error) && (
-                  <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"var(--red)",marginBottom:8}}>⚠ Research encountered an issue</div>
-                    <div style={{fontSize:12,color:"#7A2020",lineHeight:1.6,marginBottom:10}}>
-                      {brief._error || "Some sections may be incomplete."} This won't count against your runs — retry for free.
+                {(briefError || brief._error || brief._failedSections?.length > 0) && (
+                  <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--amber)",marginBottom:8}}>
+                      {brief._error ? "⚠ Research encountered an issue" : `⚠ ${brief._failedSections?.length || 0} section${(brief._failedSections?.length||0)===1?"":"s"} incomplete`}
+                    </div>
+                    <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6,marginBottom:10}}>
+                      {brief._error || `Some sections didn't load: ${(brief._failedSections||[]).join(", ")}. This happens occasionally with web search — hit Regenerate to retry. It won't count against your runs.`}
                     </div>
                     <button onClick={()=>{setBriefError("");pickAccount(selectedAccount,null,true);}}
-                      style={{padding:"8px 16px",borderRadius:8,background:"var(--red)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                      Retry Brief (free) →
+                      style={{padding:"8px 16px",borderRadius:8,background:"var(--amber)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      ↻ Retry Brief (free) →
                     </button>
                   </div>
                 )}
