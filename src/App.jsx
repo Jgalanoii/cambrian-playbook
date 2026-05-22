@@ -3783,22 +3783,6 @@ export default function App(){
   const[activeCelebration,setActiveCelebration]=useState(null);
   const celebratedRef=useRef(new Set()); // track which milestones fired this session
   const celebrate=(id)=>{if(!celebratedRef.current.has(id)&&MILESTONES[id]){celebratedRef.current.add(id);setActiveCelebration(id);}};
-  // Milestone triggers — watch state transitions
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(sellerICP?.icp && !sellerICP._error) celebrate("icp_built"); },[sellerICP?.icp?.industries]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0) celebrate("prospects_added"); },[cohorts.length]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step===3]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(brief?.companySnapshot && !brief._loadingSections?.overview) celebrate("brief_built"); },[brief?.companySnapshot]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(riverHypo?.reality) celebrate("hypothesis_ready"); },[riverHypo?.reality]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(step===7) celebrate("call_started"); },[step===7]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
-
   const[icpLoading,setIcpLoading]=useState(false);
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
   const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
@@ -5745,6 +5729,24 @@ ${isOpen
     // Phase 3c: bump stage-key to trigger CSS transition animation
     setStageKey(k => k + 1);
   }, [step]);
+
+  // ── Milestone celebration triggers — watch state transitions ────────────
+  // These must be AFTER all useState declarations to avoid temporal dead zone
+  // in production builds (minifier renames variables, TDZ becomes a runtime crash).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(sellerICP?.icp && !sellerICP._error) celebrate("icp_built"); },[sellerICP?.icp?.industries]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0) celebrate("prospects_added"); },[cohorts.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step===3]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(brief?.companySnapshot && !brief._loadingSections?.overview) celebrate("brief_built"); },[brief?.companySnapshot]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(riverHypo?.reality) celebrate("hypothesis_ready"); },[riverHypo?.reality]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(step===7) celebrate("call_started"); },[step===7]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
 
   // Build ICP whenever sellerUrl is set but ICP not yet loaded
   useEffect(()=>{
