@@ -26,8 +26,6 @@ const SCOPES = [
   "crm.objects.companies.write",
   "crm.objects.deals.read",
   "crm.objects.deals.write",
-  "crm.objects.notes.write",
-  "crm.objects.tasks.write",
 ].join(" ");
 
 // ── Encryption helpers ─────────────────────────────────────────────────
