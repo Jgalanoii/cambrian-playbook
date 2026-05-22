@@ -57,6 +57,11 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
+  // Pagination params for sessions/activity
+  const page = Math.max(1, parseInt(req.query?.page) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query?.limit) || 50));
+  const offset = (page - 1) * limit;
+
   try {
     // Audit log — record every admin access
     try {
@@ -67,11 +72,18 @@ export default async function handler(req, res) {
       });
     } catch {} // Best-effort audit — don't block the response
 
-    // Fetch all data in parallel
+    // Fetch total session count for pagination
+    const sessionCountRes = await fetch(`${SB_URL}/rest/v1/sessions?select=id&head=true`, {
+      method: "HEAD",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, Prefer: "count=exact" },
+    });
+    const totalSessions = parseInt(sessionCountRes.headers.get("content-range")?.split("/")?.[1]) || 0;
+
+    // Fetch all data in parallel (sessions are paginated)
     const [users, orgs, sessions, usageLogs, guestLogs, dbCosts] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
-      sbFetch("sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=2000"),
+      sbFetch(`sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=${limit}&offset=${offset}`),
       sbFetch("api_usage_log?select=user_id,org_id,model,input_tokens,output_tokens,cache_read_tokens,cache_creation_tokens,web_searches,endpoint,target_company,seller_url,brief_type,created_at&order=created_at.desc", 50000),
       sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=2000"),
       // Server-side cost aggregation (bypasses row limits)
@@ -398,7 +410,7 @@ export default async function handler(req, res) {
         total_users: (users || []).length,
         active_today: activeToday,
         active_this_week: activeWeek,
-        total_sessions: (sessions || []).length,
+        total_sessions: totalSessions,
         total_runs: totalRuns,
         total_max_runs: totalMaxRuns,
         total_orgs: (orgs || []).length,
@@ -406,6 +418,7 @@ export default async function handler(req, res) {
         total_milton_messages: totalMiltonMessages,
         guest_api_calls: guestActivity.total_calls,
       },
+      pagination: { page, limit, total: totalSessions },
       environment: envStatus,
       users: Object.entries(userMap).map(([id, u]) => ({
         id,

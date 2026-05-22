@@ -1513,36 +1513,46 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
   const verticalCtx = getVerticalInjection(sellerICP, member.ind);
   const paymentsCtx = getPaymentsInjection(sellerICP, member.ind);
+
+  // ── Track which knowledge layers were injected for this brief ──────────
+  // Each entry: [humanName, injectionResult]. After computing all injections,
+  // collect names of non-empty ones into _klVersions on the brief skeleton.
+  const _klInjections = [
+    ["vertical", verticalCtx],
+    ["payments", paymentsCtx],
+    ["compliance", getComplianceInjection(sellerICP, member.ind)],
+    ["realEstate", getRealEstateInjection(sellerICP, member.ind)],
+    ["banking", getBankingInjection(sellerICP, member.ind)],
+    ["healthcare", getHealthcareInjection(sellerICP, member.ind)],
+    ["aiMl", getAiMlInjection(sellerICP, member.ind)],
+    ["fintechDeep", getFintechDeepInjection(sellerICP, member.ind)],
+    ["rewards", getRewardsInjection(sellerICP, member.ind)],
+    ["qsr", getQsrInjection(sellerICP, member.ind)],
+    ["investor", getInvestorInjection(sellerICP, member.ind)],
+    ["baas", getBaasInjection(sellerICP, member.ind)],
+    ["charitable", getCharitableInjection(sellerICP, member.ind)],
+    ["smbMidmarket", getSmbMidmarketInjection(sellerICP, member.ind, member)],
+    ["insurance", getInsuranceInjection(sellerICP, member.ind)],
+    ["digitalIncentives", getDigIncentivesInjection(sellerICP, member.ind)],
+    ["retail", getRetailInjection(sellerICP, member.ind)],
+    ["professionalServices", getProfServicesInjection(sellerICP, member.ind)],
+    ["manufacturing", getManufacturingInjection(sellerICP, member.ind)],
+    ["cannabis", getCannabisInjection(sellerICP, member.ind)],
+    ["crypto", getCryptoInjection(sellerICP, member.ind)],
+    ["gaming", getGamingInjection(sellerICP, member.ind)],
+    ["predictionMarkets", getPredictionMarketsInjection(sellerICP, member.ind)],
+    ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
+    ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
+    ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
+  ];
+  const _klActiveVersions = _klInjections.filter(([, v]) => v).map(([name]) => name);
+  const _klInjectionText = _klInjections.map(([, v]) => v).join("");
+
   const baseFull = baseLight +
     `${universalCtx}\n`+
     `SELLER CONTEXT:\n${sellerCtx}${prodCtx}\n`+
     proofPack +
-    verticalCtx +
-    paymentsCtx +
-    getComplianceInjection(sellerICP, member.ind) +
-    getRealEstateInjection(sellerICP, member.ind) +
-    getBankingInjection(sellerICP, member.ind) +
-    getHealthcareInjection(sellerICP, member.ind) +
-    getAiMlInjection(sellerICP, member.ind) +
-    getFintechDeepInjection(sellerICP, member.ind) +
-    getRewardsInjection(sellerICP, member.ind) +
-    getQsrInjection(sellerICP, member.ind) +
-    getInvestorInjection(sellerICP, member.ind) +
-    getBaasInjection(sellerICP, member.ind) +
-    getCharitableInjection(sellerICP, member.ind) +
-    getSmbMidmarketInjection(sellerICP, member.ind, member) +
-    getInsuranceInjection(sellerICP, member.ind) +
-    getDigIncentivesInjection(sellerICP, member.ind) +
-    getRetailInjection(sellerICP, member.ind) +
-    getProfServicesInjection(sellerICP, member.ind) +
-    getManufacturingInjection(sellerICP, member.ind) +
-    getCannabisInjection(sellerICP, member.ind) +
-    getCryptoInjection(sellerICP, member.ind) +
-    getGamingInjection(sellerICP, member.ind) +
-    getPredictionMarketsInjection(sellerICP, member.ind) +
-    (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
-    (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
-    (KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : "") +
+    _klInjectionText +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -1839,6 +1849,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ...BLANK_BRIEF,
     companySnapshot: `Researching ${co}...`,
     _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true, roles:true, deepIntel:true},
+    _klVersions: _klActiveVersions, // which knowledge layers were injected for this brief
   };
 
   // Per-section merger functions, applied via setBrief(prev => merger(prev))
@@ -7959,9 +7970,19 @@ ${isOpen
       {/* Company disambiguation overlay */}
       {disambigOptions && (
         <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
-          onClick={()=>setDisambigOptions(null)} onKeyDown={e=>{if(e.key==="Escape")setDisambigOptions(null);}}>
+          onClick={()=>setDisambigOptions(null)}>
           <div tabIndex={-1} ref={el=>el&&el.focus()} style={{background:"var(--surface)",borderRadius:12,padding:"24px 28px",maxWidth:500,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.2)",outline:"none"}}
-            onClick={e=>e.stopPropagation()}>
+            onClick={e=>e.stopPropagation()}
+            onKeyDown={e=>{
+              if(e.key==="Escape")setDisambigOptions(null);
+              if(e.key==="Tab"){
+                const focusable=e.currentTarget.querySelectorAll("button, input, select, textarea, a[href]");
+                if(focusable.length===0)return;
+                const first=focusable[0],last=focusable[focusable.length-1];
+                if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+                else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+              }
+            }}>
             <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",marginBottom:4,fontFamily:"Lora,serif"}}>Confirm the company</div>
             <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:6}}>
               {disambigOptions.matches.length > 1
@@ -8423,7 +8444,16 @@ ${isOpen
         {showSavePrompt&&(
           <>
             <div onClick={()=>setShowSavePrompt(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:2000}}/>
-            <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==="Escape")setShowSavePrompt(false);}} style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)",outline:"none"}}>
+            <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{
+              if(e.key==="Escape")setShowSavePrompt(false);
+              if(e.key==="Tab"){
+                const focusable=e.currentTarget.querySelectorAll("button, input, select, textarea, a[href]");
+                if(focusable.length===0)return;
+                const first=focusable[0],last=focusable[focusable.length-1];
+                if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+                else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+              }
+            }} style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 24px",maxWidth:380,width:"90%",zIndex:2001,textAlign:"center",boxShadow:"0 8px 48px rgba(0,0,0,0.15)",outline:"none"}}>
               <div style={{fontSize:28,marginBottom:12}}>💾</div>
               <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,marginBottom:8}}>Save your work</div>
               <div style={{fontSize:14,color:"var(--ink-1)",lineHeight:1.7,marginBottom:24}}>Create a free account to save sessions and pick up where you left off.</div>
@@ -8893,6 +8923,11 @@ ${isOpen
                   <div style={{fontSize:11,color:"var(--green)",marginTop:8,display:"flex",alignItems:"center",gap:5,background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"8px 12px"}}>
                     <span style={{fontSize:14}}>✓</span>
                     <span>{sellerDocs.length} document{sellerDocs.length>1?"s":""} loaded — Cambrian will use {sellerDocs.length>1?"these":"this"} as the primary source for product and solution context.</span>
+                  </div>
+                )}
+                {sellerDocs.length>0&&(
+                  <div style={{fontSize:10,color:"var(--ink-3)",marginTop:4}}>
+                    Docs are processed in full during your session. Saved sessions retain the first 500 characters of each document.
                   </div>
                 )}
               </div>
@@ -13297,9 +13332,19 @@ ${isOpen
       {/* Upgrade / Pricing modal */}
       {upgradeOpen && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.5)",overflow:"auto",padding:20}}
-          onClick={()=>setUpgradeOpen(false)} onKeyDown={e=>{if(e.key==="Escape")setUpgradeOpen(false);}}>
+          onClick={()=>setUpgradeOpen(false)}>
           <div tabIndex={-1} ref={el=>el&&el.focus()} style={{background:"var(--surface)",borderRadius:"var(--r-lg)",maxWidth:680,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.15)",overflow:"hidden",outline:"none"}}
-            onClick={e=>e.stopPropagation()}>
+            onClick={e=>e.stopPropagation()}
+            onKeyDown={e=>{
+              if(e.key==="Escape")setUpgradeOpen(false);
+              if(e.key==="Tab"){
+                const focusable=e.currentTarget.querySelectorAll("button, input, select, textarea, a[href]");
+                if(focusable.length===0)return;
+                const first=focusable[0],last=focusable[focusable.length-1];
+                if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+                else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+              }
+            }}>
 
             {/* Header */}
             <div style={{padding:"24px 28px 16px",textAlign:"center",borderBottom:"1px solid var(--line-0)"}}>

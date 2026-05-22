@@ -18,6 +18,7 @@ import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runMatch } from "./lib/match.js";
+import { extractNumber } from "./lib/match.js";
 import { runInvariant } from "./lib/invariants.js";
 import { extractAllFacts, briefToText } from "./lib/extract-facts.js";
 
@@ -89,6 +90,67 @@ function extractJson(text, key) {
   return null;
 }
 
+// ── Cross-run consistency check ──────────────────────────────────────
+// Fields to check for numeric stability across runs, with max allowed spread (%).
+const CONSISTENCY_FIELDS = [
+  { key: "revenue",       briefField: "revenue",       label: "Revenue",        spreadPct: 20 },
+  { key: "employeeCount", briefField: "employeeCount", label: "Employee count",  spreadPct: 15 },
+];
+
+/**
+ * Compare numeric fields across multiple brief runs for the same company.
+ * Returns an array of { field, pass, detail } results.
+ * Only checks fields that produced parseable numbers in ALL runs.
+ *
+ * @param {Array<object>} briefs — array of brief JSON objects (nulls filtered out)
+ * @returns {Array<{field: string, pass: boolean, detail: string}>}
+ */
+function checkCrossRunConsistency(briefs) {
+  if (briefs.length < 3) return [];
+
+  const results = [];
+
+  for (const { key, briefField, label, spreadPct } of CONSISTENCY_FIELDS) {
+    const values = briefs.map(b => {
+      const raw = b[briefField];
+      return raw ? extractNumber(raw) : NaN;
+    });
+
+    // Only check if ALL runs produced a parseable number
+    if (values.some(v => isNaN(v))) {
+      results.push({
+        field: `consistency:${key}`,
+        pass: true,
+        detail: `${label} — skipped (not parseable in all ${briefs.length} runs)`,
+      });
+      continue;
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    // Avoid divide-by-zero on zero values
+    if (min === 0 && max === 0) {
+      results.push({ field: `consistency:${key}`, pass: true, detail: `${label} — all zeros` });
+      continue;
+    }
+
+    const mid = (min + max) / 2;
+    const spread = ((max - min) / mid) * 100;
+    const pass = spread <= spreadPct;
+
+    const fmt = v => v.toLocaleString();
+    results.push({
+      field: `consistency:${key}`,
+      pass,
+      detail: pass
+        ? `${label} — spread ${spread.toFixed(1)}% across ${briefs.length} runs (threshold ${spreadPct}%) [${values.map(fmt).join(", ")}]`
+        : `${label} — EXCESSIVE spread ${spread.toFixed(1)}% (threshold ${spreadPct}%) [${values.map(fmt).join(", ")}]`,
+    });
+  }
+
+  return results;
+}
+
 // ── Generate a p1-equivalent brief for a company ──────────────────────
 async function generateBrief(company) {
   const co = company.name;
@@ -138,6 +200,7 @@ async function generateBrief(company) {
 const results = [];
 let totalFacts = 0, passedFacts = 0, failedFacts = 0;
 let totalInvariants = 0, passedInvariants = 0, failedInvariants = 0;
+let totalConsistency = 0, passedConsistency = 0, failedConsistency = 0;
 
 console.log(`\nGolden-Set Regression Harness — ${IS_FULL ? "FULL" : "LITE"} mode`);
 console.log(`${goldenSet.companies.length} companies × ${RUNS_PER_COMPANY} run(s)\n`);
@@ -193,6 +256,7 @@ for (const company of goldenSet.companies) {
 
     const runResult = {
       run: run + 1,
+      _brief: brief, // retained for cross-run consistency; stripped from JSON output
       facts: factResults,
       invariants: invariantResults,
       factsPass: factResults.filter(f => f.pass).length,
@@ -218,30 +282,76 @@ for (const company of goldenSet.companies) {
     }
   }
 
+  // ── Cross-run consistency (full mode only, 3+ valid briefs) ────────
+  if (IS_FULL) {
+    // Collect briefs from successful runs (stored during run loop)
+    const validBriefs = companyResults.runs
+      .filter(r => r._brief)
+      .map(r => r._brief);
+
+    const consistency = checkCrossRunConsistency(validBriefs);
+    companyResults.consistency = consistency;
+
+    for (const c of consistency) {
+      totalConsistency++;
+      if (c.pass) passedConsistency++;
+      else failedConsistency++;
+    }
+
+    if (!JSON_OUT && consistency.length > 0) {
+      const cPass = consistency.filter(c => c.pass).length;
+      const cTotal = consistency.length;
+      const cFails = consistency.filter(c => !c.pass);
+      if (cFails.length === 0) {
+        console.log(`    Cross-run consistency: ${cPass}/${cTotal} PASS`);
+      } else {
+        console.log(`    Cross-run consistency: ${cPass}/${cTotal} (${cFails.length} FAIL)`);
+        for (const f of cFails) {
+          console.log(`      FAIL  ${f.detail}`);
+        }
+      }
+    }
+  }
+
   results.push(companyResults);
 }
 
 // ── Report ────────────────────────────────────────────────────────────
-const totalFailures = failedFacts + failedInvariants;
+const totalFailures = failedFacts + failedInvariants + failedConsistency;
+
+// Strip _brief from run results before serialization (trade-secret / payload bloat)
+for (const c of results) {
+  for (const r of c.runs) {
+    delete r._brief;
+  }
+}
 
 if (JSON_OUT) {
   const report = {
     mode: IS_FULL ? "full" : "lite",
     timestamp: new Date().toISOString(),
-    summary: { totalFacts, passedFacts, failedFacts, totalInvariants, passedInvariants, failedInvariants },
+    summary: {
+      totalFacts, passedFacts, failedFacts,
+      totalInvariants, passedInvariants, failedInvariants,
+      ...(IS_FULL ? { totalConsistency, passedConsistency, failedConsistency } : {}),
+    },
     companies: results,
   };
   console.log(JSON.stringify(report, null, 2));
 } else {
   console.log(`\n${"=".repeat(60)}`);
-  console.log(`SUMMARY: ${passedFacts + passedInvariants} passed, ${totalFailures} failed`);
-  console.log(`  Facts:      ${passedFacts}/${totalFacts} passed`);
-  console.log(`  Invariants: ${passedInvariants}/${totalInvariants} passed`);
+  console.log(`SUMMARY: ${passedFacts + passedInvariants + passedConsistency} passed, ${totalFailures} failed`);
+  console.log(`  Facts:       ${passedFacts}/${totalFacts} passed`);
+  console.log(`  Invariants:  ${passedInvariants}/${totalInvariants} passed`);
+  if (IS_FULL) {
+    console.log(`  Consistency: ${passedConsistency}/${totalConsistency} passed`);
+  }
   console.log(`${"=".repeat(60)}`);
 
   if (totalFailures > 0) {
     console.log(`\nFAILURES:`);
     for (const c of results) {
+      // Per-run failures (facts + invariants)
       for (const r of c.runs) {
         const failures = [...(r.facts || []).filter(f => !f.pass), ...(r.invariants || []).filter(i => !i.pass)];
         if (failures.length) {
@@ -249,6 +359,14 @@ if (JSON_OUT) {
           for (const f of failures) {
             console.log(`    ${f.field || f.name}: ${f.detail}`);
           }
+        }
+      }
+      // Cross-run consistency failures
+      const cFails = (c.consistency || []).filter(c => !c.pass);
+      if (cFails.length) {
+        console.log(`  ${c.name} (cross-run consistency):`);
+        for (const f of cFails) {
+          console.log(`    ${f.field}: ${f.detail}`);
         }
       }
     }
@@ -261,7 +379,11 @@ try {
   const report = {
     mode: IS_FULL ? "full" : "lite",
     timestamp: new Date().toISOString(),
-    summary: { totalFacts, passedFacts, failedFacts, totalInvariants, passedInvariants, failedInvariants },
+    summary: {
+      totalFacts, passedFacts, failedFacts,
+      totalInvariants, passedInvariants, failedInvariants,
+      ...(IS_FULL ? { totalConsistency, passedConsistency, failedConsistency } : {}),
+    },
     companies: results,
   };
   writeFileSync(reportPath, JSON.stringify(report, null, 2));

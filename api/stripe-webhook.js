@@ -13,7 +13,9 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-// Idempotency — prevent duplicate processing on Stripe retries
+// In-memory dedup — best-effort within a single instance lifespan.
+// True idempotency is enforced below by checking the org's current
+// plan/limits before writing (the update is already value-idempotent).
 const processedSessions = new Set();
 const DEDUP_MAX = 500;
 
@@ -66,6 +68,26 @@ function verifyStripeSignature(rawBody, signature) {
 async function updateOrg(orgId, planId) {
   if (!orgId || !planId || !PLAN_LIMITS[planId]) return;
   const limits = PLAN_LIMITS[planId];
+
+  // Idempotency guard — if the org already has the target plan and
+  // matching limits, skip the write.  This protects against Stripe
+  // retries that land on a different Vercel instance (where the
+  // in-memory Set is empty).
+  try {
+    const checkRes = await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}&select=plan,run_limit,max_run_limit`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+    });
+    const orgs = await checkRes.json();
+    const org = orgs?.[0];
+    if (org && org.plan === "paid" && org.run_limit === limits.run_limit && org.max_run_limit === limits.max_run_limit) {
+      console.log(`[stripe] Org ${orgId} already on ${planId} — skipping duplicate upgrade`);
+      return;
+    }
+  } catch (e) {
+    // If the check fails, proceed with the update (fail-open for the
+    // idempotent write — worst case we PATCH to the same values).
+    console.warn("[stripe] Idempotency pre-check failed, proceeding:", e.message);
+  }
 
   await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}`, {
     method: "PATCH",

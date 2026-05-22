@@ -118,8 +118,10 @@ export default async function handler(req, res) {
     incrementGuestUsage(ip);
   }
 
-  // Cache for 1 hour — this data changes only on deploys
-  res.setHeader("Cache-Control", "private, max-age=3600");
+  // Cache for 5 minutes — short TTL so plan upgrades (trial→paid) take
+  // effect quickly. Knowledge tier is plan-dependent; a 1-hour cache meant
+  // upgraders could see stale trial-tier layers for up to an hour.
+  res.setHeader("Cache-Control", "private, max-age=300");
 
   // ── Guest mode: return minimal stubs ──────────────────────────────────
   // Guests get just enough for the app to render without crashing, but

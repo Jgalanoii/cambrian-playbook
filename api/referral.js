@@ -18,6 +18,14 @@ async function sbFetch(path, method = "GET", body = null) {
   return fetch(`${SB_URL}/rest/v1/${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined }).then(r => r.json());
 }
 
+async function sbRpc(fn, params) {
+  return fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  }).then(r => r.json());
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
@@ -103,19 +111,6 @@ export default async function handler(req, res) {
     const referrer = referrers?.[0];
     if (!referrer?.org_id) return res.json({ ok: true, message: "Referrer not found or has no org" });
 
-    // Check cap
-    const orgs = await sbFetch(`orgs?id=eq.${referrer.org_id}&select=referral_bonus_runs,referral_bonus_cap,run_limit`);
-    const org = orgs?.[0];
-    if (!org) return res.json({ ok: true, message: "Referrer org not found" });
-    if ((org.referral_bonus_runs || 0) >= (org.referral_bonus_cap || 5)) {
-      // Mark as rewarded even if cap hit (so we don't keep checking)
-      await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}`, {
-        method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ referral_rewarded: true }),
-      });
-      return res.json({ ok: true, message: "Referrer at bonus cap" });
-    }
-
     // Mark as rewarded FIRST (atomic flag) to prevent race-condition double-award.
     // Use If-Match header pattern: only patch if referral_rewarded is still false.
     const markRes = await fetch(`${SB_URL}/rest/v1/users?id=eq.${payload.sub}&referral_rewarded=eq.false`, {
@@ -127,17 +122,17 @@ export default async function handler(req, res) {
     // If no rows updated, another request already claimed this reward
     if (!marked?.length) return res.json({ ok: true, message: "Already processed" });
 
-    // Award +1 run to the referrer's org
-    await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${referrer.org_id}`, {
-      method: "PATCH",
-      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({
-        run_limit: org.run_limit + 1,
-        referral_bonus_runs: (org.referral_bonus_runs || 0) + 1,
-      }),
-    });
+    // Award +1 run to the referrer's org using atomic RPC (SELECT … FOR UPDATE
+    // inside PostgreSQL prevents two concurrent rewards from reading the same
+    // run_limit and losing an increment).
+    const rpcResult = await sbRpc("increment_referral_bonus", { p_org_id: referrer.org_id });
+    if (rpcResult?.error) {
+      // Cap reached or org not found — reward flag is already set so we won't retry
+      console.log(`[referral] bonus RPC returned: ${rpcResult.error} for org ${referrer.org_id}`);
+      return res.json({ ok: true, message: rpcResult.error === "cap_reached" ? "Referrer at bonus cap" : "Referrer org issue" });
+    }
 
-    console.log(`[referral] +1 run to org ${referrer.org_id} from user ${payload.sub} (referred by ${user.referred_by})`);
+    console.log(`[referral] +1 run to org ${referrer.org_id} (run_limit=${rpcResult.run_limit}, bonus=${rpcResult.referral_bonus_runs}) from user ${payload.sub} (referred by ${user.referred_by})`);
     return res.json({ ok: true, message: "Referral reward granted!", rewarded: true });
   }
 
