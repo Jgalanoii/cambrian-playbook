@@ -5,91 +5,116 @@
   <title>Privacy Policy — Cambrian Catalyst</title>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'DM Sans', sans-serif; max-width: 720px; margin: 0 auto; padding: 40px 20px; color: #1a1a18; line-height: 1.7; }
+    body { font-family: 'DM Sans', sans-serif; max-width: 720px; margin: 0 auto; padding: 40px 20px; color: #1a1a2e; line-height: 1.7; background: #F5F6F8; }
     h1 { font-family: 'Lora', serif; font-size: 28px; margin-bottom: 8px; }
-    h2 { font-family: 'Lora', serif; font-size: 18px; margin-top: 28px; color: #8B6F47; }
-    p, li { font-size: 14px; color: #555; }
-    a { color: #8B6F47; }
+    h2 { font-family: 'Lora', serif; font-size: 18px; margin-top: 28px; color: #E85D3A; }
+    p, li { font-size: 14px; color: #4a4a5a; }
+    a { color: #E85D3A; }
     .back { font-size: 13px; margin-bottom: 20px; display: inline-block; }
-    .updated { font-size: 12px; color: #b8b6ae; margin-bottom: 24px; }
+    .updated { font-size: 12px; color: #a8a8b8; margin-bottom: 24px; }
+    strong { color: #1a1a2e; }
   </style>
 </head>
 <body>
   <a href="/" class="back">&larr; Back to Cambrian Catalyst</a>
   <h1>Privacy Policy</h1>
-  <div class="updated">Last updated: May 2026</div>
+  <div class="updated">Last updated: May 22, 2026</div>
 
   <h2>1. Who We Are</h2>
-  <p>Cambrian Catalyst LLC ("we", "us") operates the Cambrian Catalyst sales intelligence platform at cambriancatalyst.ai. We are based in Seattle, WA.</p>
+  <p>Cambrian Catalyst LLC ("we", "us", "our") operates the Cambrian Catalyst sales intelligence platform at <a href="https://cambriancatalyst.ai">cambriancatalyst.ai</a>.</p>
 
   <h2>2. What We Collect</h2>
-  <p>We collect:</p>
+  <p>We collect the following categories of information:</p>
   <ul>
-    <li><strong>Account information:</strong> name, email address, and password (encrypted)</li>
-    <li><strong>Session data:</strong> seller URLs, ICP configurations, target accounts, briefs, and notes you create</li>
-    <li><strong>Usage data:</strong> API calls, token consumption, feature usage, and session timestamps</li>
-    <li><strong>Technical data:</strong> IP address (for rate limiting), browser type (from headers)</li>
+    <li><strong>Account information:</strong> Name, email address, and password (bcrypt-hashed, never stored in plaintext)</li>
+    <li><strong>Organization data:</strong> Company name, website URL, team member roster, and plan/billing status</li>
+    <li><strong>Session data:</strong> Seller URLs, Ideal Customer Profile configurations, target accounts, research briefs, RIVER hypotheses, discovery notes, post-call analysis, and session summaries you create</li>
+    <li><strong>Uploaded content:</strong> Sales materials, pitch decks, case studies, and other documents you upload for AI grounding (stored with content truncated to 500 characters per document on session save)</li>
+    <li><strong>CRM integration data:</strong> If you connect HubSpot, we store encrypted OAuth tokens to push session data to your CRM on your behalf. We do not read or import your existing HubSpot data beyond what's needed to avoid duplicate records.</li>
+    <li><strong>Usage data:</strong> API call counts, token consumption, feature usage, and session timestamps for billing and rate limiting</li>
+    <li><strong>Technical data:</strong> IP address (for rate limiting and abuse prevention), browser type (from request headers), and origin URL</li>
   </ul>
 
-  <h2>3. How We Use It</h2>
+  <h2>3. How We Use Your Data</h2>
   <ul>
-    <li>Provide and improve the Service (brief generation, scoring, coaching)</li>
-    <li>Track usage for billing and token limits</li>
-    <li>Send transactional emails (password reset, invitations)</li>
-    <li>Aggregate anonymized usage patterns to improve our knowledge layers</li>
+    <li>Provide the Service: brief generation, fit scoring, RIVER coaching, and session management</li>
+    <li>Process AI requests through our model provider (prompts are sent, processed, and discarded — not stored for training)</li>
+    <li>Push session summaries to your connected CRM (HubSpot) when you explicitly click "Push to HubSpot"</li>
+    <li>Track usage for billing, token limits, and plan enforcement</li>
+    <li>Send transactional emails: password resets, team invitations, billing receipts</li>
+    <li>Aggregate anonymized, non-identifiable usage patterns to improve our knowledge layers and scoring models</li>
   </ul>
 
   <h2>4. What We Don't Do</h2>
   <ul>
-    <li>We do <strong>not</strong> sell your data to third parties</li>
-    <li>We do <strong>not</strong> use your session content to train AI models</li>
-    <li>We do <strong>not</strong> share your ICP or account data with other users</li>
-    <li>We do <strong>not</strong> display ads</li>
+    <li>We do <strong>not</strong> sell, rent, or trade your data to third parties — ever</li>
+    <li>We do <strong>not</strong> use your session content, briefs, or ICP data to train AI models</li>
+    <li>We do <strong>not</strong> share your data with other Cambrian Catalyst users or organizations</li>
+    <li>We do <strong>not</strong> display advertisements or use tracking pixels</li>
+    <li>We do <strong>not</strong> access your CRM data beyond what's necessary to push your session summaries and avoid duplicate company records</li>
   </ul>
 
   <h2>5. Third-Party Services</h2>
-  <p>We use:</p>
+  <p>We use the following third-party services to operate the platform:</p>
   <ul>
-    <li><strong>Supabase</strong> (authentication and database) — your data is stored in their SOC 2 compliant infrastructure</li>
-    <li><strong>Anthropic</strong> (AI model provider) — prompts are sent for processing but not stored or used for training per their enterprise terms</li>
-    <li><strong>Vercel</strong> (hosting) — serves the application and API endpoints</li>
-    <li><strong>Google Workspace</strong> (email) — transactional emails only</li>
+    <li><strong>Supabase</strong> (authentication, database, row-level security) — SOC 2 Type II compliant. Your data is stored in their managed PostgreSQL infrastructure with encryption at rest.</li>
+    <li><strong>Anthropic</strong> (AI model provider) — Prompts are sent for real-time processing. Per their commercial terms, prompts and outputs are not stored or used for model training. We use their Claude model family.</li>
+    <li><strong>Vercel</strong> (hosting and serverless functions) — SOC 2 Type II compliant. Serves the application and all API endpoints over HTTPS.</li>
+    <li><strong>Stripe</strong> (payment processing) — PCI DSS Level 1 compliant. We never see or store your full credit card number. Stripe handles all payment data directly.</li>
+    <li><strong>HubSpot</strong> (CRM integration, optional) — Only activated when you explicitly connect your HubSpot account via OAuth. Data flows one way: from Cambrian to HubSpot. We push company records, notes, deals, and tasks that you initiate.</li>
+    <li><strong>Apollo.io</strong> (company enrichment, optional) — Used to supplement company data (employee count, industry, domain verification). No personal contact data is purchased or stored without explicit user action.</li>
   </ul>
 
   <h2>6. Data Security</h2>
-  <p>We protect your data with:</p>
+  <p>We take the security of your data seriously:</p>
   <ul>
-    <li>JWT-based authentication with cryptographic signature verification</li>
-    <li>Row-level security (RLS) isolating organization data</li>
-    <li>HTTPS encryption in transit (HSTS enforced)</li>
-    <li>Content Security Policy (CSP) headers</li>
-    <li>Rate limiting on all API endpoints</li>
-    <li>Proprietary knowledge layer data served only to authenticated users, never included in the client bundle</li>
+    <li>JWT-based authentication with JWKS cryptographic signature verification</li>
+    <li>Row-level security (RLS) in Supabase isolating each organization's data</li>
+    <li>HTTPS/TLS encryption in transit with HSTS preload enforcement</li>
+    <li>AES-256-GCM encryption for stored OAuth tokens (HubSpot integration)</li>
+    <li>Content Security Policy (CSP), X-Frame-Options, and other security headers on all responses</li>
+    <li>Rate limiting on all API endpoints (per-IP and per-user)</li>
+    <li>Input validation and sanitization on all user-supplied data</li>
+    <li>Proprietary knowledge layers served only to authenticated, paid users — never included in the client-side bundle</li>
+    <li>Production console output suppressed to prevent intellectual property leakage</li>
   </ul>
 
   <h2>7. Data Retention</h2>
-  <p>Your session data is retained as long as your account is active. You can delete individual sessions from the app. If you cancel your account, we will delete your data within 30 days upon request.</p>
-
-  <h2>8. Your Rights</h2>
-  <p>You can:</p>
   <ul>
-    <li>Access, export, or delete your data by contacting us</li>
-    <li>Close your account at any time</li>
-    <li>Opt out of non-essential communications</li>
+    <li><strong>Active accounts:</strong> Session data is retained as long as your account is active. You can delete individual sessions from within the app at any time.</li>
+    <li><strong>Cancelled accounts:</strong> Upon account cancellation, we will delete your data within 30 days of your written request.</li>
+    <li><strong>CRM tokens:</strong> HubSpot OAuth tokens are deleted immediately when you disconnect the integration.</li>
+    <li><strong>Usage logs:</strong> Anonymized usage metrics may be retained for up to 12 months for aggregate analysis.</li>
   </ul>
 
-  <h2>9. Cookies</h2>
-  <p>We use sessionStorage (not cookies) for authentication tokens. We do not use tracking cookies, analytics cookies, or advertising pixels.</p>
+  <h2>8. Your Rights</h2>
+  <p>Regardless of where you're located, you have the right to:</p>
+  <ul>
+    <li><strong>Access:</strong> Request a copy of all data we hold about you</li>
+    <li><strong>Correction:</strong> Request correction of inaccurate data</li>
+    <li><strong>Deletion:</strong> Request deletion of your data ("right to be forgotten")</li>
+    <li><strong>Export:</strong> Export your sessions and briefs from within the app</li>
+    <li><strong>Disconnect:</strong> Revoke CRM integrations at any time from Settings</li>
+    <li><strong>Close your account:</strong> Contact us to permanently close your account and delete all associated data</li>
+  </ul>
+  <p><strong>California residents (CCPA):</strong> You have the right to know what personal information we collect, request deletion, and opt out of any sale of personal information. We do not sell personal information.</p>
+  <p><strong>EU/EEA residents (GDPR):</strong> Our legal basis for processing is contract performance (providing the Service you signed up for) and legitimate interest (improving the platform). You may contact us to exercise any GDPR rights.</p>
+
+  <h2>9. Cookies and Local Storage</h2>
+  <p>We use <strong>sessionStorage</strong> (not cookies) for authentication tokens. We use <strong>localStorage</strong> to cache your ICP data for performance and to persist authentication across browser restarts. We do not use tracking cookies, analytics cookies, advertising pixels, or any third-party tracking scripts.</p>
 
   <h2>10. Children</h2>
-  <p>The Service is not intended for anyone under 18.</p>
+  <p>The Service is designed for business professionals. It is not intended for anyone under 18 years of age. We do not knowingly collect data from minors.</p>
 
-  <h2>11. Changes</h2>
-  <p>We may update this policy. We'll notify you of material changes via email or in-app notice.</p>
+  <h2>11. International Data Transfers</h2>
+  <p>Your data may be processed in the United States. By using the Service, you consent to the transfer of your data to the US. We rely on our service providers' compliance frameworks (SOC 2, GDPR DPAs) for data protection.</p>
 
-  <h2>12. Contact</h2>
-  <p>Privacy questions? Email <a href="mailto:info@cambriancatalyst.com">info@cambriancatalyst.com</a>.</p>
+  <h2>12. Changes to This Policy</h2>
+  <p>We may update this policy as the platform evolves. We'll notify you of material changes via email or an in-app notice. Continued use of the Service after changes constitutes acceptance.</p>
 
-  <p style="margin-top:32px;font-size:12px;color:#b8b6ae;">Cambrian Catalyst LLC &middot; Seattle, WA</p>
+  <h2>13. Contact Us</h2>
+  <p>Privacy questions, data requests, or concerns? Email <a href="mailto:joe@cambriancatalyst.ai">joe@cambriancatalyst.ai</a>.</p>
+
+  <p style="margin-top:32px;font-size:12px;color:#a8a8b8;">&copy; 2026 Cambrian Catalyst LLC</p>
 </body>
 </html>

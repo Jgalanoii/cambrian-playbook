@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="rocketBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E85D3A"/>
+      <stop offset="100%" stop-color="#D14E2D"/>
+    </linearGradient>
+    <linearGradient id="flames" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="60%" stop-color="#E85D3A"/>
+      <stop offset="100%" stop-color="#E03E3E"/>
+    </linearGradient>
+    <linearGradient id="monsterBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0EA47A"/>
+      <stop offset="100%" stop-color="#0B8462"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Flames -->
+  <ellipse cx="256" cy="440" rx="38" ry="60" fill="url(#flames)" opacity="0.9"/>
+  <ellipse cx="240" cy="450" rx="20" ry="45" fill="#F59E0B" opacity="0.7"/>
+  <ellipse cx="272" cy="448" rx="18" ry="40" fill="#F59E0B" opacity="0.6"/>
+  <!-- Flame sparks -->
+  <circle cx="230" cy="470" r="6" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="275" cy="480" r="5" fill="#E85D3A" opacity="0.4"/>
+  <circle cx="250" cy="490" r="4" fill="#F59E0B" opacity="0.3"/>
+
+  <!-- Rocket body -->
+  <path d="M220,380 L220,200 Q220,140 256,100 Q292,140 292,200 L292,380 Z" fill="url(#rocketBody)"/>
+  <!-- Rocket nose cone highlight -->
+  <path d="M240,200 L240,160 Q240,130 256,110 Q264,130 264,160 L264,200 Z" fill="#F5B8A8" opacity="0.3"/>
+  <!-- Rocket window -->
+  <circle cx="256" cy="240" r="22" fill="#2D3A8C"/>
+  <circle cx="256" cy="240" r="18" fill="#EEF0FA"/>
+  <circle cx="256" cy="240" r="14" fill="#2D3A8C" opacity="0.15"/>
+  <!-- Window shine -->
+  <ellipse cx="250" cy="234" rx="6" ry="8" fill="white" opacity="0.5"/>
+  <!-- Rocket stripe -->
+  <rect x="220" y="300" width="72" height="8" rx="2" fill="#FEF0EC" opacity="0.6"/>
+  <!-- Rocket fins -->
+  <path d="M220,340 L190,390 L220,380 Z" fill="#D14E2D"/>
+  <path d="M292,340 L322,390 L292,380 Z" fill="#D14E2D"/>
+  <!-- Fin inner detail -->
+  <path d="M220,355 L200,385 L220,378 Z" fill="#E85D3A" opacity="0.5"/>
+  <path d="M292,355 L312,385 L292,378 Z" fill="#E85D3A" opacity="0.5"/>
+
+  <!-- Monster - sitting on top of the rocket -->
+  <!-- Monster body -->
+  <ellipse cx="256" cy="120" rx="52" ry="45" fill="url(#monsterBody)"/>
+  <!-- Monster belly -->
+  <ellipse cx="256" cy="128" rx="35" ry="28" fill="#ECFDF5" opacity="0.4"/>
+
+  <!-- Monster head -->
+  <circle cx="256" cy="68" r="38" fill="url(#monsterBody)"/>
+  <!-- Monster face highlight -->
+  <circle cx="256" cy="65" r="30" fill="#0EA47A" opacity="0.3"/>
+
+  <!-- Eyes - big, fun, slightly derpy -->
+  <ellipse cx="240" cy="58" rx="14" ry="16" fill="white"/>
+  <ellipse cx="274" cy="58" rx="14" ry="16" fill="white"/>
+  <!-- Pupils - looking up and to the right (excited!) -->
+  <circle cx="244" cy="54" r="8" fill="#1a1a2e"/>
+  <circle cx="278" cy="54" r="8" fill="#1a1a2e"/>
+  <!-- Eye shine -->
+  <circle cx="247" cy="50" r="3" fill="white"/>
+  <circle cx="281" cy="50" r="3" fill="white"/>
+
+  <!-- Big goofy smile -->
+  <path d="M238,78 Q256,96 276,78" stroke="#0B8462" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Teeth (two little ones) -->
+  <rect x="250" y="78" width="5" height="6" rx="2" fill="white"/>
+  <rect x="258" y="78" width="5" height="6" rx="2" fill="white"/>
+
+  <!-- Monster horns/antennae -->
+  <path d="M232,38 L222,12 L236,30" fill="#F59E0B"/>
+  <circle cx="222" cy="10" r="5" fill="#F59E0B"/>
+  <path d="M280,38 L290,12 L276,30" fill="#F59E0B"/>
+  <circle cx="290" cy="10" r="5" fill="#F59E0B"/>
+
+  <!-- Monster arms (holding onto rocket) -->
+  <!-- Left arm -->
+  <path d="M210,115 Q190,140 195,170 Q198,175 205,170 Q200,145 218,125" fill="url(#monsterBody)" stroke="#0B8462" stroke-width="2"/>
+  <!-- Left hand gripping rocket -->
+  <circle cx="200" cy="170" r="8" fill="#0EA47A"/>
+  <!-- Right arm -->
+  <path d="M302,115 Q322,140 317,170 Q314,175 307,170 Q312,145 294,125" fill="url(#monsterBody)" stroke="#0B8462" stroke-width="2"/>
+  <!-- Right hand gripping rocket -->
+  <circle cx="312" cy="170" r="8" fill="#0EA47A"/>
+
+  <!-- Monster legs (straddling rocket) -->
+  <path d="M225,155 Q210,175 210,195 Q212,200 218,195 Q215,178 230,160" fill="url(#monsterBody)"/>
+  <circle cx="212" cy="197" r="7" fill="#0EA47A"/>
+  <path d="M287,155 Q302,175 302,195 Q300,200 294,195 Q297,178 282,160" fill="url(#monsterBody)"/>
+  <circle cx="300" cy="197" r="7" fill="#0EA47A"/>
+
+  <!-- Speed lines -->
+  <line x1="160" y1="250" x2="160" y2="290" stroke="#E85D3A" stroke-width="2" opacity="0.3" stroke-linecap="round"/>
+  <line x1="145" y1="280" x2="145" y2="310" stroke="#E85D3A" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
+  <line x1="352" y1="260" x2="352" y2="300" stroke="#E85D3A" stroke-width="2" opacity="0.3" stroke-linecap="round"/>
+  <line x1="367" y1="290" x2="367" y2="320" stroke="#E85D3A" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
+  <!-- Stars/sparkles -->
+  <text x="140" y="200" font-size="18" opacity="0.4">✦</text>
+  <text x="360" y="180" font-size="14" opacity="0.3">✦</text>
+  <text x="170" y="350" font-size="12" opacity="0.25">✦</text>
+  <text x="340" y="360" font-size="16" opacity="0.35">✦</text>
+</svg>
