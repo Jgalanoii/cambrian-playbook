@@ -213,6 +213,10 @@ async function fetchKnowledgeLayer() {
     KL_GAMING_DISCOVERY = (d.gamingPlaybook?.discovery || []).join("\n");
     KL_PREDICTION_MARKETS = d.predictionMarketsPlaybook?.layerContent || "";
     KL_PREDICTION_MARKETS_DISCOVERY = (d.predictionMarketsPlaybook?.discovery || []).join("\n");
+    // NOTE: Knowledge tier is plan-dependent (trial gets core only, paid gets
+    // all verticals). This function must be re-called after plan upgrades
+    // (e.g. Stripe checkout success) so the user gets paid-tier layers
+    // immediately instead of waiting for cache expiry.
   } catch (e) { console.warn("Knowledge layer fetch failed — using fallback stubs:", e.message); }
 }
 import "./App.css";
@@ -2529,6 +2533,67 @@ function StepHint({ step }) {
   );
 }
 
+// ── MILESTONE CELEBRATIONS — gamified stage progression ──────────────────────
+// Escalating celebrations as users progress through the 9 stages.
+// Early stages: subtle encouragement. Later stages: full hype.
+// Tracked per-session so celebrations replay each session (they earned it).
+const MILESTONES = {
+  icp_built:       { emoji: "🎯", title: "ICP Locked In", msg: "You now know more about your buyer than 90% of reps out there. That's not luck — that's preparation.", level: 1 },
+  prospects_added: { emoji: "📋", title: "Prospects Loaded", msg: "Time to separate the signal from the noise. Your fit scores are cooking.", level: 1 },
+  first_fit:       { emoji: "📊", title: "Fit Scores In", msg: "Now you know where to spend your time. No more chasing logos that were never going to close.", level: 2 },
+  brief_built:     { emoji: "🔥", title: "Brief Built", msg: "You just did in 3 minutes what takes most reps an hour. And yours is better. Way better.", level: 2 },
+  hypothesis_ready:{ emoji: "🧪", title: "Game Plan Set", msg: "You're about to walk into this call more prepared than anyone they've talked to this quarter. Dangerous.", level: 3 },
+  call_started:    { emoji: "🎙️", title: "You're Live", msg: "Discovery doesn't have to suck. Milton's got your back. Go make it count.", level: 3 },
+  post_call:       { emoji: "🏆", title: "Deal Routed", msg: "CRM updated. Follow-up drafted. Next steps mapped. That's a full cycle of excellence right there.", level: 4 },
+  hubspot_pushed:  { emoji: "🚀", title: "Pushed to CRM", msg: "Your HubSpot just got smarter. Every piece of intel from this session — in one click. Your manager is going to wonder what happened.", level: 4 },
+};
+
+// Celebration intensity by level: 1=subtle, 2=medium, 3=excited, 4=full hype
+const LEVEL_STYLES = {
+  1: { bg: "var(--green-bg)", border: "var(--green)", color: "var(--green)", duration: 4000 },
+  2: { bg: "var(--tan-3)", border: "var(--tan-0)", color: "var(--tan-0)", duration: 5000 },
+  3: { bg: "var(--navy-bg)", border: "var(--navy)", color: "var(--navy)", duration: 6000 },
+  4: { bg: "linear-gradient(135deg, var(--tan-3), var(--green-bg))", border: "var(--tan-0)", color: "var(--tan-0)", duration: 7000 },
+};
+
+function MilestoneCelebration({ milestone, onDismiss }) {
+  const m = MILESTONES[milestone];
+  if (!m) return null;
+  const s = LEVEL_STYLES[m.level];
+  const isHype = m.level >= 3;
+
+  React.useEffect(() => {
+    const t = setTimeout(onDismiss, s.duration);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div style={{
+      position:"fixed", bottom: 24, right: 24, zIndex: 9999,
+      background: s.bg, border: `2px solid ${s.border}`,
+      borderRadius: 14, padding: isHype ? "20px 24px" : "16px 20px",
+      maxWidth: 380, boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
+      animation: "cmd-slide-in 0.4s cubic-bezier(.2,.8,.2,1)",
+    }}>
+      <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+        <span style={{fontSize: isHype ? 32 : 24, lineHeight:1}}>{m.emoji}</span>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:"'Lora',serif", fontSize: isHype ? 16 : 14, fontWeight:700, color: s.color, marginBottom:4}}>
+            {m.title}{isHype ? " 🎉" : ""}
+          </div>
+          <div style={{fontSize:12, color:"var(--ink-1)", lineHeight:1.6}}>{m.msg}</div>
+        </div>
+        <button onClick={onDismiss} aria-label="Dismiss" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:"var(--ink-3)",padding:"0 2px"}}>✕</button>
+      </div>
+      {m.level >= 4 && (
+        <div style={{marginTop:10, textAlign:"center", fontSize:11, fontWeight:700, color:s.color, letterSpacing:"0.5px", textTransform:"uppercase"}}>
+          Smart people go further.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── COMMAND PALETTE ──────────────────────────────────────────────────────────
 // Cmd-K / Ctrl-K overlay. Follows Linear/Notion/VS Code pattern. Actions are
 // a declarative registry built at render time inside the main component (so
@@ -3714,6 +3779,26 @@ export default function App(){
   const[lastBriefTime,setLastBriefTime]=useState(0); // timestamp of last brief generation
   const[editToast,setEditToast]=useState(""); // toast message for any edit confirmation
   const[miltonNudge,setMiltonNudge]=useState(""); // cheeky Milton message for bad inputs
+  // Milestone celebrations — gamified stage progression
+  const[activeCelebration,setActiveCelebration]=useState(null);
+  const celebratedRef=useRef(new Set()); // track which milestones fired this session
+  const celebrate=(id)=>{if(!celebratedRef.current.has(id)&&MILESTONES[id]){celebratedRef.current.add(id);setActiveCelebration(id);}};
+  // Milestone triggers — watch state transitions
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(sellerICP?.icp && !sellerICP._error) celebrate("icp_built"); },[sellerICP?.icp?.industries]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0) celebrate("prospects_added"); },[cohorts.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step===3]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(brief?.companySnapshot && !brief._loadingSections?.overview) celebrate("brief_built"); },[brief?.companySnapshot]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(riverHypo?.reality) celebrate("hypothesis_ready"); },[riverHypo?.reality]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(step===7) celebrate("call_started"); },[step===7]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
+
   const[icpLoading,setIcpLoading]=useState(false);
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
   const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
@@ -7001,6 +7086,7 @@ ${isOpen
         if(d.created?.tasks)parts.push(`${d.created.tasks} task${d.created.tasks>1?"s":""}`);
         if(d.created?.contacts)parts.push(`${d.created.contacts} contact${d.created.contacts>1?"s":""}`);
         setCopied("hs_ok");setTimeout(()=>setCopied(""),4000);
+        celebrate("hubspot_pushed");
         setChatMessages(prev=>[...prev,{role:"assistant",content:`Pushed to HubSpot: ${parts.join(", ")} created.`}]);
       }else{
         console.error("[hubspot] Push failed:", r.status, JSON.stringify(d));
@@ -7872,6 +7958,10 @@ ${isOpen
       window.history.replaceState({}, "", window.location.pathname);
       // Refresh org context to pick up new plan limits from webhook
       setTimeout(refreshOrgCtx, 2000); // Give webhook a moment to fire
+      // Re-fetch knowledge layers — plan upgrade unlocks paid-tier vertical
+      // knowledge, compliance, battle cards, etc. Without this, the cached
+      // trial-tier layers would persist until the 5-min cache expires.
+      setTimeout(fetchKnowledgeLayer, 2500);
       setChatMessages(prev => [...prev, { role: "assistant", content: `Welcome to the ${plan.charAt(0).toUpperCase()+plan.slice(1)} plan! Your runs have been upgraded. Let's go close some deals.` }]);
       setChatOpen(true);
     } else if (checkout === "cancel") {
@@ -13090,6 +13180,9 @@ ${isOpen
           </div>
         </div>
       )}
+
+      {/* Milestone celebration — gamified stage progression */}
+      {activeCelebration && <MilestoneCelebration milestone={activeCelebration} onDismiss={()=>setActiveCelebration(null)} />}
 
       {/* Token usage badge — visible to all org members, hidden in print. Collapse when at limit. */}
       {orgCtx && orgCtx.run_count < orgCtx.run_limit && (

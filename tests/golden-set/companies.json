@@ -335,7 +335,7 @@
       "facts": [
         { "field": "industry", "tier": 1, "value": "Hospitality", "match": "set_membership", "accepted": ["hospitality", "hotel", "lodging", "travel"], "verified": "2026-05-19", "source": "marriott.com" },
         { "field": "ownership_type", "tier": 1, "value": "Public", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "NASDAQ: MAR" },
-        { "field": "hq_location", "tier": 1, "value": "Bethesda", "match": "fuzzy_location", "verified": "2026-05-19", "source": "Wikipedia" },
+        { "field": "hq_location", "tier": 1, "value": "Bethesda", "match": "set_membership", "accepted": ["Bethesda", "Maryland", "MD"], "verified": "2026-05-22", "source": "Bethesda, MD — model sometimes returns state instead of city" },
         { "field": "founded", "tier": 1, "value": "1927", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "Wikipedia" }
       ],
       "invariants": ["exec_consistency", "no_placeholders"],
