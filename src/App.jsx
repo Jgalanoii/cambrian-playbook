@@ -3527,7 +3527,7 @@ const PAGE_GUIDES = {
   8: { title: "Post-Call Analysis", items: [
     "Deal Route (Fast Track / Nurture / Disqualify) is based on your discovery capture",
     "The Scorecard compares your pre-call hypothesis to what you actually heard",
-    "CRM Note is ready to paste — copy it directly into Salesforce/HubSpot",
+    "CRM Note is ready to paste — copy it directly into your CRM",
     "The Follow-Up Email is sendable quality — copy and personalize",
     "Download the Customer-Facing Call Summary for a professional recap to share with the prospect",
   ]},
@@ -5891,7 +5891,7 @@ ${isOpen
           `- Each match must be a REAL, currently operating company\n` +
           `- Include the company's primary website domain\n` +
           `- Include a one-line description that distinguishes it from the others\n` +
-          `- Only return 1 match if the name is truly unique (e.g. "Salesforce", "Workday", "Starbucks")\n\n` +
+          `- Only return 1 match if the name is truly unique (e.g. a well-known brand with no ambiguity)\n\n` +
           `Return ONLY raw JSON: {"matches":[{"name":"Exact Company Name","domain":"company.com","description":"One line — what they do, HQ, industry"}]}`
         }],
       });
@@ -8579,7 +8579,7 @@ ${isOpen
                   <div style={{marginBottom:8}}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>Research any company — deep intel in under 30 seconds</div>
                     <div style={{display:"flex",gap:8}}>
-                      <input type="text" placeholder="Company name or website (e.g. Acme Corp, nike.com)"
+                      <input type="text" placeholder="Company name or website (e.g. Acme Corp, rocketfuel.io)"
                         autoFocus
                         value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
                         onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()&&!disambigLoading){setSessionMode("quick");launchQuickBrief();}e.stopPropagation();}}
@@ -8661,7 +8661,7 @@ ${isOpen
                     Research any company — executives, strategy, news, and sentiment. Create a free account to unlock full sessions with ICP scoring, solution mapping, hypothesis, coaching, and more.
                   </div>
                   <div style={{display:"flex",gap:8}}>
-                    <input type="text" placeholder="Company name or website (e.g. Acme Corp, nike.com)"
+                    <input type="text" placeholder="Company name or website (e.g. Acme Corp, rocketfuel.io)"
                       autoFocus
                       value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
                       onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()&&!disambigLoading) launchQuickBrief();e.stopPropagation();}}
@@ -8921,7 +8921,7 @@ ${isOpen
                       pp.type==="ROI Metric"?"e.g. Average 3.2x ROI within 12 months":
                       pp.type==="Customer Win"?"e.g. Won a major enterprise account over the incumbent — 18-month displacement":
                       pp.type==="Award"?"e.g. Industry award — Cool Vendor 2025 in Employee Experience":
-                      pp.type==="Partnership"?"e.g. Salesforce AppExchange Partner — integrated rewards":
+                      pp.type==="Partnership"?"e.g. CRM Marketplace Partner — integrated rewards":
                       "e.g. SOC 2 Type II certified"
                     } value={pp.content} onChange={e=>setSellerProofPoints(prev=>prev.map((p,j)=>j===i?{...p,content:e.target.value}:p))} style={{flex:1,fontSize:12}}/>
                     <button className="prod-remove" onClick={()=>setSellerProofPoints(prev=>prev.filter((_,j)=>j!==i))} title="Remove">✕</button>
@@ -10035,7 +10035,7 @@ ${isOpen
                   onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={handleDrop}
                   onClick={()=>fileRef.current.click()}>
                   <div className="upload-label">{fileName||"Drop your CSV file here"}</div>
-                  <div className="upload-hint">{rows.length>0?`${rows.length} records loaded`:"Salesforce · HubSpot · Custom CRM"}</div>
+                  <div className="upload-hint">{rows.length>0?`${rows.length} records loaded`:"Any CRM export · CSV · Excel"}</div>
                   <button className="btn btn-secondary" onClick={e=>{e.stopPropagation();fileRef.current.click();}}>Browse File</button>
                   <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={e=>onFile(e.target.files[0])}/>
                 </div>
