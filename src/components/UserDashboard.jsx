@@ -6,6 +6,20 @@ import React, { useState, useEffect, useMemo } from "react";
 import { fetchOrgMembers, fetchOrgInvitations, sbPatch } from "../lib/org.js";
 import { timeAgo } from "../lib/utils.js";
 
+// ── Sortable column header component ──
+function SortTh({ sortKey, sortDir, onSort, colKey, children, style }) {
+  const active = sortKey === colKey;
+  return (
+    <th
+      style={{ cursor: "pointer", userSelect: "none", ...(active ? { color: "var(--ink-0)", fontWeight: 800, background: "rgba(0,0,0,0.02)" } : {}), ...style }}
+      onClick={() => onSort(colKey)}
+    >
+      {children}{" "}
+      <span style={{ color: "var(--ink-2)", fontSize: 10 }}>{active ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}</span>
+    </th>
+  );
+}
+
 // ── HubSpotSection (CRM integration) ──
 function HubSpotSection({ sbToken, onStatusChange }) {
   const [status, setStatus] = useState(null);
@@ -140,6 +154,21 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
   const [confirmAction, setConfirmAction] = useState(null);
   const [openMenu, setOpenMenu] = useState(null);
 
+  // ── Sort state for Team Members table ──
+  const [teamSortKey, setTeamSortKey] = useState(null);
+  const [teamSortDir, setTeamSortDir] = useState("asc");
+  const onTeamSort = (key) => {
+    if (teamSortKey === key) setTeamSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setTeamSortKey(key); setTeamSortDir("asc"); }
+  };
+  // ── Sort state for Sessions table ──
+  const [udSessionSortKey, setUdSessionSortKey] = useState(null);
+  const [udSessionSortDir, setUdSessionSortDir] = useState("asc");
+  const onUdSessionSort = (key) => {
+    if (udSessionSortKey === key) setUdSessionSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setUdSessionSortKey(key); setUdSessionSortDir("asc"); }
+  };
+
   const isAdmin = orgCtx?.userRole === "admin";
   const isManager = orgCtx?.userRole === "manager";
   const canViewTeam = isAdmin || isManager;
@@ -197,6 +226,25 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
     : (orgCtx?.run_count || 0) >= (orgCtx?.run_limit || 5) * 0.8
       ? "var(--amber)"
       : "var(--green)";
+
+  // ── Generic sort comparator for tables ──
+  const sortRows = (rows, key, dir, opts = {}) => {
+    if (!key) return rows;
+    const dateKeys = opts.dateKeys || {};
+    return [...rows].sort((a, b) => {
+      let av = a[key], bv = b[key];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (dateKeys[key] || /date|login|created|updated|active/i.test(key)) {
+        const ta = new Date(av).getTime() || 0, tb = new Date(bv).getTime() || 0;
+        return dir === "asc" ? ta - tb : tb - ta;
+      }
+      if (typeof av === "number" && typeof bv === "number") return dir === "asc" ? av - bv : bv - av;
+      const sa = String(av).toLowerCase(), sb = String(bv).toLowerCase();
+      return dir === "asc" ? sa.localeCompare(sb) : sb.localeCompare(sa);
+    });
+  };
 
   // ── Settings actions ──
   const saveOrgName = async () => {
@@ -532,16 +580,16 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Name / Email</th>
-                    <th>Role</th>
+                    <SortTh sortKey={teamSortKey} sortDir={teamSortDir} onSort={onTeamSort} colKey="name">Name / Email</SortTh>
+                    <SortTh sortKey={teamSortKey} sortDir={teamSortDir} onSort={onTeamSort} colKey="role">Role</SortTh>
                     <th>Status</th>
-                    <th>Last Active</th>
+                    <SortTh sortKey={teamSortKey} sortDir={teamSortDir} onSort={onTeamSort} colKey="_lastActive">Last Active</SortTh>
                     {isAdmin && <th style={{ width: 40 }}></th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map(m => {
-                    const lastActive = memberLastActive(m.id);
+                  {sortRows(members.map(m => ({ ...m, _lastActive: memberLastActive(m.id) })), teamSortKey, teamSortDir, { dateKeys: { _lastActive: true } }).map(m => {
+                    const lastActive = m._lastActive;
                     const status = lastActive ? "Active" : "Never active";
                     return (
                       <tr key={m.id}>
@@ -884,15 +932,15 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                   <thead>
                     <tr>
                       <th style={{ width: 20 }}></th>
-                      <th>Session</th>
-                      <th>User</th>
+                      <SortTh sortKey={udSessionSortKey} sortDir={udSessionSortDir} onSort={onUdSessionSort} colKey="name">Session</SortTh>
+                      <SortTh sortKey={udSessionSortKey} sortDir={udSessionSortDir} onSort={onUdSessionSort} colKey="user_id">User</SortTh>
                       <th>Seller URL</th>
-                      <th style={{ width: 130 }}>Last Updated</th>
+                      <SortTh sortKey={udSessionSortKey} sortDir={udSessionSortDir} onSort={onUdSessionSort} colKey="updated_at" style={{ width: 130 }}>Last Updated</SortTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {teamSessions
-                      .filter(s => !sessionFilter || s.user_id === sessionFilter)
+                    {sortRows(teamSessions
+                      .filter(s => !sessionFilter || s.user_id === sessionFilter), udSessionSortKey, udSessionSortDir, { dateKeys: { updated_at: true, created_at: true } })
                       .map(s => {
                         const isRecent = (Date.now() - new Date(s.updated_at).getTime()) < 86400000;
                         const member = members.find(m => m.id === s.user_id);

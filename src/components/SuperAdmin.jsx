@@ -4,6 +4,20 @@
 import React, { useState, useEffect } from "react";
 import { timeAgo } from "../lib/utils.js";
 
+// ── Sortable column header component ──
+function SortTh({ sortKey, sortDir, onSort, colKey, children, style }) {
+  const active = sortKey === colKey;
+  return (
+    <th
+      style={{ cursor: "pointer", userSelect: "none", ...(active ? { color: "var(--ink-0)", fontWeight: 800, background: "rgba(0,0,0,0.02)" } : {}), ...style }}
+      onClick={() => onSort(colKey)}
+    >
+      {children}{" "}
+      <span style={{ color: "var(--ink-2)", fontSize: 10 }}>{active ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}</span>
+    </th>
+  );
+}
+
 const SUPERUSER_EMAIL = "itsjoegalano@gmail.com";
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -32,6 +46,21 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [refreshing, setRefreshing] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [expandedSession, setExpandedSession] = useState(null);
+
+  // ── Sort state for Members table ──
+  const [memberSortKey, setMemberSortKey] = useState(null);
+  const [memberSortDir, setMemberSortDir] = useState("asc");
+  const onMemberSort = (key) => {
+    if (memberSortKey === key) setMemberSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setMemberSortKey(key); setMemberSortDir("asc"); }
+  };
+  // ── Sort state for Sessions table ──
+  const [sessionSortKey, setSessionSortKey] = useState(null);
+  const [sessionSortDir, setSessionSortDir] = useState("asc");
+  const onSessionSort = (key) => {
+    if (sessionSortKey === key) setSessionSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSessionSortKey(key); setSessionSortDir("asc"); }
+  };
 
   const fetchData = (showSpinner) => {
     if (showSpinner) setLoading(true);
@@ -161,6 +190,24 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
 
   const hasActiveFilters = dateRange !== "all" || userTypeFilter !== "all" || roleFilter || planFilter || searchQuery;
 
+  // ── Generic sort comparator for tables ──
+  const sortRows = (rows, key, dir, opts = {}) => {
+    if (!key) return rows;
+    const dateKeys = opts.dateKeys || {};
+    return [...rows].sort((a, b) => {
+      let av = a[key], bv = b[key];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (dateKeys[key] || /date|login|created|updated|active/i.test(key)) {
+        const ta = new Date(av).getTime() || 0, tb = new Date(bv).getTime() || 0;
+        return dir === "asc" ? ta - tb : tb - ta;
+      }
+      if (typeof av === "number" && typeof bv === "number") return dir === "asc" ? av - bv : bv - av;
+      const sa = String(av).toLowerCase(), sb = String(bv).toLowerCase();
+      return dir === "asc" ? sa.localeCompare(sb) : sb.localeCompare(sa);
+    });
+  };
 
   const applyPlanToOrg = async (orgId, planId) => {
     const plan = plans.find(p => p.id === planId);
@@ -597,17 +644,17 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                 <table className="admin-table" style={{ minWidth: 700 }}>
                   <thead>
                     <tr>
-                      <th>Session</th>
-                      <th>User</th>
+                      <SortTh sortKey={sessionSortKey} sortDir={sessionSortDir} onSort={onSessionSort} colKey="session_name">Session</SortTh>
+                      <SortTh sortKey={sessionSortKey} sortDir={sessionSortDir} onSort={onSessionSort} colKey="user_name">User</SortTh>
                       <th>Seller</th>
                       <th>Depth</th>
                       <th>Accounts</th>
                       <th>Route</th>
-                      <th>Updated</th>
+                      <SortTh sortKey={sessionSortKey} sortDir={sessionSortDir} onSort={onSessionSort} colKey="updated_at">Updated</SortTh>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredActivity.map((a, i) => {
+                    {sortRows(filteredActivity, sessionSortKey, sessionSortDir, { dateKeys: { updated_at: true } }).map((a, i) => {
                       const depthDots = [a.hasICP, a.hasBrief, a.hasHypo, a.hasPostCall, a.hasSolutionFit];
                       const depthLabels = ["ICP", "Brief", "Hypo", "Post", "SA"];
                       const isExpanded = expandedSession === a.id;
@@ -880,17 +927,17 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Name / Email</th>
-                    <th>Role</th>
-                    <th>Organization</th>
+                    <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="name">Name / Email</SortTh>
+                    <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="role">Role</SortTh>
+                    <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="org_name">Organization</SortTh>
                     <th>Status</th>
-                    <th>Last Active</th>
+                    <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="last_active">Last Active</SortTh>
                     <th>Researched</th>
                     <th style={{ width: 50 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.sort((a, b) => (b.session_count || 0) - (a.session_count || 0)).map(u => {
+                  {sortRows(filteredUsers, memberSortKey, memberSortDir, { dateKeys: { last_active: true } }).map(u => {
                     const adminAction = async (action, extra = {}) => {
                       try {
                         const r = await fetch("/api/admin", {
