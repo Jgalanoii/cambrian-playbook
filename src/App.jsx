@@ -2735,10 +2735,10 @@ function BriefLoader({ company, status }) {
 
 // ── PRICING TIERS (shared by landing page + upgrade modal) ───────────────────
 const PRICING_TIERS = [
-  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs",desc:"For the AE who refuses to wing it",features:["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Session saving + export"],priceId:"price_1TTsJr1ukA5Jsm7oFWPVRXWW"},
-  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support"],popular:true,priceId:"price_1TTsK31ukA5Jsm7odTEg1faZ"},
-  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding"],priceId:"price_1TTsKH1ukA5Jsm7oKosAgD2i"},
-  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Invoice / PO billing"],priceId:"price_1TTsKW1ukA5Jsm7o41o7K39i"},
+  {id:"starter",name:"Starter",price:"$99",period:"/mo",runs:"25 runs/mo",desc:"For the AE who refuses to wing it",features:["Full 9-step workflow","31 knowledge layers","Milton AI coaching","HubSpot CRM push","Unused runs roll over"],priceId:"price_1TTsJr1ukA5Jsm7oFWPVRXWW"},
+  {id:"pro",name:"Pro",price:"$349",period:"/mo",runs:"100 runs/mo",desc:"For the team that wants every rep prepared",features:["Everything in Starter","Team collaboration","Org-level reporting","Priority support","Unused runs roll over"],popular:true,priceId:"price_1TTsK31ukA5Jsm7odTEg1faZ"},
+  {id:"team",name:"Team",price:"$799",period:"/mo",runs:"250 runs/mo",desc:"For the org that's done with inconsistent prep",features:["Everything in Pro","Bulk user management","Role-based access","Dedicated onboarding","Unused runs roll over"],priceId:"price_1TTsKH1ukA5Jsm7oKosAgD2i"},
+  {id:"enterprise",name:"Enterprise",price:"$2,500",period:"/mo",runs:"1,000 runs/mo",desc:"For revenue teams who want custom intelligence",features:["Everything in Team","Custom knowledge layers","SSO + security review","Dedicated success manager","Unused runs roll over"],priceId:"price_1TTsKW1ukA5Jsm7o41o7K39i"},
 ];
 
 // ── AUTH / PASSWORD GATE ──────────────────────────────────────────────────────
@@ -3200,7 +3200,7 @@ function PasswordGate({ onAuth }) {
               Pricing that respects your intelligence
             </div>
             <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:500,margin:"0 auto",lineHeight:1.6}}>
-              No per-seat gotchas. No "contact sales" for a number. Pick a plan, start closing.
+              No per-seat gotchas. No "contact sales" for a number. Unused runs roll over — use them when you need them, not because a clock is ticking.
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14}}>
@@ -3226,8 +3226,14 @@ function PasswordGate({ onAuth }) {
               </div>
             ))}
           </div>
+          <div style={{background:"var(--bg-1)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"16px 20px",marginTop:20,maxWidth:600,margin:"20px auto 0"}}>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>How runs work</div>
+            <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.7}}>
+              Each plan includes a monthly run allocation. One run = one full research brief with all 10 sections. <strong>Unused runs roll over to the next month</strong> (up to one month's worth). Use them when you need them — no pressure to burn through credits before the clock resets. If you cancel, the current month is refundable. Rollover credits carry no cash value.
+            </div>
+          </div>
           <div style={{textAlign:"center",marginTop:16,fontSize:13,color:"var(--ink-2)"}}>
-            Need custom volume, SSO, or invoice billing? <a href="mailto:info@cambriancatalyst.com" style={{color:"var(--tan-0)",fontWeight:600,textDecoration:"none"}}>info@cambriancatalyst.com</a>
+            Need custom volume, SSO, or invoice billing? <a href="mailto:joe@cambriancatalyst.ai" style={{color:"var(--tan-0)",fontWeight:600,textDecoration:"none"}}>joe@cambriancatalyst.ai</a>
           </div>
         </div>
       </div>
@@ -13533,6 +13539,11 @@ ${isOpen
                   </button>
                 </div>
               ))}
+            </div>
+
+            {/* Rollover note */}
+            <div style={{padding:"12px 24px",textAlign:"center",fontSize:12,color:"var(--ink-2)",lineHeight:1.6,borderTop:"1px solid var(--line-0)"}}>
+              Unused runs roll over to the next month (up to one month's worth). No pressure to use them all — they're yours until you need them.
             </div>
 
             {/* Enterprise / Invoice */}
