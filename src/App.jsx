@@ -4355,9 +4355,14 @@ Find companies SIMILAR to these customers — same industry, similar size, simil
 ${(()=>{
   const comps = (icp.competitiveAlternatives||[]).filter(c => typeof c === "object" && c.name && c.theirCustomers?.length);
   if (!comps.length) return "No competitor customer data available. Focus on lookalike seeding above.";
-  return "The seller's competitors and their known customers:\n" +
-    comps.map(c => "  • " + c.name + " → customers: " + c.theirCustomers.join(", ") + (c.theirWeakness ? " (weakness: " + c.theirWeakness + ")" : "")).join("\n") +
-    "\n\nTHESE COMPETITOR CUSTOMERS ARE THE HIGHEST-VALUE PROSPECTS. They already have budget for this category, a proven use case, and switching potential. Include as many of these as match the size/industry filters. Also search for OTHER customers of these competitors that aren't listed above.";
+  return "The seller's competitors and their VERIFIED customers (with evidence):\n" +
+    comps.map(c => {
+      const custs = c.theirCustomers.map(tc => typeof tc === "object" ? `${tc.name} [${tc.evidence||"unverified"}]` : tc);
+      return "  • " + c.name + (c.theirWeakness ? " (weakness: " + c.theirWeakness + ")" : "") + "\n    Customers: " + custs.join(", ");
+    }).join("\n") +
+    "\n\nTHESE COMPETITOR CUSTOMERS ARE THE HIGHEST-VALUE PROSPECTS. They have budget, use case, and switching potential." +
+    "\nFor each competitor customer you include in the prospect list, note in the 'why' field that they are a known customer of [competitor name] and cite the evidence source." +
+    "\nAlso search for OTHER customers of these competitors — look for case studies, partner pages, press releases, and customer logos on competitor websites.";
 })()}
 
 ═══ RULES ═══
@@ -4618,12 +4623,16 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `  26 = you can name the SPECIFIC competitor product the target uses AND that competitor is in the seller's competitive alternatives list\n`+
         `  20 = DEFAULT — use this for ALL other cases, including: no known incumbent, uncertain, probable but unverified\n`+
         `  10 = target has a PUBLICLY DOCUMENTED enterprise-wide deployment of a deep platform incumbent with multi-year contract — only score 10 if you can cite the specific deployment\n`+
-        // Inject competitor customer lists for automatic 26 scoring
+        // Inject competitor customer lists with evidence for automatic 26 scoring
         ((() => {
           const comps = (sellerICP?.icp?.competitiveAlternatives||[]).filter(c => typeof c === "object" && c.theirCustomers?.length);
           if (!comps.length) return "";
-          return `\nCOMPETITOR CUSTOMER LIST (auto-score 26 if target appears here):\n` +
-            comps.map(c => `  ${c.name}: ${c.theirCustomers.join(", ")}`).join("\n") + "\n";
+          return `\nCOMPETITOR CUSTOMER LIST (auto-score 26 if target appears here — cite the evidence in incumbentRisk):\n` +
+            comps.map(c => {
+              const custs = c.theirCustomers.map(tc => typeof tc === "object" ? `${tc.name} [evidence: ${tc.evidence||"unverified"}]` : tc);
+              return `  ${c.name}: ${custs.join(", ")}`;
+            }).join("\n") +
+            "\nWhen scoring a company from this list, incumbentRisk MUST reference the evidence: 'Currently uses [competitor] (source: [evidence])'. This is verifiable competitive intelligence, not a guess.\n";
         })()) +
         (competitorList.length ? `Seller's competitive alternatives: ${competitorList.join(", ")}.\n` : "")+
         `CONSISTENCY RULE: Score 26 ONLY if you can name "Company X uses [specific product from competitive list above]." If you cannot complete that sentence with certainty, score 20. This is the #1 rule for reducing score variance.\n`+
@@ -5288,6 +5297,7 @@ ${isOpen
       `- If a buyer fits two buckets, pick the one matching the MEDIAN customer.\n`+
       `- CUSTOMER NAMES: Only include customers you found in the RESEARCH above or are certain from training knowledge. Do NOT guess or invent customer names — a wrong name destroys credibility. 3-5 verified names, or fewer if you can't verify more.\n`+
       `- COMPETITOR NAMES: Only include competitors you can verify. Include "Status quo / do nothing" as the first alternative.\n`+
+      `- COMPETITOR CUSTOMERS — EVIDENCE REQUIRED: For each competitor's named customers, you MUST provide a source: a case study URL, press release, partnership announcement, or specific verifiable reference. "InComm serves Albertsons" is NOT enough — include WHY you know this (e.g. "InComm case study: incomm.com/case-studies/albertsons" or "Press release: Albertsons selects InComm for loyalty card program, Jan 2025"). If you cannot cite evidence for a competitor-customer relationship, do NOT include it. An unverified claim is worse than no claim — a rep who cites a wrong competitor relationship in a meeting loses the deal.\n`+
       `- DIFFERENTIATORS: Must be specific to THIS seller, not generic category claims. "AI-powered" is generic. "Only platform with native Visa/Mastercard issuing" is specific.\n`+
       `- ALL facts must be grounded in the research above or verifiable training knowledge. Empty string if unknown.\n`+
       `- SELLER ADVOCACY (CRITICAL): You are building this ICP FOR the seller, not ABOUT them as a product to evaluate. NEVER disparage, undermine, or editorialize about the seller's product, pricing, market position, or viability. Do NOT say "there are simpler/cheaper alternatives", "limited market share", "niche player", or any language that positions the seller negatively. The ICP is a SALES TOOL — every word should help the seller WIN deals, not question whether they should exist. perceivedBarriers should describe BUYER objections (e.g. "integration complexity", "budget timing"), not your assessment of the seller's product quality.\n\n`+
@@ -5313,8 +5323,8 @@ ${isOpen
       `"topGains":["Measurable gain 1 — quantify if possible","Gain 2","Gain 3"],`+
       `"competitiveAlternatives":[`+
         `{"name":"Status quo / do nothing","theirCustomers":[]},`+
-        `{"name":"Named competitor 1 — verified from research","theirCustomers":["Customer A that uses this competitor","Customer B"],"theirWeakness":"Where they lose deals — 1 sentence"},`+
-        `{"name":"Named competitor 2 — verified","theirCustomers":["Customer C","Customer D"],"theirWeakness":""},`+
+        `{"name":"Named competitor 1 — verified from research","theirCustomers":[{"name":"Customer A","evidence":"Source: case study URL, press release, or specific reference proving this relationship"},{"name":"Customer B","evidence":"Source URL or specific citation"}],"theirWeakness":"Where they lose deals — 1 sentence"},`+
+        `{"name":"Named competitor 2 — verified","theirCustomers":[{"name":"Customer C","evidence":"Source"},{"name":"Customer D","evidence":"Source"}],"theirWeakness":""},`+
         `{"name":"Build in-house (if applicable)","theirCustomers":[]}`+
       `],`+
       `"uniqueDifferentiators":["Differentiator 1 — specific to THIS seller, not the category","Differentiator 2 — something a competitor cannot easily replicate"],`+
