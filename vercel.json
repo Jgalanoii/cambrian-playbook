@@ -5,7 +5,7 @@
     { "source": "/support", "destination": "/support.html" }
   ],
   "functions": {
-    "api/claude.js": { "maxDuration": 60 }
+    "api/claude.js": { "maxDuration": 120 }
   },
   "crons": [
     {

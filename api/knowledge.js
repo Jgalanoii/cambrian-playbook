@@ -194,13 +194,14 @@ export default async function handler(req, res) {
     offerFitFramework: OFFER_FIT_FRAMEWORK,
     repOnboarding: REP_ONBOARDING,
     qbrFramework: QBR_FRAMEWORK,
-    pricingNegotiation: PRICING_NEGOTIATION,
-    archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
-    postSaleExpansion: POST_SALE_EXPANSION,
-    solutionFitCards: SOLUTION_FIT_CARDS,
     // ── PAID-ONLY: Vertical knowledge layers, compliance, battle cards ──
     // Trial users get core frameworks above. Vertical depth is the premium.
     ...(isPaid ? {
+      // Advanced frameworks (paid only)
+      pricingNegotiation: PRICING_NEGOTIATION,
+      archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
+      postSaleExpansion: POST_SALE_EXPANSION,
+      solutionFitCards: SOLUTION_FIT_CARDS,
       // Payments deep knowledge layer
       paymentsIndustry: PAYMENTS_INDUSTRY_INJECTION,
       paymentsScoring: PAYMENTS_SCORING_CONTEXT,
@@ -299,11 +300,6 @@ export default async function handler(req, res) {
       cryptoStablecoinPlaybook: CRYPTO_STABLECOIN_PLAYBOOK,
       gamingPlaybook: GAMING_PLAYBOOK,
       predictionMarketsPlaybook: PREDICTION_MARKETS_PLAYBOOK,
-      // Advanced frameworks (paid only)
-      pricingNegotiation: PRICING_NEGOTIATION,
-      archetypeBattleCards: ARCHETYPE_BATTLE_CARDS,
-      postSaleExpansion: POST_SALE_EXPANSION,
-      solutionFitCards: SOLUTION_FIT_CARDS,
     } : {
       // Trial users: basic B2B sales + OKR frameworks only (no vertical depth)
       b2bSales: B2B_SALES_INJECTION,
