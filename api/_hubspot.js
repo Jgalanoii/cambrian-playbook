@@ -20,10 +20,16 @@ const HS_TOKEN_URL = "https://api.hubapi.com/oauth/v1/token";
 const HS_API_BASE = "https://api.hubapi.com";
 
 // SCOPES MUST EXACTLY MATCH HubSpot Developer App → Auth tab → Required scopes.
-// If you get "scope mismatch" error: compare this list with what's in the Auth tab.
-// Last verified working: 2026-05-22 with 14 scopes.
-// Reduced to 6 core scopes for reliability — expand only after verifying in Auth tab.
+// If "scope mismatch" error: compare this list 1:1 with the Auth tab.
+//
+// HOW TO ADD/REMOVE SCOPES (both sides must match):
+// 1. Add/remove in HubSpot App → Auth tab → Required scopes → Save
+// 2. Add/remove the same scope here → commit + push
+// 3. Users disconnect + reconnect to get the new permissions
+//
+// Last synced: 2026-05-26 (14 scopes)
 const SCOPES = [
+  // Core CRM (always needed)
   "oauth",
   "crm.objects.contacts.read",
   "crm.objects.contacts.write",
@@ -31,6 +37,14 @@ const SCOPES = [
   "crm.objects.companies.write",
   "crm.objects.deals.read",
   "crm.objects.deals.write",
+  // Extended (for full data mapping)
+  "crm.objects.leads.read",       // push fit-scored accounts as leads
+  "crm.objects.leads.write",
+  "crm.objects.owners.read",      // assign companies/deals to the rep
+  "crm.schemas.companies.read",   // discover custom properties for fit score
+  "crm.schemas.deals.read",       // discover deal pipeline stages
+  "crm.lists.read",               // create cohort lists from fit scoring
+  "crm.lists.write",
 ].join(" ");
 
 // ── Encryption helpers ─────────────────────────────────────────────────
