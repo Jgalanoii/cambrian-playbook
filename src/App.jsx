@@ -9593,7 +9593,7 @@ ${isOpen
                   <div style={{textAlign:"center",padding:"40px 0"}}>
                     <div className="load-spin" style={{width:28,height:28,borderWidth:3,margin:"0 auto 12px"}}/>
                     <div style={{fontSize:14,color:"var(--ink-1)"}}>{getQuip("default")}</div>
-                    <div style={{fontSize:12,color:"var(--ink-3)",marginTop:4}}>Private: Ariba · Coupa · press releases &nbsp;·&nbsp; Gov: SAM.gov · FPDS-NG · TED Europa</div>
+                    <div style={{fontSize:12,color:"var(--ink-3)",marginTop:4}}>Hunting for active opportunities that match your ICP — procurement portals, published RFPs, and contract vehicles</div>
                   </div>
                 )}
                 {rfpData.error && !rfpData.loading && (
@@ -10528,7 +10528,7 @@ ${isOpen
                               disabled={targetGenLoading || !ready}
                               style={{opacity: ready ? 1 : 0.5}}
                               onClick={generateTargets}>
-                              {targetGenLoading ? "✨ Building your target list…" : ready ? "✨ Build my target accounts →" : "Complete required fields above"}
+                              {targetGenLoading ? "✨ Finding your best targets…" : ready ? "✨ Build my pipeline →" : "Complete required fields above"}
                             </button>
                           </div>
                         );
@@ -10541,16 +10541,16 @@ ${isOpen
                           </div>
                           <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12,color:"var(--ink-2)"}}>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <span style={{color:"var(--green)"}}>✓</span> Analyzing your ICP and seller profile
+                              <span style={{color:"var(--green)"}}>✓</span> Analyzing your ICP, customers, and win patterns
                             </div>
                             <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <span style={{color:"var(--green)"}}>✓</span> Searching the web for ICP-matched companies
+                              <span style={{color:"var(--green)"}}>✓</span> Finding companies that belong in your pipeline
                             </div>
                             <div style={{display:"flex",alignItems:"center",gap:8,animation:"cmd-fade-in 0.5s ease"}}>
-                              <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Evaluating fit, competitors, and market signals
+                              <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Scoring fit, mapping competitors, and validating targets
                             </div>
                             <div style={{fontSize:11,color:"var(--ink-3)",marginTop:6}}>
-                              Opus is doing deep research — this takes 20-40 seconds but produces significantly better results than a quick search.
+                              This is deep research, not a quick list — we're building you a pipeline you can actually defend. Takes about 30 seconds.
                             </div>
                           </div>
                         </div>
