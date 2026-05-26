@@ -546,9 +546,20 @@ function authHeaders() {
 // ── CAMBRIAN MAX — premium model toggle ──────────────────────────────────
 // When enabled, AI calls use Opus instead of Haiku. ~15x cost but
 // significantly richer output. Set by the component; read by all AI helpers.
-const HAIKU = "claude-haiku-4-5-20251001";
-// Model selection — always Haiku. Opus available for future silent upgrades
-// on specific high-value calls (server-side, not user-facing toggle).
+// ── MODEL TIER STRATEGY ──────────────────────────────────────────────
+// Invest in quality at the top of the funnel (ICP, research brief),
+// then let rich context cascade to cheaper models downstream.
+//
+// Opus:   ICP build (amortized, cached), P3 strategy/opening angle
+// Sonnet: P1 overview, P2 executives, P4 solutions, P7 competitive, RFP search
+// Haiku:  P5-P6, P8-P10, hypothesis, discovery, coaching, post-call
+//
+// Cost: ~$1.15/run (was $0.38 all-Haiku). Margins: 54-71% by tier.
+const HAIKU  = "claude-haiku-4-5-20251001";
+const SONNET = "claude-sonnet-4-5-20250929";
+const OPUS   = "claude-opus-4-6-20250514";
+
+// Default model for calls that don't specify — Haiku (cheapest)
 function activeModel() { return HAIKU; }
 
 // Tracking context — set before brief generation, read by claudeFetch/streamAI
@@ -1038,7 +1049,7 @@ ANTI-HALLUCINATION RULES (apply to EVERY response):
 - A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.
 - NEVER disparage or undermine the selling organization. You are building tools FOR the seller. Do not editorialize about their product quality, pricing, viability, or market position.`;
 
-async function streamAI(prompt, onChunk, maxTok=2000) {
+async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Wrap the initial fetch in retry. Once the stream is open we let it run
   // through; mid-stream failures surface as a null parse result and the
@@ -1049,7 +1060,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
       method: 'POST',
       headers: { ...authHeaders(), ..._trackingCtx },
       body: JSON.stringify({
-        model: activeModel(),
+        model: model || activeModel(),
         max_tokens: maxTok,
         temperature: 0,
         system: ANTI_HALLUCINATION_SYSTEM,
@@ -1102,7 +1113,7 @@ async function streamAI(prompt, onChunk, maxTok=2000) {
 //   - Track content block types — only feed TEXT blocks to onChunk
 //   - Use extractJsonWithKey for final parse (handles preamble text)
 // anchorKey: the expected top-level JSON key to find (e.g. "elevatorPitch")
-async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null } = {}) {
+async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null, model=null } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let response = null;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -1110,7 +1121,7 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
       method: 'POST',
       headers: { ...authHeaders(), ..._trackingCtx },
       body: JSON.stringify({
-        model: activeModel(),
+        model: model || activeModel(),
         max_tokens: maxTok,
         temperature: 0,
         system: ANTI_HALLUCINATION_SYSTEM,
@@ -1604,7 +1615,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       if (!onStream || partial.length < 40) return;
       const snapMatch = partial.match(/"companySnapshot"\s*:\s*"((?:[^"\\]|\\.)*)"/);
       if (snapMatch) onStream("overview", { companySnapshot: snapMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n') });
-    }, 1800, { maxSearches: 1, anchorKey: "companySnapshot", onStatus }
+    }, 1800, { maxSearches: 1, anchorKey: "companySnapshot", onStatus, model: SONNET }
   );
 
   // MICRO 2: Executives — reuse pre-cache promise/result. Never duplicate.
@@ -1653,9 +1664,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     };
 
     try {
-      // Phase 1: web search for current executives
+      // Phase 1: web search for current executives (Sonnet — exec accuracy is critical)
       const d = await claudeFetch({
-        model:activeModel(),
+        model: SONNET,
         max_tokens:3000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:execPrompt}],
@@ -1666,7 +1677,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       // Phase 2: fallback — no web search, use training knowledge only
       console.log(`[p2] Web search returned no executives for ${co}, falling back to training knowledge`);
       const d2 = await claudeFetch({
-        model:activeModel(),
+        model: SONNET,
         max_tokens:3000,
         messages:[{role:"user",content:
           `You are a senior sales researcher. Return the CURRENT leadership team of "${co}".\n\n`+
@@ -1754,7 +1765,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus }
+    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
   );
   // relationshipSignals feature tabled
 
@@ -1807,7 +1818,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
         }
       } catch { /* partial — wait for more */ }
-    }, 4500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus }
+    }, 4500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus, model: SONNET }
   );
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
@@ -2077,7 +2088,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p7 = (async()=>{
     try {
       const d = await claudeFetch({
-        model:activeModel(), max_tokens:2000,
+        model: SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
           deepIntelIdentity+
@@ -5166,8 +5177,9 @@ ${isOpen
     // for competitors/industry context. More research → more stable ICP.
     let researchCtx = "";
     try{
+      // ICP Phase 1 — Opus: foundation of everything. Built once, cached forever.
       const d1 = await claudeFetch({
-        model:activeModel(),
+        model: OPUS,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -5237,8 +5249,9 @@ ${isOpen
       `\n\nLeave relevantEvents as an empty array — events are populated by a separate web-search call that verifies dates and URLs.`;
 
     try{
+      // ICP Phase 2 — Opus: ICP quality drives every downstream output
       const d2 = await claudeFetch({
-        model:activeModel(),
+        model: OPUS,
         max_tokens:4000,
         temperature:0,
         messages:[
