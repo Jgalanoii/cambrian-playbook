@@ -5531,6 +5531,27 @@ ${isOpen
     if (!validateInput(newValue, field)) return; // frivolous input rejected
     const edit = { source, field, oldValue: String(oldValue||"").slice(0,200), newValue: String(newValue||"").slice(0,200), company: company||"", timestamp: Date.now() };
     setUserEdits(prev => [...prev, edit]);
+    // Log to Supabase for trend analysis (fire-and-forget)
+    if (sbToken && sbUser) {
+      const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      fetch(`${SB_URL}/rest/v1/icp_edit_log`, {
+        method: "POST",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({
+          user_id: sbUser.id,
+          org_id: orgCtx?.id || null,
+          seller_url: sellerUrl || null,
+          market_category: sellerICP?.marketCategory || null,
+          field_name: field,
+          old_value: String(oldValue || "").slice(0, 2000),
+          new_value: String(newValue || "").slice(0, 2000),
+          edit_source: source,
+          target_company: company || null,
+          session_id: currentSessionId || null,
+        }),
+      }).catch(() => {});
+    }
     // Show toast
     const label = field.replace(/([A-Z])/g, " $1").replace(/^./, s=>s.toUpperCase()).trim();
     const sourceLabel = source === "brief" ? "Brief" : source === "intel" ? "Intel" : source === "hypothesis" ? "Call Prep" : source === "icp" ? "Buyer Profile" : "";
@@ -5593,6 +5614,28 @@ ${isOpen
       console.log("[icp-edit]", newEdits.map(e => `${e.field}: "${e.oldValue}" → "${e.newValue}"`).join(", "));
       setIcpEdits(prev => [...prev, ...newEdits]);
       setIcpLastEditTime(Date.now());
+      // Log edits to Supabase for trend analysis (fire-and-forget)
+      if (sbToken && sbUser) {
+        const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        newEdits.forEach(e => {
+          fetch(`${SB_URL}/rest/v1/icp_edit_log`, {
+            method: "POST",
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+            body: JSON.stringify({
+              user_id: sbUser.id,
+              org_id: orgCtx?.id || null,
+              seller_url: sellerUrl || null,
+              market_category: sellerICP?.marketCategory || null,
+              field_name: e.field,
+              old_value: String(e.oldValue || "").slice(0, 2000),
+              new_value: String(e.newValue || "").slice(0, 2000),
+              edit_source: "icp",
+              session_id: currentSessionId || null,
+            }),
+          }).catch(() => {}); // fire-and-forget — never block the UI
+        });
+      }
       // Show toast with field names
       const fieldNames = newEdits.map(e => e.field.replace("icp.", "").replace(/([A-Z])/g, " $1").trim()).join(", ");
       setEditToast(`Updated: ${fieldNames}`);
