@@ -4335,7 +4335,7 @@ ${buildTargetingText() ? `\n═══ SELLER TARGETING PREFERENCES (MUST RESPECT
 ═══ CONTEXT ═══
 Buyer personas:       ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")}
 Priority trigger:     ${icp.priorityInitiative||""}
-Disqualifiers:        ${(icp.disqualifiers||[]).join("; ")}
+Structural disqualifiers (rare — only TRUE impossibilities): ${(icp.disqualifiers||[]).filter(d => d && !d.startsWith("Return ONLY")).join("; ") || "none"}
 Known customers:      ${(icp.customerExamples||[]).join(", ")}
 
 ═══ SCALE GUIDANCE: ${scaleLabel.toUpperCase()} ═══
@@ -4550,7 +4550,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     const winPatterns = icp.winPatterns || {};
 
     const icpContext = sellerICP?.icp
-      ? `\nSELLER ICP: Target industries: ${(icp.industries||[]).join(", ")} | Size: ${icp.companySize||"any"} | Buyer: ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Disqualifiers: ${(icp.disqualifiers||[]).join(", ")}`
+      ? `\nSELLER ICP: Target industries: ${(icp.industries||[]).join(", ")} | Size: ${icp.companySize||"any"} | Buyer: ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")}${(icp.disqualifiers||[]).filter(d => d && !d.startsWith("Return")).length ? " | Structural DQs: " + icp.disqualifiers.filter(d => d && !d.startsWith("Return")).join(", ") : ""}`
         // ── MULTI-LOB CONTEXT ──
         + (lobProfiles.length ? `\n\nSELLER LINES OF BUSINESS (score prospects against the BEST-matching LOB):\n${lobProfiles.map((l,i) => `  LOB ${i+1}: ${l.name} (${l.revenueWeight || "?"} of revenue) — ${l.description || ""} | Buyer: ${l.buyerProfile || "?"} | Customers: ${(l.namedCustomers||[]).join(", ") || "none listed"}`).join("\n")}` : "")
         // ── NAMED CUSTOMER PROFILES (the anchor for similarity scoring) ──
@@ -5328,7 +5328,7 @@ ${isOpen
         `{"name":"Build in-house (if applicable)","theirCustomers":[]}`+
       `],`+
       `"uniqueDifferentiators":["Differentiator 1 — specific to THIS seller, not the category","Differentiator 2 — something a competitor cannot easily replicate"],`+
-      `"disqualifiers":["HARD disqualifier 1 — structural deal-breaker (e.g. 'Company has fewer than 100 employees')","HARD disqualifier 2 — not a preference, a reason to walk away"],`+
+      `"disqualifiers":["Return ONLY 1-2 TRUE structural impossibilities — the product literally CANNOT work there. Example: 'Company must operate in the US (no international support)' or 'Must have an existing CRM (product is a CRM integration)'. Do NOT list preferences like company size, industry, or revenue — those are handled by scoring. Most sellers have 0-1 real disqualifiers. An empty array is perfectly valid."],`+
       `"techSignals":["Tech signal 1 that indicates readiness (e.g. 'Uses Workday = likely buyer')","Signal 2"],`+
       `"tractionChannels":["Primary GTM channel","Secondary","Tertiary"],`+
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
