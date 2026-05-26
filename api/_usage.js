@@ -163,7 +163,7 @@ export async function checkOrgUsage(userId, { isMax = false } = {}) {
       }
     }
 
-    const orgRes = await sbFetch(`orgs?id=eq.${orgId}&select=run_count,run_limit,max_run_count,max_run_limit,plan`);
+    const orgRes = await sbFetch(`orgs?id=eq.${orgId}&select=run_count,run_limit,max_run_count,max_run_limit,plan,rollover_runs`);
     const orgs = await orgRes.json();
     const org = orgs?.[0];
     if (!org) return { allowed: true };
@@ -172,25 +172,25 @@ export async function checkOrgUsage(userId, { isMax = false } = {}) {
       return { allowed: false, reason: "suspended" };
     }
 
+    // Total available = plan limit + rollover from last month
+    const totalAvailable = (org.run_limit || 0) + (org.rollover_runs || 0);
+
     if (isMax) {
-      // Check Max (Opus) limit
       if (org.max_run_limit <= 0) {
         return { allowed: false, reason: "max_not_available", message: "Cambrian Max is not available on your plan. Upgrade to unlock premium intelligence." };
       }
       if (org.max_run_count >= org.max_run_limit) {
         return { allowed: false, reason: "max_limit_exceeded", max_run_count: org.max_run_count, max_run_limit: org.max_run_limit };
       }
-      // Max runs also consume a regular run
-      if (org.run_count >= org.run_limit) {
-        return { allowed: false, reason: "limit_exceeded", run_count: org.run_count, run_limit: org.run_limit };
+      if (org.run_count >= totalAvailable) {
+        return { allowed: false, reason: "limit_exceeded", run_count: org.run_count, run_limit: org.run_limit, rollover_runs: org.rollover_runs || 0, total_available: totalAvailable };
       }
-      return { allowed: true, org_id: orgId, max_run_count: org.max_run_count, max_run_limit: org.max_run_limit, run_count: org.run_count, run_limit: org.run_limit };
+      return { allowed: true, org_id: orgId, max_run_count: org.max_run_count, max_run_limit: org.max_run_limit, run_count: org.run_count, run_limit: org.run_limit, rollover_runs: org.rollover_runs || 0, total_available: totalAvailable };
     } else {
-      // Check standard (Haiku) limit
-      if (org.run_count >= org.run_limit) {
-        return { allowed: false, reason: "limit_exceeded", run_count: org.run_count, run_limit: org.run_limit };
+      if (org.run_count >= totalAvailable) {
+        return { allowed: false, reason: "limit_exceeded", run_count: org.run_count, run_limit: org.run_limit, rollover_runs: org.rollover_runs || 0, total_available: totalAvailable };
       }
-      return { allowed: true, org_id: orgId, run_count: org.run_count, run_limit: org.run_limit, max_run_count: org.max_run_count, max_run_limit: org.max_run_limit };
+      return { allowed: true, org_id: orgId, run_count: org.run_count, run_limit: org.run_limit, rollover_runs: org.rollover_runs || 0, total_available: totalAvailable, max_run_count: org.max_run_count, max_run_limit: org.max_run_limit };
     }
   } catch (e) {
     console.error("[usage] check failed — BLOCKING (fail-closed):", e.message);

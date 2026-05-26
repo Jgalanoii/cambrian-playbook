@@ -1,7 +1,13 @@
 // api/cron-reset-tokens.js
 //
-// Monthly token reset — resets run_count and max_run_count to 0 for all orgs.
+// Monthly billing cycle — calculates rollover runs, then resets counters.
 // Triggered by Vercel Cron on the 1st of each month at midnight UTC.
+//
+// Rollover model:
+//   - Unused runs carry forward (capped at 1 month's allocation)
+//   - run_count resets to 0
+//   - rollover_runs = min(unused, rollover_cap)
+//   - Trial orgs: no rollover, just reset
 //
 // Security: requires CRON_SECRET header to prevent unauthorized calls.
 
@@ -9,13 +15,11 @@ const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 export default async function handler(req, res) {
-  // Only allow GET (Vercel Cron sends GET requests)
   if (req.method !== "GET") return res.status(405).end();
 
-  // Verify the request is from Vercel Cron — FAIL CLOSED if secret not configured
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
-    console.error("[cron] CRON_SECRET not set — rejecting request (fail-closed)");
+    console.error("[cron] CRON_SECRET not set — rejecting (fail-closed)");
     return res.status(500).json({ error: "Cron not configured" });
   }
   if (req.headers.authorization !== `Bearer ${cronSecret}`) {
@@ -27,8 +31,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Reset all org token counters to 0
-    const response = await fetch(`${SB_URL}/rest/v1/orgs?run_count=gt.0`, {
+    // Step 1: Process rollover for paid orgs (atomic RPC)
+    const rolloverRes = await fetch(`${SB_URL}/rest/v1/rpc/process_monthly_rollover`, {
+      method: "POST",
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    const rolloverData = await rolloverRes.json();
+    const paidCount = rolloverData?.orgs_processed || 0;
+
+    // Step 2: Reset trial orgs (no rollover, just zero out)
+    const trialRes = await fetch(`${SB_URL}/rest/v1/orgs?plan=eq.trial&run_count=gt.0`, {
       method: "PATCH",
       headers: {
         apikey: SB_KEY,
@@ -36,13 +53,24 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
         Prefer: "return=representation",
       },
-      body: JSON.stringify({ run_count: 0, max_run_count: 0 }),
+      body: JSON.stringify({ run_count: 0, max_run_count: 0, rollover_runs: 0 }),
+    });
+    const trialUpdated = await trialRes.json();
+    const trialCount = Array.isArray(trialUpdated) ? trialUpdated.length : 0;
+
+    // Step 3: Reset referral bonus counters (monthly cap resets)
+    await fetch(`${SB_URL}/rest/v1/orgs?referral_bonus_runs=gt.0`, {
+      method: "PATCH",
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ referral_bonus_runs: 0 }),
     });
 
-    const updated = await response.json();
-    const count = Array.isArray(updated) ? updated.length : 0;
-
-    // Log the reset to api_usage_log for audit trail
+    // Audit log
     await fetch(`${SB_URL}/rest/v1/api_usage_log`, {
       method: "POST",
       headers: {
@@ -53,18 +81,18 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         user_id: "system",
-        model: "cron-monthly-reset",
+        model: "cron-monthly-rollover",
         input_tokens: 0,
         output_tokens: 0,
         web_searches: 0,
-        endpoint: "cron-reset-tokens",
+        endpoint: `paid:${paidCount},trial:${trialCount}`,
       }),
     });
 
-    console.log(`[cron] Monthly token reset: ${count} orgs reset to 0`);
-    res.status(200).json({ ok: true, orgs_reset: count, timestamp: new Date().toISOString() });
+    console.log(`[cron] Monthly cycle: ${paidCount} paid orgs rolled over, ${trialCount} trial orgs reset`);
+    res.status(200).json({ ok: true, paid_rollovers: paidCount, trial_resets: trialCount, timestamp: new Date().toISOString() });
   } catch (e) {
-    console.error("[cron] Token reset failed:", e.message);
-    res.status(500).json({ error: "Reset failed" });
+    console.error("[cron] Monthly cycle failed:", e.message);
+    res.status(500).json({ error: "Cycle failed" });
   }
 }

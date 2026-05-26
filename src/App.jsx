@@ -8724,7 +8724,7 @@ ${isOpen
                     Welcome back{sbUser.user_metadata?.first_name ? `, ${sbUser.user_metadata.first_name}` : ""}. Let's make someone's day.
                   </div>
                   <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6,marginBottom:12}}>
-                    You have <strong>{Math.max(0,(orgCtx?.run_limit||3)-(orgCtx?.run_count||0))}</strong> of <strong>{orgCtx?.run_limit||3}</strong> runs this month.
+                    You have <strong>{Math.max(0,((orgCtx?.run_limit||3)+(orgCtx?.rollover_runs||0))-(orgCtx?.run_count||0))}</strong> of <strong>{(orgCtx?.run_limit||3)+(orgCtx?.rollover_runs||0)}</strong> runs available{orgCtx?.rollover_runs > 0 ? ` (${orgCtx.rollover_runs} rolled over)` : ""}.
                     {orgCtx?.plan==="trial" && " Upgrade anytime for more."}
                   </div>
                   {/* Quick Brief input — always visible for authenticated users */}
@@ -13239,12 +13239,14 @@ ${isOpen
             <div style={{display:"flex",flexDirection:"column",gap:4,flex:1}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                 <span style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Runs</span>
-                <span style={{fontWeight:700,fontSize:12,color:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--ink-0)"}}>
-                  {orgCtx.run_count}/{orgCtx.run_limit}
-                </span>
+                {(()=>{const total=(orgCtx.run_limit||0)+(orgCtx.rollover_runs||0);const pct=total>0?orgCtx.run_count/total:0;return(
+                <span style={{fontWeight:700,fontSize:12,color:pct>=1?"var(--red)":pct>=0.8?"var(--amber)":"var(--ink-0)"}}>
+                  {orgCtx.run_count}/{total}{orgCtx.rollover_runs>0?` (${orgCtx.rollover_runs} bonus)`:""}
+                </span>)})()}
               </div>
               <div style={{width:80,height:4,borderRadius:2,background:"var(--bg-2)",overflow:"hidden"}}>
-                <div style={{height:"100%",borderRadius:2,background:orgCtx.run_count>=orgCtx.run_limit?"var(--red)":orgCtx.run_count>=orgCtx.run_limit*0.8?"var(--amber)":"var(--green)",width:Math.min(100,Math.round(orgCtx.run_count/orgCtx.run_limit*100))+"%",transition:"width 0.3s"}}/>
+                {(()=>{const total=(orgCtx.run_limit||0)+(orgCtx.rollover_runs||0);const pct=total>0?orgCtx.run_count/total:0;return(
+                <div style={{height:"100%",borderRadius:2,background:pct>=1?"var(--red)":pct>=0.8?"var(--amber)":"var(--green)",width:Math.min(100,Math.round(pct*100))+"%",transition:"width 0.3s"}}/>)})()}
               </div>
               {/* Max runs usage bar removed — no Max mode */}
             </div>

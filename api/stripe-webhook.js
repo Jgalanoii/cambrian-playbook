@@ -101,7 +101,8 @@ async function updateOrg(orgId, planId) {
       plan: "paid",
       run_limit: limits.run_limit,
       max_run_limit: limits.max_run_limit,
-      run_count: 0, // Reset on upgrade
+      run_count: 0,
+      rollover_cap: limits.run_limit, // Max rollover = 1 month's allocation
     }),
   });
 
