@@ -219,6 +219,44 @@ For Benefits Administration:
 - Conference circuit matters: HFMA ANI (Annual National Institute), HIMSS, AHIP, RISE (MA-specific), and America's Health Insurance Plans conferences are where buyers evaluate and decide. KLAS ratings are the healthcare equivalent of Gartner MQ — being rated is a prerequisite for enterprise sales.
 - The cybersecurity conversation is now a buying criterion, not a checkbox: post-Change Healthcare, healthcare payment vendors must demonstrate SOC 2 Type II, HITRUST certification, business continuity / redundancy architecture, and incident response capability to win enterprise deals.
 
+HSA/FSA ARCHITECTURE (the ancestor of filtered-spend):
+Every basket-level adjudication mechanic in MA flex cards traces back to employer-sponsored CDH accounts. Section 213(d) defines eligible "medical care" expenses. Section 223 governs HSAs. Section 125 governs cafeteria plans (FSA umbrella).
+2026 limits (IRS Notice 2026-5): HSA self-only $4,400, HSA family $8,750, HSA catch-up (55+) $1,000, FSA $3,400 [verified 05/2026, IRS]. HDHP minimum deductible $1,650/$3,300; OOP max $8,500/$17,000 [verified 05/2026, IRS]. OBBBA (2025) expanded HSA eligibility — bronze and catastrophic ACA Exchange plans now HDHP-eligible after Dec 31, 2025; Direct Primary Care fees now 213(d) eligible from HSA.
+IIAS (Inventory Information Approval System) is the IRS-sanctioned standard allowing non-healthcare merchants to accept FSA/HRA debit cards. SIGIS (Special Interest Group for IIAS Standards) publishes the Eligible Product List monthly — SKU-level identification of 213(d)-eligible items. The 90% Rule allows pharmacies/medical-supply retailers to accept cards without full IIAS infrastructure. HSA funds are individually owned, portable, roll over indefinitely. FSAs subject to use-it-or-lose-it (carryover up to $680 in 2026 [verified 05/2026, IRS] OR grace period up to 2.5 months — not both).
+HSA/FSA admin "Big 4-5": HealthEquity (~$30B assets, ~17M accounts [verified 05/2026, HealthEquity IR]), Optum Financial (UHG captive), WEX (NYSE: WEX, 350+ payroll/HRIS partners [verified 05/2026, WEX IR]), Inspira Financial, Lively.
+
+LIFESTYLE SPENDING ACCOUNTS (LSA) — fastest-growing employer-funded benefit:
+Post-tax employer-funded accounts — NOT tax-advantaged. Employer defines eligible expenses, contribution, carry-forward rules. Reimbursement is taxable income to employee. Adoption: 10% of companies offer LSA (doubled since 2024) [verified 05/2026, Sequoia]; 48% of full-time-office employers expect to offer within next year [verified 05/2026, Compt]. Common funding: $500-$2,000/EE/year. Vendors: WEX (enterprise), Forma (mid-market/tech), Compt (27 categories), Holisticly, Fringe, Inspira, Benepass.
+
+MA STAR RATINGS & QUALITY BONUS PAYMENT DYNAMICS:
+Star Ratings drive MA plan economics more than any other single factor. ACA Section 3201 provides 4+ star plans with 5% benchmark bonus. More than 58% of MA plans earned less than 4.0 stars for 2024 [verified 05/2026, CMS Star Ratings]. 2025 Star Ratings: 40% of MA-PDs (209 contracts) earned 4+ stars — a 12-percentage-point single-year decline (largest in program history) [verified 05/2026, CMS Star Ratings]. Health Equity Index (HEI) replaces Reward Factor starting 2027 Star Ratings — plans serving D-SNP/dual-eligible populations get structural advantage. The supplemental benefits / flex card / engagement infrastructure is DIRECTLY LOAD-BEARING on Star Ratings [verified 05/2026, Wakely Actuarial / McKinsey].
+
+OUTCOMES-LINKED CARD DESIGN (three architectures):
+1. Care-Gap Closure: card reload contingent on preventive screening, wellness visit, medication adherence — improves Star Ratings while driving engagement.
+2. SDOH-Aligned Spend Steering: filtering pre-restricted to clinical condition (diabetes-aligned grocery, heart-healthy for CHF, renal-diet for ESRD).
+3. Behavioral Reinforcement Loops: real-time push notifications at point of purchase — same mechanism as Tango Card reward redemption.
+
+SNAP/EBT & NUTRITION INCENTIVES:
+- SNAP: ~41M Americans [verified 05/2026, USDA/FNS], state-operated EBT cards. EBT online purchasing operational in all 50 states as of 2025.
+- GusNIP (Gus Schumacher Nutrition Incentive Program, 2018 Farm Bill): federal grants for fruit/vegetable purchase subsidies for SNAP participants — typically 1:1 dollar match.
+- EBT processors: Conduent, FIS, Solutran/WEX ($340M acquisition 2022) [verified 05/2026, WEX IR].
+
+FOOD AS MEDICINE — MEDICAID 1115 WAIVERS:
+- CMS approved 10 state waivers expanding Food as Medicine by Nov 2024; 19 approved or pending addressing nutrition overall [verified 05/2026, Hanson et al. 2024, Health Affairs Scholar].
+- FIM service categories: medically tailored meals (9 of 10 waivers), medically supportive groceries (8), produce prescriptions (7), medically supportive meals (7), medically tailored groceries (6).
+- CRITICAL 2025 REVERSAL: CMS rescinded guidance on Health-Related Social Needs (March 2025) and is reviewing 1115 waivers. Federal matching-fund risk has materially increased.
+
+INTERNATIONAL PREVENTIVE-CARE INCENTIVE BENCHMARKS:
+- UK NHS Social Prescribing: GPs refer to Link Workers who connect patients to community-based support. Permanent ARRS funding mechanism [verified 05/2026, NHS England].
+- Singapore HPB Healthy 365: 1M+ app downloads, 80%+ engagement rates in National Steps Challenge. Multi-redemption-rail architecture [verified 05/2026, HPB Singapore].
+- Germany Bonusprogramm: Section 65a SGB V. ~95 statutory health insurance funds, cash bonuses (EUR 100-200/year) for preventive screenings [verified 05/2026, GKV-Spitzenverband].
+- Cross-country lessons: (1) Stable funding > reward richness. (2) Non-financial mechanisms work. (3) Wearable integration is the engagement multiplier. (4) Multi-rail architecture increases stickiness vs single-rail.
+
+VENDOR FINANCIAL PROFILES (pre-engagement diligence):
+NationsBenefits: founded 2015, ~2,500 employees, $328M total raised, General Atlantic majority [verified 05/2026, Crunchbase/PitchBook]. Est. revenue ~$200M, est. valuation ~$640M. 11+ major retail integrations 2025-2026 (Walgreens, Dollar General, H Mart). Strategic position: exit or scaling event 2026-2027.
+Solutran: founded 1982, acquired by UHG Jan 2021. Healthy Benefits+ (consumer brand), S3 platform (55K+ stores). Captive; insulated from M&A.
+Soda Health: founded 2020, $94.2M raised (Lightspeed, Define Ventures). Most likely candidate for acquisition or Series C 2026-2027 [verified 05/2026, Crunchbase].
+
 === 12. CROSS-REFERENCES ===
 - digitalIncentivesPlatformsKnowledge.js: the filtered-spend supplemental-benefits card architecture is structurally identical to digital incentives platform economics. Layer these together for targets at the intersection (flex card vendors, benefit delivery platforms).
 - rewardsIncentivesKnowledge.js: care-gap closure incentive design, wellness reward programs, and outcomes-linked card design are rewards/incentives patterns applied to healthcare.
@@ -228,19 +266,30 @@ For Benefits Administration:
 - insuranceKnowledge.js: health plan economics, carrier dynamics, and regulatory frameworks that drive supplemental benefits investment decisions.
 - healthcareSaasKnowledge.js: healthcare SaaS platforms (EHR, PM, telehealth) that are RCM adjacencies and potential integration partners.
 
+M&A OUTLOOK:
+NationsBenefits is the most likely 2026-2027 strategic event. General Atlantic hold period approaching 4-5 years. Likely strategic buyers: UHG/Optum, Humana, CVS, Elevance — or PE roll-up. Soda Health is the most likely follow-on event 2027-2028. Solutran (UHG captive) and InComm Healthcare (subsidiary) are structurally insulated. In RCM, R1 RCM's take-private ($8.9B, TowerBrook/New Mountain, 2024) signals continued PE interest in RCM consolidation. Waystar's IPO filing indicates a potential public-market exit path for PE-backed RCM [verified 05/2026, PitchBook / press reports].
+
+CROSS-AGENCY BENEFIT PROTECTION (2024-2025):
+- USDA/FNS (Dec 2024): MA supplemental benefits excluded from SNAP income determination.
+- CMS (Jan 2025): flex cards are not cash benefits.
+- HUD (Jan/Mar 2025): flex card amounts count for rental assistance only when actually used for rent/utilities.
+- Operator implication: cross-agency coordination supports broader flex-card adoption for dual-eligible (D-SNP) populations without disqualifying members from SNAP or Section 8. 91% of D-SNP plans offered a flex card in 2025 [verified 05/2026, ATI Advisory].
+
+CAMBRIAN'S EDGE: The filtered-spend supplemental-benefits stack is structurally identical to the BHN/Tango branded-payments-network stack Joe operated. The COTF/IGCC relationship vector takes sharper shape here — card-issuance, real-time adjudication, and benefit-utilization analytics for MA supplemental benefits are operationally the same patterns COTF and IGCC operators run for charitable giving and corporate incentive programs.
+
 KNOWN TRAPS (data staleness, misinterpretation risks — review every quarterly sweep):
-1. IRS HSA/FSA/HDHP limits change EVERY calendar year. The 2026 figures will be wrong by January 2027. Always re-verify.
-2. CMS Star Ratings cut points shift annually (October release). The Tukey methodology, guardrails, and court-ordered recalculations mean year-over-year comparisons are NOT apples-to-apples.
-3. Medicaid 1115 waiver status is VOLATILE. Any state-level FIM program could lose federal matching funds between quarterly sweeps.
-4. SNAP participation (~41M) fluctuates with economic conditions and policy.
-5. MA supplemental benefit penetration rates (OTC at 79%, D-SNP flex card at 91%) are PLAN-YEAR figures that reset each October.
-6. Vendor financials (NationsBenefits ~$200M rev, ~$640M valuation; Soda Health $94.2M raised) are ESTIMATED from Crunchbase/PitchBook. Treat as directional.
-7. PBM market share (~80% Big 3) is shifting. Re-verify after any federal PBM bill passes.
-8. GusNIP funding depends on Farm Bill reauthorization. A lapse could eliminate the nutrition incentive grant pipeline.
-9. Cross-agency benefit protection rulings (USDA/HUD/CMS 2024-2025) are GUIDANCE, not statute. Reversible without notice.
-10. LSA adoption figures (10% of companies, 48% expect to offer) are survey-based with small samples.
-11. International benchmarks (NHS Social Prescribing, Singapore HPB, Germany Bonusprogramm) are structural comparisons only — do not extrapolate engagement rates across geographies.
-12. The "food as medicine" umbrella conflates 5 distinct service categories with different evidence bases and reimbursement routes.
+1. IRS HSA/FSA/HDHP limits change EVERY calendar year. The 2026 figures will be wrong by January 2027. Always re-verify against the latest IRS Revenue Procedure or Notice before citing in a brief.
+2. CMS Star Ratings cut points shift annually (October release). The Tukey methodology, guardrails, and court-ordered recalculations mean year-over-year comparisons are NOT apples-to-apples. Never extrapolate trends from two adjacent years.
+3. Medicaid 1115 waiver status is VOLATILE. The March 2025 CMS guidance rescission and ongoing reviews mean any state-level FIM program could lose federal matching funds between quarterly sweeps. Verify individual state waiver status before citing.
+4. SNAP participation (~41M) fluctuates with economic conditions and policy (pandemic-era expansions expired). Can swing 5-10M in a single year. Cite the most recent USDA monthly participation report.
+5. MA supplemental benefit penetration rates (OTC at 79%, D-SNP flex card at 91%) are PLAN-YEAR figures that reset each October. Mid-year amendments and Star Ratings-driven benefit cuts can make last year's number materially wrong.
+6. Vendor financials (NationsBenefits ~$200M rev, ~$640M valuation; Soda Health $94.2M raised) are ESTIMATED from Crunchbase/PitchBook. Private companies do not disclose — treat as directional. M&A events can make these obsolete overnight.
+7. PBM market share (~80% Big 3) is shifting as transparency-focused alternatives gain share. Re-verify after any federal PBM bill passes.
+8. GusNIP funding depends on Farm Bill reauthorization. A lapse or restructuring could eliminate the entire nutrition incentive grant pipeline.
+9. Cross-agency benefit protection rulings (USDA/HUD/CMS 2024-2025) are GUIDANCE, not statute. A new administration can reverse without notice.
+10. LSA adoption figures (10% of companies, 48% expect to offer) are survey-based from Sequoia and Compt — small sample sizes, self-selected respondents, vendor-sponsored. Treat as directional market signal.
+11. International benchmarks (NHS Social Prescribing, Singapore HPB, Germany Bonusprogramm) are structural comparisons only — do NOT cite engagement rates as evidence of achievable US rates.
+12. The "food as medicine" umbrella conflates 5 distinct service categories with different evidence bases, cost structures, and reimbursement routes. Never treat FIM as a monolith.
 `;
 
 export const MEDICAL_PAYMENTS_SCORING = {
