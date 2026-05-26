@@ -1765,7 +1765,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: SONNET }
+    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
   );
   // relationshipSignals feature tabled
 
@@ -5177,9 +5177,9 @@ ${isOpen
     // for competitors/industry context. More research → more stable ICP.
     let researchCtx = "";
     try{
-      // ICP Phase 1 — Haiku (fast web search extraction, ~3-5s)
+      // ICP Phase 1 — Opus (foundation, cached/amortized)
       const d1 = await claudeFetch({
-        model: HAIKU,
+        model: OPUS,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -5249,9 +5249,9 @@ ${isOpen
       `\n\nLeave relevantEvents as an empty array — events are populated by a separate web-search call that verifies dates and URLs.`;
 
     try{
-      // ICP Phase 2 — Sonnet (fast + accurate)
+      // ICP Phase 2 — Opus (ICP quality drives everything downstream)
       const d2 = await claudeFetch({
-        model: SONNET,
+        model: OPUS,
         max_tokens:4000,
         temperature:0,
         messages:[
