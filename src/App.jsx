@@ -1012,6 +1012,11 @@ async function claudeFetch(body, { retries = 3, extraHeaders = {} } = {}) {
         window.dispatchEvent(new CustomEvent("usage-limit-exceeded", { detail: d }));
         return d;
       }
+      // Log ALL non-200 responses so we can see guard rejections
+      if (!r.ok) {
+        const errText = await r.clone().text().catch(() => "");
+        console.error(`[claudeFetch] HTTP ${r.status} for model=${body.model}:`, errText.slice(0, 500));
+      }
       const d = stripCitations(await r.json());
       if (d?.error) {
         const t = d.error.type;
