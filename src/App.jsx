@@ -4341,18 +4341,29 @@ Known customers:      ${(icp.customerExamples||[]).join(", ")}
 ═══ SCALE GUIDANCE: ${scaleLabel.toUpperCase()} ═══
 ${scaleGuidance}
 
+═══ APPROACH ═══
+Use web search to find REAL, CURRENT, OPERATIONAL companies. Search for:
+1. "top ${(targetIndustries.length ? targetIndustries : (icp.industries||[])).join(" OR ")} companies" with size filters
+2. "${sellerICP.marketCategory||""} buyers" or "companies using ${sellerICP.marketCategory||""}"
+3. Industry association member lists, trade publication rankings, or analyst reports
+
+═══ LOOKALIKE SEEDING ═══
+The seller's known customers are: ${(icp.customerExamples||[]).join(", ") || "none listed"}
+Find companies SIMILAR to these customers — same industry, similar size, similar business model, similar buying patterns. If the seller sells to Home Depot, find other large retailers with loyalty programs and omnichannel operations. The best prospects look like existing customers.
+
 ═══ RULES ═══
-- Return ONLY real companies. Do NOT invent names.
-- SIZE IS A HARD FILTER. If the range is "100-499 employees", a 50,000-employee company is REJECTED. If "50,000+", a 200-person startup is REJECTED. Use your training knowledge to estimate — you do not need web verification of exact headcount.
-- REVENUE IS A HARD FILTER. "$1M-$10M" means do NOT include billion-dollar enterprises. "$1B+" means do NOT include small startups.
+CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Never return variants of the same company (e.g., "Acme Corp" and "Acme Corp (Restructured)").
+
+- Return ONLY real, currently operational companies. Do NOT invent names. Do NOT return companies that have filed for bankruptcy, been liquidated, ceased operations, or been acquired and dissolved.
+- SIZE IS A HARD FILTER. If the range says "100-499 employees", reject companies outside that range.
+- REVENUE IS A HARD FILTER. "$1M-$10M" means no billion-dollar enterprises.
 - Do NOT return companies from the "known customers" list — they are already customers.
 - AVOID companies matching the disqualifiers.
-- Distribute across the listed industries — do not cluster in one vertical.
-- Return REAL companies you are confident exist. Do NOT invent company names. If you cannot fill 20 slots with companies you are certain are real, return fewer rather than fabricating. 15 real companies is better than 20 with 5 invented ones.
-- OWNERSHIP ACCURACY: If a company was acquired or went private, say "Private" — NEVER include a stale ticker. Only include a ticker if currently publicly traded.
-- QUALITY MIX: Return 15-20 STRONG fits (companies you are confident match the ICP well) followed by 10-15 STRETCH targets (companies that partially match — right industry but wrong size, right size but adjacent industry, or companies where a specific relationship or context could make them viable). This gives the seller both high-confidence targets and exploratory opportunities.
-- CONSISTENCY: For the same seller and ICP inputs, return the same core companies every time. Anchor on the most obvious, well-known companies first, then fill remaining slots. Sort output alphabetically by company name.
-- Return sorted ALPHABETICALLY by company name (for consistency across runs).
+- DISTRIBUTE across the listed industries — aim for 3-5 companies per industry. Do not cluster 20+ in one vertical.
+- 15 real, unique, operational companies is better than 30 with duplicates or defunct companies.
+- OWNERSHIP ACCURACY: If acquired or went private, say "Private". Only include a ticker if currently publicly traded.
+- DIFFERENTIATE: Every company should have a DIFFERENT "why" reason. Generic reasons like "operates in the seller's target industry" are useless. Be specific: "runs a 500-location loyalty program" or "just raised Series C for digital transformation".
+- Return sorted ALPHABETICALLY by company name.
 
 ═══ OUTPUT (raw JSON only, 25-30 entries, no prose) ═══
 {"accounts":[
@@ -4360,14 +4371,14 @@ ${scaleGuidance}
 ]}`;
 
     try {
-      // Enterprise targets: web_search helps find real companies and verify data.
-      // Mid-market/SMB: skip web_search — training knowledge is more reliable
-      // for regional companies, and web_search causes the model to refuse when
-      // it can't verify exact employee counts for smaller firms.
+      // ── OPUS + WEB SEARCH for ALL tiers ────────────────────────────────
+      // This is the most important AI call in the product. Opus + web search
+      // produces real, verified, well-differentiated companies. Haiku produces
+      // duplicates and bankrupt companies.
       const d = await claudeFetch({
-        model: activeModel(),
-        max_tokens: 6000,
-        ...(isEnterprise ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }] } : {}),
+        model: OPUS,
+        max_tokens: 7000,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
         messages: [{ role: "user", content: prompt }],
       });
       if (d?.error) {
@@ -4378,18 +4389,15 @@ ${scaleGuidance}
       // Parse — tool use returns text + tool_result blocks; find JSON via anchor
       const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
       let parsed = null;
-      // Try multiple key names — LLM sometimes uses "targets", "companies", or "results" instead of "accounts"
       const keyAttempts = ["accounts", "targets", "companies", "results"];
       for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
         for (const key of keyAttempts) {
           parsed = extractJsonWithKey(textBlocks[i], key);
           if (parsed) {
-            // Normalize to .accounts regardless of which key matched
             if (!parsed.accounts && parsed[key]) parsed.accounts = parsed[key];
             break;
           }
         }
-        // Last resort: try to find any JSON array in the response
         if (!parsed && textBlocks[i]) {
           try {
             const arrMatch = textBlocks[i].match(/\[\s*\{[\s\S]*?"company"[\s\S]*?\}\s*\]/);
@@ -4403,12 +4411,42 @@ ${scaleGuidance}
         setTargetGenLoading(false);
         return;
       }
-      const generated = parsed.accounts.filter(a => a?.company?.trim());
+
+      // ── DEDUP + VALIDATION ─────────────────────────────────────────────
+      // Remove duplicates by normalized company name, filter out defunct companies
+      const seen = new Set();
+      const DEFUNCT_PATTERNS = /bankrupt|liquidat|chapter\s*(7|11)|ceased\s*operations|no\s*longer\s*operat|wound\s*down|shut\s*down/i;
+      const generated = parsed.accounts.filter(a => {
+        if (!a?.company?.trim()) return false;
+        // Normalize: lowercase, strip Inc/LLC/Corp suffixes, collapse whitespace
+        const key = a.company.trim().toLowerCase()
+          .replace(/\b(inc|llc|corp|corporation|ltd|limited|co|company|group|holdings?)\b\.?/gi, "")
+          .replace(/\s*\(.*?\)\s*/g, "")
+          .replace(/\s+/g, " ").trim();
+        if (seen.has(key)) {
+          console.log(`[generateTargets] DEDUP: skipped duplicate "${a.company}"`);
+          return false;
+        }
+        seen.add(key);
+        // Filter known-defunct companies
+        if (DEFUNCT_PATTERNS.test(a.why || "") || DEFUNCT_PATTERNS.test(a.company || "")) {
+          console.log(`[generateTargets] DEFUNCT: skipped "${a.company}"`);
+          return false;
+        }
+        // Filter Bed Bath & Beyond specifically (training data artifact)
+        if (/bed\s*bath/i.test(a.company)) {
+          console.log(`[generateTargets] FILTERED: skipped "${a.company}" (bankrupt 2023)`);
+          return false;
+        }
+        return true;
+      });
+
       if (!generated.length) {
         setTargetGenError("No accounts came through this time. Try again — or tweak your ICP to cast a wider net.");
         setTargetGenLoading(false);
         return;
       }
+      console.log(`[generateTargets] ${parsed.accounts.length} raw → ${generated.length} after dedup+validation`);
 
       // Same shape as CSV import
       const hdrs = ["company","industry","company_url","employees","publicPrivate","lead_source","outcome"];
