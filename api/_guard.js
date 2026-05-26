@@ -390,7 +390,8 @@ export async function guard(req, res, { stream = false } = {}) {
   try {
     return buildAnthropicBody(req.body, { stream });
   } catch (e) {
-    res.status(e.status || 400).json({ error: e.message || "bad request" });
+    console.error("[guard] validation failed:", e.message || e, "model:", req.body?.model, "msgLen:", JSON.stringify(req.body?.messages || []).length);
+    res.status(e.status || 400).json({ error: e.message || "bad request", _debug: { model: req.body?.model, msgLen: JSON.stringify(req.body?.messages || []).length } });
     return null;
   }
 }

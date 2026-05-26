@@ -67,6 +67,12 @@ export default async function handler(req, res) {
   let response = await callAnthropic(body);
   let usedFallback = false;
 
+  // Log non-200 from Anthropic for debugging
+  if (!response.ok && response.status !== 529) {
+    const errBody = await response.clone().text().catch(() => "");
+    console.error(`[claude] Anthropic ${response.status} for model=${body.model}:`, errBody.slice(0, 500));
+  }
+
   if (response.status === 529 && MODEL_FALLBACK[body.model]) {
     const fallbackModel = MODEL_FALLBACK[body.model];
     console.log(`[fallback] ${body.model} -> ${fallbackModel} (529 from Anthropic)`);
