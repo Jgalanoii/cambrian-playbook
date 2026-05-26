@@ -5179,7 +5179,7 @@ ${isOpen
     try{
       // ICP Phase 1 — Opus (foundation, cached/amortized)
       const d1 = await claudeFetch({
-        model: OPUS,
+        model: HAIKU,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -5251,7 +5251,7 @@ ${isOpen
     try{
       // ICP Phase 2 — Opus (ICP quality drives everything downstream)
       const d2 = await claudeFetch({
-        model: OPUS,
+        model: HAIKU,
         max_tokens:4000,
         temperature:0,
         messages:[
