@@ -5787,13 +5787,13 @@ ${isOpen
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0) celebrate("prospects_added"); },[cohorts.length]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step===3]);
+  useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(brief?.companySnapshot && !brief._loadingSections?.overview) celebrate("brief_built"); },[brief?.companySnapshot]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(riverHypo?.reality) celebrate("hypothesis_ready"); },[riverHypo?.reality]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(step===7) celebrate("call_started"); },[step===7]);
+  useEffect(()=>{ if(step===7) celebrate("call_started"); },[step]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
 
@@ -8664,10 +8664,10 @@ ${isOpen
               </button>
               <span style={{color:"var(--ink-3)",fontWeight:600}}>{STEPS[step]}</span>
               <button onClick={()=>{
-                const maxStep = postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1;
+                const maxStep = solutionFit?9:postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1;
                 if(step<maxStep)setStep(step+1);
-              }} disabled={step>=(postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1)}
-                style={{padding:"4px 12px",borderRadius:6,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"var(--ink-1)",cursor:"pointer",fontWeight:700,fontSize:13,opacity:step<(postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1)?1:0.4}}>
+              }} disabled={step>=(solutionFit?9:postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1)}
+                style={{padding:"4px 12px",borderRadius:6,border:"1.5px solid var(--line-0)",background:"var(--surface)",color:"var(--ink-1)",cursor:"pointer",fontWeight:700,fontSize:13,opacity:step<(solutionFit?9:postCall?8:riverHypo?7:brief?6:cohorts.length>0?4:sellerUrl?2:1)?1:0.4}}>
                 Next →
               </button>
             </div>
@@ -13381,8 +13381,8 @@ ${isOpen
       {dqModalTarget && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={()=>setDqModalTarget(null)}>
-          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"24px 28px",maxWidth:400,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
-            onClick={e=>e.stopPropagation()}>
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"24px 28px",maxWidth:400,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)",outline:"none"}}
+            onClick={e=>e.stopPropagation()} tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==='Escape')setDqModalTarget(null);}}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Disqualify — {dqModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
               Why is this company not a fit? This helps us learn and improve future target lists.
@@ -13421,8 +13421,8 @@ ${isOpen
       {intelModalTarget && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={()=>setIntelModalTarget(null)}>
-          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
-            onClick={e=>e.stopPropagation()}>
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)",outline:"none"}}
+            onClick={e=>e.stopPropagation()} tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==='Escape')setIntelModalTarget(null);}}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Intel Adjustment — {intelModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
               Add insider knowledge that affects this company's fit score. This won't change the AI scoring — it's your personal adjustment based on facts you know.
@@ -13479,8 +13479,8 @@ ${isOpen
       {confirmModal && (
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={confirmModal.onCancel}>
-          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 32px",maxWidth:420,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)"}}
-            onClick={e=>e.stopPropagation()}>
+          <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"28px 32px",maxWidth:420,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)",outline:"none"}}
+            onClick={e=>e.stopPropagation()} tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==='Escape')confirmModal.onCancel();}}>
             <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:16,lineHeight:1.5}}>{confirmModal.message}</div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
               <button onClick={confirmModal.onCancel} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:13,fontWeight:600,cursor:"pointer",color:"var(--ink-1)"}}>Cancel</button>
