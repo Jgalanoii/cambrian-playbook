@@ -557,7 +557,7 @@ function authHeaders() {
 // Cost: ~$1.15/run (was $0.38 all-Haiku). Margins: 54-71% by tier.
 const HAIKU  = "claude-haiku-4-5-20251001";
 const SONNET = "claude-sonnet-4-5-20250929";
-const OPUS   = "claude-opus-4-6-20250514";
+const OPUS   = "claude-opus-4-6";
 
 // Default model for calls that don't specify — Haiku (cheapest)
 function activeModel() { return HAIKU; }
@@ -1765,7 +1765,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: SONNET }
+    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
   );
   // relationshipSignals feature tabled
 
@@ -5177,9 +5177,9 @@ ${isOpen
     // for competitors/industry context. More research → more stable ICP.
     let researchCtx = "";
     try{
-      // ICP Phase 1 — Sonnet: foundation of everything. Built once, cached forever.
+      // ICP Phase 1 — Opus: foundation of everything. Built once, cached forever.
       const d1 = await claudeFetch({
-        model: SONNET,
+        model: OPUS,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -5249,9 +5249,9 @@ ${isOpen
       `\n\nLeave relevantEvents as an empty array — events are populated by a separate web-search call that verifies dates and URLs.`;
 
     try{
-      // ICP Phase 2 — Sonnet: ICP quality drives every downstream output
+      // ICP Phase 2 — Opus: ICP quality drives every downstream output
       const d2 = await claudeFetch({
-        model: SONNET,
+        model: OPUS,
         max_tokens:4000,
         temperature:0,
         messages:[

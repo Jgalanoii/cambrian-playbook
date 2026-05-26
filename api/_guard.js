@@ -19,12 +19,14 @@ const ALLOWED_MODELS = new Set([
   "claude-haiku-4-5-20251001",
   "claude-sonnet-4-5",
   "claude-sonnet-4-5-20250929",
-  "claude-opus-4-6-20250514",     // Cambrian Max — premium tier
+  "claude-opus-4-6",              // Opus 4.6 — ICP + P3 strategy
+  "claude-opus-4-20250514",       // Dated alias (also works)
 ]);
 
 export const MODEL_FALLBACK = {
   "claude-haiku-4-5-20251001": "claude-sonnet-4-5",
-  "claude-opus-4-6-20250514": "claude-sonnet-4-5",  // Opus overload → Sonnet (not Haiku — preserve quality)
+  "claude-opus-4-6": "claude-sonnet-4-5",            // Opus overload → Sonnet (preserve quality)
+  "claude-opus-4-20250514": "claude-sonnet-4-5",
 };
 
 const ALLOWED_TOOL_TYPES = new Set([
