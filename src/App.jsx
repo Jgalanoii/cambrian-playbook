@@ -5716,7 +5716,7 @@ ${isOpen
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
-    const rows=await sbSessions('GET',`sessions?user_id=eq.${sbUser.id}&order=updated_at.desc&limit=20`,sbToken);
+    const rows=await sbSessions('GET',`sessions?user_id=eq.${sbUser.id}&order=updated_at.desc&limit=100`,sbToken);
     if(rows) setSavedSessions(rows);
   };
 
