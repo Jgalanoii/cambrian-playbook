@@ -10,7 +10,7 @@
 //   3. Rate limiting — per-IP sliding window (in-memory, per-instance)
 //   4. Model allow-list — only Haiku + Sonnet fallback
 //   5. Tool allow-list — only web_search
-//   6. Input size cap — 120KB messages + 12KB system prompt
+//   6. Input size cap — 250KB messages + 30KB system prompt
 //   7. max_tokens cap — 8000
 
 import { createHmac, timingSafeEqual, createVerify, createPublicKey } from "crypto";
@@ -319,7 +319,7 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
 
   // Cap total input size (~150KB) to prevent billing abuse
   const inputSize = JSON.stringify(body.messages).length + (body.system?.length || 0);
-  if (inputSize > 120_000) { // 120KB — baseFull with 20+ knowledge layer injections needs ~60-80KB
+  if (inputSize > 250_000) { // 250KB — baseFull with 31+ knowledge layers can reach 150-200KB
     throw { status: 400, message: "input too large" };
   }
 
