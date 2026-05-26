@@ -1765,7 +1765,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
+    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: SONNET }
   );
   // relationshipSignals feature tabled
 
@@ -5177,23 +5177,14 @@ ${isOpen
     // for competitors/industry context. More research → more stable ICP.
     let researchCtx = "";
     try{
-      // ICP Phase 1 — try Opus first, fall back to Sonnet, then Haiku
-      let d1 = null;
-      for (const fallbackModel of [OPUS, SONNET, HAIKU]) {
-        d1 = await claudeFetch({
-          model: fallbackModel,
-          max_tokens:2000,
-          temperature:0,
-          tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
-          messages:[{role:"user",content:researchPrompt}],
-        });
-        if (d1 && !d1.error) {
-          console.log(`[ICP Phase 1] succeeded with ${fallbackModel}`);
-          break;
-        }
-        console.warn(`[ICP Phase 1] ${fallbackModel} failed:`, d1?.error?.message || d1?.error || "unknown");
-        if (fallbackModel === HAIKU) break; // last resort, don't retry
-      }
+      // ICP Phase 1 — Sonnet (fast + accurate)
+      const d1 = await claudeFetch({
+        model: SONNET,
+        max_tokens:2000,
+        temperature:0,
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
+        messages:[{role:"user",content:researchPrompt}],
+      });
       if(d1 && !d1.error){
         const raw1 = (d1.content||[])
           .filter(b=>b.type==="text"||b.type==="tool_result")
@@ -5201,7 +5192,7 @@ ${isOpen
           .join(" ").trim();
         researchCtx = raw1.slice(0,2000);
       } else {
-        console.warn("ICP phase 1 (research) all models failed:", d1?.error);
+        console.warn("ICP phase 1 (research) error:", d1?.error);
       }
     }catch(e){ console.warn("ICP research failed:",e.message); }
 
@@ -5258,27 +5249,16 @@ ${isOpen
       `\n\nLeave relevantEvents as an empty array — events are populated by a separate web-search call that verifies dates and URLs.`;
 
     try{
-      // ICP Phase 2 — try Opus first, fall back to Sonnet, then Haiku
-      let d2 = null;
-      for (const fallbackModel of [OPUS, SONNET, HAIKU]) {
-        d2 = await claudeFetch({
-          model: fallbackModel,
-          max_tokens:4000,
-          temperature:0,
-          messages:[
-            {role:"user",content:icpPrompt},
-            {role:"assistant",content:"{"},
-          ],
-        }, { extraHeaders: { "x-billable-run": "1" } });
-        if (d2 && !d2.error) {
-          console.log(`[ICP Phase 2] succeeded with ${fallbackModel}`);
-          break;
-        }
-        // Don't retry on usage limits — those apply to all models
-        if (d2?.error?.type === "usage_limit_exceeded" || d2?.error?.type === "max_limit_exceeded") break;
-        console.warn(`[ICP Phase 2] ${fallbackModel} failed:`, d2?.error?.message || d2?.error || "unknown");
-        if (fallbackModel === HAIKU) break;
-      }
+      // ICP Phase 2 — Sonnet (fast + accurate)
+      const d2 = await claudeFetch({
+        model: SONNET,
+        max_tokens:4000,
+        temperature:0,
+        messages:[
+          {role:"user",content:icpPrompt},
+          {role:"assistant",content:"{"},
+        ],
+      }, { extraHeaders: { "x-billable-run": "1" } });
       if(d2.error){
         console.warn("ICP phase 2 error:",d2.error);
         // Surface usage limit errors
