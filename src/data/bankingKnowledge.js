@@ -1,8 +1,8 @@
 // src/data/bankingKnowledge.js
 //
-// Version: 1.0.0
-// Last verified: 2026-05-19
-// Next review: 2026-08-19 (quarterly)
+// Version: 2.0.0
+// Last verified: 2026-05-21
+// Next review: 2026-08-21 (quarterly)
 //
 // U.S. Banking & Capital Markets knowledge layer.
 // Covers: G-SIBs, regionals, community banks, credit unions, PE/VC,
@@ -11,6 +11,12 @@
 // insurance, and regulatory backdrop.
 //
 // Served via /api/knowledge.js (JWT-auth'd, not in client bundle).
+//
+// BUILT TO THE KNOWLEDGE LAYER ANTI-HALLUCINATION STANDARD v1.0:
+//   - Tier 1 (structural) and Tier 2 (cyclical, dated) only.
+//   - No Tier 3 facts (named current execs, company-specific current
+//     financials/investors). Those are fetched live by P2/P5/P8/P9.
+//   - Every Tier 2 claim carries a [verified MM/YYYY, Source] tag.
 //
 // -- SOURCES (re-verify each on quarterly sweep) --
 //   FDIC Quarterly Banking Profile Q4 2025:
@@ -35,11 +41,18 @@
 //     jefferies.com/insights
 //   Investment Company Institute (Money Market Funds):
 //     ici.org/research/stats
+//   nCino, Q2 Holdings, Alkami Technology, Temenos SEC filings
+//   Jack Henry & Associates Investor Relations
+//   FIS Annual Report 2025
+//   Fiserv Investor Day 2025
 
 export const BANKING_INDUSTRY_INJECTION = `
 U.S. BANKING & CAPITAL MARKETS CONTEXT (use when target or seller is in banking, financial services, lending, PE, VC, credit, wealth management, or fintech):
 
-MARKET SNAPSHOT (FDIC QBP Q4 2025 — canonical industry baseline):
+---
+
+## 1. Snapshot and market sizing
+
 - **4,336 FDIC-insured banks** (down 43 in Q4 2025 alone: 36 mergers, 4 sold to nonbanks, 2 liquidations, 1 new). Consolidation accelerating. [verified 05/2026, FDIC QBP Q4 2025]
 - Top 4 (JPM $4.43T, BAC $3.4T, C $2.4T, WFC $2.0T) hold ~$11T combined — more than the next 4,000+. [verified 05/2026, FDIC QBP Q4 2025]
 - ~4,411 credit unions, ~$2.3T assets. Navy Federal alone: $192B, 15M members. [verified 05/2026, NCUA]
@@ -51,103 +64,275 @@ MARKET SNAPSHOT (FDIC QBP Q4 2025 — canonical industry baseline):
 - **Unrealized securities losses: $337.1B** (Q3 2025) — lowest since Q1 2022, still elevated. [verified 05/2026, FDIC QBP Q4 2025]
 - Private credit AUM: ~$2.5T, growing. PE "Big Five" (Blackstone, Apollo, KKR, Ares, Carlyle): ~$3.5T combined AUM. [verified 05/2026, Preqin/PitchBook]
 - BaaS market: $35-45B globally, projected $75-90B by 2030-2031. [verified 05/2026, S&P Global Market Intelligence]
+- Core banking software market: ~$14B globally, ~5% CAGR. Digital banking platform market ~$10B, ~12% CAGR. [verified 05/2026, Gartner/S&P Global]
 
-DEPOSIT DYNAMICS (THE most important story):
-- **Noninterest-bearing deposits down 30%+ since March 2022** — structural deposit-mix shift. Only 57% of banks report noninterest-bearing deposit increases. [verified 05/2026, FDIC QBP Q4 2025]
-- **Money market fund assets hit $7.02T** in mid-2025 — record high. Mid-2022 to Q2 2023: MMFs received $777B+ from bank deposit migration. This is the structural ceiling on bank deposit-pricing power. [verified 05/2026, Investment Company Institute]
-- Interest-bearing deposits +3.7% YoY through March 2025. ~80% of banks reported deposit increases Q1 2025. [verified 05/2026, FDIC QBP Q4 2025]
-- Deposit beta is structurally higher — customers more rate-sensitive with better digital alternatives.
-- Brokered deposits under increased FDIC scrutiny — higher cost, community banks managing carefully.
-- Benchmarks: Huntington (deposit beta discipline + 15bps NIM expansion), Wintrust (~30% noninterest-bearing share), U.S. Bank (61bps cost of funds). [verified 05/2026, Company Earnings Reports]
+---
 
-KEY STRUCTURAL THEMES:
-- "Bank vs non-bank" line has dissolved at product level. Apollo extends credit. Stripe holds deposits. Apple issues cards. SoFi has a charter.
-- Deposit franchise quality is the #1 strategic question post-SVB/First Republic.
-- Middle-market lending moving off bank balance sheets into private credit (Ares, Golub, Blue Owl).
-- Every institution running 5-10 generations of vendor systems — tech stack rationalization is constant.
-- Cost-to-serve compression from digital competitors is universal.
+## 2. What makes banking distinct as a sales target
 
-BANKING TIERS:
-- G-SIBs (8): JPM, BAC, C, WFC, GS, MS, BK, STT — dominant but rarely buy from boutique consultants directly.
-- Super-regionals ($100B-$700B): USB, PNC, Truist, Capital One, Citizens, Fifth Third, KeyCorp, M&T, Regions, Huntington — SWEET SPOT for GTM consulting. [verified 05/2026, FDIC QBP Q4 2025]
-- Community banks (<$10B): ~4,000 banks. Relationship-driven, increasingly serving as BaaS sponsor banks. [verified 05/2026, FDIC QBP Q4 2025]
-- Credit unions: mission-driven, committee-governed, slower decisions. Digital experience gap is biggest strategic risk.
+**1. Every bank is a regulated utility wrapped in a competitive market.** Charter type (national, state, credit union, ILC, trust) determines primary regulator, permissible activities, and compliance surface. A seller who cannot quickly classify the target's charter type will misframe the entire opportunity.
 
-PRIVATE CAPITAL:
+**2. Deposit franchise quality is the #1 strategic question post-SVB/First Republic.** Noninterest-bearing deposits down 30%+ since March 2022 — structural deposit-mix shift. Only 57% of banks report noninterest-bearing deposit increases. [verified 05/2026, FDIC QBP Q4 2025] Money market fund assets hit $7.02T in mid-2025 — record high. Mid-2022 to Q2 2023: MMFs received $777B+ from bank deposit migration. This is the structural ceiling on bank deposit-pricing power. [verified 05/2026, Investment Company Institute] Interest-bearing deposits +3.7% YoY through March 2025. ~80% of banks reported deposit increases Q1 2025. Deposit beta is structurally higher — customers more rate-sensitive with better digital alternatives. Brokered deposits under increased FDIC scrutiny — higher cost, community banks managing carefully. Benchmarks: Huntington (deposit beta discipline + 15bps NIM expansion), Wintrust (~30% noninterest-bearing share), U.S. Bank (61bps cost of funds). [verified 05/2026, Company Earnings Reports]
+
+**3. "Bank vs non-bank" line has dissolved at product level.** Apollo extends credit. Stripe holds deposits. Apple issues cards. SoFi has a charter. The practical distinction is regulatory perimeter, not product capability.
+
+**4. Tech stack is the deepest moat and the highest cost.** Every institution running 5-10 generations of vendor systems — tech stack rationalization is constant. Cost-to-serve compression from digital competitors is universal. A core banking conversion is a 3-5 year program that absorbs all adjacent budget.
+
+---
+
+## 3. Sub-categorization — who operates in this vertical
+
+### Banking tiers
+
+| Tier | Asset range | Count | Characteristics |
+|---|---|---|---|
+| **G-SIBs** | $500B+ | 8 (JPM, BAC, C, WFC, GS, MS, BK, STT) | Dominant but rarely buy from boutique consultants directly |
+| **Super-regionals** | $100B-$700B | ~15 (USB, PNC, Truist, Capital One, Citizens, Fifth Third, KeyCorp, M&T, Regions, Huntington, Zions, Comerica, Webster, First Horizon, CIT) | SWEET SPOT for GTM consulting [verified 05/2026, FDIC QBP Q4 2025] |
+| **Large community** | $10B-$100B | ~200 | Strategic enough to invest in tech; small enough to decide fast |
+| **Community banks** | <$10B | ~4,000 | Relationship-driven, increasingly serving as BaaS sponsor banks [verified 05/2026, FDIC QBP Q4 2025] |
+| **Credit unions** | Varies | ~4,411 | Mission-driven, committee-governed, slower decisions. Digital experience gap is biggest strategic risk |
+| **De novo / digital charter** | Varies | Handful | SoFi, Varo (chartered); Column, Lead (sponsor bank); long approval cycles |
+
+### Private capital
+
 - PE mega-funds: Blackstone, Apollo, KKR, Ares, Carlyle. Middle-market: Audax, GTCR, Genstar, Vista, Thoma Bravo.
 - VC: a16z, Sequoia, Tiger, Insight, General Catalyst, Thrive — top-tier funds increasingly backing fintech and AI infrastructure.
 - Private credit: Blue Owl, Golub, HPS (BlackRock), Antares, Monroe. Asset-based finance (ABF) is fastest-growing sub-segment.
 - Hard money / business purpose lending: Kiavi, RCN Capital, Lima One, Genesis (GS). Rates 9-13%, LTV 65-75%. [verified 05/2026, Industry Surveys]
 - Family offices: 4,500+ SFOs in US, $5T+ AUM. RIA aggregators (Focus, Mercer, Hightower, Mariner) backed by PE. [verified 05/2026, Preqin/PitchBook]
 
-FINTECH/BAAS:
+### Fintech / BaaS
+
 - Neobanks: Chime (~38M users), Cash App (~57M MAU), SoFi (chartered), Mercury, Brex, Ramp, Rho. [verified 05/2026, Company Disclosures]
 - BaaS middleware: Unit, Synctera, Treasury Prime, Stripe Treasury, Increase.
 - Issuer processors: Galileo (SoFi), Marqeta, Lithic, Highnote.
 - Post-Synapse regulatory reset: sponsor bank scrutiny dramatically higher. Bar for BaaS programs has risen.
 - Vertical SaaS + embedded finance is the dominant structural trend.
 
-DIGITAL INCENTIVES (Cambrian core competency):
+---
+
+## 4. Named companies — the operator landscape (15-20)
+
+| Company | Type | Assets / Scale | Why they matter |
+|---|---|---|---|
+| **JPMorgan Chase** | G-SIB | $4.43T | Largest US bank; benchmark for everything |
+| **Bank of America** | G-SIB | $3.4T | #2; massive consumer franchise |
+| **Wells Fargo** | G-SIB | $2.0T | Consent-order era winding down; rebuilding |
+| **Citigroup** | G-SIB | $2.4T | Global franchise; structural simplification underway |
+| **U.S. Bancorp** | Super-regional | $680B+ | 61bps cost of funds benchmark; Union Bank integration complete [verified 05/2026, USB Earnings] |
+| **PNC Financial** | Super-regional | $560B+ | National expansion via BBVA USA; strong middle-market franchise |
+| **Truist Financial** | Super-regional | $530B+ | BB&T/SunTrust merger 2019; still integrating platforms |
+| **Capital One** | Super-regional | $480B+ | Discover acquisition transforms from monoline to network-issuer-bank [verified 05/2026, Company Filings] |
+| **TD Bank** | Super-regional (US ops) | $400B+ US | Canadian parent; US franchise concentrated in Northeast corridor |
+| **M&T Bank** | Super-regional | $210B+ | Community-banking culture at regional scale; Peoples United integration done |
+| **FIS** | Core tech vendor | $9.5B+ revenue | Worldpay carved out/re-merged with GP; IDP and banking solutions platform |
+| **Fiserv** | Core tech vendor | $20B+ revenue | Core banking (DNA, Precision, Signature) + payments (Clover) + digital banking; stock under pressure on Clover issues [verified 05/2026, Fiserv Earnings] |
+| **Jack Henry & Associates** | Core tech vendor | $2.2B+ revenue | Community bank and credit union core (SilverLake, Symitar, CIF); ~1,000 banks, 800+ CUs [verified 05/2026, Jack Henry Investor Relations] |
+| **Temenos** | Core tech vendor | $1B+ revenue | International; gaining US community bank presence; cloud-native T24 Transact |
+| **nCino** | Digital banking platform | $500M+ revenue | Cloud banking OS on Salesforce; loan origination, account opening, treasury management. Dominant in commercial lending workflow [verified 05/2026, nCino SEC Filings] |
+| **Q2 Holdings** | Digital banking platform | $700M+ revenue | Digital banking platform for community banks and credit unions; ~450 FI clients [verified 05/2026, Q2 Earnings] |
+| **Alkami Technology** | Digital banking platform | $350M+ revenue | Digital banking for mid-tier FIs; ~250+ clients; high NRR [verified 05/2026, Alkami SEC Filings] |
+| **MX Technologies** | Data connectivity | Private | Open finance data platform; aggregation, analytics; 2,000+ FI clients |
+
+---
+
+## 5. Regulatory overlay — the dominant constraint
+
+### Primary regulators
+
+| Regulator | Jurisdiction | Key function |
+|---|---|---|
+| **OCC** | National banks, federal thrifts | Charter, supervision, enforcement |
+| **Federal Reserve** | BHCs, SLHCs, state member banks | Monetary policy, supervision, payment systems |
+| **FDIC** | Insured banks (all), state non-member banks | Deposit insurance, resolution, supervision |
+| **NCUA** | Credit unions | Insurance, supervision |
+| **CFPB** | Consumer products (all charter types) | Consumer protection (severely constrained 2025-2026 under OBBBA $249M cap) |
+| **FinCEN** | All FIs | BSA/AML, SAR/CTR, beneficial ownership |
+| **OFAC** | All entities | Sanctions screening |
+| **State regulators** | State-chartered banks, trust companies, MTLs | Chartering, examination, consumer protection |
+
+### Key regulatory dynamics (2025-2026)
+
+**Basel III endgame** — substantially softened. Capital impact reduced from original proposal. Implementation timeline extended. [verified 05/2026, Federal Reserve]
+
+**GENIUS Act — Stablecoins (enacted July 18, 2025):** Three issuer pathways: (1) Subsidiary of Insured Depository Institution (IDI) — apply to primary federal banking agency; (2) Federal Qualified PPSI — regulated by OCC (Tether, Circle/USDC, PayPal/PYUSD); (3) State Qualified PPSI — ≤$10B outstanding, state regime must be certified "substantially similar" by SCRC. Core requirements: 1:1 reserve backing (cash, demand deposits, T-bills ≤93 days, repos); monthly attestations; >$50B issuers require audited annual financials; NO interest/yield to holders; BSA/AML applies; NOT securities or commodities under federal law. OCC NPRM March 2026; FDIC NPRM April 2026 (comments due June 9, 2026). [verified 05/2026, GENIUS Act Enacted Text/OCC/FDIC]
+
+**OCC Crypto Interpretive Letters (2025 reset):** IL 1170 (2020): crypto custody. IL 1172 (2020): stablecoin reserves. IL 1174 (2021): DLT nodes. IL 1179 (2021): REQUIRED supervisory non-objection — chilled bank crypto for 3+ years. IL 1183 (March 2025): RESCINDED IL 1179 — banks may engage in crypto without non-objection. IL 1184 (May 2025): buy/sell crypto at customer direction. IL 1186 (Nov 2025): hold crypto on balance sheet for gas fees. SAB 121→122 (Jan 2025): rescinded balance-sheet requirement for crypto custody. [verified 05/2026, OCC/SEC]
+
+**Section 1033 Open Banking (saga):** Oct 2024: CFPB final rule (Biden). Same day: bank plaintiffs sue. May 2025: CFPB seeks to vacate. July 2025: reverses, requests stay for new rulemaking. Aug 2025: ANPR issued. Sept 2025: JPMorgan-Plaid paid data-sharing deal — paid bank-to-fintech data sharing becoming equilibrium. Nov 2025: court vacates/postpones. Original June 2026 effective date not happening. [verified 05/2026, CFPB/Court Filings]
+
+**Regulation II / Durbin vacatur (August 7, 2025):** Corner Post v. Fed: District court vacated Regulation II entirely. Court STAYED vacatur pending appeal to 8th Circuit. Banks/networks continue operating under $0.21 + 5bps + $0.01. Proposed 2023 NPRM would have cut to $0.144 + 4bps + $0.013 (~28% reduction). DOJ Visa debit antitrust lawsuit (Sept 2024) ongoing. CCCA (credit card Durbin) reintroduced but not advanced. [verified 05/2026, Federal Reserve/Court Filings]
+
+**BSA/AML / CRA modernization:** FinCEN beneficial ownership database live but enforcement uncertain. CRA modernization final rule (Oct 2023) faces legal challenge; partial implementation timeline. Community Reinvestment Act remains a factor in M&A approvals and branch strategy. [verified 05/2026, FinCEN/OCC]
+
+---
+
+## 6. Technology stack — core banking, digital, and analytics
+
+### Core banking processors (the Big 3)
+
+| Vendor | Platform(s) | Client base | Notes |
+|---|---|---|---|
+| **Fiserv** | DNA (credit unions), Precision (community banks), Signature (mid-tier) | ~1/3 of US FIs | Also Clover (POS), digital banking, Zelle integration |
+| **FIS** | Modern Banking Platform, IBS, HORIZON | ~1/3 of US FIs | Post-Worldpay carve-out; refocusing on banking |
+| **Jack Henry** | SilverLake (banks), Symitar (CUs), CIF 20/20 | ~1/3 of community banks/CUs | Open API strategy; Banno digital platform |
+
+### Digital banking platforms
+
+- **Q2 Holdings** — digital banking for community FIs; ~450 clients; growing commercial digital
+- **Alkami Technology** — digital banking; ~250+ mid-tier FI clients; high NRR
+- **nCino** — cloud banking OS on Salesforce; dominant in commercial lending workflow
+- **Temenos** — T24 Transact; international strength; growing US community bank footprint
+- **MX Technologies** — open finance data platform; 2,000+ FI clients
+- **Finzly** — real-time payments and FX for community banks
+- **Narmi** — digital account opening and digital banking for community FIs
+
+### Lending technology
+
+- **nCino** — commercial loan origination dominant
+- **Blend** — consumer mortgage and deposit origination
+- **Finastra** — lending and treasury (Misys + D+H merger legacy)
+- **Abrigo** — credit risk, lending, compliance for community banks
+- **LoanPro** — loan management system (fintech/BaaS focus)
+
+### Contract dynamics
+- Core banking contracts are typically 5-7 year terms with 18-24 month notice periods for renewal
+- Switching costs are enormous ($5-50M+ depending on size); average core conversion takes 18-36 months
+- Contract renewal windows are the #1 buying trigger for adjacent technology sales
+- "Best of breed vs. integrated suite" is the persistent architectural debate
+
+---
+
+## 7. Payment rails stack
+
+- **ACH:** ~31B transactions/year, ~$80T value. Same-day ACH limit $1M. Nacha fraud monitoring Phase 1 effective March 20, 2026 (large originators), Phase 2 June 19, 2026 (all non-consumer originators). [verified 05/2026, Nacha]
+- **Wire:** Fedwire ~$1.1 quadrillion/year (RTGS in central bank money). CHIPS ~$1.8T/day (~50 banks). Fedwire expanding to 22hrs/day. [verified 05/2026, Federal Reserve]
+- **Card Networks:** Visa, Mastercard (pure networks), AmEx, Discover (network + issuer). Credit interchange 1.4-3.5%. 2024 swipe fees totaled $38.7B. [verified 05/2026, Nilson Report]
+- **RTP (The Clearing House):** ~1,000+ FIs, reaches 70-90% of DDAs. 2024: 343M transactions, $246B (94% YoY growth). Limit raised to $10M Feb 2025. [verified 05/2026, The Clearing House]
+- **FedNow (Federal Reserve):** 1,500+ FIs (40% of DDAs reachable). Q4 2024 value: $20B (1,500x growth from Q4 2023). Community banks/CUs = 95% of participants. [verified 05/2026, Federal Reserve]
+- **58% of FIs enabling instant payments do so through BOTH RTP AND FedNow** — multi-rail is now norm. RTP and FedNow are NOT interoperable. [verified 05/2026, Federal Reserve/The Clearing House]
+- **P2P:** Zelle (2,300+ FIs, bank-owned), Venmo (PayPal), Cash App (Block). [verified 05/2026, Early Warning Services]
+
+---
+
+## 8. ICP patterns by bank type
+
+### Best-fit Cambrian user-prospect: Super-regional and large community banks ($10B-$200B assets)
+
+Why this segment:
+- Large enough to have real technology budgets and dedicated innovation teams
+- Small enough that the CIO, CDO, or Head of Digital is accessible and empowered
+- In the strategic window: core contract renewals, digital transformation programs, M&A integration
+- Post-SVB deposit-franchise urgency creates active budget for engagement, loyalty, and digital experience
+- Stablecoin readiness (GENIUS Act Pathway 1) creates a new, unfilled advisory opportunity
+
+### Strong-fit adjacent segments
+
+- **Community banks ($1B-$10B) evaluating real-time payments** — ~7,000 FIs still haven't adopted FedNow/RTP; vendor selection + product strategy + fraud control [verified 05/2026, Federal Reserve]
+- **Credit unions building member acquisition/engagement programs** — rewards/incentives expertise + digital experience gap = real fit
+- **BaaS/embedded fintech providers ($5-500M revenue)** — direct domain overlap with Cambrian's payments + incentives expertise
+- **PE-backed fintech portfolio companies** — growth-pressured, typically understaffed on GTM
+
+### Lower-fit segments
+
+- **G-SIBs** — procurement fortress; rarely buy from sub-$10M boutiques
+- **Hedge funds** — almost no GTM consulting buyers
+- **Pure DeFi protocols** — different operating logic, not core competency
+- **Wealth management broker-dealer infrastructure** — saturated; specialized firms entrenched
+
+---
+
+## 9. Buying committee and decision dynamics
+
+| Role | What they care about | Their lens |
+|---|---|---|
+| **CIO / CTO** | Core modernization, vendor rationalization, cloud migration, cybersecurity | "Does this integrate with our core processor? Does it reduce vendor count?" |
+| **Chief Digital Officer** | Digital banking experience, account opening, mobile, self-service | "Will this move our digital NPS? How fast to deploy?" |
+| **CFO / Treasurer** | NIM, cost of funds, fee income, capital optimization | "What's the revenue impact? What's the payback period?" |
+| **Chief Risk Officer** | BSA/AML, model risk, third-party risk management, cyber | "Does this create new regulatory surface? Who's your SOC 2?" |
+| **Head of Treasury Management** | Payments product, commercial cash management, real-time payments | "Can we monetize this with our commercial clients?" |
+| **Chief Operating Officer** | Branch operations, efficiency ratio, process automation | "Does this reduce cost-to-serve per account?" |
+| **Head of Retail Banking** | Deposit gathering, customer acquisition, retention, cross-sell | "Will this help us compete with Chime and Marcus for deposits?" |
+| **General Counsel** | Regulatory compliance, vendor contracts, IP, data privacy | "What's the regulatory risk? Is this permissible activity?" |
+
+### Decision pattern
+
+- Community banks ($1-10B): CEO + CIO + CFO = the deal. 60-120 day cycle.
+- Large community / small regional ($10-50B): CIO + CDO + CFO + CRO. 90-180 day cycle. Vendor risk assessment required.
+- Super-regional ($50-200B): Full procurement. RFP. Security review. Third-party risk management (TPRM) process. Legal. 6-12 months.
+- G-SIBs: 12-24 months minimum. Dedicated vendor management office. Board-level for material spend.
+
+---
+
+## 10. Trigger events
+
+| Trigger | What it signals | Sales implication |
+|---|---|---|
+| **Core banking contract renewal window** | 18-24 month pre-renewal evaluation period | Opens budget for all adjacent technology; the master trigger |
+| **GENIUS Act Pathway 1 evaluation** | Bank considering stablecoin issuance | Economics modeling, reserve infrastructure, core integration advisory |
+| **M&A announcement** | System integration program ahead | 12-36 month technology integration spend |
+| **New CIO / CDO / Chief Digital Officer** | Strategic reset; new vendor evaluation cycle | First 6 months is the window |
+| **Real-time payments adoption decision** | FedNow/RTP enablement program | Vendor selection, fraud controls, product strategy |
+| **Regulatory exam finding** | Remediation budget unlocked | BSA/AML, TPRM, data governance vendors benefit |
+| **Deposit flight / cost-of-funds pressure** | Digital engagement and retention urgency | Loyalty, rewards, digital experience investments |
+| **BaaS program launch or expansion** | Embedded finance strategy | Middleware, compliance, risk-management vendors |
+| **Consent order / enforcement action** | Forced remediation; compliance spend | Compliance technology, consulting, monitoring tools |
+| **Branch rationalization / digital transformation** | Cost structure realignment | Digital banking, automation, CX technology |
+
+---
+
+## 11. Common failure modes
+
+1. **Treating all banks as the same buyer.** A $500M community bank and a $50B regional are completely different sales. Charter type, asset size, and regulatory tier determine everything from budget to buying process.
+2. **Pitching without knowing the core processor.** Every technology purchase in banking is evaluated against the existing core (Fiserv, FIS, Jack Henry). If you don't know the target's core, you can't speak to integration.
+3. **Ignoring the TPRM process.** Banks above $10B in assets have formal third-party risk management. Vendors need SOC 2 Type II, business continuity plans, and information security documentation before a conversation begins.
+4. **Assuming credit unions buy like banks.** Credit unions are member-owned, committee-governed, and structurally slower. The CEO may be enthusiastic but the board/committee must approve. Different culture, different timeline.
+5. **Leading with technology without business case.** Bankers think in basis points, efficiency ratio, and ROA. "Cloud-native" is not a value proposition — "reduce cost-to-serve by 15bps" is.
+6. **Overstating deposit data freshness.** FDIC QBP is ~3 months behind. Don't present as real-time. [verified 05/2026, FDIC]
+7. **Confusing BaaS regulatory status.** Post-Synapse, the BaaS landscape is in active flux. Any "current status" claim decays within months. [verified 05/2026, FDIC/OCC]
+8. **Fabricating bank-specific financials.** G-SIB and super-regional asset totals change quarterly. PE/VC AUM varies by source (Preqin vs PitchBook). Always fetch live for a specific institution.
+
+---
+
+## 12. GTM implications for Cambrian seller-users
+
+### Bank M&A — 2025-2028 consolidation window
+
+Jefferies projects window open through 2028 presidential election. Notable: Santander-Webster $12.23B (third-biggest US bank deal since 2010). SoFi +11.8% assets sequentially Q4 2025 (highest among top 50). LendingClub rebranded to "Happen Bank." Buyer drivers: scale economies, deposit diversification, tech/compliance cost sharing. Seller drivers: tech investment pressure, compliance ratchet, margin pressure, aging boards/succession. Regulatory environment more permissive under current administration. [verified 05/2026, Jefferies/S&P Global]
+
+### Cambrian engagement vectors for banks
+
+1. **Stablecoin readiness diagnostics** — GENIUS Act Pathway 1 economics, reserve infrastructure, product strategy
+2. **Real-time payments strategy** for community banks (~7,000 institutions still haven't adopted FedNow/RTP) [verified 05/2026, Federal Reserve]
+3. **Bank-fintech partnership evaluation** — post-Synapse TPRM frameworks
+4. **Crypto custody go-to-market** for regional banks — build-vs-buy: Anchorage, BitGo, Fireblocks, Coinbase Custody
+5. **Reg II contingency planning** for $10B+ banks — model status quo vs $0.144 cap vs full vacatur scenarios [verified 05/2026, Federal Reserve/Court Filings]
+6. **Deposit acquisition and cost-of-funds optimization** — $7T MMF overhang, 30%+ NIB decline [verified 05/2026, FDIC QBP Q4 2025/ICI]
+
+### Digital incentives in banking (Cambrian core competency)
+
 - Blackhawk Network (BHN/Tango), InComm, Tremendous, Giftbit, Reward Gateway — B2B rewards-as-a-service.
 - B2B incentives growing faster than consumer: research, recognition, partner programs, sales SPIFFs.
 - Card-linked offers scaling through bank channels (Cardlytics, Augeo).
 - Embedded loyalty: vertical SaaS platforms building rewards as features.
 
-PAYMENT RAILS STACK:
-- ACH: ~31B transactions/year, ~$80T value. Same-day ACH limit $1M. Nacha fraud monitoring Phase 1 effective March 20, 2026 (large originators), Phase 2 June 19, 2026 (all non-consumer originators). New PAYROLL and PURCHASE labels enable receiving-bank anomaly detection. [verified 05/2026, Nacha]
-- Wire: Fedwire ~$1.1 quadrillion/year (RTGS in central bank money). CHIPS ~$1.8T/day (~50 banks). Fedwire expanding to 22hrs/day, 6 days/week, 365 days. [verified 05/2026, Federal Reserve]
-- Card Networks: Visa, Mastercard (pure networks), AmEx, Discover (network + issuer). Credit interchange 1.4-3.5%. 2024 swipe fees totaled $38.7B. [verified 05/2026, Nilson Report]
-- RTP (The Clearing House): ~1,000+ FIs, reaches 70-90% of DDAs. 2024: 343M transactions, $246B (94% YoY growth). Limit raised to $10M Feb 2025. Average payment $719. [verified 05/2026, The Clearing House]
-- FedNow (Federal Reserve): 1,500+ FIs (40% of DDAs reachable). Q4 2024 value: $20B (1,500x growth from Q4 2023). Community banks/CUs = 95% of participants. Average payment ~$22K. [verified 05/2026, Federal Reserve]
-- **58% of FIs enabling instant payments do so through BOTH RTP AND FedNow** — multi-rail is now norm. RTP and FedNow are NOT interoperable. [verified 05/2026, Federal Reserve/The Clearing House]
-- 90% of consumers prefer instant disbursements when offered; 94% satisfaction rate. [verified 05/2026, Federal Reserve Payments Study]
-- P2P: Zelle (2,300+ FIs, bank-owned), Venmo (PayPal), Cash App (Block). [verified 05/2026, Early Warning Services]
+---
 
-GENIUS ACT — STABLECOINS (enacted July 18, 2025 — most consequential FS legislation since Dodd-Frank):
-Three issuer pathways: (1) Subsidiary of Insured Depository Institution (IDI) — apply to primary federal banking agency; (2) Federal Qualified PPSI — regulated by OCC (Tether, Circle/USDC, PayPal/PYUSD); (3) State Qualified PPSI — ≤$10B outstanding, state regime must be certified "substantially similar" by SCRC. [verified 05/2026, GENIUS Act Enacted Text]
-Core requirements: 1:1 reserve backing (cash, demand deposits, T-bills ≤93 days, repos); monthly attestations; >$50B issuers require audited annual financials; NO interest/yield to holders; BSA/AML applies; NOT securities or commodities under federal law; restricted to issuance/redemption/reserve management activities; does NOT alter Fed master account eligibility. OCC NPRM March 2026; FDIC NPRM April 2026 (comments due June 9, 2026); most regulations must be final by July 18, 2026. [verified 05/2026, GENIUS Act Enacted Text/OCC/FDIC]
-Operator implication: banks evaluating stablecoin issuance (Pathway 1) need economics modeling — application, capital/liquidity, core integration, FDIC deposit treatment. Banks can also hold reserves for nonbank issuers (per OCC IL 1172/1183). Tokenized deposits are the legally distinct alternative (FDIC-insured, on distributed ledger).
+## 13. Cross-references to sister layers
 
-OCC CRYPTO INTERPRETIVE LETTERS (2025 reset):
-IL 1170 (2020): banks may provide crypto custody. IL 1172 (2020): banks may hold stablecoin reserves. IL 1174 (2021): banks may act as DLT nodes.
-IL 1179 (2021): REQUIRED supervisory non-objection — effectively chilled bank crypto for 3+ years.
-IL 1183 (March 2025): RESCINDED IL 1179 — banks may engage in crypto activities WITHOUT supervisory non-objection. Withdrew two interagency joint statements on crypto risks.
-IL 1184 (May 2025): banks may buy/sell crypto at customer direction; may outsource to third parties.
-IL 1186 (Nov 2025): banks may hold crypto on balance sheet for network fees (gas fees).
-SAB 121 (SEC, 2022) → SAB 122 (Jan 2025): rescinded balance-sheet requirement for crypto custody. Major operational unlock for traditional bank custody.
-Cross-agency April 2025: jointly withdrew 2023 crypto-risk joint statements. July 2025: new joint guidance on risk management (not risk prohibition).
+| Layer | How it applies |
+|---|---|
+| \`paymentsKnowledge.js\` | Payment rails, interchange, acquiring, card economics — the payments side of banking |
+| \`cryptoStablecoinKnowledge.js\` | GENIUS Act stablecoin pathways; OCC crypto guidance; bank-issued digital assets |
+| \`baasKnowledge.js\` | BaaS/embedded finance — the bank-fintech partnership layer |
+| \`fintechKnowledge.js\` | Neobanks, digital lenders, challenger banks competing with traditional FIs |
+| \`digitalIncentivesPlatformsKnowledge.js\` | Rewards and incentives platforms selling into bank channels |
+| \`investorIntelligenceKnowledge.js\` | PE/VC backing of fintech; public bank investor dynamics; M&A intelligence |
+| \`complianceKnowledge.js\` | BSA/AML, KYC, TPRM, regulatory exam frameworks |
 
-SECTION 1033 OPEN BANKING (saga):
-Oct 2024: CFPB final rule (Biden). Same day: bank plaintiffs sue. May 2025: CFPB seeks to vacate its own rule. July 2025: reverses course, requests stay for new rulemaking. Aug 2025: ANPR issued. Sept 2025: JPMorgan-Plaid data-sharing deal with paid pricing structure — paid bank-to-fintech data sharing is becoming the equilibrium. Nov 2025: court vacates/postpones. Dec 2025: CFPB signals interim final rules. Original June 2026 effective date not happening. CFPB structurally constrained (OBBBA $249M budget cap, OLC funding limitations). [verified 05/2026, CFPB/Court Filings]
+---
 
-REGULATION II / DURBIN VACATUR (August 7, 2025):
-Corner Post v. Fed: District court vacated Regulation II entirely — Fed exceeded authority by including fixed costs/fraud losses in cap (Durbin requires only incremental costs); one-size-fits-all cap violated transaction-specific statutory language; Loper Bright (post-Chevron) invoked. Court STAYED vacatur pending appeal to 8th Circuit. Banks/networks continue operating under $0.21 + 5bps + $0.01. Proposed 2023 NPRM would have cut to $0.144 + 4bps + $0.013 (~28% reduction). DOJ Visa debit antitrust lawsuit (Sept 2024) ongoing. CCCA (credit card Durbin) reintroduced but not advanced. [verified 05/2026, Federal Reserve/Court Filings]
-
-BANK M&A — 2025-2028 CONSOLIDATION WINDOW:
-Jefferies projects window open through 2028 presidential election. Notable: Santander-Webster $12.23B (third-biggest US bank deal since 2010, Santander rises to 19th-largest bank). SoFi +11.8% assets sequentially Q4 2025 (highest among top 50). LendingClub rebranded to "Happen Bank." Buyer drivers: scale economies, deposit diversification, tech/compliance cost sharing. Seller drivers: tech investment pressure, compliance ratchet, margin pressure, aging boards/succession. Regulatory environment more permissive under current administration. [verified 05/2026, Jefferies/S&P Global]
-
-REGULATORY:
-- OCC: national banks. Fed: BHCs. FDIC: insured banks. NCUA: credit unions. CFPB: consumer products (severely constrained 2025-2026).
-- Basel III endgame substantially softened. Bank M&A window open through 2028.
-- Synapse aftermath: BaaS/sponsor bank compliance bar dramatically higher.
-- FinCEN: BSA/AML, SAR/CTR, beneficial ownership. OFAC: sanctions. SEC Chair: Paul Atkins.
-- Key voices: Jonathan V. Gould (OCC, confirmed late 2025), Travis Hill (Acting FDIC Chair), Christopher Waller (Fed Governor).
-
-CAMBRIAN ENGAGEMENT VECTORS FOR BANKS:
-1. Stablecoin readiness diagnostics (GENIUS Act Pathway 1 economics, reserve infrastructure, product strategy)
-2. Real-time payments strategy for community banks (~7,000 institutions still haven't adopted FedNow/RTP) [verified 05/2026, Federal Reserve]
-3. Bank-fintech partnership evaluation (post-Synapse third-party-risk-management frameworks)
-4. Crypto custody go-to-market for regional banks (build-vs-buy: Anchorage, BitGo, Fireblocks, Coinbase Custody)
-5. Reg II contingency planning for $10B+ banks (model status quo vs $0.144 cap vs full vacatur scenarios) [verified 05/2026, Federal Reserve/Court Filings]
-6. Deposit acquisition and cost-of-funds optimization ($7T MMF overhang, 30%+ NIB decline) [verified 05/2026, FDIC QBP Q4 2025/ICI]
-
-KNOWN TRAPS (meta-knowledge about where banking data fails):
-- G-SIB and super-regional asset totals change quarterly — always fetch live for a specific bank
-- PE/VC AUM figures are self-reported and vary by source (Preqin vs PitchBook vs firm claims)
-- BaaS regulatory landscape is in active flux post-Synapse — any "current status" claim decays within months
-- Mutual/member-owned institutions (credit unions, USAA) have limited public financial data — caveat figures
-- Deposit flight data is lag-reported (FDIC QBP is ~3 months behind) — don't present as real-time
-- Stablecoin legislation (GENIUS Act) has multiple versions — verify enacted vs pending
+*End of layer. Update cadence: quarterly aligned to FDIC QBP releases. Critical re-check triggers: FDIC QBP publication, Fed rate decisions, GENIUS Act rulemaking deadlines, Reg II 8th Circuit ruling, major bank M&A announcements, core vendor earnings.*
 `;
 
 export const BANKING_SCORING_CONTEXT = {

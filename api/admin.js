@@ -405,8 +405,165 @@ export default async function handler(req, res) {
     guestActivity.by_endpoint = Object.entries(guestActivity.by_endpoint).map(([endpoint, count]) => ({ endpoint, count }));
     guestActivity.by_day = Object.entries(guestActivity.by_day).map(([day, count]) => ({ day, count })).sort((a, b) => b.day.localeCompare(a.day));
 
+    // ── Data Science / Intelligence queries ──
+    // These tables may not exist yet (migrations 022-024). Each query is
+    // wrapped in try/catch so a missing table doesn't crash the endpoint.
+    const intelligence = {};
+
+    // Model accuracy (from model_accuracy_log)
+    try {
+      const malRows = await sbFetch("model_accuracy_log?select=market_category,predicted_label,prediction_correct,predicted_score&limit=5000");
+      if (Array.isArray(malRows) && malRows.length > 0 && !malRows.error) {
+        const byCategory = {};
+        malRows.forEach(r => {
+          const cat = r.market_category || "Unknown";
+          if (!byCategory[cat]) byCategory[cat] = { predictions: 0, correct: 0, totalScore: 0 };
+          byCategory[cat].predictions++;
+          if (r.prediction_correct) byCategory[cat].correct++;
+          byCategory[cat].totalScore += r.predicted_score || 0;
+        });
+        const totalPredictions = malRows.length;
+        const totalCorrect = malRows.filter(r => r.prediction_correct).length;
+        intelligence.modelAccuracy = {
+          overall: totalPredictions > 0 ? Math.round(totalCorrect / totalPredictions * 100) : null,
+          totalPredictions,
+          totalCorrect,
+          byCategory: Object.entries(byCategory).map(([cat, d]) => ({
+            category: cat, predictions: d.predictions, correct: d.correct,
+            accuracy: d.predictions > 0 ? Math.round(d.correct / d.predictions * 100) : 0,
+          })).sort((a, b) => b.predictions - a.predictions),
+        };
+      } else {
+        intelligence.modelAccuracy = null;
+      }
+    } catch { intelligence.modelAccuracy = null; }
+
+    // Scoring calibration (from seller_profiles)
+    try {
+      const spRows = await sbFetch("seller_profiles?select=avg_fit_score_advanced,avg_fit_score_dq,prediction_accuracy&limit=500");
+      if (Array.isArray(spRows) && spRows.length > 0 && !spRows.error) {
+        const advScores = spRows.filter(r => r.avg_fit_score_advanced != null).map(r => Number(r.avg_fit_score_advanced));
+        const dqScores = spRows.filter(r => r.avg_fit_score_dq != null).map(r => Number(r.avg_fit_score_dq));
+        intelligence.scoringCalibration = {
+          avgScoreAdvanced: advScores.length > 0 ? Math.round(advScores.reduce((a, b) => a + b, 0) / advScores.length) : null,
+          avgScoreDQ: dqScores.length > 0 ? Math.round(dqScores.reduce((a, b) => a + b, 0) / dqScores.length) : null,
+          sellersWithData: spRows.length,
+        };
+      } else {
+        intelligence.scoringCalibration = null;
+      }
+    } catch { intelligence.scoringCalibration = null; }
+
+    // Knowledge layer effectiveness (from kl_effectiveness)
+    try {
+      const kleRows = await sbFetch("kl_effectiveness?select=kl_name,sections_it_influenced,user_edited_kl_content,deal_outcome&limit=5000");
+      if (Array.isArray(kleRows) && kleRows.length > 0 && !kleRows.error) {
+        const byKL = {};
+        kleRows.forEach(r => {
+          const name = r.kl_name || "unknown";
+          if (!byKL[name]) byKL[name] = { injected: 0, sectionsInfluenced: 0, corrections: 0, advanced: 0 };
+          byKL[name].injected++;
+          byKL[name].sectionsInfluenced += r.sections_it_influenced || 0;
+          if (r.user_edited_kl_content) byKL[name].corrections++;
+          if (r.deal_outcome === "FAST_TRACK") byKL[name].advanced++;
+        });
+        intelligence.klEffectiveness = Object.entries(byKL).map(([name, d]) => ({
+          name, injected: d.injected,
+          avgSectionsInfluenced: d.injected > 0 ? Math.round(d.sectionsInfluenced / d.injected * 10) / 10 : 0,
+          corrections: d.corrections,
+          correctionRate: d.injected > 0 ? Math.round(d.corrections / d.injected * 100) : 0,
+          advanced: d.advanced,
+        })).sort((a, b) => b.correctionRate - a.correctionRate || b.injected - a.injected);
+      } else {
+        intelligence.klEffectiveness = null;
+      }
+    } catch { intelligence.klEffectiveness = null; }
+
+    // ICP edit trends (from icp_edit_log)
+    try {
+      const editRows = await sbFetch("icp_edit_log?select=field_name,market_category,new_value,old_value&order=created_at.desc&limit=5000");
+      if (Array.isArray(editRows) && editRows.length > 0 && !editRows.error) {
+        const byField = {};
+        editRows.forEach(r => {
+          const f = r.field_name || "unknown";
+          if (!byField[f]) byField[f] = { count: 0, categories: {} };
+          byField[f].count++;
+          const cat = r.market_category || "Unknown";
+          byField[f].categories[cat] = (byField[f].categories[cat] || 0) + 1;
+        });
+        intelligence.editTrends = Object.entries(byField).map(([field, d]) => {
+          const topCat = Object.entries(d.categories).sort((a, b) => b[1] - a[1])[0];
+          return { field, count: d.count, topCategory: topCat?.[0] || "—", direction: "corrected" };
+        }).sort((a, b) => b.count - a.count);
+      } else {
+        intelligence.editTrends = null;
+      }
+    } catch { intelligence.editTrends = null; }
+
+    // Competitor intel coverage (from competitor_intel)
+    try {
+      const ciRows = await sbFetch("competitor_intel?select=market_category,competitor_name,verified,times_cited&limit=5000");
+      if (Array.isArray(ciRows) && ciRows.length > 0 && !ciRows.error) {
+        const byCat = {};
+        ciRows.forEach(r => {
+          const cat = r.market_category || "Unknown";
+          if (!byCat[cat]) byCat[cat] = { competitors: new Set(), verified: 0, citations: 0 };
+          byCat[cat].competitors.add(r.competitor_name);
+          if (r.verified) byCat[cat].verified++;
+          byCat[cat].citations += r.times_cited || 0;
+        });
+        intelligence.competitorCoverage = Object.entries(byCat).map(([cat, d]) => ({
+          category: cat, competitorsMapped: d.competitors.size, verified: d.verified, citations: d.citations,
+        })).sort((a, b) => b.competitorsMapped - a.competitorsMapped);
+      } else {
+        intelligence.competitorCoverage = null;
+      }
+    } catch { intelligence.competitorCoverage = null; }
+
+    // Conversion funnel (from prospect_events)
+    try {
+      const peRows = await sbFetch("prospect_events?select=event_type&limit=10000");
+      if (Array.isArray(peRows) && peRows.length > 0 && !peRows.error) {
+        const counts = {};
+        peRows.forEach(r => { counts[r.event_type] = (counts[r.event_type] || 0) + 1; });
+        intelligence.conversionFunnel = {
+          generated: counts.generated || 0,
+          viewed: counts.viewed || 0,
+          briefed: counts.briefed || 0,
+          pushed_crm: counts.pushed_crm || 0,
+          advanced: counts.advanced || 0,
+          disqualified: counts.disqualified || 0,
+          total: peRows.length,
+        };
+      } else {
+        intelligence.conversionFunnel = null;
+      }
+    } catch { intelligence.conversionFunnel = null; }
+
+    // Brief quality (from brief_quality_signals)
+    try {
+      const bqRows = await sbFetch("brief_quality_signals?select=sections_completed,sections_edited,sections_attempted,pushed_hubspot&limit=5000");
+      if (Array.isArray(bqRows) && bqRows.length > 0 && !bqRows.error) {
+        const totalBriefs = bqRows.length;
+        const avgSections = bqRows.reduce((s, r) => s + (r.sections_completed || 0), 0) / totalBriefs;
+        const avgEdited = bqRows.filter(r => r.sections_edited > 0).length;
+        const avgEditRate = totalBriefs > 0 ? Math.round(avgEdited / totalBriefs * 100) : 0;
+        const crmPushes = bqRows.filter(r => r.pushed_hubspot).length;
+        const crmRate = totalBriefs > 0 ? Math.round(crmPushes / totalBriefs * 100) : 0;
+        intelligence.briefQuality = {
+          totalBriefs,
+          avgSectionsComplete: Math.round(avgSections * 10) / 10,
+          avgEditRate,
+          crmPushRate: crmRate,
+        };
+      } else {
+        intelligence.briefQuality = null;
+      }
+    } catch { intelligence.briefQuality = null; }
+
     res.setHeader("Cache-Control", "private, no-cache");
     res.json({
+      intelligence,
       summary: {
         total_users: (users || []).length,
         active_today: activeToday,

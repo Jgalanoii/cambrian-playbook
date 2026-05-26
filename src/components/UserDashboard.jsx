@@ -198,7 +198,7 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
   };
 
   useEffect(() => {
-    if (tab === "sessions" && canViewTeam && teamSessions.length === 0) loadTeamSessions();
+    if ((tab === "sessions" || tab === "insights") && canViewTeam && teamSessions.length === 0) loadTeamSessions();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, canViewTeam]);
 
@@ -353,6 +353,10 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
     setTimeout(() => setInviteMsg(""), 4000);
   };
 
+  // ── Toast state for Insights export buttons ──
+  const [insightsToast, setInsightsToast] = useState("");
+  const showInsightsToast = (msg) => { setInsightsToast(msg); setTimeout(() => setInsightsToast(""), 3500); };
+
   // ── Analytics (from ReportPanel) ──
   const analytics = useMemo(() => {
     const sessions = savedSessions || [];
@@ -364,26 +368,70 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
     let totalDeals = 0;
     const icpEdits = {};
     const intelAdj = [];
+    const companiesScored = new Set();
+    let briefsGenerated = 0;
+    let crmPushes = 0;
+    let dealsAdvanced = 0;
+    const fitBuckets = { strong: 0, potential: 0, poor: 0 }; // 75+, 55-74, 0-54
+    let icpLastUpdated = null;
+    let icpFieldsEditedThisSession = 0;
 
     sessions.forEach(s => {
       const d = s.data;
       if (!d) return;
+
+      // Brief generated = session has brief data
+      if (d.brief || d.selectedAccount) briefsGenerated++;
+
+      // CRM pushes (track via celebration marker or postCall push)
+      if (d.postCall?.pushedToCrm || d.hubspotPushed) crmPushes++;
+
+      // Deal routing
       if (d.postCall?.dealRoute) {
         dealRoutes[d.postCall.dealRoute] = (dealRoutes[d.postCall.dealRoute] || 0) + 1;
         totalDeals++;
+        if (d.postCall.dealRoute === "FAST_TRACK") dealsAdvanced++;
       }
-      (d.icpEdits || []).forEach(e => {
+
+      // Fit scores - count by bucket
+      if (d.fitScores) {
+        Object.entries(d.fitScores).forEach(([co, fs]) => {
+          companiesScored.add(co);
+          const score = fs?.score ?? 0;
+          if (score >= 75) fitBuckets.strong++;
+          else if (score >= 55) fitBuckets.potential++;
+          else fitBuckets.poor++;
+        });
+      }
+
+      // ICP edits
+      const edits = d.icpEdits || [];
+      edits.forEach(e => {
         icpEdits[e.field] = (icpEdits[e.field] || 0) + 1;
+        if (e.timestamp) {
+          const t = new Date(e.timestamp);
+          if (!icpLastUpdated || t > icpLastUpdated) icpLastUpdated = t;
+        }
       });
+
+      // Intel adjustments
       Object.entries(d.intelAdjustments || {}).forEach(([co, adj]) => {
         intelAdj.push({ company: co, modifier: adj.modifier, reason: adj.reason });
       });
     });
 
+    // ICP fields edited in most recent session
+    const lastSession = sessions[0];
+    if (lastSession?.data?.icpEdits) {
+      icpFieldsEditedThisSession = lastSession.data.icpEdits.length;
+    }
+
     const topEditedFields = Object.entries(icpEdits)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([field, count]) => ({ field, count }));
+
+    const mostEditedField = topEditedFields.length > 0 ? topEditedFields[0].field : null;
 
     return {
       totalSessions,
@@ -394,6 +442,15 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
       disqualifyRate: totalDeals > 0 ? Math.round(dealRoutes.DISQUALIFY / totalDeals * 100) : 0,
       topEditedFields,
       intelAdj,
+      // New: Insights panel data
+      prospectsScored: companiesScored.size,
+      briefsGenerated,
+      crmPushes,
+      dealsAdvanced,
+      fitBuckets,
+      icpLastUpdated,
+      icpFieldsEditedThisSession,
+      mostEditedField,
     };
   }, [savedSessions]);
 
@@ -988,86 +1045,212 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
           )}
 
           {/* ═══ INSIGHTS ═══ */}
-          {tab === "insights" && (
+          {tab === "insights" && (() => {
+            const fitTotal = analytics.fitBuckets.strong + analytics.fitBuckets.potential + analytics.fitBuckets.poor;
+            const fitMaxCount = Math.max(analytics.fitBuckets.strong, analytics.fitBuckets.potential, analytics.fitBuckets.poor, 1);
+            return (
             <div>
               <div className="admin-section-title">Insights</div>
-              <div className="admin-section-sub">Deal routing patterns, ICP accuracy, and intel adjustments</div>
+              <div className="admin-section-sub">Org-level analytics for your revenue team</div>
 
-              {/* Deal routing distribution */}
-              {analytics.totalDeals > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>Deal Routing Distribution</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                    {[
-                      { label: "Fast Track", count: analytics.dealRoutes.FAST_TRACK, pct: analytics.fastTrackRate, color: "var(--green)", bg: "var(--green-bg)" },
-                      { label: "Nurture", count: analytics.dealRoutes.NURTURE, pct: analytics.totalDeals > 0 ? Math.round(analytics.dealRoutes.NURTURE / analytics.totalDeals * 100) : 0, color: "var(--amber)", bg: "var(--amber-bg)" },
-                      { label: "Disqualify", count: analytics.dealRoutes.DISQUALIFY, pct: analytics.disqualifyRate, color: "var(--red)", bg: "var(--red-bg)" },
-                    ].map(dr => (
-                      <div key={dr.label} className="admin-metric" style={{ background: dr.bg, border: `1px solid ${dr.color}22` }}>
-                        <div className="admin-metric-num" style={{ color: dr.color }}>{dr.count}</div>
-                        <div className="admin-metric-label" style={{ color: dr.color }}>{dr.label} ({dr.pct}%)</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Most corrected ICP fields */}
-              {analytics.topEditedFields.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
-                    Most Corrected ICP Fields
-                    <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6, color: "var(--ink-3)" }}>Fields you edit most -- helps us improve accuracy</span>
-                  </div>
-                  {analytics.topEditedFields.map((f, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid var(--line-0)" }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-0)", flex: 1 }}>{f.field}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ height: 6, borderRadius: 3, background: "var(--amber)", width: Math.min(200, f.count * 20) }} />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber)" }}>{f.count}x</span>
-                      </div>
+              {/* ── 1. Pipeline Overview ── */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>Pipeline Overview</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+                  {[
+                    { label: "Prospects Scored", value: analytics.prospectsScored, color: "var(--ink-0)" },
+                    { label: "Briefs Generated", value: analytics.briefsGenerated, color: "var(--navy)" },
+                    { label: "Pushed to CRM", value: analytics.crmPushes, color: "var(--amber)" },
+                    { label: "Deals Advanced", value: analytics.dealsAdvanced, color: "var(--green)" },
+                  ].map(m => (
+                    <div key={m.label} className="admin-metric">
+                      <div className="admin-metric-num" style={{ color: m.color }}>{m.value}</div>
+                      <div className="admin-metric-label">{m.label}</div>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* Intel adjustments */}
-              {analytics.intelAdj.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
-                    Intel Adjustments Applied
-                    <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6, color: "var(--ink-3)" }}>Fit score overrides applied by your team</span>
+              {/* ── 2. Fit Score Distribution ── */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>Fit Score Distribution</div>
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 20px" }}>
+                  {fitTotal === 0 ? (
+                    <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "12px 0" }}>
+                      No fit scores yet. Run briefs and score prospects to see the distribution.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      {[
+                        { label: "Strong Fit (75+)", count: analytics.fitBuckets.strong, color: "var(--green)" },
+                        { label: "Potential Fit (55-74)", count: analytics.fitBuckets.potential, color: "var(--amber)" },
+                        { label: "Poor Fit (0-54)", count: analytics.fitBuckets.poor, color: "var(--red)" },
+                      ].map(bucket => {
+                        const barWidth = Math.max(2, Math.round((bucket.count / fitMaxCount) * 100));
+                        return (
+                          <div key={bucket.label}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-1)" }}>{bucket.label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: bucket.color }}>{bucket.count}</span>
+                            </div>
+                            <svg width="100%" height="14" style={{ display: "block" }}>
+                              <rect x="0" y="2" width="100%" height="10" rx="5" fill="var(--bg-2)" />
+                              <rect x="0" y="2" width={barWidth + "%"} height="10" rx="5" fill={bucket.color} style={{ transition: "width 0.4s ease" }} />
+                            </svg>
+                          </div>
+                        );
+                      })}
+                      <div style={{ fontSize: 11, color: "var(--ink-3)", textAlign: "right", marginTop: 2 }}>
+                        {fitTotal} prospect{fitTotal !== 1 ? "s" : ""} scored across all sessions
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── 3. Team Activity (admin/manager only) ── */}
+              {canViewTeam && (
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>Team Activity</div>
+                  <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 20px" }}>
+                    {members.length > 0 ? (
+                      <>
+                        <table className="admin-table" style={{ marginBottom: 10 }}>
+                          <thead>
+                            <tr>
+                              <th>Team Member</th>
+                              <th>Briefs This Month</th>
+                              <th>Sessions</th>
+                              <th>Last Active</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {members.map(m => {
+                              const now = Date.now();
+                              const thirtyDaysAgo = now - 2592000000;
+                              const memberSessions = teamSessions.filter(s => s.user_id === m.id);
+                              const briefsThisMonth = memberSessions.filter(s => new Date(s.updated_at).getTime() > thirtyDaysAgo).length;
+                              const lastActive = memberLastActive(m.id);
+                              return (
+                                <tr key={m.id}>
+                                  <td>
+                                    <div style={{ fontWeight: 600, color: "var(--ink-0)", fontSize: 13 }}>
+                                      {m.name || m.email?.split("@")[0]}
+                                      {m.id === sbUser?.id && <span style={{ fontSize: 9, color: "var(--ink-3)", fontWeight: 400, marginLeft: 4 }}>(you)</span>}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: "var(--ink-3)" }}>{m.email}</div>
+                                  </td>
+                                  <td style={{ fontWeight: 700, color: briefsThisMonth > 0 ? "var(--green)" : "var(--ink-3)", fontSize: 13 }}>
+                                    {briefsThisMonth}
+                                  </td>
+                                  <td style={{ fontWeight: 600, color: "var(--ink-1)", fontSize: 13 }}>
+                                    {memberSessions.length}
+                                  </td>
+                                  <td>
+                                    {lastActive ? (
+                                      <>
+                                        <div style={{ fontWeight: 600, color: "var(--ink-1)", fontSize: 12 }}>{timeAgo(lastActive)}</div>
+                                        <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 1 }}>{new Date(lastActive).toLocaleDateString()}</div>
+                                      </>
+                                    ) : <span style={{ color: "var(--ink-3)", fontSize: 12 }}>--</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        <div style={{ fontSize: 11, color: "var(--ink-3)", fontStyle: "italic" }}>
+                          Feature adoption data coming soon
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "12px 0" }}>
+                        Team member data loading...
+                      </div>
+                    )}
                   </div>
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Company</th>
-                        <th>Modifier</th>
-                        <th>Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.intelAdj.slice(0, 15).map((adj, i) => (
-                        <tr key={i}>
-                          <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{adj.company}</td>
-                          <td style={{ fontWeight: 700, color: adj.modifier > 0 ? "var(--green)" : "var(--red)" }}>
-                            {adj.modifier > 0 ? "+" : ""}{adj.modifier}
-                          </td>
-                          <td style={{ color: "var(--ink-3)" }}>{adj.reason || "--"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               )}
 
-              {analytics.totalDeals === 0 && analytics.topEditedFields.length === 0 && analytics.intelAdj.length === 0 && (
-                <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "32px 0" }}>
-                  Complete more sessions and this fills up -- deal routing patterns, ICP corrections, intel adjustments.
+              {/* ── 4. Export Center ── */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>Export Center</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+                  {[
+                    { id: "prospects", title: "Export Scored Prospects", desc: "All prospects with fit scores, labels, and reasoning", icon: "\u{1F3AF}" },
+                    { id: "briefs", title: "Export Brief History", desc: "Full brief output for every session in your org", icon: "\u{1F4CB}" },
+                    { id: "edits", title: "Export Edit History", desc: "ICP edits, intel adjustments, and field corrections", icon: "\u{270F}\u{FE0F}" },
+                    { id: "intel", title: "Export Competitive Intel", desc: "Competitive intelligence collected across all sessions", icon: "\u{1F50D}" },
+                  ].map(exp => (
+                    <button key={exp.id}
+                      onClick={() => showInsightsToast("Export coming soon -- data collection in progress")}
+                      style={{
+                        display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6,
+                        background: "var(--bg-1)", border: "1.5px solid var(--line-0)", borderRadius: 10,
+                        padding: "16px 18px", cursor: "pointer", textAlign: "left",
+                        transition: "border-color 0.15s, box-shadow 0.15s",
+                      }}
+                      onMouseOver={e => { e.currentTarget.style.borderColor = "var(--tan-0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}
+                      onMouseOut={e => { e.currentTarget.style.borderColor = "var(--line-0)"; e.currentTarget.style.boxShadow = "none"; }}
+                    >
+                      <div style={{ fontSize: 22 }}>{exp.icon}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-0)" }}>{exp.title}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.5 }}>{exp.desc}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", marginTop: 4 }}>Download CSV</div>
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+
+              {/* ── 5. ICP Health Check ── */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tan-0)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>ICP Health Check</div>
+                <div style={{ background: "var(--bg-1)", borderRadius: 10, padding: "16px 20px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 5 }}>ICP Last Updated</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: analytics.icpLastUpdated ? "var(--ink-0)" : "var(--ink-3)" }}>
+                        {analytics.icpLastUpdated ? analytics.icpLastUpdated.toLocaleDateString() : "Never"}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 5 }}>Fields Edited (Last Session)</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: analytics.icpFieldsEditedThisSession > 0 ? "var(--ink-0)" : "var(--ink-3)" }}>
+                        {analytics.icpFieldsEditedThisSession}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 5 }}>Most Edited Field</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: analytics.mostEditedField ? "var(--amber)" : "var(--ink-3)" }}>
+                        {analytics.mostEditedField || "None yet"}
+                      </div>
+                    </div>
+                  </div>
+                  {analytics.topEditedFields.length > 0 && (
+                    <div style={{ marginTop: 16, borderTop: "1px solid var(--line-0)", paddingTop: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 8 }}>
+                        Top Corrected Fields
+                        <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, marginLeft: 6 }}>-- helps us improve accuracy</span>
+                      </div>
+                      {analytics.topEditedFields.slice(0, 5).map((f, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", borderBottom: i < Math.min(analytics.topEditedFields.length, 5) - 1 ? "1px solid var(--line-0)" : "none" }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-0)", flex: 1 }}>{f.field}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ height: 6, borderRadius: 3, background: "var(--amber)", width: Math.min(120, f.count * 20) }} />
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber)", minWidth: 24, textAlign: "right" }}>{f.count}x</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Toast notification */}
+              {insightsToast && <div className="admin-toast">{insightsToast}</div>}
             </div>
-          )}
+            );
+          })()}
 
         </main>
       </div>

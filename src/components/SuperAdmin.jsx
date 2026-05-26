@@ -249,6 +249,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
         { id: "usage", label: "Usage" },
         { id: "pricing", label: "Pricing" },
         { id: "learnings", label: "Learnings" },
+        { id: "intelligence", label: "Intelligence" },
         { id: "urls", label: "URLs", count: s.unique_seller_urls },
       ],
     },
@@ -1803,6 +1804,336 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ═══ INTELLIGENCE ═══ */}
+          {tab === "intelligence" && (
+            <div>
+              {(() => {
+                const intel = data.intelligence || {};
+
+                // Full list of 31 knowledge layers for the KL effectiveness table
+                const ALL_KL_NAMES = [
+                  "Payments", "Real Estate", "Banking", "Healthcare SaaS", "AI/ML",
+                  "Fintech", "Rewards & Incentives", "QSR", "BaaS", "Charitable Giving",
+                  "Medical Payments", "SMB & Mid-Market", "Insurance", "Executive Perspectives",
+                  "Approval Gates", "Retail", "Professional Services", "Manufacturing",
+                  "PE Holdco", "Digital Incentives Platforms", "Cannabis", "Crypto & Stablecoin",
+                  "Gaming", "Prediction Markets", "Investor Intelligence", "B2B Sales",
+                  "OKR/KPI", "Compliance", "Accounting & Finance",
+                  "Competitive Injection", "Discovery Scorecard",
+                ];
+
+                return (
+                  <>
+                    {/* ── 1. Model Accuracy ── */}
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{ background: "var(--navy)", color: "var(--surface)", padding: "8px 14px", borderRadius: "8px 8px 0 0", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}>
+                        Model Accuracy
+                      </div>
+                      <div style={{ border: "1px solid var(--line-0)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 16 }}>
+                        <div className="admin-metric" style={{ display: "inline-block", marginBottom: 16 }}>
+                          <div className="admin-metric-num" style={{ color: intel.modelAccuracy?.overall != null ? "var(--green)" : "var(--ink-3)", fontSize: 28 }}>
+                            {intel.modelAccuracy?.overall != null ? `${intel.modelAccuracy.overall}%` : "--%"}
+                          </div>
+                          <div className="admin-metric-label">Prediction Accuracy</div>
+                        </div>
+                        {intel.modelAccuracy?.byCategory?.length > 0 ? (
+                          <table className="admin-table">
+                            <thead>
+                              <tr>
+                                <th>Market Category</th>
+                                <th>Predictions</th>
+                                <th>Correct</th>
+                                <th>Accuracy %</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {intel.modelAccuracy.byCategory.map((row, i) => (
+                                <tr key={i}>
+                                  <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{row.category}</td>
+                                  <td>{row.predictions}</td>
+                                  <td style={{ color: "var(--green)", fontWeight: 600 }}>{row.correct}</td>
+                                  <td>
+                                    <span style={{ fontWeight: 700, color: row.accuracy >= 70 ? "var(--green)" : row.accuracy >= 50 ? "var(--amber)" : "var(--red)" }}>
+                                      {row.accuracy}%
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "var(--ink-3)", fontStyle: "italic" }}>
+                            Data populates as users complete deal cycles
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ── 2. Scoring Calibration ── */}
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{ background: "var(--navy)", color: "var(--surface)", padding: "8px 14px", borderRadius: "8px 8px 0 0", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}>
+                        Scoring Calibration
+                      </div>
+                      <div style={{ border: "1px solid var(--line-0)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 16 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                          <div className="admin-metric">
+                            <div className="admin-metric-num" style={{ color: intel.scoringCalibration?.avgScoreAdvanced != null ? "var(--green)" : "var(--ink-3)", fontSize: 24 }}>
+                              {intel.scoringCalibration?.avgScoreAdvanced != null ? intel.scoringCalibration.avgScoreAdvanced : "--"}
+                            </div>
+                            <div className="admin-metric-label">Avg Score &rarr; Advanced</div>
+                          </div>
+                          <div className="admin-metric">
+                            <div className="admin-metric-num" style={{ color: intel.scoringCalibration?.avgScoreDQ != null ? "var(--red)" : "var(--ink-3)", fontSize: 24 }}>
+                              {intel.scoringCalibration?.avgScoreDQ != null ? intel.scoringCalibration.avgScoreDQ : "--"}
+                            </div>
+                            <div className="admin-metric-label">Avg Score &rarr; DQ'd</div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--ink-2)", fontStyle: "italic" }}>
+                          When these numbers are far apart, the model is discriminating well
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── 3. Knowledge Layer Effectiveness ── */}
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{ background: "var(--navy)", color: "var(--surface)", padding: "8px 14px", borderRadius: "8px 8px 0 0", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}>
+                        Knowledge Layer Effectiveness
+                      </div>
+                      <div style={{ border: "1px solid var(--line-0)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 16 }}>
+                        <div style={{ maxHeight: 400, overflow: "auto" }}>
+                          <table className="admin-table">
+                            <thead>
+                              <tr>
+                                <th>KL Name</th>
+                                <th>Times Injected</th>
+                                <th>Sections Influenced</th>
+                                <th>User Corrections</th>
+                                <th>Deals Advanced</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(() => {
+                                // Merge real data with the full KL list
+                                const realData = {};
+                                (intel.klEffectiveness || []).forEach(r => { realData[r.name] = r; });
+                                const merged = ALL_KL_NAMES.map(name => {
+                                  const d = realData[name] || realData[name.toLowerCase()] || {};
+                                  return {
+                                    name,
+                                    injected: d.injected || 0,
+                                    avgSectionsInfluenced: d.avgSectionsInfluenced || 0,
+                                    corrections: d.corrections || 0,
+                                    correctionRate: d.correctionRate || 0,
+                                    advanced: d.advanced || 0,
+                                  };
+                                });
+                                // Also include any real data entries not in the static list
+                                (intel.klEffectiveness || []).forEach(r => {
+                                  if (!ALL_KL_NAMES.some(n => n === r.name || n.toLowerCase() === r.name)) {
+                                    merged.push(r);
+                                  }
+                                });
+                                // Sort: KLs with data first (by correction rate desc), then zeros
+                                merged.sort((a, b) => {
+                                  if (a.injected > 0 && b.injected === 0) return -1;
+                                  if (a.injected === 0 && b.injected > 0) return 1;
+                                  return b.correctionRate - a.correctionRate || b.injected - a.injected;
+                                });
+                                return merged.map((row, i) => (
+                                  <tr key={i} style={{ opacity: row.injected === 0 ? 0.5 : 1 }}>
+                                    <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{row.name}</td>
+                                    <td>{row.injected || "—"}</td>
+                                    <td>{row.avgSectionsInfluenced || "—"}</td>
+                                    <td>
+                                      {row.corrections > 0 ? (
+                                        <span style={{ color: "var(--amber)", fontWeight: 700 }}>{row.corrections} ({row.correctionRate}%)</span>
+                                      ) : "—"}
+                                    </td>
+                                    <td>
+                                      {row.advanced > 0 ? (
+                                        <span style={{ color: "var(--green)", fontWeight: 700 }}>{row.advanced}</span>
+                                      ) : "—"}
+                                    </td>
+                                  </tr>
+                                ));
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── 4. Edit Trends ── */}
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{ background: "var(--navy)", color: "var(--surface)", padding: "8px 14px", borderRadius: "8px 8px 0 0", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}>
+                        Edit Trends
+                      </div>
+                      <div style={{ border: "1px solid var(--line-0)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 16 }}>
+                        {intel.editTrends?.length > 0 ? (
+                          <table className="admin-table">
+                            <thead>
+                              <tr>
+                                <th>Field Name</th>
+                                <th>Times Edited</th>
+                                <th>Top Market Category</th>
+                                <th>Direction</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {intel.editTrends.map((row, i) => (
+                                <tr key={i}>
+                                  <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{row.field}</td>
+                                  <td>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <div style={{ height: 6, borderRadius: 3, background: "var(--amber)", width: Math.min(120, row.count * 8) }} />
+                                      <span style={{ fontWeight: 700, color: "var(--amber)" }}>{row.count}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ color: "var(--ink-2)" }}>{row.topCategory}</td>
+                                  <td>
+                                    <span className="admin-badge" style={{ background: "var(--amber-bg)", color: "var(--amber)" }}>
+                                      {row.direction}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "var(--ink-3)", fontStyle: "italic" }}>
+                            No edits logged yet
+                          </div>
+                        )}
+                        <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 10, fontStyle: "italic" }}>
+                          Fields edited most frequently = where the AI needs improvement
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── 5. Competitor Intel Coverage ── */}
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{ background: "var(--navy)", color: "var(--surface)", padding: "8px 14px", borderRadius: "8px 8px 0 0", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}>
+                        Competitor Intel Coverage
+                      </div>
+                      <div style={{ border: "1px solid var(--line-0)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 16 }}>
+                        {intel.competitorCoverage?.length > 0 ? (
+                          <table className="admin-table">
+                            <thead>
+                              <tr>
+                                <th>Market Category</th>
+                                <th>Competitors Mapped</th>
+                                <th>Verified Relationships</th>
+                                <th>Citations</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {intel.competitorCoverage.map((row, i) => (
+                                <tr key={i}>
+                                  <td style={{ fontWeight: 600, color: "var(--ink-0)" }}>{row.category}</td>
+                                  <td style={{ fontWeight: 700, color: "var(--navy)" }}>{row.competitorsMapped}</td>
+                                  <td>
+                                    {row.verified > 0 ? (
+                                      <span style={{ color: "var(--green)", fontWeight: 700 }}>{row.verified}</span>
+                                    ) : <span style={{ color: "var(--ink-3)" }}>0</span>}
+                                  </td>
+                                  <td>{row.citations}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "var(--ink-3)", fontStyle: "italic" }}>
+                            No competitor intel data yet
+                          </div>
+                        )}
+                        <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 10, fontStyle: "italic" }}>
+                          Grows with every ICP build. Each verified relationship is a prospect source.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── 6. Conversion Funnel ── */}
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{ background: "var(--navy)", color: "var(--surface)", padding: "8px 14px", borderRadius: "8px 8px 0 0", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}>
+                        Conversion Funnel
+                      </div>
+                      <div style={{ border: "1px solid var(--line-0)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 16 }}>
+                        {(() => {
+                          const f = intel.conversionFunnel;
+                          const steps = [
+                            { label: "Generated", value: f?.generated, color: "var(--ink-0)" },
+                            { label: "Viewed", value: f?.viewed, color: "var(--navy)" },
+                            { label: "Briefed", value: f?.briefed, color: "var(--green)" },
+                            { label: "Pushed CRM", value: f?.pushed_crm, color: "var(--amber)" },
+                            { label: "Advanced", value: f?.advanced, color: "var(--violet)" },
+                          ];
+                          const maxVal = Math.max(...steps.map(s => s.value || 0), 1);
+                          return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {steps.map((step, i) => {
+                                const val = step.value != null ? step.value : null;
+                                const pct = val != null && maxVal > 0 ? (val / maxVal * 100) : 0;
+                                return (
+                                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    <div style={{ width: 90, fontSize: 11, fontWeight: 600, color: "var(--ink-2)", textAlign: "right" }}>{step.label}</div>
+                                    <div style={{ flex: 1, height: 24, borderRadius: 6, background: "var(--bg-2)", overflow: "hidden", position: "relative" }}>
+                                      <div style={{ height: "100%", borderRadius: 6, background: step.color, width: val != null ? `${Math.max(pct, 2)}%` : "0%", opacity: 0.25, transition: "width 0.3s" }} />
+                                      <div style={{ position: "absolute", top: 0, left: 8, height: "100%", display: "flex", alignItems: "center", fontSize: 12, fontWeight: 700, color: step.color }}>
+                                        {val != null ? val.toLocaleString() : "--"}
+                                      </div>
+                                    </div>
+                                    {i < steps.length - 1 && (
+                                      <div style={{ fontSize: 14, color: "var(--ink-3)" }}>&darr;</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* ── 7. Brief Quality ── */}
+                    <div style={{ marginBottom: 28 }}>
+                      <div style={{ background: "var(--navy)", color: "var(--surface)", padding: "8px 14px", borderRadius: "8px 8px 0 0", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}>
+                        Brief Quality
+                      </div>
+                      <div style={{ border: "1px solid var(--line-0)", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 16 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                          <div className="admin-metric">
+                            <div className="admin-metric-num" style={{ color: intel.briefQuality?.avgSectionsComplete != null ? "var(--green)" : "var(--ink-3)", fontSize: 24 }}>
+                              {intel.briefQuality?.avgSectionsComplete != null ? `${intel.briefQuality.avgSectionsComplete}/10` : "--/10"}
+                            </div>
+                            <div className="admin-metric-label">Avg Sections Complete</div>
+                          </div>
+                          <div className="admin-metric">
+                            <div className="admin-metric-num" style={{ color: intel.briefQuality?.avgEditRate != null ? "var(--amber)" : "var(--ink-3)", fontSize: 24 }}>
+                              {intel.briefQuality?.avgEditRate != null ? `${intel.briefQuality.avgEditRate}%` : "--%"}
+                            </div>
+                            <div className="admin-metric-label">Avg Edit Rate</div>
+                          </div>
+                          <div className="admin-metric">
+                            <div className="admin-metric-num" style={{ color: intel.briefQuality?.crmPushRate != null ? "var(--navy)" : "var(--ink-3)", fontSize: 24 }}>
+                              {intel.briefQuality?.crmPushRate != null ? `${intel.briefQuality.crmPushRate}%` : "--%"}
+                            </div>
+                            <div className="admin-metric-label">CRM Push Rate</div>
+                          </div>
+                        </div>
+                        {intel.briefQuality?.totalBriefs > 0 && (
+                          <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 10 }}>
+                            Based on {intel.briefQuality.totalBriefs} brief{intel.briefQuality.totalBriefs !== 1 ? "s" : ""} with quality signals
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
