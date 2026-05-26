@@ -4385,13 +4385,14 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 ]}`;
 
     try {
-      // ── SONNET + WEB SEARCH via streaming ─────────────────────────────
-      // Streaming keeps the connection alive (SSE) so Vercel doesn't timeout.
-      // Sonnet + 2 web searches = fast enough to avoid ERR_CONNECTION_CLOSED.
-      // Opus was timing out at 60-90s for 25-30 companies + 3 searches.
+      // ── OPUS via streaming — best quality, connection stays alive ────
+      // Opus produces the deepest, most differentiated prospect lists.
+      // Streaming (SSE) keeps the connection alive during the 40-60s call.
+      // 3 web searches for maximum research depth.
+      // This is a paid service — users expect the best.
       const parsed = await streamAIWithSearch(
         prompt, () => {}, 7000,
-        { maxSearches: 2, anchorKey: "accounts", model: SONNET }
+        { maxSearches: 3, anchorKey: "accounts", model: OPUS }
       );
       // Normalize key name — model sometimes uses "targets" or "companies"
       if (parsed && !parsed.accounts) {
