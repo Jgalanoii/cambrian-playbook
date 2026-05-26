@@ -13,8 +13,8 @@
 //     financials/investors). Those are fetched live by P2/P5/P8/P9.
 //   - Every Tier 2 claim carries a [verified MM/YYYY, Source] tag.
 //
-// VERSION: 1.0.0
-// VERIFIED: 2026-05-20
+// VERSION: 2.0.0
+// VERIFIED: 2026-05-21
 //
 // -- SOURCES (re-verify each on quarterly sweep) --
 //   US Census Bureau, Monthly Retail Trade Survey (2026):
@@ -41,6 +41,8 @@
 //     ftc.gov/enforcement
 //   PCI Security Standards Council, PCI DSS v4.0.1 (2025):
 //     pcisecuritystandards.org
+//   Shopify, BigCommerce, Salesforce Commerce Cloud annual reports/filings
+//   Adobe Commerce / Magento community data
 
 // -- RETAIL INDUSTRY INJECTION --
 // Injected when the seller or target operates in retail: brands, retailers,
@@ -49,98 +51,285 @@
 export const RETAIL_INDUSTRY_INJECTION = `
 RETAIL & E-COMMERCE INDUSTRY CONTEXT (use when the target or seller is a retailer, brand, marketplace, DTC company, wholesaler, distributor, or retail-tech provider):
 
-VALUE CHAIN -- WHO MAKES, WHO SELLS, WHO FULFILLS (structural):
-- BRAND / MANUFACTURER: creates the product, owns the brand equity, sets MSRP. May sell direct (DTC), wholesale to retailers, or both. Increasingly going DTC to capture margin and first-party data.
-- RETAILER: buys from brands/wholesalers, curates assortment, merchandises, sells to consumers. Owns the store footprint and/or e-commerce site. Earns gross margin on the buy-sell spread.
-- MARKETPLACE: platform connecting third-party sellers with consumers. Earns take-rate (commission + fulfillment fees). Amazon, Walmart Marketplace, eBay, Shopify-powered storefronts. Does not own inventory (in pure marketplace model).
-- DTC (Direct-to-Consumer): brand sells directly via owned channels (website, owned stores, social). Higher margin per unit but must fund customer acquisition and fulfillment.
-- WHOLESALE / DISTRIBUTOR: aggregates products from many brands, sells in bulk to retailers. Operates on thin margins (2-8%), high volume. Logistics and credit-extension are core value.
-- FRANCHISE: brand licenses its model; franchisee owns and operates locations. Split economics (royalty + ad fund fees). Technology decisions are partly centralized, partly franchisee-driven.
+---
 
-RETAIL FORMATS -- NOT ONE MARKET (structural -- subdivide first):
-- MASS MARKET / DISCOUNT: Walmart, Target, Dollar General. High volume, low margin, price-driven. Scale and supply-chain efficiency are existential.
-- SPECIALTY RETAIL: category-focused (Best Buy, Home Depot, Ulta, Dick's). Deep assortment, product expertise, often higher margin than mass.
-- LUXURY: LVMH brands, Nordstrom, Neiman Marcus. High margin, low volume, experience-driven, brand-controlled distribution. Clienteling and personalization are core.
-- GROCERY / FOOD RETAIL: Kroger, Albertsons, Publix, Aldi, Whole Foods. Ultra-thin margins (1-3%), high frequency, perishable inventory, loyalty-program-driven. Private label is a margin lever.
-- CONVENIENCE (C-STORE): 7-Eleven, Circle K, Wawa. Impulse, fuel-adjacent, high transaction frequency, low ticket. Evolving toward foodservice and digital loyalty.
-- CLUB / WAREHOUSE: Costco, Sam's Club, BJ's. Membership-fee economics, limited SKU count, high velocity, bulk format. Membership renewal rate is the key metric.
-- DEPARTMENT STORE: Macy's, Kohl's, Nordstrom. Multi-category, in decline structurally; surviving via omnichannel and off-price pivots.
-- OFF-PRICE / VALUE: TJ Maxx, Ross, Burlington. Opportunistic buying, treasure-hunt model, low e-commerce penetration by design.
+## 1. Snapshot and market sizing
 
-ECONOMIC MODEL -- MARGIN, TURNS, AND COMP-STORE SALES (structural):
-- GROSS MARGIN = (Revenue - COGS) / Revenue. Varies dramatically by format: luxury 60-70%, specialty 35-50%, mass/discount 25-35%, grocery 25-30%, convenience 30-35% (ex-fuel).
-- INVENTORY TURNS = COGS / Average Inventory. Grocery turns 12-20x/year; specialty 4-8x; luxury 2-4x. Higher turns = less working-capital tied up, less markdown risk.
-- COMP-STORE SALES (same-store sales / SSS): YoY revenue change in stores open 12+ months. The single most-watched operating metric in retail -- isolates organic growth from new-store openings.
-- GMROI (Gross Margin Return on Inventory): Gross Margin $ / Average Inventory $. Measures how many gross-margin dollars generated per dollar of inventory invested. Best single metric combining margin and turns.
-- SHRINKAGE: inventory loss from theft (internal + external), damage, administrative error, and vendor fraud. US retail shrinkage ~$112B in 2022 (~1.6% of sales) [verified 01/2026, NRF 2023 National Retail Security Survey]. Organized retail crime (ORC) has driven shrinkage increases and is a C-suite priority.
-- FOUR-WALL ECONOMICS: revenue, margin, labor, rent, shrinkage at the individual-store level. Stores must clear a four-wall contribution threshold or face closure.
-- CUSTOMER ACQUISITION COST (CAC): especially critical for DTC/e-commerce. Digital CAC has risen sharply -- Meta/Google CPMs up 30-50% since 2020 [verified 01/2026, Deloitte]. Retention and loyalty spend is the counter-strategy.
+| Metric | Value |
+|---|---|
+| US total retail sales (2025) | ~$7.2T (ex-auto, ex-gas: ~$5.6T) [verified 01/2026, US Census / NRF] |
+| US e-commerce sales (2025) | ~$1.19T, ~22-25% of total retail [verified 01/2026, US Commerce Dept / eMarketer] |
+| E-commerce growth rate | ~8-10% YoY, outpacing in-store ~2-3% |
+| Amazon US e-commerce share | ~38-40% [verified 01/2026, eMarketer] |
+| Walmart US e-commerce share | ~6-7% (#2) [verified 01/2026, eMarketer] |
+| Shopify US e-commerce GMV share | ~10% [verified 01/2026, Shopify Investor Relations] |
+| Retail establishments (US) | ~1.05M employing ~15.4M workers [verified 01/2026, NRF / BLS] |
+| Retail media ad spend (US, 2025) | ~$55-60B, growing 20%+ YoY [verified 01/2026, eMarketer] |
+| Social commerce (US, 2025) | ~$80B market [verified 01/2026, eMarketer] |
+| Retail shrinkage (US) | ~$112B in 2022 (~1.6% of sales) [verified 01/2026, NRF 2023 NRSS] |
+| US retail tech spending | ~$100B+ annually [verified 01/2026, Forrester / IHL Group] |
 
-MARKET STRUCTURE & SIZE (cyclical -- dated):
-- US total retail sales ~$7.2T in 2025 (ex-auto, ex-gas: ~$5.6T) [verified 01/2026, US Census / NRF].
-- US e-commerce sales ~$1.19T in 2025, representing ~22-25% of total retail (narrower definitions ex-food/auto push this higher) [verified 01/2026, US Commerce Dept / eMarketer]. E-commerce growth ~8-10% YoY, outpacing in-store ~2-3%.
-- Amazon accounts for ~38-40% of US e-commerce [verified 01/2026, eMarketer]. Walmart is the #2 e-commerce player (~6-7% share) and gaining. Shopify powers ~10% of US e-commerce by GMV.
-- Top 10 US retailers by revenue: Walmart (~$650B global), Amazon (~$575B global), Costco (~$250B), Kroger (~$150B), Walgreens, Home Depot, Target, CVS, Lowe's, Albertsons [verified 01/2026, NRF Top 100]. Massive concentration at the top.
-- ~1.05M retail establishments in the US employing ~15.4M workers [verified 01/2026, NRF / BLS]. Retail is the nation's largest private-sector employer.
-- Retail media networks (RMNs) have become a major revenue line: US retail media ad spend ~$55-60B in 2025, growing 20%+ YoY [verified 01/2026, eMarketer]. Amazon, Walmart, Instacart, Kroger, Target all operate ad platforms monetizing first-party shopper data.
+---
 
-TECHNOLOGY LANDSCAPE (structural categories + dated vendor facts):
-- POINT OF SALE (POS): the operational backbone of physical retail. Modern cloud POS replaces legacy on-premise terminals. Key vendors: Oracle Retail (MICROS), NCR Voyix, Toshiba, Lightspeed, Square/Block, Toast (restaurant-adjacent), Shopify POS. POS modernization is a multi-year program and a master buying trigger.
-- ORDER MANAGEMENT SYSTEM (OMS): orchestrates orders across channels -- routes to optimal fulfillment node (store, DC, vendor), manages inventory promises, returns. Manhattan Associates, IBM Sterling, Fluent Commerce, Kibo, Salesforce OMS. Critical for omnichannel.
-- WAREHOUSE MANAGEMENT SYSTEM (WMS): manages DC/fulfillment center operations. Manhattan Associates (dominant), Blue Yonder (JDA legacy), Körber, Oracle WMS. Increasingly includes robotics integration (Locus, 6 River Systems, Symbotic).
-- CUSTOMER DATA PLATFORM (CDP) / CRM: unifies customer data across touchpoints. Salesforce, Adobe Real-Time CDP, Treasure Data, Tealium, Amperity, mParticle. Retailers investing heavily in first-party data as third-party cookies deprecate.
-- LOYALTY PLATFORMS: manage points, tiers, rewards, offers. Salesforce Loyalty, Eagle Eye, Comarch, Epsilon/Publicis, SessionM (Mastercard), Braze (engagement + loyalty). Loyalty is the #1 retention lever -- nearly all top retailers have a program.
-- UNIFIED COMMERCE / COMMERCE PLATFORM: single platform spanning e-commerce, POS, OMS, inventory. Shopify, commercetools, Salesforce Commerce Cloud, Adobe Commerce (Magento), BigCommerce, VTEX. Composable/MACH architecture (Microservices, API-first, Cloud-native, Headless) is the current architectural direction [verified 01/2026, Gartner].
-- MERCHANDISING & PRICING: assortment planning, price optimization, promotion management. Blue Yonder, SAS, Revionics (Aptos), Oracle Retail.
-- SUPPLY CHAIN PLANNING: demand forecasting, replenishment, allocation. Blue Yonder (dominant), o9 Solutions, Kinaxis, Oracle.
-- US retail tech spending ~$100B+ annually [verified 01/2026, Forrester / IHL Group], with e-commerce, supply chain, and data/analytics as the top investment priorities.
+## 2. What makes retail distinct as a sales target
 
-OMNICHANNEL DYNAMICS -- THE BLURRING OF PHYSICAL AND DIGITAL (structural):
-- BOPIS (Buy Online, Pick Up In Store): now offered by 80%+ of top-100 retailers [verified 01/2026, NRF]. Drives incremental store traffic and attach purchases.
-- SHIP-FROM-STORE: converts stores into micro-fulfillment nodes to shorten delivery time and reduce shipping cost. Requires OMS sophistication and store-level inventory accuracy.
-- CURBSIDE PICKUP: accelerated during COVID, now a permanent expectation.
-- MARKETPLACE INTEGRATION: brands/retailers selling on Amazon, Walmart, Target+, etc. alongside owned channels. Channel conflict and MAP (Minimum Advertised Price) enforcement are constant tensions.
-- SOCIAL COMMERCE: TikTok Shop, Instagram Shopping, Pinterest, YouTube Shopping. ~$80B US market by 2025 [verified 01/2026, eMarketer]. Emerging but growing rapidly.
-- LAST-MILE DELIVERY: Instacart, DoorDash, Uber, Shipt, retailers' own fleets. Profitability of last-mile is the persistent challenge.
-- UNIFIED INVENTORY: the holy grail -- a single, real-time view of inventory across all stores, DCs, and third-party locations. Most retailers are not there yet; inventory accuracy at store level averages ~65-70% [verified 01/2026, IHL Group].
+**1. "Retail" is not one market — it is at least eight distinct formats with radically different economics.** A grocery chain (1-3% net margin, 15x inventory turns) and a luxury retailer (15-20% net margin, 3x turns) share almost nothing in common commercially. Always subdivide by format before engaging. The first question in any retail brief is: what format?
 
-BUYER-ROLE TAXONOMY (structural -- who owns budget):
-- Chief Marketing Officer (CMO): brand, advertising, customer acquisition, retail media, loyalty program strategy. Often the largest discretionary budget.
-- Chief Digital Officer (CDO) / VP E-commerce: e-commerce platform, digital experience, conversion optimization, marketplace strategy.
-- Chief Information Officer (CIO) / Chief Technology Officer (CTO): enterprise tech stack, POS, OMS, WMS, ERP, data infrastructure, cybersecurity.
-- VP / SVP Merchandising: assortment, pricing, promotion, vendor management, private label. The merchant is the P&L owner in many retail orgs.
-- VP / SVP Supply Chain: logistics, fulfillment, distribution centers, inventory management, transportation.
-- VP / SVP Stores / Store Operations: four-wall performance, labor, in-store experience, shrinkage.
-- Chief Customer Officer / VP Loyalty: customer experience, loyalty program operations, retention, personalization.
-- CFO: increasingly involved in tech spend approval, especially for multi-million-dollar platform programs.
+**2. Physical stores still dominate — ~75% of retail happens in-store.** [verified 05/2026, US Census Bureau] Omnichannel (not pure-play digital) is the reality for most retailers. The "death of retail" narrative has been wrong for a decade. What is dying is single-channel retail — retailers that don't connect store, digital, and marketplace are the ones declining.
 
-REGULATORY LANDSCAPE (structural -- durable):
-- CCPA / STATE PRIVACY LAWS: California Consumer Privacy Act (CCPA/CPRA) and 15+ state-level privacy laws (Virginia, Colorado, Connecticut, Texas, Oregon, etc.) govern collection, use, and sale of consumer data. Retailers with loyalty programs and CDPs are squarely in scope. No federal privacy law yet, but proposed (ADPPA). Compliance complexity scales with state count.
-- PCI DSS (Payment Card Industry Data Security Standard): v4.0.1 is current [verified 01/2026, PCI SSC]. Any entity that stores, processes, or transmits cardholder data must comply. Non-compliance = fines, breach liability, and potential loss of card-acceptance privileges. PCI DSS v4.0 mandatory compliance deadline was March 2025.
-- FTC (Federal Trade Commission): enforces consumer protection, advertising truth-in-labeling, endorsement disclosures, children's privacy (COPPA), and unfair/deceptive practices. FTC has increased enforcement on dark patterns, fake reviews, and subscription auto-renewal practices.
-- ADA / WEB ACCESSIBILITY: ADA Title III has been applied to retail websites and apps. WCAG 2.1 AA is the de facto standard. Lawsuit volume is high -- ~4,000+ digital accessibility lawsuits filed annually against retailers [verified 01/2026, UsableNet].
-- PRODUCT SAFETY (CPSC): Consumer Product Safety Commission regulates product recalls, labeling. Relevant for private-label and imported goods.
-- TRADE / TARIFF: import tariffs and trade policy directly impact COGS for retailers sourcing internationally. Tariff volatility is a persistent planning challenge.
-- EMPLOYMENT LAW: Fair Labor Standards Act, predictive scheduling laws (state/local), gig-worker classification for delivery. Retail's large hourly workforce makes labor law a significant compliance surface.
+**3. Customer acquisition cost has become the binding constraint.** Digital CAC has risen sharply — Meta/Google CPMs up 30-50% since 2020 [verified 01/2026, Deloitte]. This has shifted strategic emphasis from acquisition to retention, loyalty, and first-party data. The retailer who owns the customer relationship (first-party data, loyalty program, direct channel) wins; the one dependent on paid acquisition is structurally disadvantaged.
 
-KNOWN TRAPS -- COMMON HALLUCINATION / REASONING ERRORS:
-- Treating "retail" as one market -- grocery economics differ entirely from luxury differ entirely from DTC. Always subdivide by format first.
-- Assuming e-commerce dominance -- ~75% of retail still happens in physical stores [verified 05/2026, US Census Bureau Quarterly Retail E-Commerce Sales]. Omnichannel, not pure-play digital, is the reality for most retailers.
-- Conflating gross margin across formats -- a 30% margin is excellent in grocery and poor in luxury. Always contextualize margin by format.
-- Overstating DTC viability -- rising CAC, logistics cost, and return rates have challenged many DTC-only models. The "DTC revolution" narrative has moderated significantly.
-- Assuming Amazon data is public -- Amazon reports North America and International segments, not granular US retail/marketplace splits. Third-party estimates (eMarketer, Marketplace Pulse) vary. Caveat Amazon-specific figures.
-- Fabricating comp-store sales or margin figures for specific retailers -- these are quarterly-reported; any cached number decays fast. Fetch live.
-- Ignoring private companies -- many major retailers (Publix, Aldi, H-E-B, Lidl, Trader Joe's) are private. Treat data as ranges, caveat sourcing.
+**4. Retail media networks have created a second P&L inside retailers.** Amazon, Walmart, Target, Kroger, Instacart all operate advertising platforms monetizing first-party shopper data. RMN revenue is high-margin (70%+) and growing 20%+ — it subsidizes thin retail margins and has become a strategic priority that creates new technology buying.
 
-GTM IMPLICATIONS (structural):
-- Subdivide by format before selling: mass, specialty, luxury, grocery, convenience, club, DTC are different ICPs with different economics, buyers, and tech stacks.
-- Margin structure determines budget: grocery/mass retailers scrutinize every dollar (thin margins); luxury/specialty have more discretionary spend.
-- Omnichannel is the master buying trigger -- any initiative that promises unified inventory, faster fulfillment, or seamless cross-channel experience opens budget.
-- Loyalty and first-party data are the strategic priority -- the deprecation of third-party cookies and the rise of retail media have made loyalty programs and CDPs C-suite investments.
-- Shrinkage/loss prevention is a current C-suite conversation and an active budget line.
-- POS modernization is a multi-year platform program that unlocks adjacent spend (payments, loyalty, analytics, unified commerce).
-- Seasonal buying cycles matter: major tech decisions and budgets are set in Q3-Q4 for the following fiscal year. Holiday (Nov-Dec) is a freeze period for most retailers -- no major deployments.
-- Store operations leaders are powerful but often underleveraged -- they control labor, shrinkage, and four-wall economics.
+---
+
+## 3. Sub-categorization — retail formats
+
+| Format | Examples | Margin profile | Key dynamics |
+|---|---|---|---|
+| **Mass market / discount** | Walmart, Target, Dollar General | 25-35% gross, 3-5% net | Scale and supply-chain efficiency existential; price-driven |
+| **Specialty retail** | Best Buy, Home Depot, Ulta, Dick's | 35-50% gross | Deep assortment; product expertise; higher margin than mass |
+| **Luxury** | LVMH brands, Nordstrom, Neiman Marcus | 60-70% gross | Experience-driven; brand-controlled distribution; clienteling core |
+| **Grocery / food** | Kroger, Albertsons, Publix, Aldi, Whole Foods | 25-30% gross, 1-3% net | Ultra-thin margins; high frequency; perishable; private label is margin lever |
+| **Convenience (C-store)** | 7-Eleven, Circle K, Wawa | 30-35% gross (ex-fuel) | Impulse; fuel-adjacent; evolving toward foodservice and digital loyalty |
+| **Club / warehouse** | Costco, Sam's Club, BJ's | 12-15% gross (membership-fee model) | Membership renewal rate is the key metric; limited SKU, high velocity |
+| **Department store** | Macy's, Kohl's, Nordstrom | 35-40% gross | Multi-category; structural decline; surviving via omnichannel and off-price pivots |
+| **Off-price / value** | TJ Maxx, Ross, Burlington | 28-32% gross | Opportunistic buying; treasure-hunt model; low e-commerce by design |
+| **DTC (Direct-to-Consumer)** | Warby Parker, Allbirds, Glossier | 60-70% gross | Higher margin per unit; must fund CAC and fulfillment; challenging at scale |
+| **Marketplace** | Amazon, Walmart Marketplace, eBay, Etsy | Take-rate 8-15% | Platform model; does not own inventory (pure); earns commission + fulfillment |
+
+---
+
+## 4. Named companies — the operator landscape (15-20)
+
+| Company | Format | Revenue | Why they matter |
+|---|---|---|---|
+| **Walmart** | Mass / grocery | ~$650B global [verified 01/2026, NRF Top 100] | Largest retailer globally; #2 US e-commerce; Walmart Marketplace growing; major RMN (Walmart Connect) |
+| **Amazon** | Marketplace / everything | ~$575B global [verified 01/2026, NRF Top 100] | ~38-40% US e-commerce; AWS subsidizes retail; Amazon Ads ~$50B+; sets consumer expectations |
+| **Target** | Mass / discount | ~$107B | Omnichannel execution benchmark; Target Circle loyalty; Roundel RMN; strong private-label |
+| **Costco** | Club / warehouse | ~$250B | 93%+ membership renewal rate; limited SKU model; e-commerce growing from low base |
+| **Kroger** | Grocery | ~$150B | Largest pure-play grocer; Kroger Precision Marketing (RMN); 84.51 data subsidiary |
+| **Home Depot** | Specialty (home improvement) | ~$155B | Largest specialty retailer; Pro customer segment is growth priority; strong digital |
+| **Lowe's** | Specialty (home improvement) | ~$86B | #2 home improvement; rural/suburban strength; loyalty program relaunch |
+| **Macy's** | Department store | ~$24B | Iconic brand; navigating structural decline; closing underperforming stores; off-price (Backstage) |
+| **Nordstrom** | Luxury / department | ~$15B | Premium positioning; Nordstrom Rack off-price; going private (2024-2025 deal) [verified 05/2026, S&P Global] |
+| **Shopify** | Commerce platform | ~$8B+ revenue, ~10% US e-commerce GMV [verified 01/2026, Shopify IR] | Powers DTC and SMB e-commerce; Shopify POS; Shop Pay; Shopify Fulfillment Network |
+| **BigCommerce** | Commerce platform | ~$300M+ revenue | Mid-market/enterprise e-commerce; composable commerce; headless architecture |
+| **Salesforce Commerce Cloud** | Commerce platform | Part of Salesforce CRM ecosystem | Enterprise unified commerce; B2B and B2C; strong in large retail/brand |
+| **Adobe Commerce (Magento)** | Commerce platform | Part of Adobe Experience Cloud | Open-source roots; enterprise e-commerce; Real-Time CDP integration |
+
+---
+
+## 5. Regulatory overlay
+
+### Consumer data and privacy
+
+| Regulation | Scope | Impact on retail |
+|---|---|---|
+| **CCPA / CPRA** | California consumers | Governs collection, use, sale of consumer data; loyalty programs squarely in scope; 15+ state-level privacy laws now active [verified 01/2026, IAPP] |
+| **State privacy laws** | VA, CO, CT, TX, OR, MT, others | Compliance complexity scales with state count; no federal privacy law yet (ADPPA proposed) |
+| **FTC enforcement** | All US consumers | Dark patterns, fake reviews, subscription auto-renewal, endorsement disclosures; increasing enforcement |
+| **COPPA** | Children under 13 | Relevant for toy/children's retailers; restricts data collection |
+
+### Payment and security
+
+- **PCI DSS v4.0.1** — current standard; mandatory compliance since March 2025 [verified 01/2026, PCI SSC]. Any entity storing, processing, or transmitting cardholder data must comply.
+- **ADA / Web accessibility** — ADA Title III applied to retail websites and apps. WCAG 2.1 AA is de facto standard. ~4,000+ digital accessibility lawsuits filed annually against retailers [verified 01/2026, UsableNet].
+
+### Trade and product
+
+- **Product safety (CPSC)** — recalls, labeling; relevant for private-label and imported goods
+- **Trade / tariff** — import tariffs directly impact COGS for international sourcing; tariff volatility is a persistent planning challenge
+- **Employment law** — FLSA, predictive scheduling laws (state/local), gig-worker classification for delivery; retail's large hourly workforce makes labor law a significant compliance surface
+
+---
+
+## 6. Technology stack — retail systems landscape
+
+### Core operational systems
+
+| System | Function | Key vendors |
+|---|---|---|
+| **POS (Point of Sale)** | Transaction processing, store operations backbone | Oracle Retail (MICROS), NCR Voyix, Toshiba, Lightspeed, Square/Block, Toast, Shopify POS [verified 01/2026, IHL Group] |
+| **OMS (Order Management)** | Cross-channel order routing, fulfillment orchestration, returns | Manhattan Associates, IBM Sterling, Fluent Commerce, Kibo, Salesforce OMS |
+| **WMS (Warehouse Management)** | DC/fulfillment center operations, robotics integration | Manhattan Associates (dominant), Blue Yonder, Korber, Oracle WMS |
+| **ERP** | Finance, HR, procurement, master data | SAP S/4HANA, Oracle Cloud, Microsoft Dynamics, Infor |
+| **Commerce platform** | E-commerce, unified commerce, digital experience | Shopify, commercetools, Salesforce Commerce Cloud, Adobe Commerce, BigCommerce, VTEX |
+
+### Customer-facing systems
+
+| System | Function | Key vendors |
+|---|---|---|
+| **CDP (Customer Data Platform)** | Unify customer data across touchpoints; first-party data strategy | Salesforce, Adobe Real-Time CDP, Treasure Data, Tealium, Amperity, mParticle |
+| **Loyalty platform** | Points, tiers, rewards, offers, retention | Salesforce Loyalty, Eagle Eye, Comarch, Epsilon/Publicis, SessionM (MC), Braze |
+| **Personalization** | Product recommendations, content, search | Algolia, Bloomreach, Dynamic Yield (MC), Coveo |
+| **Retail media platform** | Ad monetization of shopper data | Criteo (for retailers), CitrusAd (Epsilon), PromoteIQ (Microsoft), proprietary (Amazon, Walmart, Kroger) |
+| **Marketing automation** | Email, SMS, push, journey orchestration | Braze, Iterable, Klaviyo, Salesforce Marketing Cloud, Adobe Campaign |
+
+### Merchandising and supply chain
+
+- **Merchandising & pricing:** Blue Yonder, SAS, Revionics (Aptos), Oracle Retail
+- **Supply chain planning:** Blue Yonder (dominant), o9 Solutions, Kinaxis, Oracle
+- **Inventory optimization:** Manhattan, Blue Yonder, Relex Solutions
+- **MACH architecture** (Microservices, API-first, Cloud-native, Headless) is the current architectural direction for enterprise commerce [verified 01/2026, Gartner]
+
+---
+
+## 7. Omnichannel dynamics
+
+### The blurring of physical and digital (structural)
+
+- **BOPIS (Buy Online, Pick Up In Store):** offered by 80%+ of top-100 retailers [verified 01/2026, NRF]. Drives incremental store traffic and attach purchases.
+- **Ship-from-store:** converts stores into micro-fulfillment nodes; requires OMS sophistication and store-level inventory accuracy.
+- **Curbside pickup:** accelerated during COVID, now permanent expectation.
+- **Marketplace integration:** brands/retailers selling on Amazon, Walmart, Target+ alongside owned channels. Channel conflict and MAP enforcement constant tensions.
+- **Social commerce:** TikTok Shop, Instagram Shopping, Pinterest, YouTube Shopping. ~$80B US market by 2025 [verified 01/2026, eMarketer].
+- **Last-mile delivery:** Instacart, DoorDash, Uber, Shipt, retailer fleets. Profitability of last-mile is the persistent challenge.
+- **Unified inventory:** single, real-time view of inventory across all stores, DCs, third parties. Most retailers not there yet; store-level inventory accuracy averages ~65-70% [verified 01/2026, IHL Group].
+
+### Economic model (structural)
+
+- **Gross margin** = (Revenue - COGS) / Revenue. Varies dramatically by format (see Section 3).
+- **Inventory turns** = COGS / Average Inventory. Grocery turns 12-20x/year; specialty 4-8x; luxury 2-4x.
+- **Comp-store sales** (SSS): YoY revenue change in stores open 12+ months. The single most-watched operating metric in retail.
+- **GMROI** (Gross Margin Return on Inventory): the best single metric combining margin and turns.
+- **Four-wall economics:** revenue, margin, labor, rent, shrinkage at individual-store level. Stores must clear a four-wall threshold or face closure.
+- **Customer acquisition cost (CAC):** critical for DTC/e-commerce. Digital CAC risen sharply — Meta/Google CPMs up 30-50% since 2020.
+
+---
+
+## 8. ICP patterns by retailer type
+
+### Best-fit Cambrian user-prospect: Mid-market specialty retailers with active loyalty/engagement programs ($500M-$10B revenue)
+
+Why this segment:
+- Loyalty and rewards are core to retention strategy; engaged CMO/CCO budget owner
+- Faster procurement than megacaps; 60-120 day decision cycles
+- Actively investing in first-party data and personalization
+- Technology stack is modernizing but not yet locked into a single mega-vendor
+- Cambrian's rewards/incentives expertise maps directly to their #1 strategic priority (retention)
+
+### Strong-fit adjacent segments
+
+- **Grocery/food retailers investing in digital loyalty** — ultra-thin margins make loyalty-driven retention existential; high transaction frequency creates rich data
+- **DTC brands scaling into omnichannel** — rising CAC forces retention and loyalty investment; API-first tech stack; fast procurement
+- **Convenience/fuel retailers modernizing loyalty** — high-frequency transactions; loyalty program overhaul cycle; payments modernization adjacencies
+- **Franchise retail networks** — franchisee incentive and engagement programs map to rewards infrastructure
+- **Retailers with active RMN buildout** — RMN monetization requires rich first-party data and loyalty engagement; creates adjacency
+
+### Lower-fit segments
+
+- **Top-5 US mega-retailers (Walmart, Amazon, Costco, Kroger, Home Depot)** — procurement fortress; 12-24 month vendor onboarding; build-not-buy preference
+- **Off-price retailers (TJ Maxx, Ross, Burlington)** — treasure-hunt model is anti-digital by design; minimal loyalty investment
+- **Luxury conglomerates (LVMH, Kering, Richemont)** — bespoke clienteling systems; European HQ; long cycles; anti-mass-market positioning
+- **Legacy department stores in restructuring** — structural decline; cost-cutting mode; not investing in new capabilities
+
+---
+
+## 9. Buying committee and decision dynamics
+
+| Role | What they care about | Their lens |
+|---|---|---|
+| **CMO / VP Marketing** | Brand, advertising, customer acquisition, RMN, loyalty strategy | "Will this improve retention rate and lower CAC?" — often the largest discretionary budget |
+| **CDO / VP E-commerce** | E-commerce platform, digital experience, conversion, marketplace | "What's the conversion lift? How does this integrate with our commerce platform?" |
+| **CIO / CTO** | Enterprise tech stack, POS, OMS, WMS, ERP, cybersecurity | "Does this fit our architecture? What's the integration complexity?" |
+| **VP/SVP Merchandising** | Assortment, pricing, promotion, vendor mgmt, private label | "What's the margin impact? The merchant is the P&L owner in many retail orgs." |
+| **VP/SVP Supply Chain** | Logistics, fulfillment, DCs, inventory, transportation | "Does this reduce fulfillment cost or improve delivery speed?" |
+| **VP/SVP Stores** | Four-wall performance, labor, in-store experience, shrinkage | "Will my store teams actually use it? What's the labor impact?" |
+| **Chief Customer Officer / VP Loyalty** | CX, loyalty operations, retention, personalization | "How does this improve loyalty enrollment, engagement, and LTV?" |
+| **CFO** | Tech spend approval for multi-million programs; ROI | "What's the payback period? What's the total cost of ownership?" |
+
+### Decision pattern
+
+- DTC / digital-native ($10-100M): CEO/Founder + VP Marketing + CTO. 30-60 days. Fast, informal.
+- Mid-market specialty ($500M-$5B): CMO + CIO + VP Merchandising + CFO. 60-120 days. Formal but accessible.
+- Large retailer ($5-20B): Full RFP process. CIO + CDO + CMO + CFO + Procurement. 6-12 months. Security review required.
+- Mega-retailer ($20B+): 12-24 month cycles. Dedicated vendor management. Board-level for material spend. Build-not-buy bias.
+
+---
+
+## 10. Trigger events
+
+| Trigger | What it signals | Sales implication |
+|---|---|---|
+| **Loyalty program launch, relaunch, or major expansion** | Active investment in retention and first-party data | Direct budget for loyalty tech, rewards, personalization |
+| **POS modernization or unified commerce initiative** | Multi-year platform program | Unlocks adjacent spend (payments, loyalty, analytics) |
+| **New CMO, CDO, or Chief Customer Officer** | Strategic reset; first 6 months is the window | New vendor evaluation cycle; fresh budget priorities |
+| **Retail media network launch or expansion** | First-party data investment; new revenue line | CDP, loyalty, data enrichment adjacencies |
+| **Omnichannel fulfillment expansion (BOPIS, ship-from-store)** | OMS and inventory investment | Technology modernization budget unlocked |
+| **Shrinkage/loss prevention initiative** | C-suite priority with active budget line | Technology vendors for LP, analytics, and operations |
+| **Private-label or owned-brand expansion** | Margin focus strategy | Signals investment mindset; merchandising tech buying |
+| **M&A or store portfolio acquisition** | System integration ahead | 12-24 month integration technology spend |
+| **Holiday freeze ending (January)** | New fiscal year; budget unlocked | Primary selling window for Q1 engagements |
+| **CDP or first-party data strategy investment** | Cookie deprecation response; data monetization | CDP vendor selection; loyalty-data integration |
+
+---
+
+## 11. Common failure modes
+
+1. **Treating "retail" as one market.** Grocery economics differ entirely from luxury differ entirely from DTC. Always subdivide by format first.
+2. **Assuming e-commerce dominance.** ~75% of retail still happens in physical stores [verified 05/2026, US Census Bureau]. Omnichannel, not pure-play digital, is the reality.
+3. **Conflating gross margin across formats.** A 30% margin is excellent in grocery and poor in luxury. Always contextualize margin by format.
+4. **Overstating DTC viability.** Rising CAC, logistics cost, and return rates have challenged many DTC-only models. The "DTC revolution" narrative has moderated significantly.
+5. **Assuming Amazon data is public.** Amazon reports North America and International segments, not granular US retail/marketplace splits. Third-party estimates vary. Caveat Amazon-specific figures.
+6. **Fabricating comp-store sales or margin figures.** These are quarterly-reported; any cached number decays fast. Fetch live.
+7. **Ignoring private companies.** Many major retailers (Publix, Aldi, H-E-B, Lidl, Trader Joe's) are private. Treat data as ranges, caveat sourcing.
+8. **Pitching during holiday freeze.** Nov-Dec is a deployment freeze for most retailers. No major tech decisions during this period.
+9. **Selling technology without connecting to the metric the buyer owns.** CMO cares about retention and CAC; VP Merchandising cares about GMROI; VP Supply Chain cares about fulfillment cost. Lead with their metric.
+10. **Ignoring the power of the merchant (VP Merchandising).** In many retail orgs, the merchant is the P&L owner. Technology investments that don't have merchandising buy-in stall.
+
+---
+
+## 12. GTM implications for Cambrian seller-users
+
+### Structural priorities for retail in 2026
+
+- **First-party data and loyalty** are the strategic priority — the deprecation of third-party cookies and the rise of retail media have made loyalty programs and CDPs C-suite investments
+- **Retail media monetization** creates new budget holders and justifies first-party data investment
+- **Shrinkage/loss prevention** is a current C-suite conversation and active budget line across all formats
+- **POS modernization** is a multi-year platform program that unlocks adjacent spend
+- **Unified commerce / composable architecture** is the aspirational target for enterprise retailers
+
+### Seasonal buying cycles
+
+- **Q3-Q4:** Major tech decisions and budgets set for the following fiscal year
+- **November-December:** Holiday freeze — no major deployments or vendor decisions
+- **January-February:** New fiscal year begins; budget unlocked; primary selling window
+- **Q2:** Mid-year reviews; supplemental budget requests; pilot results drive expansion
+
+### Cambrian engagement vectors
+
+1. **Loyalty program strategy and vendor selection** — Cambrian's rewards/incentives expertise is directly applicable
+2. **First-party data monetization** — connecting loyalty data to RMN revenue
+3. **Customer retention economics** — quantifying the value of a 1-point retention improvement by format
+4. **Omnichannel experience optimization** — connecting store, digital, and marketplace into unified customer journey
+5. **Franchisee engagement and incentive programs** — rewards infrastructure for franchise networks
+6. **POS modernization advisory** — vendor selection and change management for multi-year core programs
+
+### Route to yes
+
+- Pilot scoped to a single format, region, or channel (e.g., loyalty enhancement for 50 stores in one market) to prove ROI before chain-wide rollout
+- Align to seasonal planning window — retailer budgets set Q3-Q4; avoid holiday freeze
+- Lead with the metric the buyer owns: CMO = retention and CAC; VP Merchandising = GMROI and margin; VP Supply Chain = fulfillment cost and speed
+- If retailer has an RMN, frame first-party data enrichment as an RMN revenue amplifier — it unlocks a second budget holder
+
+---
+
+## 13. Cross-references to sister layers
+
+| Layer | How it applies |
+|---|---|
+| \`paymentsKnowledge.js\` | POS payments, interchange, embedded payments, card-linked offers |
+| \`digitalIncentivesPlatformsKnowledge.js\` | Rewards, gift cards, loyalty platforms selling into retail channels |
+| \`qsrKnowledge.js\` | QSR/restaurant retail — loyalty, franchise, multi-location patterns overlap |
+| \`fintechKnowledge.js\` | BNPL, embedded lending, digital wallets in retail checkout |
+| \`complianceKnowledge.js\` | PCI DSS, CCPA/state privacy, ADA accessibility compliance |
+| \`manufacturingKnowledge.js\` | CPG/brand manufacturers selling through retail channels |
+| \`b2bSalesKnowledge.js\` | Enterprise selling motion into large retail procurement |
+
+---
+
+*End of layer. Update cadence: quarterly aligned with NRF reports and Census retail data releases. Critical re-check triggers: NRF annual forecast, Census e-commerce quarterly data, major retailer earnings (comp-store sales), holiday season results, retail M&A announcements, state privacy law enactments.*
 `;
 
 // -- RETAIL SCORING CONTEXT --
