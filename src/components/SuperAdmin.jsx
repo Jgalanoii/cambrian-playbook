@@ -1,4 +1,4 @@
-// src/components/SuperAdmin.jsx — Superuser engagement dashboard
+// src/components/SuperAdmin.jsx — Reporting dashboard (formerly Super Admin)
 // Locked to superuser email only. Shows engagement metrics across all users.
 
 import React, { useState, useEffect } from "react";
@@ -372,8 +372,8 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
       {/* ── Header ── */}
       <div className="admin-header">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Super Admin</div>
-          <span className="admin-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)", fontSize: 9, letterSpacing: "0.5px", textTransform: "uppercase" }}>Superuser</span>
+          <div style={{ fontFamily: "Lora,serif", fontSize: 18, fontWeight: 700, color: "var(--ink-0)" }}>Reporting</div>
+          <span className="admin-badge" style={{ background: "var(--violet-bg)", color: "var(--violet)", fontSize: 9, letterSpacing: "0.5px", textTransform: "uppercase" }}>Admin</span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={() => fetchData(false)} disabled={refreshing}

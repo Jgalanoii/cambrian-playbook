@@ -8670,14 +8670,14 @@ ${isOpen
                       Contact Us
                     </button>
 
-                    {/* ADMIN */}
+                    {/* REPORTING */}
                     {sbUser?.email==="itsjoegalano@gmail.com"&&(
                       <>
                         <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
                         <button onClick={()=>{setSuperAdminOpen(true);setMoreMenuOpen(false);}}
                           style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--violet)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                           onMouseEnter={e=>e.currentTarget.style.background="var(--violet-bg)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                          Super Admin
+                          Reporting
                         </button>
                       </>
                     )}
@@ -11504,7 +11504,16 @@ ${isOpen
                 )}
 
                 {/* Company Snapshot */}
-                <div className="bb">
+                {brief._loadingSections?.overview && !brief.companySnapshot ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon">◎</div><div style={{flex:1}}><div className="bb-title">Company Overview</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body"><div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      <div className="skeleton" style={{width:"90%",height:14}}/><div className="skeleton" style={{width:"75%",height:14}}/><div className="skeleton" style={{width:"60%",height:14}}/>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:8}}>{[1,2,3,4].map(i=><div key={i} className="skeleton" style={{height:40,borderRadius:"var(--r-md)"}}/>)}</div>
+                    </div></div>
+                  </div>
+                ) : (
+                <div className={`bb${!brief._loadingSections?.overview ? " bb-arrive" : ""}`}>
                   <div className="bb-hdr" onClick={()=>toggleBB("overview")}>
                     <div className="bb-icon">◎</div>
                     <div style={{flex:1}}><div className="bb-title">Company Overview</div><div className="bb-sub">Click any field to edit — your corrections sharpen the call prep, questions, and coaching</div></div>
@@ -11596,9 +11605,18 @@ ${isOpen
                     </div>
                   )}
                 </div></div>{/* /bb-body-wrap overview */}
+                )}
 
                 {/* Key Executives — always show section */}
-                <div className="bb">
+                {brief._loadingSections?.executives && !(brief.keyExecutives||[]).some(e=>e?.name) ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:10}}>👤</div><div><div className="bb-title">Key Executives</div><div className="bb-sub">Searching...</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+                      {[1,2,3].map(i=><div key={i} style={{display:"flex",gap:10,padding:8}}><div className="skeleton" style={{width:36,height:36,borderRadius:"50%",flexShrink:0}}/><div style={{flex:1,display:"flex",flexDirection:"column",gap:6}}><div className="skeleton" style={{width:"60%",height:14}}/><div className="skeleton" style={{width:"40%",height:12}}/><div className="skeleton" style={{width:"80%",height:12}}/></div></div>)}
+                    </div>
+                  </div>
+                ) : (
+                <div className={`bb${!brief._loadingSections?.executives ? " bb-arrive" : ""}`}>
                   <div className="bb-hdr">
                     <div className="bb-icon" style={{fontSize:10}}>👤</div>
                     <div><div className="bb-title">Key Executives</div><div className="bb-sub">{brief._loadingSections?.executives ? "Searching..." : "Know someone here? Edit names and angles — your corrections carry forward"}</div></div>
@@ -11620,9 +11638,7 @@ ${isOpen
                           </div>
                         </div>
                       ))
-                      : brief._loadingSections?.executives
-                        ? <div style={{fontSize:13,color:"var(--ink-3)",padding:12}}>Searching for executive team...</div>
-                        : <div style={{fontSize:13,color:"var(--ink-3)",padding:12,textAlign:"center"}}>
+                      : <div style={{fontSize:13,color:"var(--ink-3)",padding:12,textAlign:"center"}}>
                             Executive data not available.
                             <button onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}
                               style={{marginLeft:8,fontSize:12,fontWeight:600,padding:"4px 12px",borderRadius:6,border:"1px solid var(--tan-2)",background:"var(--bg-1)",color:"var(--ink-1)",cursor:"pointer"}}>
@@ -11632,10 +11648,18 @@ ${isOpen
                     }
                   </div>
                 </div>
+                )}
 
                 {/* Recent Headlines */}
-                {(brief.recentHeadlines||[]).filter(h=>h?.headline||typeof h==="string").length>0&&(
-                  <div className="bb">
+                {brief._loadingSections?.live && !(brief.recentHeadlines||[]).some(h=>h?.headline||typeof h==="string") ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:10}}>📰</div><div><div className="bb-title">Recent Headlines</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {[1,2,3].map(i=><div key={i} style={{padding:"8px 10px",borderRadius:7}}><div className="skeleton" style={{width:i===1?"95%":i===2?"80%":"88%",height:14}}/></div>)}
+                    </div>
+                  </div>
+                ) : (brief.recentHeadlines||[]).filter(h=>h?.headline||typeof h==="string").length>0 ? (
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>📰</div>
                       <div><div className="bb-title">Recent Headlines</div><div className="bb-sub">What they've been up to — and what it might mean for you</div></div>
@@ -13465,7 +13489,7 @@ ${isOpen
         <UserDashboard orgCtx={orgCtx} setOrgCtx={setOrgCtx} sbUser={sbUser} sbToken={sbToken} savedSessions={savedSessions} onClose={()=>setOrgPanelOpen(false)} onHubspotChange={setHubspotStatus} />
       )}
 
-      {/* Superuser analytics */}
+      {/* Reporting panel */}
       {/* Favorites panel */}
       {favPanelOpen && (
         <>
