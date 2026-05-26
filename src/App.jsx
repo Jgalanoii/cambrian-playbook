@@ -4385,42 +4385,22 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 ]}`;
 
     try {
-      // ── OPUS + WEB SEARCH for ALL tiers ────────────────────────────────
-      // This is the most important AI call in the product. Opus + web search
-      // produces real, verified, well-differentiated companies. Haiku produces
-      // duplicates and bankrupt companies.
-      const d = await claudeFetch({
-        model: OPUS,
-        max_tokens: 7000,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
-        messages: [{ role: "user", content: prompt }],
-      });
-      if (d?.error) {
-        setTargetGenError("That didn't land. " + (d.error.message || "Give it another shot — sometimes the AI needs a second swing."));
-        setTargetGenLoading(false);
-        return;
-      }
-      // Parse — tool use returns text + tool_result blocks; find JSON via anchor
-      const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
-      let parsed = null;
-      const keyAttempts = ["accounts", "targets", "companies", "results"];
-      for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
-        for (const key of keyAttempts) {
-          parsed = extractJsonWithKey(textBlocks[i], key);
-          if (parsed) {
-            if (!parsed.accounts && parsed[key]) parsed.accounts = parsed[key];
-            break;
-          }
-        }
-        if (!parsed && textBlocks[i]) {
-          try {
-            const arrMatch = textBlocks[i].match(/\[\s*\{[\s\S]*?"company"[\s\S]*?\}\s*\]/);
-            if (arrMatch) parsed = { accounts: JSON.parse(arrMatch[0]) };
-          } catch {}
+      // ── SONNET + WEB SEARCH via streaming ─────────────────────────────
+      // Streaming keeps the connection alive (SSE) so Vercel doesn't timeout.
+      // Sonnet + 2 web searches = fast enough to avoid ERR_CONNECTION_CLOSED.
+      // Opus was timing out at 60-90s for 25-30 companies + 3 searches.
+      const parsed = await streamAIWithSearch(
+        prompt, () => {}, 7000,
+        { maxSearches: 2, anchorKey: "accounts", model: SONNET }
+      );
+      // Normalize key name — model sometimes uses "targets" or "companies"
+      if (parsed && !parsed.accounts) {
+        for (const key of ["targets", "companies", "results"]) {
+          if (parsed[key]) { parsed.accounts = parsed[key]; break; }
         }
       }
       if (!parsed?.accounts?.length) {
-        console.warn("[generateTargets] Parse failed. Raw response:", textBlocks.join("\n").slice(0, 500));
+        console.warn("[generateTargets] Stream returned no accounts");
         setTargetGenError("The results came back a little scrambled. Give it another shot — or try narrowing your industry or company size.");
         setTargetGenLoading(false);
         return;
