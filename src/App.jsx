@@ -4530,10 +4530,22 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     // decision-relevant intel: industries/size/personas/disqualifiers
     // (existing) + named customer analogues + differentiators (so a
     // company very similar to a known win scores higher).
+    const icp = sellerICP?.icp || {};
+    const lobProfiles = icp.linesOfBusiness?.filter(l => l?.name) || [];
+    const customerProfiles = icp.namedCustomerProfiles?.filter(c => c?.name) || [];
+    const winPatterns = icp.winPatterns || {};
+
     const icpContext = sellerICP?.icp
-      ? `\nSELLER ICP: Target industries: ${(sellerICP.icp.industries||[]).join(", ")} | Size: ${sellerICP.icp.companySize||"any"} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Disqualifiers: ${(sellerICP.icp.disqualifiers||[]).join(", ")}`
-        + (sellerICP.icp.customerExamples?.length ? `\nKNOWN CUSTOMER ANALOGUES (companies similar to these should score higher; do NOT score these themselves — they're already customers): ${sellerICP.icp.customerExamples.join(", ")}` : "")
-        + (sellerICP.icp.uniqueDifferentiators?.length ? `\nSELLER DIFFERENTIATORS (use to break ties — companies that would benefit MOST from these score higher): ${sellerICP.icp.uniqueDifferentiators.join(" · ")}` : "")
+      ? `\nSELLER ICP: Target industries: ${(icp.industries||[]).join(", ")} | Size: ${icp.companySize||"any"} | Buyer: ${(icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Disqualifiers: ${(icp.disqualifiers||[]).join(", ")}`
+        // ── MULTI-LOB CONTEXT ──
+        + (lobProfiles.length ? `\n\nSELLER LINES OF BUSINESS (score prospects against the BEST-matching LOB):\n${lobProfiles.map((l,i) => `  LOB ${i+1}: ${l.name} (${l.revenueWeight || "?"} of revenue) — ${l.description || ""} | Buyer: ${l.buyerProfile || "?"} | Customers: ${(l.namedCustomers||[]).join(", ") || "none listed"}`).join("\n")}` : "")
+        // ── NAMED CUSTOMER PROFILES (the anchor for similarity scoring) ──
+        + (customerProfiles.length ? `\n\nNAMED CUSTOMER PROFILES (these are REAL customers — score prospects by how similar they are to these profiles):\n${customerProfiles.map(c => `  • ${c.name} — ${c.industry || "?"}, ${c.estimatedSize || "?"}, LOB: ${c.lob || "?"}, Use case: ${c.useCase || "?"}, Why: ${c.whyTheyBuy || "?"}`).join("\n")}\nCRITICAL: When scoring customer similarity (dim2), compare each prospect against EACH named customer above. The score reflects how close the prospect is to the BEST-matching customer. Name the specific customer in your explanation.` : "")
+        // ── WIN PATTERNS ──
+        + (winPatterns.industriesWhereTheyWin?.length ? `\n\nWHERE THE SELLER WINS: ${winPatterns.industriesWhereTheyWin.join(" | ")}` : "")
+        + (winPatterns.typicalEntryPoint ? `\nTYPICAL ENTRY: ${winPatterns.typicalEntryPoint}` : "")
+        + (icp.customerExamples?.length ? `\nKNOWN CUSTOMERS (do NOT score these — they're already customers): ${icp.customerExamples.join(", ")}` : "")
+        + (icp.uniqueDifferentiators?.length ? `\nSELLER DIFFERENTIATORS: ${icp.uniqueDifferentiators.join(" · ")}` : "")
         + buildUserEditContext(icpEdits, userEdits)
       : "";
 
@@ -4612,6 +4624,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `- CRITICAL: The 'reason', 'customerSimilarity', and 'incumbentRisk' fields are CUSTOMER-FACING. NEVER include: point values (+32, +5), dimension labels (dim1, dim2, dim3), step references (Step A, Step B), bracket terminology, scoring formulas, threshold numbers, or ANY internal methodology. A salesperson reads these fields — they should sound like expert judgment, not a scorecard calculation.\n`+
         `- 'customerSimilarity' is 1-2 sentences: name the MOST similar existing seller customer and explain the parallel in business terms. If no close match: "No close analogue — nearest comparison is [X] because [reason]."\n`+
         `- 'incumbentRisk' is 1-2 sentences: name the incumbent vendor ONLY if certain, and assess switching cost in business terms.\n`+
+        `- 'bestLOB' is which seller line of business best fits this prospect (use the LOB names from the seller context above, or "" if no LOBs defined).\n`+
+        `- 'closestCustomer' is the name of the seller's existing customer that most closely matches this prospect (from the named customer profiles above, or "" if none).\n`+
         `- Do NOT use "tier", "wall", "band", "bucket", "dimension", "score", "points", "bracket" in any customer-facing field.\n\n`+
         `SELLER: ${sellerCtx.slice(0,500)}\n${icpContext}\n`+
         `\n━━━ VERTICAL CONTEXT (background knowledge — do NOT override dim1/dim2/dim3 fixed values) ━━━\n`+
@@ -4711,7 +4725,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [named customer from the seller's proof pack above] — same vertical, comparable employee count, and identical buyer persona. If no close match exists, say so honestly.","incumbentRisk":"Name the incumbent vendor ONLY if you are certain. If uncertain, say 'Unknown — research needed'. Do NOT invent vendor names.","orgSize":"Employee count ONLY if you are confident — otherwise empty string. Do NOT guess.","ownership":"CURRENT status only — if company was acquired or went private, say Private (acquired by X). NEVER include a stale ticker for a company that delisted. No ticker unless you are certain it is currently listed. Empty string if uncertain.","ownershipType":"PICK ONE: public | pe-backed | vc-backed | private | bootstrapped — empty string if uncertain"}]}`;
+        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [specific named customer from profiles above] — same vertical, comparable size, identical use case. Be specific about WHY they're similar.","incumbentRisk":"Name the incumbent vendor ONLY if certain. If uncertain: 'No verified incumbent.'","bestLOB":"Which seller line of business best fits this prospect","closestCustomer":"Name of the seller's existing customer most similar to this prospect","orgSize":"Employee count if confident — empty string if not","ownership":"CURRENT status only — Private if acquired/delisted","ownershipType":"public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt, { maxTokens: 7500 });
@@ -5288,8 +5302,23 @@ ${isOpen
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
       `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
       `"customerExamples":["Customer names from the Phase 1 research above ONLY — do NOT add names from training knowledge. If research found no customers, return empty array."],`+
-      `"relevantEvents":[]}`+
-      `\n\nLeave relevantEvents as an empty array — events are populated by a separate web-search call that verifies dates and URLs.`;
+      `"relevantEvents":[],`+
+
+      // ── MULTI-LOB + NAMED CUSTOMER PROFILES (v2 scoring architecture) ──
+      `"linesOfBusiness":[`+
+        `{"name":"Primary LOB name (e.g. 'B2B Rewards & Incentives')","description":"1 sentence: what this LOB sells and to whom","revenueWeight":"estimated % of total revenue (e.g. 60%)","buyerProfile":"Who buys this LOB (title + industry)","namedCustomers":["Customer 1 from research","Customer 2"]},`+
+        `{"name":"Secondary LOB (if exists — many companies have only 1)","description":"","revenueWeight":"","buyerProfile":"","namedCustomers":[]}`+
+      `],`+
+      `"namedCustomerProfiles":[`+
+        `{"name":"Customer name from research","industry":"Their industry","estimatedSize":"Employee count or revenue band","useCase":"What they buy from the seller — be specific","lob":"Which seller LOB they map to","whyTheyBuy":"1 sentence: the business outcome this customer gets"}`+
+      `],`+
+      `"winPatterns":{`+
+        `"industriesWhereTheyWin":["Industry 1 — with WHY they win there","Industry 2"],`+
+        `"companySizeSweet":"The size range where they close most deals and why",`+
+        `"typicalEntryPoint":"How they typically land — which LOB, which buyer, which use case",`+
+        `"expansionPath":"How they grow within an account after landing"`+
+      `}}`+
+      `\n\nIMPORTANT: linesOfBusiness should have 1-4 entries based on how many distinct buyer profiles the seller serves. A company selling one product to one type of buyer has 1 LOB. A company like Blackhawk Network has 3+ (B2B incentives, B2C gift cards, payments infrastructure). namedCustomerProfiles should have 3-8 entries — one per named customer found in the research, with their industry and use case mapped. If research found no customers, return empty arrays. Leave relevantEvents empty — populated by a separate call.`;
 
     try{
       // ICP Phase 2 — Opus (ICP quality drives everything downstream)
