@@ -5177,9 +5177,9 @@ ${isOpen
     // for competitors/industry context. More research → more stable ICP.
     let researchCtx = "";
     try{
-      // ICP Phase 1 — Sonnet (fast + accurate)
+      // ICP Phase 1 — Haiku (fast web search extraction, ~3-5s)
       const d1 = await claudeFetch({
-        model: SONNET,
+        model: HAIKU,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
