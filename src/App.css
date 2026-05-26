@@ -130,6 +130,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg-0); color: var(-
   animation: cmd-fade-in var(--t-fast) var(--ease);
 }
 @keyframes cmd-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bb-section-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.bb-arrive { animation: bb-section-in 0.4s ease both; }
+.bb-skeleton { opacity: 0.6; }
 .cmd-box {
   width: 100%; max-width: 560px;
   background: var(--surface); border-radius: var(--r-lg);

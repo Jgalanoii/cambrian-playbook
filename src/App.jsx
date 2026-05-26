@@ -11604,7 +11604,7 @@ ${isOpen
                       <EF value={brief.fundingProfile||""} onChange={v=>patchBrief(b=>{b.fundingProfile=v;})} placeholder="Ownership structure, funding history..."/>
                     </div>
                   )}
-                </div></div>{/* /bb-body-wrap overview */}
+                </div></div>
                 )}
 
                 {/* Key Executives — always show section */}
@@ -11686,11 +11686,11 @@ ${isOpen
                       })}
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 {/* Growth Signals + Recent Signals */}
                 {((brief.growthSignals||[]).filter(Boolean).length>0||(brief.recentSignals||[]).filter(Boolean).length>0)&&(
-                  <div className="bb">
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>📈</div>
                       <div><div className="bb-title">Buying Signals</div><div className="bb-sub">Signals that say now might be the right time</div></div>
@@ -11717,8 +11717,15 @@ ${isOpen
                 )}
 
                 {/* Open Positions — only render when we have actual data (summary or titled roles) */}
-                {brief.openRoles&&(brief.openRoles.summary||(brief.openRoles.roles||[]).some(r=>r?.title))&&(
-                  <div className="bb">
+                {brief._loadingSections?.roles && !(brief.openRoles?.summary||(brief.openRoles?.roles||[]).some(r=>r?.title)) ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:10}}>💼</div><div><div className="bb-title">Open Positions at {selectedAccount?.company||"Target"}</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {[1,2,3].map(i=><div key={i} style={{padding:"8px 10px",borderRadius:7}}><div className="skeleton" style={{width:i===1?"70%":i===2?"55%":"65%",height:14}}/></div>)}
+                    </div>
+                  </div>
+                ) : brief.openRoles&&(brief.openRoles.summary||(brief.openRoles.roles||[]).some(r=>r?.title)) ? (
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:10}}>💼</div>
                       <div><div className="bb-title">Open Positions at {selectedAccount?.company||"Target"}</div><div className="bb-sub">What they're hiring for tells you what they're building</div></div>
@@ -11747,11 +11754,11 @@ ${isOpen
                       )}
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 {/* Public Sentiment */}
                 {brief.publicSentiment&&(brief.publicSentiment.onlineSentiment||brief.publicSentiment.standoutReview?.text||brief.publicSentiment.glassdoorRating)&&(
-                  <div className="bb">
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:11}}>💬</div>
                       <div><div className="bb-title">Market Sentiment</div><div className="bb-sub">What employees, customers, and the press actually say</div></div>
@@ -11843,7 +11850,7 @@ ${isOpen
 
                 {/* Leadership Team — separate block */}
                 {(brief.leadershipTeam||[]).filter(l=>l?.name).length>0&&(
-                  <div className="bb">
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr">
                       <div className="bb-icon">👤</div>
                       <div><div className="bb-title">Leadership Team</div><div className="bb-sub">Real names, real titles — your way into the org chart</div></div>
@@ -11865,7 +11872,14 @@ ${isOpen
                 )}
 
                 {/* Solution Mapping — hidden for research-only Quick Briefs */}
-                {sellerUrl!=="research-only"&&<div className="bb">
+                {sellerUrl!=="research-only" && brief._loadingSections?.solutions && !(brief.solutionMapping||[]).some(item=>item?.product) ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon">↑</div><div><div className="bb-title">How You Help</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
+                      {[1,2].map(i=><div key={i} style={{padding:"12px 14px",borderRadius:10,border:"1px solid var(--line-0)"}}><div className="skeleton" style={{width:"50%",height:16,marginBottom:8}}/><div className="skeleton" style={{width:"90%",height:14}}/><div className="skeleton" style={{width:"75%",height:14,marginTop:6}}/></div>)}
+                    </div>
+                  </div>
+                ) : sellerUrl!=="research-only"&&<div className={`bb${!brief._loadingSections?.solutions ? " bb-arrive" : ""}`}>
                   <div className="bb-hdr" onClick={()=>toggleBB("solutions")}>
                     <div className="bb-icon">↑</div>
                     <div>
@@ -12007,7 +12021,7 @@ ${isOpen
 
                 {/* Tech Stack & Integrations */}
                 {brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(
-                  <div className="bb">
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr" onClick={()=>toggleBB("techstack")}>
                       <div className="bb-icon" style={{fontSize:13}}>🔌</div>
                       <div><div className="bb-title">Tech Stack & Integrations</div><div className="bb-sub">What they run today — and where you might plug in</div></div>
@@ -12043,7 +12057,7 @@ ${isOpen
 
                 {/* Workforce & Culture Intelligence */}
                 {(brief.workforceProfile?.knowledgeWorkerPct||brief.cultureProfile?.coreValues||brief.incumbentVendors?.hrSystem)&&(
-                  <div className="bb">
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr" onClick={()=>toggleBB("culture")}>
                       <div className="bb-icon" style={{fontSize:12}}>🏛</div>
                       <div><div className="bb-title">{sellerUrl==="research-only"?"Culture & Workforce":"Culture, Workforce & Incumbents"}</div><div className="bb-sub">Their culture, their people{sellerUrl==="research-only"?"":", and who got there before you"}</div></div>
@@ -12100,8 +12114,15 @@ ${isOpen
                 )}
 
                 {/* Strategic Theme + Why You Why Now */}
-                {(brief.strategicTheme||brief.sellerOpportunity)&&(
-                  <div className="bb">
+                {brief._loadingSections?.strategy && !brief.strategicTheme && !brief.sellerOpportunity ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div style={{flex:1}}><div className="bb-title">Strategic Analysis</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
+                      <div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"70%",height:14}}/><div className="skeleton" style={{width:"90%",height:14}}/>
+                    </div>
+                  </div>
+                ) : (brief.strategicTheme||brief.sellerOpportunity) ? (
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div style={{flex:1}}><div className="bb-title">Strategic Analysis</div><div className="bb-sub">{sellerUrl==="research-only"?"What's driving this company right now":"What's driving this account and why you're positioned to win"}</div></div>
                     <StarButton id={`strategy-${selectedAccount?.company}`} type="Brief" label="Strategic Analysis" content={brief?.strategicTheme} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/></div>
                     <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -12119,10 +12140,16 @@ ${isOpen
                       )}
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 {/* Opening Angle */}
-                <div className="bb">
+                {brief._loadingSections?.strategy && !brief.openingAngle ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body"><div className="skeleton" style={{width:"85%",height:14}}/></div>
+                  </div>
+                ) : brief.openingAngle ? (
+                <div className="bb bb-arrive">
                   <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div></div>
                   <div className="bb-body">
                     <div className="talk-box">
@@ -12131,12 +12158,13 @@ ${isOpen
                     </div>
                   </div>
                 </div>
+                ) : null}
 
                 {/* ═══ DEEP INTELLIGENCE LAYERS ═══ */}
 
                 {/* Financial Deep Dive */}
                 {(brief.financialDeepDive || brief._loadingSections?.deepIntel) && (
-                  <div className="bb">
+                  <div className={`bb${brief.financialDeepDive && !brief._loadingSections?.deepIntel ? " bb-arrive" : ""}${brief._loadingSections?.deepIntel && !brief.financialDeepDive ? " bb-skeleton" : ""}`}>
                     <div className="bb-hdr" onClick={()=>toggleBB("financial")}>
                       <div className="bb-icon" style={{fontSize:12}}>📊</div>
                       <div style={{flex:1}}><div className="bb-title">Financial Intelligence</div><div className="bb-sub">Follow the money — where it's coming from and where they're putting it</div></div>
@@ -12185,7 +12213,7 @@ ${isOpen
 
                 {/* Competitive Positioning */}
                 {(brief.competitivePositioning || brief._loadingSections?.deepIntel) && (
-                  <div className="bb">
+                  <div className={`bb${brief.competitivePositioning && !brief._loadingSections?.deepIntel ? " bb-arrive" : ""}${brief._loadingSections?.deepIntel && !brief.competitivePositioning ? " bb-skeleton" : ""}`}>
                     <div className="bb-hdr" onClick={()=>toggleBB("competitive")}>
                       <div className="bb-icon" style={{fontSize:12}}>⚔</div>
                       <div style={{flex:1}}><div className="bb-title">Competitive Positioning</div><div className="bb-sub">Where they win, where they lose, and who they're fighting</div></div>
@@ -12247,7 +12275,7 @@ ${isOpen
 
                 {/* Board & Investors */}
                 {(brief.boardAndInvestors || brief._loadingSections?.deepIntel) && (
-                  <div className="bb">
+                  <div className={`bb${brief.boardAndInvestors && !brief._loadingSections?.deepIntel ? " bb-arrive" : ""}${brief._loadingSections?.deepIntel && !brief.boardAndInvestors ? " bb-skeleton" : ""}`}>
                     <div className="bb-hdr" onClick={()=>toggleBB("board")}>
                       <div className="bb-icon" style={{fontSize:12}}>🏛</div>
                       <div style={{flex:1}}><div className="bb-title">Board & Investors</div><div className="bb-sub">Who governs, who funds, and what they're pushing for</div></div>
@@ -12300,7 +12328,7 @@ ${isOpen
 
                 {/* Gate Map — approval paths for seller + buyer */}
                 {brief.gateMap && (
-                  <div className="bb" style={{borderColor:"var(--navy)",borderWidth:2}}>
+                  <div className={`bb${!brief._loadingSections?.deepIntel ? " bb-arrive" : ""}`} style={{borderColor:"var(--navy)",borderWidth:2}}>
                     <div className="bb-hdr" onClick={()=>toggleBB("gateMap")}>
                       <div className="bb-icon" style={{fontSize:14}}>🚦</div>
                       <div style={{flex:1}}>
@@ -12369,7 +12397,7 @@ ${isOpen
 
                 {/* DMAIC Process Maturity */}
                 {brief.processMaturity?.dmiacStage&&(
-                  <div className="bb">
+                  <div className="bb bb-arrive">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:14}}>⚙️</div>
                       <div><div className="bb-title">Process Maturity</div><div className="bb-sub">Where are they in their improvement cycle?</div></div>

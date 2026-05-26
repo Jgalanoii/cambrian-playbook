@@ -11,7 +11,7 @@
 export const VERTICAL_PLAYBOOKS = {
   ai: {
     name: "AI / ML",
-    keywords: ["artificial intelligence", "machine learning", "ai/ml", "ai platform", "ai-powered", "llm", "genai", "data science", "deep learning", "foundation-models", "mlops", "applied-ai", "vector-db", "fine-tuning", "inference", "rag", "copilot", "ai-native"],
+    keywords: ["ai/ml", "ai platform", "ai-powered", "data science", "deep learning", "foundation-models", "applied-ai", "vector-db", "inference", "copilot", "ai-native"],
     personas: ["Chief AI Officer", "CDO", "CTO", "CIO", "Head of Data Science", "ML Lead", "AI Ethics Board", "Head of Innovation", "CPO", "CMIO"],
     triggers: ["Competitor AI launch (public announcement)", "New CAO/CDO/CTO hire (first 6 months)", "Efficiency mandate / layoffs creating budget pressure", "Board AI mandate with deadline", "EU AI Act / state AI law compliance deadline", "Failed POC from another vendor (budget + urgency remain)", "Data readiness milestone (warehouse migration, semantic layer)", "Frontier model capability jump creating new use-case viability", "Incident from customer-facing AI failure"],
     disqualifiers: ["No data readiness (inaccessible, unclean, locked in vendor systems)", "No AI governance posture or named AI leader", "Strong internal build bias with no partner appetite", "No structured POC capability with success criteria", "No workflow integration (requires new surface for daily use)"],
@@ -31,7 +31,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   fintech: {
     name: "FinTech",
-    keywords: ["fintech", "financial technology", "neobank", "banking as a service", "baas", "lending", "regtech", "banking", "fintech-finance", "financial services", "embedded-finance", "challenger-bank", "digital-assets", "capital-markets"],
+    keywords: ["financial technology", "lending", "banking", "fintech-finance", "financial services", "embedded-finance", "challenger-bank", "digital-assets", "capital-markets"],
     personas: ["CFO", "Head of Payments", "VP Finance Ops", "Chief Risk Officer", "CCO", "BSA Officer", "Engineering Lead", "Sponsor Bank", "Chief Compliance Officer", "General Counsel", "Internal Audit", "Fraud Ops Lead"],
     triggers: ["Regulatory action (exam finding, MRA, consent order, Section 1033)", "Incumbent vendor sunset/failure or M&A-driven price increase", "Volume threshold crossed (outgrowing processor limits)", "New product/rail launch (FedNow, RTP, card program, new geography)", "Fraud/loss event (chargeback spike, synthetic fraud, ATO)", "Sponsor bank change (re-papering required)", "Audit/SOX/ASC 606 issue forcing GL-ready reporting", "Funding round or M&A triggering stack modernization", "New Head of Risk/CCO hire (first 6 months)"],
     disqualifiers: ["Treating fintech as single market (it's 6+ sub-industries)", "Missing compliance kit for bank buyer (no SOC 2 Type II)", "No external compelling event driving timeline", "Ignoring sponsor bank dynamics (post-Synapse sensitivity)", "Under-resourcing reference calls", "Cannot pass TPRM questionnaire (SIG Lite minimum)"],
@@ -41,7 +41,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   healthtech: {
     name: "HealthTech",
-    keywords: ["healthtech", "healthcare", "health tech", "digital health", "medtech", "clinical", "ehr", "epic", "cerner", "payer", "provider", "pharmaceuticals", "pharma", "biotech", "life sciences", "telehealth", "value-based-care", "fhir"],
+    keywords: ["healthtech", "medtech", "clinical", "payer", "provider", "pharmaceuticals", "pharma", "biotech", "life sciences", "value-based-care"],
     personas: ["CFO", "COO", "CMO", "CIO", "CMIO", "Chief Quality Officer", "CNO", "Service Line Leader", "HIPAA Security Officer", "HIPAA Privacy Officer", "Value Analysis Committee", "Medical Director", "VP Revenue Cycle", "Head of Care Management"],
     triggers: ["New C-suite hire (CMO, CMIO, CIO, CFO, CNO — first 6-12 months)", "EHR implementation/upgrade (Epic/Oracle Health opens adjacent categories)", "Reimbursement change (new CPT code, VBC contract, bundled payment)", "Regulatory change (CMS rule, ONC certification update)", "Quality/accreditation event (Joint Commission, NCQA findings)", "Merger/acquisition (system consolidation)", "Financial pressure (margin compression)", "Clinical event (sentinel event, quality metric miss)", "Population health / VBC initiative (entry into risk-bearing)", "Workforce crisis (nurse shortage, physician burnout driving automation)"],
     disqualifiers: ["No EHR integration pathway (Epic App Orchard, Oracle Health, SMART-on-FHIR)", "No clinical evidence (peer-reviewed, outcome data, KOL endorsement)", "No reimbursement pathway for service product enables", "Product adds clinician workflow burden (critical given burnout)", "Ignoring GPO gatekeepers (Vizient, Premier, HealthTrust)", "Not registered with relevant GPO; gates access to many systems"],
@@ -81,7 +81,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   payments: {
     name: "Payments",
-    keywords: ["payments", "payment processing", "acquiring", "issuing", "payfac", "iso", "interchange", "merchant services", "card-networks", "gateway", "tokenization", "settlement", "pci-dss", "chargeback"],
+    keywords: ["payments", "payment processing", "acquiring", "issuing", "payfac", "iso", "merchant services", "card-networks", "gateway", "tokenization", "settlement", "pci-dss", "chargeback"],
     personas: ["CFO", "COO", "Head of Payments", "Head of E-commerce", "VP Retail", "Chief Risk Officer", "CPO (ISV)", "Head of Card Program", "Head of Treasury Management", "EVP Retail Banking", "CTO"],
     triggers: ["IC+ pricing renegotiation (merchant moving off blended)", "PCI scope expansion (new compliance, payment type)", "Chargeback ratio threshold breach (VAMP, VDMP, MATCH)", "Processor outage/sunset driving re-platforming", "New rail adoption (FedNow/RTP, stablecoin, BNPL)", "Card program launch or migration (12-month window)", "Network rule change (tokenization, 3DS2, token vault mandate)", "Regulatory change (Durbin expansion, CCCA, Section 1033)", "Volume threshold crossed (new pricing tier, capacity)", "Geographic expansion (new country/currency/acquirer)"],
     disqualifiers: ["Pitching capability without pricing context (bps matter)", "Ignoring incumbent processor relationship (contractually sticky)", "Underestimating certification timelines (6+ months)", "Conflating merchant-facing and FI-facing ICPs", "Disruption framing (payments buyers skeptical — incumbent-trained)", "Missing PCI-DSS certification appropriate to volume", "No network certifications (Visa/MC PFAC, 3DS2, token vault)", "API-only to merchant needing hosted/iframe option"],
@@ -141,7 +141,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   "qsr-restaurants": {
     name: "QSR / Restaurants",
-    keywords: ["qsr", "quick service", "fast food", "fast casual", "restaurant", "food service", "franchise", "casual dining", "ghost kitchen", "delivery", "drive-thru", "pos", "loyalty program", "toast", "doordash"],
+    keywords: ["quick service", "casual dining", "delivery", "doordash"],
     personas: ["Chief Digital Officer", "CTO", "CMO", "COO", "CFO", "VP Off-Premise/Digital", "VP Operations", "Multi-Unit Franchisee Owner", "VP Marketing", "VP Technology"],
     triggers: ["Loyalty member plateau or declining engagement", "Third-party delivery commission exceeding 30-35%", "Per-store traffic declining despite unit growth", "PE mandate: AI adoption within 12 months", "POS end-of-life or franchisee adoption resistance", "First-party app order volume below 40%", "Food/labor cost trending 100+ bps above peers", "Acquisition by PE or strategic parent (tech stack rationalization)", "Earnings miss requiring cost discipline"],
     disqualifiers: ["Post-earnings cost freeze (2+ quarters)", "Activist campaign or CEO transition underway", "Franchisee sub-5% EBITDA margins (capital-constrained)", "POS vendor monopoly without required integration certification", "Loyalty program locked in exclusive multi-year vendor contract"],
@@ -151,7 +151,7 @@ export const VERTICAL_PLAYBOOKS = {
   },
   "banking-finance": {
     name: "Banking & Financial Services",
-    keywords: ["banking", "bank", "credit union", "lending", "loan", "deposit", "private equity", "venture capital", "private credit", "hedge fund", "asset management", "wealth management", "family office", "neobank", "baas", "embedded finance", "broker-dealer", "investment bank", "capital markets", "g-sib", "regional bank", "community bank"],
+    keywords: ["bank", "credit union", "loan", "deposit", "private equity", "venture capital", "private credit", "hedge fund", "asset management", "wealth management", "family office", "broker-dealer", "investment bank", "capital markets", "g-sib", "regional bank", "community bank"],
     personas: ["CEO/President", "CFO", "CRO", "Chief Digital Officer", "Head of Payments", "Head of Partnerships", "VP Lending", "VP Deposits", "Chief Risk Officer", "CCO", "PE Operating Partner", "Board Member"],
     triggers: ["New executive hire (CEO, CRO, CDO — first 6 months)", "Regulatory action (consent order, MRA, exam finding)", "Bank M&A (acquirer or target — integration GTM)", "Deposit franchise pressure (post-SVB urgency)", "BaaS/sponsor bank program launch or restructuring", "Digital transformation initiative (core conversion, channel modernization)", "Private credit fund launch or expansion", "PE acquisition of fintech portfolio company", "Credit union CUSO formation or fintech partnership", "Capital One + Discover integration ripple effects"],
     disqualifiers: ["G-SIB / money center bank (procurement fortress — approach via fintech vendor selling INTO them)", "Pure hedge fund (almost no GTM consulting buyers)", "Pre-revenue crypto/DeFi protocol", "No growth mandate or external pressure"],
