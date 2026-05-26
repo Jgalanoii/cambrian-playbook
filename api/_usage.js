@@ -163,7 +163,7 @@ export async function checkOrgUsage(userId, { isMax = false } = {}) {
       }
     }
 
-    const orgRes = await sbFetch(`orgs?id=eq.${orgId}&select=run_count,run_limit,max_run_count,max_run_limit,plan`);
+    const orgRes = await sbFetch(`orgs?id=eq.${orgId}&select=run_count,run_limit,max_run_count,max_run_limit,plan,rollover_runs`);
     const orgs = await orgRes.json();
     const org = orgs?.[0];
     if (!org) return { allowed: true };
