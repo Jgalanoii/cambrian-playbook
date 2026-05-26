@@ -4349,7 +4349,16 @@ Use web search to find REAL, CURRENT, OPERATIONAL companies. Search for:
 
 ═══ LOOKALIKE SEEDING ═══
 The seller's known customers are: ${(icp.customerExamples||[]).join(", ") || "none listed"}
-Find companies SIMILAR to these customers — same industry, similar size, similar business model, similar buying patterns. If the seller sells to Home Depot, find other large retailers with loyalty programs and omnichannel operations. The best prospects look like existing customers.
+Find companies SIMILAR to these customers — same industry, similar size, similar business model, similar buying patterns.
+
+═══ COMPETITOR CUSTOMER TARGETING (HIGHEST-VALUE PROSPECTS) ═══
+${(()=>{
+  const comps = (icp.competitiveAlternatives||[]).filter(c => typeof c === "object" && c.name && c.theirCustomers?.length);
+  if (!comps.length) return "No competitor customer data available. Focus on lookalike seeding above.";
+  return "The seller's competitors and their known customers:\n" +
+    comps.map(c => "  • " + c.name + " → customers: " + c.theirCustomers.join(", ") + (c.theirWeakness ? " (weakness: " + c.theirWeakness + ")" : "")).join("\n") +
+    "\n\nTHESE COMPETITOR CUSTOMERS ARE THE HIGHEST-VALUE PROSPECTS. They already have budget for this category, a proven use case, and switching potential. Include as many of these as match the size/industry filters. Also search for OTHER customers of these competitors that aren't listed above.";
+})()}
 
 ═══ RULES ═══
 CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Never return variants of the same company (e.g., "Acme Corp" and "Acme Corp (Restructured)").
@@ -4605,9 +4614,17 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : `No named customers available — score this dimension at 15 (fixed neutral) for ALL targets.\n\n`)+
         `━━━ DIMENSION 3: COMPETITIVE LANDSCAPE (30 points max) ━━━\n`+
         `Score using EXACTLY these fixed values based on VERIFIABLE knowledge only:\n`+
-        `  26 = you can name the SPECIFIC competitor product the target uses AND that competitor is in the seller's competitive alternatives list below\n`+
-        `  20 = DEFAULT — use this for ALL other cases, including: no known incumbent, uncertain, probable but unverified, or the target uses a vendor NOT in the seller's competitive alternatives list\n`+
-        `  10 = target has a PUBLICLY DOCUMENTED enterprise-wide deployment of a deep platform incumbent (e.g. Palantir Foundry, SAP, Oracle) with multi-year contract — only score 10 if you can cite the specific deployment\n`+
+        `  26 = target is a KNOWN CUSTOMER of a named competitor (from the competitor customer list below) — this is the highest-confidence signal. They have budget, use case, and switching potential.\n`+
+        `  26 = you can name the SPECIFIC competitor product the target uses AND that competitor is in the seller's competitive alternatives list\n`+
+        `  20 = DEFAULT — use this for ALL other cases, including: no known incumbent, uncertain, probable but unverified\n`+
+        `  10 = target has a PUBLICLY DOCUMENTED enterprise-wide deployment of a deep platform incumbent with multi-year contract — only score 10 if you can cite the specific deployment\n`+
+        // Inject competitor customer lists for automatic 26 scoring
+        ((() => {
+          const comps = (sellerICP?.icp?.competitiveAlternatives||[]).filter(c => typeof c === "object" && c.theirCustomers?.length);
+          if (!comps.length) return "";
+          return `\nCOMPETITOR CUSTOMER LIST (auto-score 26 if target appears here):\n` +
+            comps.map(c => `  ${c.name}: ${c.theirCustomers.join(", ")}`).join("\n") + "\n";
+        })()) +
         (competitorList.length ? `Seller's competitive alternatives: ${competitorList.join(", ")}.\n` : "")+
         `CONSISTENCY RULE: Score 26 ONLY if you can name "Company X uses [specific product from competitive list above]." If you cannot complete that sentence with certainty, score 20. This is the #1 rule for reducing score variance.\n`+
         `In "incumbentRisk": name the incumbent vendor ONLY if you scored 26 or 10, otherwise say "No verified incumbent in this category."\n\n`+
@@ -5294,7 +5311,12 @@ ${isOpen
       `"customerJobs":["Functional job: the task they hire this product to do","Emotional job: how they want to feel","Social job: how they want to be perceived"],`+
       `"topPains":["Specific pain 1 — cite what triggers it","Specific pain 2","Specific pain 3"],`+
       `"topGains":["Measurable gain 1 — quantify if possible","Gain 2","Gain 3"],`+
-      `"competitiveAlternatives":["Status quo / do nothing","Named competitor 1 — verified","Named competitor 2 — verified","Build in-house (if applicable)"],`+
+      `"competitiveAlternatives":[`+
+        `{"name":"Status quo / do nothing","theirCustomers":[]},`+
+        `{"name":"Named competitor 1 — verified from research","theirCustomers":["Customer A that uses this competitor","Customer B"],"theirWeakness":"Where they lose deals — 1 sentence"},`+
+        `{"name":"Named competitor 2 — verified","theirCustomers":["Customer C","Customer D"],"theirWeakness":""},`+
+        `{"name":"Build in-house (if applicable)","theirCustomers":[]}`+
+      `],`+
       `"uniqueDifferentiators":["Differentiator 1 — specific to THIS seller, not the category","Differentiator 2 — something a competitor cannot easily replicate"],`+
       `"disqualifiers":["HARD disqualifier 1 — structural deal-breaker (e.g. 'Company has fewer than 100 employees')","HARD disqualifier 2 — not a preference, a reason to walk away"],`+
       `"techSignals":["Tech signal 1 that indicates readiness (e.g. 'Uses Workday = likely buyer')","Signal 2"],`+
