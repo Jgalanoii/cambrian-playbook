@@ -1765,7 +1765,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: SONNET }
+    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
   );
   // relationshipSignals feature tabled
 
@@ -5179,7 +5179,7 @@ ${isOpen
     try{
       // ICP Phase 1 — Opus: foundation of everything. Built once, cached forever.
       const d1 = await claudeFetch({
-        model: SONNET,
+        model: OPUS,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -5251,7 +5251,7 @@ ${isOpen
     try{
       // ICP Phase 2 — Opus: ICP quality drives every downstream output
       const d2 = await claudeFetch({
-        model: SONNET,
+        model: OPUS,
         max_tokens:4000,
         temperature:0,
         messages:[
