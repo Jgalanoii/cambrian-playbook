@@ -10534,8 +10534,25 @@ ${isOpen
                         );
                       })()}
                       {targetGenLoading && (
-                        <div style={{fontSize:12,color:"var(--ink-2)",marginTop:10,fontStyle:"italic"}}>
-                          Searching the web for ICP-matched companies… ~20-30 seconds
+                        <div style={{marginTop:16,padding:"24px 20px",background:"var(--bg-1)",borderRadius:"var(--r-md)",border:"1.5px solid var(--line-0)"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                            <div className="load-spin" style={{width:24,height:24,borderWidth:3,flexShrink:0}}/>
+                            <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)"}}>{getQuip("scoring")}</div>
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",gap:6,fontSize:12,color:"var(--ink-2)"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{color:"var(--green)"}}>✓</span> Analyzing your ICP and seller profile
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{color:"var(--green)"}}>✓</span> Searching the web for ICP-matched companies
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:8,animation:"cmd-fade-in 0.5s ease"}}>
+                              <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Evaluating fit, competitors, and market signals
+                            </div>
+                            <div style={{fontSize:11,color:"var(--ink-3)",marginTop:6}}>
+                              Opus is doing deep research — this takes 20-40 seconds but produces significantly better results than a quick search.
+                            </div>
+                          </div>
                         </div>
                       )}
                       {targetGenError && (
