@@ -3877,7 +3877,7 @@ ${g.sections.map(s => {
   return (
     <>
       <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
-      <div style={{position:"fixed",top:0,right:0,bottom:0,width:"min(560px, 92vw)",background:"var(--surface)",zIndex:9999,display:"flex",flexDirection:"column",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",animation:"cmd-fade-in 0.2s ease"}}>
+      <div tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==="Escape")onClose();}} style={{position:"fixed",top:0,right:0,bottom:0,width:"min(560px, 92vw)",background:"var(--surface)",zIndex:9999,display:"flex",flexDirection:"column",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",animation:"cmd-fade-in 0.2s ease",outline:"none"}}>
         {/* Header */}
         <div style={{padding:"16px 20px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div>
@@ -4230,7 +4230,6 @@ export default function App(){
   const[gateNotes,setGateNotes]=useState({}); // notes under each gate
   const[riverData,setRiverData]=useState({});
   const[expandedObjs,setExpandedObjs]=useState({});
-  const[rightTab,setRightTab]=useState("brief");
   const[notes,setNotes]=useState("");
   const[postCall,setPostCall]=useState(null);
   const[postLoading,setPostLoading]=useState(false);
@@ -6210,7 +6209,7 @@ Return ONLY raw JSON:
       if (tag === "input" || tag === "textarea" || tag === "select") return;
       if (el?.isContentEditable) return;
       // Skip if any overlay/panel/modal is open or in-call step active
-      if (orgPanelOpen || showSessions || cmdOpen || chatOpen || favPanelOpen || resourcesOpen || contactOpen || dqModalTarget || intelModalTarget || confirmModal || upgradeOpen || superAdminOpen || moreMenuOpen) return;
+      if (orgPanelOpen || showSessions || cmdOpen || chatOpen || favPanelOpen || resourcesOpen || contactOpen || guidesOpen || helpOpen || dqModalTarget || intelModalTarget || confirmModal || upgradeOpen || superAdminOpen || moreMenuOpen) return;
       // Cmd-S — save session
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
