@@ -9811,8 +9811,8 @@ Return ONLY raw JSON:
                       if(Object.keys(patch).length){
                         const SB_URL=import.meta.env.VITE_SUPABASE_URL;
                         const SB_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
-                        await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgCtx.id}`,{method:"PATCH",headers:{apikey:SB_KEY,Authorization:`Bearer ${sbToken}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(patch)});
-                        setOrgCtx(prev=>({...prev,...patch}));
+                        try{await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgCtx.id}`,{method:"PATCH",headers:{apikey:SB_KEY,Authorization:`Bearer ${sbToken}`,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify(patch)});
+                        setOrgCtx(prev=>({...prev,...patch}));}catch{ /* non-critical */ }
                       }
                     }}
                       style={{padding:"8px 16px",borderRadius:8,background:"var(--amber)",color:"var(--surface)",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
@@ -14206,7 +14206,7 @@ Return ONLY raw JSON:
                     <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--red)",marginBottom:8}}>⚠ Watch-Outs</div>
                     {(brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
                       <div key={i} style={{fontSize:12,color:"var(--ink-1)",paddingBottom:6,marginBottom:6,borderBottom:i<brief.watchOuts.filter(Boolean).length-1?"1px solid var(--tan-3)":"none",lineHeight:1.5}}>
-                        {w}
+                        {typeof w==="string"?w:w?.text||w?.title||JSON.stringify(w)}
                       </div>
                     ))}
                   </div>
