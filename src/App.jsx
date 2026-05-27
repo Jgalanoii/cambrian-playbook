@@ -4884,20 +4884,40 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         (getPredictionMarketsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nPREDICTION MARKETS CONTEXT: Prediction market platforms operate under CFTC oversight as designated contract markets. Event contracts face federal preemption questions and state gambling law conflicts. Frame fit through regulatory compliance infrastructure and market integrity requirements.\n`
           : "") +
-        (getCybersecurityInjection(sellerICP, batch.map(m=>m.ind).join(" "))
-          ? `\nCYBERSECURITY CONTEXT: Cybersecurity companies sell to CISOs and SOC teams under compliance mandates (SOC2, NIST, ISO 27001, FedRAMP). Buyer journey includes POC/bake-off, board-level risk reporting, and vendor consolidation pressure. Frame fit through threat landscape urgency and compliance acceleration.\n`
+        (KL_CYBERSECURITY_SCORING && getCybersecurityInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nCYBERSECURITY VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_CYBERSECURITY_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "SOC teams under compliance mandates"}\n`+
+            `High-friction: ${KL_CYBERSECURITY_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+          : getCybersecurityInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nCYBERSECURITY CONTEXT: Cybersecurity companies sell to CISOs and SOC teams under compliance mandates. Frame fit through threat landscape urgency and compliance acceleration.\n`
           : "") +
-        (getEducationInjection(sellerICP, batch.map(m=>m.ind).join(" "))
-          ? `\nEDUCATION CONTEXT: Education buyers operate under FERPA, state procurement rules, ESSER funding timelines, and board approval cycles. K-12 districts have 6-18mo buying cycles driven by budget years. Higher ed has provost/CIO dual authority. Frame fit through compliance, funding alignment, and institutional buying patterns.\n`
+        (KL_EDUCATION_SCORING && getEducationInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nEDUCATION VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_EDUCATION_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "K-12 districts, higher ed"}\n`+
+            `High-friction: ${KL_EDUCATION_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+          : getEducationInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nEDUCATION CONTEXT: FERPA, state procurement rules, ESSER funding. K-12: 6-18mo cycles. Higher ed: provost/CIO dual authority.\n`
           : "") +
-        (getEnergyInjection(sellerICP, batch.map(m=>m.ind).join(" "))
-          ? `\nENERGY/UTILITIES CONTEXT: Utilities are heavily regulated — every purchase involves PUC/FERC approval adding 6-24mo. Regulated utilities earn guaranteed ROI on capex (rate base). IRA created $369B in clean energy incentives reshaping capital allocation. Deregulated markets (ERCOT/PJM/CAISO) have entirely different buying dynamics. Frame fit through regulatory approval path and rate base recovery.\n`
+        (KL_ENERGY_SCORING && getEnergyInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nENERGY/UTILITIES VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_ENERGY_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "Regulated IOUs, renewable developers"}\n`+
+            `High-friction: ${KL_ENERGY_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+          : getEnergyInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nENERGY/UTILITIES CONTEXT: Heavily regulated. PUC/FERC approval adds 6-24mo. IRA $369B clean energy incentives.\n`
           : "") +
-        (getHrTechInjection(sellerICP, batch.map(m=>m.ind).join(" "))
-          ? `\nHR TECHNOLOGY CONTEXT: HR tech buying cycles tied to open enrollment (Oct-Dec decisions) and fiscal year start. Enterprise HCM (Workday/Oracle/SAP) vs mid-market (ADP/UKG/Paylocity) is a binary market. CHRO now reports to CEO (post-COVID elevation). EOR/PEO explosion driven by distributed workforce. Frame fit through employee lifecycle coverage and compliance acceleration.\n`
+        (KL_HR_TECH_SCORING && getHrTechInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nHR TECHNOLOGY VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_HR_TECH_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "Mid-market employers, open enrollment"}\n`+
+            `High-friction: ${KL_HR_TECH_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+          : getHrTechInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nHR TECHNOLOGY CONTEXT: Buying cycles tied to open enrollment (Oct-Dec). Enterprise HCM vs mid-market is binary.\n`
           : "") +
-        (getGovernmentInjection(sellerICP, batch.map(m=>m.ind).join(" "))
-          ? `\nGOVERNMENT/PUBLIC SECTOR CONTEXT: Federal IT $100B+, SLED $100B+. FAR/DFARS govern all procurement. Contracting Officer (CO) has sole legal authority. Fiscal year end (Sep 30 federal, Jun 30 most states) drives 30-40% of annual spend. FedRAMP/StateRAMP required for cloud. Past performance is the #1 evaluation criterion. ATO process adds 12-18mo. Frame fit through contract vehicle access, compliance posture, and past performance.\n`
+        (KL_GOVERNMENT_SCORING && getGovernmentInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nGOVERNMENT VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_GOVERNMENT_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "Civilian IT, SLED"}\n`+
+            `High-friction: ${KL_GOVERNMENT_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+          : getGovernmentInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nGOVERNMENT CONTEXT: FAR/DFARS. FedRAMP required. Past performance is #1. ATO adds 12-18mo.\n`
           : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`
@@ -5348,7 +5368,13 @@ ${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━
 ━━━ SELLER PROFILE ━━━
 URL: ${sanitizeForPrompt(sellerUrl)}
 Market category: ${sanitizeForPrompt(category)}
+What they sell: ${sanitizeForPrompt(sellerICP?.sellerDescription || "")}
 Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+Key differentiators: ${differ.slice(0,2).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
+They commonly displace: ${competitors.slice(0,2).map(c=>sanitizeForPrompt(c)).join(" · ") || "—"}
+Buyer personas: ${buyers.slice(0,3).join(", ") || "—"}
+Priority trigger: ${sanitizeForPrompt(trigger) || "—"}
+Geographies: ${geo.map(g=>sanitizeForPrompt(g)).join(", ") || "North America"}
 ${naicsCodes.length ? `NAICS codes: ${naicsCodes.join(", ")}` : ""}
 
 ━━━ WHAT TO LOOK FOR ━━━
@@ -7425,6 +7451,25 @@ Return ONLY raw JSON:
       getInvestorInjection(sellerICP, member.ind) +
       getBaasInjection(sellerICP, member.ind) +
       getCharitableInjection(sellerICP, member.ind) +
+      getMedicalPaymentsInjection(sellerICP, member.ind) +
+      getSmbMidmarketInjection(sellerICP, member.ind, member) +
+      getInsuranceInjection(sellerICP, member.ind) +
+      getDigIncentivesInjection(sellerICP, member.ind) +
+      getRetailInjection(sellerICP, member.ind) +
+      getProfServicesInjection(sellerICP, member.ind) +
+      getManufacturingInjection(sellerICP, member.ind) +
+      getCannabisInjection(sellerICP, member.ind) +
+      getCryptoInjection(sellerICP, member.ind) +
+      getGamingInjection(sellerICP, member.ind) +
+      getPredictionMarketsInjection(sellerICP, member.ind) +
+      getCybersecurityInjection(sellerICP, member.ind) +
+      getEducationInjection(sellerICP, member.ind) +
+      getEnergyInjection(sellerICP, member.ind) +
+      getHrTechInjection(sellerICP, member.ind) +
+      getGovernmentInjection(sellerICP, member.ind) +
+      (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
+      (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
+      (KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : "") +
       (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
       (KL_B2B_SALES ? "\n" + KL_B2B_SALES : "") +
       (KL_OKR_KPI ? "\n" + KL_OKR_KPI : "") +
@@ -7536,6 +7581,15 @@ Return ONLY raw JSON:
       (KL_RETAIL_DISCOVERY && getRetailInjection(sellerICP, member?.ind) ? KL_RETAIL_DISCOVERY + "\n" : "") +
       (KL_PROF_SERVICES_DISCOVERY && getProfServicesInjection(sellerICP, member?.ind) ? KL_PROF_SERVICES_DISCOVERY + "\n" : "") +
       (KL_MANUFACTURING_DISCOVERY && getManufacturingInjection(sellerICP, member?.ind) ? KL_MANUFACTURING_DISCOVERY + "\n" : "") +
+      (KL_CANNABIS_DISCOVERY && getCannabisInjection(sellerICP, member?.ind) ? KL_CANNABIS_DISCOVERY + "\n" : "") +
+      (KL_CRYPTO_DISCOVERY && getCryptoInjection(sellerICP, member?.ind) ? KL_CRYPTO_DISCOVERY + "\n" : "") +
+      (KL_GAMING_DISCOVERY && getGamingInjection(sellerICP, member?.ind) ? KL_GAMING_DISCOVERY + "\n" : "") +
+      (KL_PREDICTION_MARKETS_DISCOVERY && getPredictionMarketsInjection(sellerICP, member?.ind) ? KL_PREDICTION_MARKETS_DISCOVERY + "\n" : "") +
+      (KL_CYBERSECURITY_DISCOVERY && getCybersecurityInjection(sellerICP, member?.ind) ? KL_CYBERSECURITY_DISCOVERY + "\n" : "") +
+      (KL_EDUCATION_DISCOVERY && getEducationInjection(sellerICP, member?.ind) ? KL_EDUCATION_DISCOVERY + "\n" : "") +
+      (KL_ENERGY_DISCOVERY && getEnergyInjection(sellerICP, member?.ind) ? KL_ENERGY_DISCOVERY + "\n" : "") +
+      (KL_HR_TECH_DISCOVERY && getHrTechInjection(sellerICP, member?.ind) ? KL_HR_TECH_DISCOVERY + "\n" : "") +
+      (KL_GOVERNMENT_DISCOVERY && getGovernmentInjection(sellerICP, member?.ind) ? KL_GOVERNMENT_DISCOVERY + "\n" : "") +
       (KL_EXEC_PERSPECTIVES_DISCOVERY ? KL_EXEC_PERSPECTIVES_DISCOVERY + "\n" : "") +
       (KL_APPROVAL_GATES_DISCOVERY ? KL_APPROVAL_GATES_DISCOVERY + "\n" : "") +
       (KL_PE_HOLDCO_DISCOVERY ? KL_PE_HOLDCO_DISCOVERY + "\n" : "") +
