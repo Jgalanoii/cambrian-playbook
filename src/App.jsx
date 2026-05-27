@@ -8968,32 +8968,58 @@ Return ONLY raw JSON:
               </div>
             )}
 
-            {/* ── TOOLS TAB ── */}
+            {/* ── TOOLS TAB — actionable quick-access to built-in frameworks ── */}
             {resourceTab==="tools"&&(
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:4}}>Sales enablement tools and frameworks.</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{fontSize:12,color:"var(--ink-2)",marginBottom:2}}>Jump to any built-in framework or ask Milton for coaching.</div>
 
                 {[
-                  { icon: "⚔️", title: "Competitive Battle Cards", desc: "Reframe comparisons, handle 'we're also looking at X' moments", action: "Built into hypothesis talk tracks" },
-                  { icon: "📋", title: "Discovery Call Scorecard", desc: "8-dimension scoring rubric for call quality assessment", action: "Built into discovery question generation" },
-                  { icon: "🎯", title: "Offer-Fit Mapping", desc: "Map prospect situations to engagement shapes (Diagnostic, Pilot, Implementation, etc.)", action: "Built into post-call deal routing" },
-                  { icon: "🎓", title: "Rep Onboarding Playbook", desc: "90-day curriculum with weekly milestones and certification gates", action: "Available via Milton coaching" },
-                  { icon: "📊", title: "QBR Template", desc: "7-section quarterly business review structure", action: "Available via Milton coaching" },
-                  { icon: "🃏", title: "Solution-Fit Cards", desc: "Per-offer cards: trigger → pain → solution → deliverable → success metric", action: "Built into Solution Architecture review" },
-                  { icon: "🤖", title: "Milton (Sales Coach)", desc: "AI coaching assistant with full knowledge layer — ask anything", action: null },
+                  { icon: "⚔️", title: "Battle Cards", desc: "Competitive positioning for 'we're also looking at X' moments", stepLabel: "Prep", stepNum: 6, needs: !!riverHypo },
+                  { icon: "📋", title: "Discovery Scorecard", desc: "8-dimension call quality assessment with Sales + Architecture tracks", stepLabel: "Prep", stepNum: 6, needs: !!discoveryQs },
+                  { icon: "🎯", title: "Deal Routing", desc: "Fast Track / Nurture / Disqualify — based on your call capture", stepLabel: "Post-Call", stepNum: 8, needs: !!postCall },
+                  { icon: "🃏", title: "Solution Architecture", desc: "Product-market fit, maturity stage, implementation phasing", stepLabel: "Solution Fit", stepNum: 9, needs: !!solutionFit },
+                  { icon: "📊", title: "Fit Scores", desc: "3-dimension scoring across your full prospect list", stepLabel: "Fit Scores", stepNum: 3, needs: cohorts.some(c=>c.members.length>0) },
+                  { icon: "📡", title: "RFP Intelligence", desc: "Published RFPs, contract awards, and buying signals", stepLabel: "ICP & RFPs", stepNum: 1, needs: true },
                 ].map((tool,i)=>(
-                  <div key={i} style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
-                    <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                      <span style={{fontSize:18,flexShrink:0}}>{tool.icon}</span>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>{tool.title}</div>
-                        <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5,marginTop:2}}>{tool.desc}</div>
-                        {tool.action && <div style={{fontSize:10,color:"var(--tan-0)",marginTop:4,fontWeight:600}}>{tool.action}</div>}
-                        {!tool.action && <button className="btn btn-secondary btn-sm" style={{marginTop:6}} onClick={()=>{setResourcesOpen(false);setChatOpen(true);}}>Open Milton →</button>}
-                      </div>
+                  <button key={i} onClick={()=>{setResourcesOpen(false);setStep(tool.stepNum);}}
+                    style={{padding:"10px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,transition:"all 0.1s"}}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor="var(--tan-0)"} onMouseLeave={e=>e.currentTarget.style.borderColor="var(--line-0)"}>
+                    <span style={{fontSize:16,flexShrink:0}}>{tool.icon}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)"}}>{tool.title}</div>
+                      <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.4,marginTop:1}}>{tool.desc}</div>
                     </div>
-                  </div>
+                    <div style={{fontSize:10,fontWeight:600,color:tool.needs?"var(--green)":"var(--ink-3)",flexShrink:0,whiteSpace:"nowrap"}}>
+                      {tool.needs ? `→ ${tool.stepLabel}` : "Build first"}
+                    </div>
+                  </button>
                 ))}
+
+                <div style={{borderTop:"1px solid var(--line-0)",paddingTop:8,marginTop:4}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Coaching & Guides</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    <button onClick={()=>{setResourcesOpen(false);setChatOpen(true);}}
+                      style={{padding:"10px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}
+                      onMouseEnter={e=>e.currentTarget.style.borderColor="var(--tan-0)"} onMouseLeave={e=>e.currentTarget.style.borderColor="var(--line-0)"}>
+                      <span style={{fontSize:16}}>🤖</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)"}}>Milton — Sales Coach</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)"}}>Ask about objections, QBR prep, onboarding, or any sales question</div>
+                      </div>
+                      <span style={{fontSize:10,fontWeight:600,color:"var(--green)"}}>Open →</span>
+                    </button>
+                    <button onClick={()=>{setResourcesOpen(false);setGuidesOpen(true);}}
+                      style={{padding:"10px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}
+                      onMouseEnter={e=>e.currentTarget.style.borderColor="var(--tan-0)"} onMouseLeave={e=>e.currentTarget.style.borderColor="var(--line-0)"}>
+                      <span style={{fontSize:16}}>📘</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)"}}>Guides & Downloads</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)"}}>User Guide, Admin Guide, Reseller Guide — read or download as PDF</div>
+                      </div>
+                      <span style={{fontSize:10,fontWeight:600,color:"var(--green)"}}>Open →</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
