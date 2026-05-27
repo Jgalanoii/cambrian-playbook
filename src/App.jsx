@@ -5241,16 +5241,16 @@ ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
 ${!isOpen && KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ SEARCH STRATEGY — USE ALL ${isOpen ? "6" : "4"} SEARCHES ━━━
 ${isOpen ? `
-  You have 6 web searches. Use EVERY one. Do NOT stop early.
+  You have 6 web searches. Use EVERY one. Do NOT stop early. Vary your queries — don't repeat similar searches.
 
   Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025 2026${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
-  Search 2 (State agencies): "${sanitizeForPrompt(category || industries[0])}" RFP OR "request for proposals" site:.gov 2025 2026
-  Search 3 (State + local): "${sanitizeForPrompt(industries[0] || category)}" solicitation OR procurement OR "bid opportunity" site:.gov 2025 2026
-  Search 4 (Commercial): "${sanitizeForPrompt(industries[0] || category)}" RFP OR "request for proposal" 2025 2026 -site:kff.org -site:advisory
+  Search 2 (State-specific SLED): "${sanitizeForPrompt(category || industries[0])}" RFP "employee trust" OR "department of health" OR "Medicaid" OR "retirement system" OR "state comptroller" site:.gov
+  Search 3 (Aggregator): "${sanitizeForPrompt(category || industries[0])}" RFP 2025 2026 site:bidnet.com OR site:demandstar.com OR site:findrfp.com OR site:govwin.com
+  Search 4 (Commercial): "${sanitizeForPrompt(industries[0] || category)}" RFP OR "request for proposal" 2025 2026 -site:kff.org -site:advisory.com
   Search 5 (Competitors in RFPs): "${sanitizeForPrompt(competitors[0] || category)}" RFP OR solicitation OR "vendor selection" 2025 2026
-  Search 6 (NAICS + broad): ${naicsCodes.length ? `NAICS ${naicsCodes[0]} ` : ""}"${sanitizeForPrompt(category || industries[0])}" procurement OR RFP OR "sources sought" 2025 2026
+  Search 6 (Niche SLED): "supplemental benefits" OR "flex card" OR "${sanitizeForPrompt(category)}" RFP OR solicitation OR procurement site:.gov 2024 OR 2025 OR 2026
 
-  STATE AGENCIES ARE KEY: Departments of health, employee trust funds, Medicaid agencies, state retirement systems, and public employee benefit boards post RFPs on their own .gov portals — NOT on SAM.gov. These are often the highest-value opportunities. Do NOT skip the .gov searches.
+  IMPORTANT: Broad queries like "insurance RFP site:.gov" return 10,000+ results and miss specific state agencies. Use SPECIFIC terms from the seller's category in your queries. State employee trust funds, Medicaid agencies, and health departments post RFPs on their own portals.
 ` : `
   Search 1 (Buyer websites): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" OR "vendor" site:.com
   Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
