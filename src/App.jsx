@@ -1171,9 +1171,11 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
     }
   }
   try {
-    const cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").trim();
-    const lastBrace = cleaned.lastIndexOf('}');
-    return stripCitations(JSON.parse(lastBrace > 0 ? cleaned.slice(0, lastBrace+1) : cleaned));
+    let cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, "").trim();
+    const fb = cleaned.indexOf("{");
+    const lb = cleaned.lastIndexOf("}");
+    if (fb >= 0 && lb > fb) cleaned = cleaned.slice(fb, lb + 1);
+    return stripCitations(JSON.parse(cleaned));
   } catch { return null; }
 }
 
@@ -1275,12 +1277,16 @@ async function callAI(prompt, { maxTokens = 5500 } = {}){
     ],
   });
   if(d?.error) return null;
-  const raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/<\/?cite[^>]*>/g,"").trim();
+  let raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/<\/?cite[^>]*>/g,"").trim();
   if(!raw) return null;
-  const text = raw.startsWith("{") ? raw : "{" + raw;
-  const last = text.lastIndexOf("}");
-  if(last<=0) return null;
-  const candidate = text.slice(0, last+1);
+  // Strip markdown fences, thinking tags, and prose before JSON
+  raw = raw.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, "").trim();
+  // Find the first { and last } to extract JSON
+  const firstBrace = raw.indexOf("{");
+  const lastBrace = raw.lastIndexOf("}");
+  if (firstBrace < 0 || lastBrace <= firstBrace) return null;
+  const text = raw.slice(firstBrace, lastBrace + 1);
+  const candidate = text;
   // Try 1: direct parse
   try{return JSON.parse(candidate);}catch{ /* non-critical */ }
   // Try 2: unicode sanitize + trailing comma removal
