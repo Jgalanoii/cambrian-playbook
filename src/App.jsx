@@ -144,6 +144,10 @@ let KL_HR_TECH_DISCOVERY = "";
 let KL_GOVERNMENT = ""; // Government & public sector
 let KL_GOVERNMENT_SCORING = null;
 let KL_GOVERNMENT_DISCOVERY = "";
+let KL_RFP_SEARCH_GUIDANCE = ""; // RFP search strategy guidance (injected into Opus RFP prompt)
+let KL_RFP_SIGNAL_SCORING = null; // Signal strength scoring rubric
+let KL_RFP_SOURCE_TIERS = null; // 5-tier source hierarchy
+let KL_PRE_RFP_INTENT_KEYWORDS = []; // Pre-RFP intent keyword list
 
 async function fetchKnowledgeLayer() {
   try {
@@ -257,6 +261,10 @@ async function fetchKnowledgeLayer() {
     KL_GOVERNMENT = d.government || "";
     KL_GOVERNMENT_SCORING = d.governmentScoring || null;
     KL_GOVERNMENT_DISCOVERY = d.governmentDiscovery || "";
+    KL_RFP_SEARCH_GUIDANCE = d.rfpSearchGuidance || "";
+    KL_RFP_SIGNAL_SCORING = d.rfpSignalScoring || null;
+    KL_RFP_SOURCE_TIERS = d.rfpSourceTiers || null;
+    KL_PRE_RFP_INTENT_KEYWORDS = d.preRfpIntentKeywords || [];
     // NOTE: Knowledge tier is plan-dependent (trial gets core only, paid gets
     // all verticals). This function must be re-called after plan upgrades
     // (e.g. Stripe checkout success) so the user gets paid-tier layers
@@ -5227,6 +5235,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     const buildPrompt = (kind) => {
       const isOpen = kind === "open";
       return `You are a procurement intelligence analyst helping a seller find relevant RFPs. Use web_search with SPECIFIC queries. ${isOpen ? "Focus on ACTIVE (open) opportunities posted in the last 90 days." : "Focus on AWARDED (closed) contracts from the last 18 months that reveal incumbent vendors."}
+${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 
 ━━━ SELLER PROFILE ━━━
 URL: ${sanitizeForPrompt(sellerUrl)}

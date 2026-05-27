@@ -52,6 +52,8 @@ import { EDUCATION_INJECTION, EDUCATION_SCORING, EDUCATION_DISCOVERY } from "../
 import { ENERGY_INJECTION, ENERGY_SCORING, ENERGY_DISCOVERY } from "../src/data/energyKnowledge.js";
 import { HR_TECH_INJECTION, HR_TECH_SCORING, HR_TECH_DISCOVERY } from "../src/data/hrTechKnowledge.js";
 import { GOVERNMENT_INJECTION, GOVERNMENT_SCORING, GOVERNMENT_DISCOVERY } from "../src/data/governmentKnowledge.js";
+import { RFP_PROCUREMENT_INJECTION, RFP_SIGNAL_SCORING, RFP_SOURCE_TIERS, RFP_SEARCH_GUIDANCE } from "../src/data/rfpProcurementKnowledge.js";
+import { PRE_RFP_SIGNAL_INJECTION, PRE_RFP_INTENT_KEYWORDS, PRE_RFP_SCORING_RUBRIC } from "../src/data/preRfpSignalKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -325,6 +327,15 @@ export default async function handler(req, res) {
       government: GOVERNMENT_INJECTION,
       governmentScoring: GOVERNMENT_SCORING,
       governmentDiscovery: GOVERNMENT_DISCOVERY,
+      // RFP & Procurement Intelligence (cross-cutting)
+      rfpProcurement: RFP_PROCUREMENT_INJECTION,
+      rfpSignalScoring: RFP_SIGNAL_SCORING,
+      rfpSourceTiers: RFP_SOURCE_TIERS,
+      rfpSearchGuidance: RFP_SEARCH_GUIDANCE,
+      // Pre-RFP Signal Extraction Intelligence
+      preRfpSignal: PRE_RFP_SIGNAL_INJECTION,
+      preRfpIntentKeywords: PRE_RFP_INTENT_KEYWORDS,
+      preRfpScoringRubric: PRE_RFP_SCORING_RUBRIC,
     } : {
       // Trial users: basic B2B sales + OKR frameworks only (no vertical depth)
       b2bSales: B2B_SALES_INJECTION,
