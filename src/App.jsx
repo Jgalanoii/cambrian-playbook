@@ -310,7 +310,7 @@ const CURRENT_RFP_VER = "v3";
     }
     stale.forEach(k => localStorage.removeItem(k));
     if (stale.length) console.log(`[cache] purged ${stale.length} stale entries`);
-  } catch {}
+  } catch { /* non-critical */ }
 })();
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
@@ -357,26 +357,7 @@ const RKEYS = ["reality","impact","vision","entryPoints","route"];
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
-function parseACV(v){if(!v)return 0;const n=parseFloat(v.toString().replace(/[$,]/g,"").replace(/k$/i,"000"));return isNaN(n)?0:n;}
 // Cohorts now based on org size, not ACV
-function labelOrgSize(row,mapping){
-  const emp = ((mapping.employees&&row[mapping.employees])||"").toString().toLowerCase();
-  const ind = ((mapping.industry&&row[mapping.industry])||"").toString();
-  if(emp){
-    const n=parseFloat(emp.replace(/[^0-9.]/g,""));
-    if(!isNaN(n)){
-      if(n<500)   return"Small Org (<500 employees)";
-      if(n<5000)  return"Mid-Size (500–5K employees)";
-      if(n<50000) return"Large Org (5K–50K employees)";
-      return"Enterprise (50K+ employees)";
-    }
-  }
-  // Fall back to industry signals if no employee data
-  const indLow=ind.toLowerCase();
-  if(indLow.includes("university")||indLow.includes("higher ed")) return"Mid-Size (500–5K employees)";
-  return"Unknown Size";
-}
-function labelACV(v){if(v===0)return"Unknown";if(v<25000)return"SMB (<$25K)";if(v<100000)return"Mid-Market ($25K–$100K)";return"Enterprise ($100K+)";}
 function getOutcomeTheme(row,mapping){
   const get=k=>(mapping[k]?(row[mapping[k]]||""):"").toString().toLowerCase();
   const txt=get("outcome")+get("product");
@@ -496,27 +477,17 @@ function confColor(s){return s>=75?"var(--green)":s>=50?"var(--amber)":"var(--re
 // ANTHROPIC_API_KEY server-side. Do NOT re-introduce VITE_ANTHROPIC_*; it
 // would inline the key into the browser bundle.
 
-function extractJSON(text){
-  try{
-    const clean=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
-    try{return JSON.parse(clean);}catch{
-      const m=clean.match(/\{[\s\S]*\}/);
-      return m?JSON.parse(m[0]):null;
-    }
-  }catch{return null;}
-}
-
 // ── SINGLE-CALL BRIEF GENERATION: web search + synthesis in one request ────────
 // Claude searches the web AND returns structured JSON in a single API call.
 // This avoids the two-step coordination problem entirely.
 // ── WEB SEARCH: recent news + jobs only (1 call, max 3 searches) ──────────────
 // ── SAFE JSON PARSER ─────────────────────────────────────────────────────────
 function safeParseJSON(text){
-  try{return JSON.parse(text);}catch{}
+  try{return JSON.parse(text);}catch{ /* non-critical */ }
   const s=text.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
   // Also strip trailing commas before arrays/objects close
   const noTrailing = s.replace(/,\s*([}\]])/g,"$1");
-  try{return JSON.parse(noTrailing);}catch{}
+  try{return JSON.parse(noTrailing);}catch{ /* non-critical */ }
   let out="",inStr=false,esc=false;
   for(let i=0;i<s.length;i++){
     const ch=s[i];
@@ -618,8 +589,6 @@ function setTrackingContext(targetCompany, sellerUrl, briefType) {
   if (sellerUrl && sellerUrl !== "research-only") _trackingCtx["x-seller-url"] = sellerUrl.slice(0, 200);
   _trackingCtx["x-brief-type"] = briefType || "brief";
 }
-function clearTrackingContext() { _trackingCtx = {}; }
-
 // ── VERTICAL PLAYBOOK MATCHER ────────────────────────────────────────────
 // Matches vertical playbooks for BOTH the seller and the target prospect.
 // Seller verticals tell you HOW to sell (your methodology, compliance, USPs).
@@ -1199,7 +1168,7 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
           fullText += event.delta.text;
           onChunk(fullText.replace(/<\/?cite[^>]*>/g, ""));
         }
-      } catch {}
+      } catch { /* non-critical */ }
     }
   }
   try {
@@ -1274,7 +1243,7 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
           fullText += event.delta.text;
           if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, ""));
         }
-      } catch {}
+      } catch { /* non-critical */ }
     }
   }
   // Parse: use extractJsonWithKey if anchor provided, else try direct parse
@@ -1315,14 +1284,14 @@ async function callAI(prompt, { maxTokens = 5500 } = {}){
   if(last<=0) return null;
   const candidate = text.slice(0, last+1);
   // Try 1: direct parse
-  try{return JSON.parse(candidate);}catch{}
+  try{return JSON.parse(candidate);}catch{ /* non-critical */ }
   // Try 2: unicode sanitize + trailing comma removal
   const sanitized = candidate
     .replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"')
     .replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...")
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"")
     .replace(/,\s*([}\]])/g,"$1");
-  try{return JSON.parse(sanitized);}catch{}
+  try{return JSON.parse(sanitized);}catch{ /* non-critical */ }
   // Try 3: character-by-character JSON repair
   try{return JSON.parse(repairJSON(sanitized));}catch(e){
     console.error("JSON repair failed:",e.message);
@@ -1613,6 +1582,14 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       enrichedPeople.slice(0, 8).map(p => `- ${p.name}, ${p.title}${p.department ? ` (${p.department})` : ""}${p.linkedIn ? ` — ${p.linkedIn}` : ""}`).join("\n") + "\n" : "") +
     "\n" : "";
 
+  // PUBLIC COMPANY: inject SEC filing search instructions for publicly traded targets
+  const isPublicCompany = !!(
+    (enrichment?.publiclyTraded && !/private/i.test(enrichment.publiclyTraded)) ||
+    (member.publicPrivate && /public/i.test(member.publicPrivate)) ||
+    (fitScores[co]?.ownership && /public/i.test(fitScores[co].ownership))
+  );
+  const secFilingCtx = isPublicCompany ? `\nSEC FILING INTELLIGENCE (PUBLICLY TRADED company — use these authoritative sources):\nSearch queries to include:\n- site:sec.gov "${co}" 10-K (annual report — strategy, capex, risk factors)\n- "${co}" earnings call transcript 2025 (CEO/CFO strategic statements)\n- "${co}" proxy statement DEF 14A (board composition, governance)\nWhat to extract:\n- 10-K Item 7 (MD&A): Forward-looking strategy, capital plans, modernization initiatives, procurement intent\n- 10-K Item 1A (Risk Factors): Competitive gaps, technology needs, regulatory pressures\n- 10-K Item 1 (Business): Segments, revenue breakdown, key customers, market position\n- Proxy (DEF 14A): Board members, committees, activist investors, mandates\n- Earnings calls: CEO/CFO direct quotes on priorities, guidance, investments\nCite specific filing dates and data (e.g. "Per 10-K filed 2/28/2025, revenue grew 12% YoY to $4.2B"). SEC filings are the highest-quality source for public companies.\n` : "";
+
   // IDENTITY ANCHOR: when a URL is available, use it as the primary identifier
   // to prevent cross-company contamination in briefs.
   const identityAnchor = url && url !== co
@@ -1626,6 +1603,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `SELLER NAME CONSISTENCY: Always refer to the selling organization as "${canonicalSellerName}" — not "${sellerUrl}" or any other variation. Use this exact name in every section.\n`+
     identityAnchor +
     enrichmentCtx +
+    secFilingCtx +
     `RULE: All fields describe ${co} NOT the seller. ASCII only.\n`+
     `EMPTY FIELD RULE (CRITICAL): If a fact is unknown, return an EMPTY STRING "". NEVER return "Not found", "Not specified", "Not available", "N/A", "Unknown", "[Verify]", or any placeholder text. The UI handles empty fields gracefully — placeholder text breaks the display. Empty string is ALWAYS correct for unknown data.\n`+
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string.\n`+
@@ -2193,9 +2171,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // ── DEEP INTELLIGENCE LAYERS (p7, p8, p9) — fire in parallel with p1-p6 ──
 
   // Identity context for deep intel calls — prevents cross-company contamination (Apollo.io vs Apollo Global)
-  const deepIntelIdentity = url && url !== co
+  const deepIntelIdentity = (url && url !== co
     ? `IDENTITY: Research ONLY the company at https://${url} ("${co}"). Multiple companies share this name — use the website ${url} as the definitive identifier. Do NOT mix facts from different companies.\n\n`
-    : `IDENTITY: Research the company "${co}". Do NOT mix facts from different companies with similar names.\n\n`;
+    : `IDENTITY: Research the company "${co}". Do NOT mix facts from different companies with similar names.\n\n`) +
+    secFilingCtx;
 
   // MICRO 7: Competitive Positioning — who they compete with and where they win/lose
   const p7 = (async()=>{
@@ -2236,15 +2215,15 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           deepIntelIdentity+
           `Research the board of directors, investors, and governance of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}board of directors" and "${co} investors funding".\n`+
-          `For private/startup companies: search for funding rounds, lead investors, board observers.\n`+
-          `For public companies: search for board composition, activist investors, governance changes.\n`+
-          `For nonprofits: search for board members and major donors/grantors.\n\n`+
+          (isPublicCompany
+            ? `This is a PUBLIC COMPANY. Search for:\n- "${co}" proxy statement DEF 14A board of directors (most authoritative source for board composition)\n- "${co}" institutional shareholders 13F filings\n- "${co}" activist investor OR shareholder proposal\n- "${co}" board committee assignments (audit, compensation, nominating)\nProxy statements contain exact board member names, committee assignments, tenure, compensation, and independence status. This is the gold standard for board intelligence.\n\n`
+            : `For private/startup companies: search for funding rounds, lead investors, board observers.\nFor nonprofits: search for board members and major donors/grantors.\n\n`) +
           `Return raw JSON:\n`+
           `{"boardAndInvestors":{`+
-          `"boardMembers":[{"name":"Full name","title":"Board title or role","background":"1 sentence: where they came from, what expertise they bring","significance":"Why this person matters for understanding ${co}'s strategy"}],`+
-          `"leadInvestors":"Key investors or funding sources — names + amounts if known. For public companies: top institutional holders or activist investors. For nonprofits: major grantors.",`+
+          `"boardMembers":[{"name":"Full name","title":"Board title or role","background":"1 sentence: where they came from, what expertise they bring","significance":"Why this person matters for understanding ${co}'s strategy"${isPublicCompany ? ',"committee":"Board committee assignments (Audit, Compensation, Nominating/Governance)"' : ""}}],`+
+          `"leadInvestors":"${isPublicCompany ? "Top institutional shareholders (Vanguard, BlackRock, etc.), any activist investors, notable insider ownership. Cite 13F data if found." : "Key investors or funding sources — names + amounts if known. For nonprofits: major grantors."}",`+
           `"investmentThesis":"1-2 sentences: what bet are the investors making? What outcome are they driving toward?",`+
-          `"boardMandate":"1-2 sentences: what is the board pushing for right now? Growth, profitability, exit, expansion, compliance, turnaround?"}}`
+          `"boardMandate":"1-2 sentences: what is the board pushing for right now? Growth, profitability, exit, expansion, compliance, turnaround?${isPublicCompany ? " Reference any stated board priorities from the proxy statement or recent shareholder communications." : ""}"}}`
         }],
       });
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
@@ -2265,17 +2244,25 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         messages:[{role:"user",content:
           deepIntelIdentity+
           `Research the financial performance and trajectory of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
-          `For PUBLIC companies: search for latest earnings, 10-K, revenue trends, margin analysis.\n`+
-          `For PRIVATE/STARTUP companies: search for funding rounds, growth metrics, valuation signals.\n`+
-          `For NONPROFITS: search for annual reports, grant funding, program spending.\n\n`+
+          (isPublicCompany
+            ? `This is a PUBLIC COMPANY. Use SEC filings as primary sources:\n`+
+              `- Search: site:sec.gov "${co}" 10-K for annual financials (revenue, segments, margins, capex, risk factors)\n`+
+              `- Search: "${co}" earnings call Q4 2024 OR Q1 2025 for CEO/CFO guidance quotes\n`+
+              `- Search: "${co}" 10-K "Management's Discussion and Analysis" for forward-looking strategy\n`+
+              `- 10-K Item 7 (MD&A) contains: revenue breakdown by segment, margin analysis, capital allocation priorities, forward guidance\n`+
+              `- 10-K Item 1 (Business) contains: business segment descriptions, key customers, competitive position\n`+
+              `- 10-K Item 1A (Risk Factors) contains: competitive vulnerabilities, technology dependencies, regulatory exposure\n`+
+              `Cite specific filing dates and exact figures. "Per 10-K filed 2/28/2025" is authoritative.\n\n`
+            : `For PRIVATE/STARTUP companies: search for funding rounds, growth metrics, valuation signals.\n`+
+              `For NONPROFITS: search for annual reports, grant funding, program spending.\n\n`) +
           `Return raw JSON:\n`+
           `{"financialDeepDive":{`+
-          `"revenueTrend":"2-3 sentences: revenue trajectory over 2-3 years. Growth rate, acceleration/deceleration, key drivers. Cite specific numbers when available.",`+
-          `"marginTrend":"1-2 sentences: gross margin, operating margin, or EBITDA margin direction. What's driving margin expansion or compression?",`+
-          `"segmentBreakdown":"Which business segments or product lines drive the most revenue? Any segment growing faster or shrinking?",`+
-          `"earningsInsight":"1-2 sentences: the most revealing thing from their latest earnings call, annual report, or investor update. A direct quote from the CEO/CFO is ideal.",`+
-          `"capitalPriorities":"Where are they investing? R&D spend, M&A, geographic expansion, headcount, share buybacks? What does capital allocation reveal about strategy?",`+
-          `"guidanceQuote":"A direct quote from leadership about future direction — from earnings call, press release, or interview. Empty if not found."}}`
+          `"revenueTrend":"2-3 sentences: revenue trajectory over 2-3 years. Growth rate, acceleration/deceleration, key drivers. ${isPublicCompany ? "Cite specific numbers from 10-K filings (e.g. '$4.2B FY2024, up 12% from $3.75B FY2023')." : "Cite specific numbers when available."}",`+
+          `"marginTrend":"1-2 sentences: gross margin, operating margin, or EBITDA margin direction. ${isPublicCompany ? "Reference specific 10-K data (e.g. 'Operating margin expanded 200bps to 18.3% per 10-K filed 3/1/2025')." : "What's driving margin expansion or compression?"}",`+
+          `"segmentBreakdown":"Which business segments or product lines drive the most revenue? ${isPublicCompany ? "Use 10-K segment reporting. Public companies must disclose segment revenue/profit by accounting standards." : "Any segment growing faster or shrinking?"}",`+
+          `"earningsInsight":"${isPublicCompany ? "1-2 sentences: the most revealing quote from the latest earnings call. Attribute to a specific executive by name and title (e.g. 'CFO Jane Smith stated...'). Include the call date." : "1-2 sentences: the most revealing thing from their latest annual report or investor update. A direct quote from leadership is ideal."}",`+
+          `"capitalPriorities":"${isPublicCompany ? "Where is capex going? Reference 10-K capital expenditure figures, R&D spend as % of revenue, M&A activity, share buyback authorization. What does capital allocation reveal about strategic priorities?" : "Where are they investing? R&D, M&A, geographic expansion, headcount? What does capital allocation reveal about strategy?"}",`+
+          `"guidanceQuote":"A direct quote from leadership about future direction — ${isPublicCompany ? "from earnings call transcript with speaker name, title, and call date. This is the most valuable field for a seller — a CEO's own words about where they're headed." : "from press release or interview. Empty if not found."}"}}`
         }],
       });
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
@@ -2367,107 +2354,6 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   };
 }
 
-
-function exportToExcel(brief,gateAnswers,riverData,postCall,account,cohort,outcomes,sellerUrl,confidence){
-  const ts=new Date().toISOString().slice(0,10);
-  const co=account?.company||"Account";
-  const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const H="font-family:Arial;font-size:11pt;font-weight:bold;background:#1a1a18;color:#ffffff;padding:5px 8px;";
-  const C="font-family:Arial;font-size:10pt;padding:5px 8px;vertical-align:top;";
-  const S="font-family:Arial;font-size:10pt;font-weight:bold;color:#8B6F47;padding:5px 8px;";
-  const mkRow=(cells,isHeader)=>'<tr>'+(Array.isArray(cells)?cells:[cells]).map((c,i)=>'<td style="'+(isHeader&&i===0?H:typeof c==="string"&&c&&c===c.toUpperCase()&&i===0&&c.length>2&&!/[a-z]/.test(c)?S:C)+'">'+esc(c)+'</td>').join('')+'</tr>';
-  const mkSheet=(name,rows)=>{
-    let t=`<table x:Name="${esc(name)}"><tbody>`;
-    rows.forEach(r=>t+=mkRow(r,false));
-    return t+`</tbody></table>`;
-  };
-
-  const sheets=[
-    {name:"Account Overview",rows:[
-      ["ACCOUNT OVERVIEW",""],["",""],
-      ["Powered by Cambrian Catalyst proprietary sales intelligence and live research. Verify company-specific facts before use.",""],
-      ["",""],
-      ["Company",co],["Industry",account?.ind||""],["Deal Size (ACV)",account?.acv>0?"$"+account.acv.toLocaleString():""],
-      ["Lead Source",account?.src||""],["Website",account?.company_url||""],
-      ["Cohort",cohort?.name||""],["Target Outcomes",outcomes.join(", ")],
-      ["Selling Org",sellerUrl||""],["Briefing Completeness",`${confidence}%`],
-      ["",""],["COMPANY SNAPSHOT",""],["",brief?.companySnapshot||""],
-      ["",""],["STRATEGIC THEME",""],["",brief?.strategicTheme||""],
-      ["",""],["WHY YOU · WHY NOW (Seller Opportunity)",""],["",brief?.sellerOpportunity||""],
-      ["",""],["FUNDING PROFILE",""],["",brief?.fundingProfile||""],
-      ["",""],["KEY EXECUTIVES","","",""],
-      ["Name","Title","Background","Executive Perspective"],
-      ...(brief?.keyExecutives||[]).filter(e=>e?.name).map(e=>[e.name||"",e.title||"",e.background||"",e.angle||""]),
-      ["",""],["RECENT HEADLINES",""],
-      ...(brief?.recentHeadlines||[]).filter(Boolean).map((h,i)=>[`Headline ${i+1}`,typeof h==="object"?h.headline:h]),
-      ["",""],["GROWTH SIGNALS",""],
-      ...(brief?.growthSignals||[]).filter(Boolean).map((g,i)=>[`Signal ${i+1}`,g]),
-      ["",""],["TOP BUYING SIGNALS",""],
-      ...(brief?.recentSignals||[]).filter(Boolean).map((s,i)=>[`Signal ${i+1}`,s]),
-    ]},
-    {name:"Sales Brief",rows:[
-      ["RIVER BRIEF — PRE-CALL HYPOTHESIS",""],["",""],
-      ["STAGE","HYPOTHESIS"],
-      ...RIVER_STAGES.map((s,i)=>[`${s.letter} — ${s.label}`,brief?.riverHypothesis?.[RKEYS[i]]||""]),
-      ["",""],["OPENING ANGLE",""],["",brief?.openingAngle||""],
-      ["",""],["RECENT SIGNALS",""],
-      ...(brief?.recentSignals||[]).filter(Boolean).map((s,i)=>[`Signal ${i+1}`,s]),
-    ]},
-    {name:"Solution Mapping",rows:[
-      ["SOLUTION MAPPING",""],["",""],
-      ["PRODUCT / SERVICE","FIT RATIONALE"],
-      ...(brief?.solutionMapping||[]).filter(s=>s?.product).map(s=>[s.product,s.fit]),
-      ["",""],["LIKELY COMPETITORS",""],
-      ...(brief?.competitors||[]).filter(Boolean).map(c=>[c,""]),
-      ["",""],["KEY CONTACTS","TITLE","ENGAGEMENT ANGLE"],
-      ...(brief?.keyContacts||[]).filter(c=>c?.name).map(c=>[c.name,c.title,c.angle]),
-      ["",""],["WATCH-OUTS",""],
-      ...(brief?.watchOuts||[]).filter(Boolean).map(w=>[w,""]),
-    ]},
-    {name:"Discovery Capture",rows:[
-      ["DISCOVERY CAPTURE","",""],["","",""],
-      ["STAGE","GATE QUESTION","ANSWER CAPTURED"],
-      ...RIVER_STAGES.flatMap(s=>s.gates.map(g=>[s.label,g.q,gateAnswers[g.id]||"—"])),
-      ["","",""],["STAGE","DISCOVERY PROMPT","REP NOTES"],
-      ...RIVER_STAGES.flatMap(s=>s.discovery.map(p=>[s.label,p.label,riverData[p.id]||"—"])),
-    ]},
-    {name:"RIVER Scorecard",rows:[
-      ["RIVER SCORECARD","",""],["","",""],
-      ["STAGE","PRE-CALL HYPOTHESIS","POST-CALL FINDING"],
-      ...RIVER_STAGES.map((s,i)=>[`${s.letter} — ${s.label}`,brief?.riverHypothesis?.[RKEYS[i]]||"",postCall?.riverScorecard?.[RKEYS[i]]||"Not yet completed"]),
-    ]},
-    {name:"Post-Call Route",rows:[
-      ["POST-CALL ROUTE",""],["",""],
-      ["DEAL ROUTE",postCall?.dealRoute||"Not yet generated"],
-      ["ROUTE REASON",postCall?.dealRouteReason||""],
-      ["TOP RISK",postCall?.dealRisk||""],
-      ["BRIEFING COMPLETENESS",`${confidence}%`],
-      ["",""],["CALL SUMMARY",""],["",postCall?.callSummary||""],
-      ["",""],["NEXT STEPS",""],
-      ...(postCall?.nextSteps||[]).map((s,i)=>[`${i+1}.`,s]),
-      ["",""],["CRM NOTE",""],["",postCall?.crmNote||""],
-      ["",""],["FOLLOW-UP EMAIL",""],
-      ["Subject",postCall?.emailSubject||""],["Body",postCall?.emailBody||""],
-    ]},
-    {name:"CRM Upload",rows:[
-      ["Company","Industry","ACV","Lead Source","Cohort","Target Outcomes","Briefing Completeness","Deal Route","Top Risk","R — Reality","I — Impact","V — Vision","E — Entry Points","R — Route","Next Step 1","Next Step 2","Next Step 3","Follow-Up Subject","CRM Note"],
-      [co,account?.ind||"",account?.acv>0?account.acv:"",account?.src||"",cohort?.name||"",outcomes.join("; "),`${confidence}%`,postCall?.dealRoute||"",postCall?.dealRisk||"",brief?.riverHypothesis?.reality||"",brief?.riverHypothesis?.impact||"",brief?.riverHypothesis?.vision||"",brief?.riverHypothesis?.entryPoints||"",brief?.riverHypothesis?.route||"",postCall?.nextSteps?.[0]||"",postCall?.nextSteps?.[1]||"",postCall?.nextSteps?.[2]||"",postCall?.emailSubject||"",postCall?.crmNote||""],
-    ]},
-  ];
-
-  let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>`;
-  sheets.forEach(s=>{html+=`<x:ExcelWorksheet><x:Name>${esc(s.name)}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`;});
-  html+=`</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>`;
-  sheets.forEach(s=>{html+=mkSheet(s.name,s.rows);});
-  html+=`</body></html>`;
-
-  const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;a.download=`Cambrian_Brief_${co.replace(/\s+/g,"_")}_${ts}.xls`;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 // ── BRIEF LOADER ─────────────────────────────────────────────────────────────
 const LOADER_QUIPS = {
@@ -2669,7 +2555,7 @@ function StepHint({ step }) {
     try { return !localStorage.getItem(key); } catch { return false; }
   });
   if (!visible || !STEP_HINTS[step]) return null;
-  const dismiss = () => { try { localStorage.setItem(key, "1"); } catch {} setVisible(false); };
+  const dismiss = () => { try { localStorage.setItem(key, "1"); } catch { /* non-critical */ } setVisible(false); };
   const { icon, text } = STEP_HINTS[step];
   return (
     <div style={{background:"var(--tan-3)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"12px 16px",marginBottom:16,display:"flex",gap:12,alignItems:"flex-start",animation:"cmd-fade-in 0.3s ease"}}>
@@ -2933,7 +2819,7 @@ function PasswordGate({ onAuth }) {
         try {
           const payload = JSON.parse(atob(accessToken.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
           if (payload.email) setInviteEmail(payload.email);
-        } catch {}
+        } catch { /* non-critical */ }
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
@@ -3852,7 +3738,7 @@ function GuideText({ text }) {
   ));
 }
 
-function GuidePanel({ guide, activeGuide, setActiveGuide, onClose }) {
+function GuidePanel({ activeGuide, setActiveGuide, onClose }) {
   const g = APP_GUIDES[activeGuide];
   if (!g) return null;
 
@@ -4022,7 +3908,7 @@ export default function App(){
   // ── SESSION HELPERS (localStorage fallback for guest mode) ──────────────
   const STORAGE_KEY = "cambrian_session_v1";
   const clearSession = () => {
-    try { localStorage.removeItem(STORAGE_KEY); } catch{}
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* non-critical */ }
     setCurrentSessionId(null); setSessionName('');
     setSellerUrl(''); setSellerInput(''); setBrief(null); setRiverHypo(null);
     setCohorts([]); setRows([]); setSelectedAccount(null); setPostCall(null);
@@ -4066,7 +3952,6 @@ export default function App(){
     geography: [],         // up to 3: ["USA","EMEA","APAC"]
     excludes: [],          // unlimited: ["Healthcare","Government",...]
   });
-  const[sellerLinkedIn,setSellerLinkedIn]=useState(""); // personal LinkedIn URL
   const[sellerProofPoints,setSellerProofPoints]=useState([]); // [{type:"Case Study"|"ROI Metric"|..., content:"text"}]
   const[sellerExclusions,setSellerExclusions]=useState([]); // ["payroll", "hiring bonuses", ...] — things the seller does NOT do
   // Sync exclusions into ICP object so buildSellerProofPack can read them
@@ -4075,7 +3960,6 @@ export default function App(){
       setSellerICP(prev => prev?.icp ? { ...prev, icp: { ...prev.icp, sellerExclusions } } : prev);
     }
   }, [sellerExclusions.length]);
-  const[productPageUrl,setProductPageUrl]=useState(""); // kept for backward compat
   const[productUrls,setProductUrls]=useState([{url:"",label:""}]); // up to 5
   const[urlScanStatus,setUrlScanStatus]=useState(""); // "scanning"|"found"|"none"|""
   const[urlScanConfirmed,setUrlScanConfirmed]=useState(false);
@@ -4536,15 +4420,6 @@ export default function App(){
     setMapping(am);
   };
 
-  const loadSample=()=>{
-    const hdrs=Object.keys(SAMPLE_ROWS[0]);
-    setHeaders(hdrs);setRows(SAMPLE_ROWS);setFileName(`sample_${SAMPLE_ROWS.length}_accounts.csv`);
-    const m={};hdrs.forEach(h=>m[h]=h);
-    // buildCohorts looks up "public_private" but data uses "publicPrivate"
-    if(!m["public_private"] && m["publicPrivate"]) m["public_private"] = "publicPrivate";
-    setMapping(m);
-  };
-
   // ── GENERATE TARGET ACCOUNTS FROM ICP ────────────────────────────────────
   // "Don't know who to target?" — uses the seller's ICP + web_search to
   // surface 20 real, recognizable companies that match the buyer profile,
@@ -4563,7 +4438,6 @@ export default function App(){
     const icp = sellerICP.icp;
     // Determine the target company scale. icpTargeting fields are now arrays.
     const arrJoin = (v) => Array.isArray(v) ? v.join(" OR ") : (v || "");
-    const arrFirst = (v) => Array.isArray(v) ? v[0] : (v || "");
     const effectiveHeadcount = targetHeadcount.length ? targetHeadcount.join(" OR ") : (arrJoin(icpTargeting.headcount) || icp.companySize || "");
     const effectiveRevenue = targetRevenue.length ? targetRevenue.join(" OR ") : (arrJoin(icpTargeting.revenue) || icp.revenueRange || "");
     const effectiveOwnership = targetOwnership.length ? targetOwnership.join(" OR ") : (arrJoin(icpTargeting.ownership) || "");
@@ -4574,7 +4448,6 @@ export default function App(){
     const revStr = effectiveRevenue.toLowerCase();
     const isEnterprise = effectiveSegment === "Enterprise" || sizeStr.includes("50,000") || sizeStr.includes("10,000-") || revStr.includes("$1b");
     const isMidMarket = !isEnterprise && (effectiveSegment === "Mid-Market" || sizeStr.includes("5,000-") || sizeStr.includes("1,000-") || revStr.includes("$100m"));
-    const isSMB = !isEnterprise && !isMidMarket;
     const scaleLabel = isEnterprise ? "enterprise" : isMidMarket ? "mid-market" : "SMB/growth-stage";
     const scaleGuidance = isEnterprise
       ? "Target Fortune 500, large public companies, and enterprise organizations. These are well-known, highly visible companies."
@@ -4828,12 +4701,6 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       const companies = batch.map(m => `${sanitizeForPrompt(m.company)}|${sanitizeForPrompt(m.ind||"Unknown — use training knowledge to identify industry")}|${sanitizeForPrompt(m.company_url||"")}`).join("\n");
       const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
       const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
-      // Inject research-backed heuristics from knowledge layer
-      const highFrictionCtx = KL_FIT_RULES.highFriction.industries.map(i=>`${i.name} (avg ${i.avgFit}%): ${i.reason}`).join("; ");
-      const highFitCtx = KL_FIT_RULES.highFit.industries.map(i=>`${i.name} (avg ${i.avgFit}%${i.examples?" e.g. "+i.examples:""})`).join("; ");
-      const stageCtx = KL_FIT_RULES.stageThresholds.map(s=>`${s.stage}: avg ${s.avgFit}% — ${s.note}`).join("; ");
-      const signalCtx = [...KL_FIT_RULES.signals.positive, ...KL_FIT_RULES.signals.negative].join("; ");
-
       const prompt =
         `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
         `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n`+
@@ -6306,7 +6173,6 @@ Return ONLY raw JSON:
     if(d.icpTargeting) setIcpTargeting(d.icpTargeting);
     // Backward compat: old sessions had free-form icpConstraints string
     if(d.icpConstraints && !d.icpTargeting) setIcpTargeting(prev => ({...prev}));
-    if(d.sellerLinkedIn) setSellerLinkedIn(d.sellerLinkedIn);
     if(d.sellerICPInput) setSellerICPInput(d.sellerICPInput);
     if(d.icpDelta) setIcpDelta(d.icpDelta);
     if(d.icpEdits?.length) setIcpEdits(d.icpEdits);
@@ -6603,17 +6469,6 @@ Return ONLY raw JSON:
       return currentCohorts; // no-op state update, just reading current value
     });
   };
-  const goToOutcomes=()=>{
-    if(selectedCohort){
-      // Start with the 6 universal imperatives + any cohort-specific outcomes
-      const universal=OUTCOMES.filter(o=>UNIVERSAL_IMPERATIVES.includes(o.id)).map(o=>o.title);
-      const cohortSpecific=selectedCohort.topOut.slice(0,2);
-      const combined=[...new Set([...cohortSpecific,...universal])].slice(0,6);
-      setSelectedOutcomes(combined);
-      setStep(4);
-    }
-  };
-
   // ── URL DETECTION — extract domain from user input ──────────────────────
   function extractCompanyUrl(input) {
     const trimmed = input.trim().toLowerCase();
@@ -6835,7 +6690,7 @@ Return ONLY raw JSON:
       const effectiveSellerUrl = overrideSellerUrl || sellerUrl;
       const result = generateBrief(
         member, effectiveSellerUrl, sellerDocs, products,
-        selectedCohort, selectedOutcomes, productPageUrl,
+        selectedCohort, selectedOutcomes, "",
         (msg) => setBriefStatus(msg),
         productUrls,
         sellerICP,
@@ -7012,7 +6867,6 @@ Return ONLY raw JSON:
       setTimeout(() => {
         setBrief(current => {
           if (!current?.companySnapshot) return current;
-          const co = member.company;
 
           // Gather all named entities and claims across sections
           const entitySources = [];
@@ -7040,8 +6894,6 @@ Return ONLY raw JSON:
           ].filter(Boolean).join("\n\n");
 
           // Quick client-side checks before burning an API call
-          const execNames = (current.keyExecutives || []).filter(e => e?.name).map(e => e.name.toLowerCase());
-
           // Check: does any text mention a CEO/leader name that contradicts the executives list?
           const ceoExec = (current.keyExecutives || []).find(e => e?.title && /\bceo\b/i.test(e.title));
           if (ceoExec && allText) {
