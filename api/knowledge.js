@@ -47,6 +47,8 @@ import { CANNABIS_PLAYBOOK } from "../src/data/cannabisKnowledge.js";
 import { CRYPTO_STABLECOIN_PLAYBOOK } from "../src/data/cryptoStablecoinKnowledge.js";
 import { GAMING_PLAYBOOK } from "../src/data/gamingKnowledge.js";
 import { PREDICTION_MARKETS_PLAYBOOK } from "../src/data/predictionMarketsKnowledge.js";
+import { CYBERSECURITY_INJECTION, CYBERSECURITY_SCORING, CYBERSECURITY_DISCOVERY } from "../src/data/cybersecurityKnowledge.js";
+import { EDUCATION_INJECTION, EDUCATION_SCORING, EDUCATION_DISCOVERY } from "../src/data/educationKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -300,6 +302,14 @@ export default async function handler(req, res) {
       cryptoStablecoinPlaybook: CRYPTO_STABLECOIN_PLAYBOOK,
       gamingPlaybook: GAMING_PLAYBOOK,
       predictionMarketsPlaybook: PREDICTION_MARKETS_PLAYBOOK,
+      // Cybersecurity & information security
+      cybersecurity: CYBERSECURITY_INJECTION,
+      cybersecurityScoring: CYBERSECURITY_SCORING,
+      cybersecurityDiscovery: CYBERSECURITY_DISCOVERY,
+      // Education technology & institutional learning
+      education: EDUCATION_INJECTION,
+      educationScoring: EDUCATION_SCORING,
+      educationDiscovery: EDUCATION_DISCOVERY,
     } : {
       // Trial users: basic B2B sales + OKR frameworks only (no vertical depth)
       b2bSales: B2B_SALES_INJECTION,

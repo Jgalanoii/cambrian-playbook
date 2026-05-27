@@ -129,6 +129,12 @@ let KL_GAMING = ""; // Gaming & sports betting (iGaming, sportsbook, tribal)
 let KL_GAMING_DISCOVERY = "";
 let KL_PREDICTION_MARKETS = ""; // Prediction markets (event contracts, Kalshi, Polymarket)
 let KL_PREDICTION_MARKETS_DISCOVERY = "";
+let KL_CYBERSECURITY = ""; // Cybersecurity & information security
+let KL_CYBERSECURITY_SCORING = null;
+let KL_CYBERSECURITY_DISCOVERY = "";
+let KL_EDUCATION = ""; // Education technology & institutional learning
+let KL_EDUCATION_SCORING = null;
+let KL_EDUCATION_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -227,6 +233,12 @@ async function fetchKnowledgeLayer() {
     KL_GAMING_DISCOVERY = (d.gamingPlaybook?.discovery || []).join("\n");
     KL_PREDICTION_MARKETS = d.predictionMarketsPlaybook?.layerContent || "";
     KL_PREDICTION_MARKETS_DISCOVERY = (d.predictionMarketsPlaybook?.discovery || []).join("\n");
+    KL_CYBERSECURITY = d.cybersecurity || "";
+    KL_CYBERSECURITY_SCORING = d.cybersecurityScoring || null;
+    KL_CYBERSECURITY_DISCOVERY = d.cybersecurityDiscovery || "";
+    KL_EDUCATION = d.education || "";
+    KL_EDUCATION_SCORING = d.educationScoring || null;
+    KL_EDUCATION_DISCOVERY = d.educationDiscovery || "";
     // NOTE: Knowledge tier is plan-dependent (trial gets core only, paid gets
     // all verticals). This function must be re-called after plan upgrades
     // (e.g. Stripe checkout success) so the user gets paid-tier layers
@@ -988,6 +1000,26 @@ function getPredictionMarketsInjection(sellerICP, targetIndustry) {
   return "\n" + KL_PREDICTION_MARKETS;
 }
 
+// ── CYBERSECURITY INJECTION ───────────────────────────────────────────
+const CYBERSECURITY_KW = ["cybersecurity", "endpoint security", "edr", "xdr", "siem", "soar", "iam", "zero trust", "cloud security", "threat intelligence", "mdr", "appsec", "vulnerability", "cnapp", "cspm", "soc", "ciso", "ransomware", "devsecops", "sase"];
+function getCybersecurityInjection(sellerICP, targetIndustry) {
+  if (!KL_CYBERSECURITY) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (CYBERSECURITY_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_CYBERSECURITY;
+}
+
+// ── EDUCATION TECHNOLOGY INJECTION ───────────────────────────────────
+const EDUCATION_KW = ["education", "edtech", "k-12", "higher education", "university", "college", "lms", "learning management", "student information", "enrollment", "ferpa", "esser", "school district", "curriculum", "assessment", "adaptive learning", "opm", "ed tech"];
+function getEducationInjection(sellerICP, targetIndustry) {
+  if (!KL_EDUCATION) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (EDUCATION_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_EDUCATION;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -1575,6 +1607,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ["crypto", getCryptoInjection(sellerICP, member.ind)],
     ["gaming", getGamingInjection(sellerICP, member.ind)],
     ["predictionMarkets", getPredictionMarketsInjection(sellerICP, member.ind)],
+    ["cybersecurity", getCybersecurityInjection(sellerICP, member.ind)],
+    ["education", getEducationInjection(sellerICP, member.ind)],
     ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
     ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
     ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
@@ -4365,6 +4399,11 @@ ${(()=>{
     "\nAlso search for OTHER customers of these competitors — look for case studies, partner pages, press releases, and customer logos on competitor websites.";
 })()}
 
+═══ ACTIVE RFP OPPORTUNITIES ═══
+${rfpData.open?.length ?
+  "Active RFPs matching the seller's ICP:\n" + rfpData.open.slice(0,5).map(r => `• ${r.title || r.agency} — ${r.description?.slice(0,100) || ""}`).join("\n") + "\nPrioritize companies that could be responding to or benefiting from these procurement opportunities."
+  : "No active RFPs detected."}
+
 ═══ RULES ═══
 CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Never return variants of the same company (e.g., "Acme Corp" and "Acme Corp (Restructured)").
 
@@ -4723,6 +4762,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (getPredictionMarketsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nPREDICTION MARKETS CONTEXT: Prediction market platforms operate under CFTC oversight as designated contract markets. Event contracts face federal preemption questions and state gambling law conflicts. Frame fit through regulatory compliance infrastructure and market integrity requirements.\n`
+          : "") +
+        (getCybersecurityInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nCYBERSECURITY CONTEXT: Cybersecurity companies sell to CISOs and SOC teams under compliance mandates (SOC2, NIST, ISO 27001, FedRAMP). Buyer journey includes POC/bake-off, board-level risk reporting, and vendor consolidation pressure. Frame fit through threat landscape urgency and compliance acceleration.\n`
+          : "") +
+        (getEducationInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nEDUCATION CONTEXT: Education buyers operate under FERPA, state procurement rules, ESSER funding timelines, and board approval cycles. K-12 districts have 6-18mo buying cycles driven by budget years. Higher ed has provost/CIO dual authority. Frame fit through compliance, funding alignment, and institutional buying patterns.\n`
           : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`
@@ -7250,6 +7295,8 @@ ${isOpen
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
   const [hubspotPushing,setHubspotPushing]=useState("");
+  const [hubspotBulkPushing,setHubspotBulkPushing]=useState(false);
+  const [hubspotBulkProgress,setHubspotBulkProgress]=useState("");
   const pushToHubSpot=async(action,data)=>{
     if(!hubspotStatus?.connected){setCopied("hs_err");setTimeout(()=>setCopied(""),3000);return;}
     console.log(`[hubspot] Pushing ${action}:`, JSON.stringify({company: data?.company?.name, domain: data?.company?.domain, selectedAccount: selectedAccount?.company}, null, 2));
@@ -7300,6 +7347,57 @@ ${isOpen
       strategicTheme: summary?.strategicTheme || brief?.strategicTheme || "",
       fiveQuestions: summary?.discoveryQuestions || brief?.fiveQuestions || [],
     });
+  };
+
+  // Bulk push all scored accounts from Fit Check to HubSpot
+  const pushAllToHubSpot = async () => {
+    if(!hubspotStatus?.connected){setCopied("hs_err");setTimeout(()=>setCopied(""),3000);return;}
+    const allMembers = cohorts.flatMap(c => c.members).filter(m => m.company);
+    if(!allMembers.length){setChatMessages(prev=>[...prev,{role:"assistant",content:"No accounts to push — your prospect list is empty."}]);return;}
+    setHubspotBulkPushing(true);
+    let pushed = 0, failed = 0;
+    try {
+      for(let i = 0; i < allMembers.length; i++){
+        const m = allMembers[i];
+        setHubspotBulkProgress(`${i+1} of ${allMembers.length}`);
+        const fit = fitScores[m.company];
+        const fitScore = fit?.score ?? "";
+        const fitLabel = fit?.label ?? "";
+        const fitReason = fit?.reason ?? "";
+        const ownership = fit?.ownership || m.publicPrivate || "";
+        try {
+          const r = await fetch("/api/hubspot",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({
+            action: "push_brief",
+            data: {
+              company: { name: m.company, domain: m.company_url || "", industry: m.ind || "", employees: m.employees || "" },
+              summary: { fitScore, fitLabel, fitReason, companySnapshot: "", ownership }
+            }
+          })});
+          const d = await r.json();
+          if(d.ok) pushed++;
+          else {
+            failed++;
+            if(d.error?.includes("expired")||d.error?.includes("reconnect")||d.error?.includes("not_connected")||r.status===401||r.status===502){
+              setHubspotStatus({connected:false});
+              setChatMessages(prev=>[...prev,{role:"assistant",content:"HubSpot connection expired during bulk push. Go to Settings → Disconnect → Reconnect HubSpot to fix."}]);
+              break;
+            }
+          }
+        } catch(e){
+          console.error("[hubspot] Bulk push error for", m.company, e.message);
+          failed++;
+        }
+      }
+      const msg = failed > 0
+        ? `Pushed ${pushed} of ${allMembers.length} companies to HubSpot (${failed} failed).`
+        : `Pushed ${pushed} companies to HubSpot.`;
+      setChatMessages(prev=>[...prev,{role:"assistant",content:msg}]);
+      if(pushed > 0) celebrate("hubspot_pushed");
+      setCopied("hs_ok");setTimeout(()=>setCopied(""),4000);
+    } finally {
+      setHubspotBulkPushing(false);
+      setHubspotBulkProgress("");
+    }
   };
 
   const isFilled=s=>s.gates.some(g=>gateAnswers[g.id])||s.discovery.some(p=>riverData[p.id]?.trim());
@@ -7935,7 +8033,7 @@ ${isOpen
   }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
-  const STEPS=["Start","Define Your Buyer","Build Prospect Lists","Fit Check","Account Review","Research Brief","Call Prep","Live Call","Post-Call","Solution Fit"];
+  const STEPS=["Start","ICP & RFPs","Import","Fit Scores","Accounts","Brief","Prep","Live Call","Post-Call","Solution Fit"];
   const STEP_TIPS=["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Deal routing, CRM note, follow-up email, and solutioning","Solution architecture review, stakeholder mapping, next steps"];
   const chatContextLabel = selectedAccount?.company
     ? `${STEPS[step]} · ${selectedAccount.company}`
@@ -8562,9 +8660,15 @@ ${isOpen
                     disabled={!canNav && step!==i}
                     onClick={()=>canNav&&setStep(i)}
                     aria-current={step===i?"step":undefined}
-                    title={STEP_TIPS[i] || s}>
+                    title={STEP_TIPS[i] || s}
+                    style={{position:"relative"}}>
                     <div className={`step-num ${celebrateStep===i?"just-completed":""}`}>{step>i?"✓":i+1}</div>
                     <div className="step-label">{s}</div>
+                    {i === 1 && rfpData.open?.length > 0 && (
+                      <span style={{position:"absolute",top:-4,right:-4,background:"var(--red)",color:"white",fontSize:8,fontWeight:800,width:16,height:16,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {rfpData.open.length}
+                      </span>
+                    )}
                   </button>
                 </React.Fragment>
               );
@@ -10678,7 +10782,15 @@ ${isOpen
                 <div className="page-title">Fit Check — Your Best Matches</div>
                 <div className="page-sub">Fit Check: all {rows.length} companies ranked by how well they fit your buyer profile. Click any company to build a deep research brief.</div>
               </div>
-              <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Accounts", getAccountsCSVData())} />
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                {hubspotStatus?.connected&&(
+                  <button onClick={pushAllToHubSpot} disabled={hubspotBulkPushing}
+                    style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--line-0)",borderRadius:8,background:hubspotBulkPushing?"var(--amber-bg)":"var(--surface)",color:hubspotBulkPushing?"#7A5010":"var(--ink-1)",cursor:hubspotBulkPushing?"wait":"pointer",display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}}>
+                    {hubspotBulkPushing?`Pushing ${hubspotBulkProgress}...`:"Push All to HubSpot"}
+                  </button>
+                )}
+                <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Accounts", getAccountsCSVData())} />
+              </div>
             </div>
 
             {/* ICP changed since last scoring — suggest re-score */}
@@ -11416,6 +11528,23 @@ ${isOpen
                       <div className="skeleton" style={{width:"80%",height:14,borderRadius:4}}/>
                       <div className="skeleton" style={{width:"85%",height:14,borderRadius:4}}/>
                     </div>
+                  </div>
+                )}
+
+                {/* RFP alert — active procurement opportunities */}
+                {rfpData.open?.length > 0 && (
+                  <div style={{background:"var(--red-bg)",border:"2px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--red)",marginBottom:6}}>
+                      {"\uD83D\uDD34"} {rfpData.open.length} Active RFP{rfpData.open.length > 1 ? "s" : ""} Detected
+                    </div>
+                    <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6}}>
+                      Live procurement opportunities matching your ICP were found. Check the RFP Intel tab on the ICP page for details — these represent active buying intent.
+                    </div>
+                    {rfpData.open.slice(0, 3).map((rfp, idx) => (
+                      <div key={idx} style={{fontSize:11,color:"var(--ink-2)",marginTop:4,paddingLeft:12,borderLeft:"2px solid var(--red)"}}>
+                        {rfp.title || rfp.agency || "Active opportunity"} {rfp.deadline ? `— deadline: ${rfp.deadline}` : ""}
+                      </div>
+                    ))}
                   </div>
                 )}
 
