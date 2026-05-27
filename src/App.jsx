@@ -4137,7 +4137,7 @@ export default function App(){
     lastGenSig.current[stage] = sig;
     return false;
   };
-  const[rfpData,setRfpData]=useState({open:[],closed:[],loading:false,error:null});
+  const[rfpData,setRfpData]=useState({open:[],closed:[],signals:[],loading:false,error:null});
   const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
@@ -5197,15 +5197,15 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         const cached = localStorage.getItem(rfpCacheKey());
         if (cached) {
           const parsed = JSON.parse(cached);
-          if ((parsed?.open?.length > 0) || (parsed?.closed?.length > 0)) {
-            setRfpData({ open: parsed.open || [], closed: parsed.closed || [], loading: false, error: null });
+          if ((parsed?.open?.length > 0) || (parsed?.closed?.length > 0) || (parsed?.signals?.length > 0)) {
+            setRfpData({ open: parsed.open || [], closed: parsed.closed || [], signals: parsed.signals || [], loading: false, error: null });
             return;
           }
         }
       } catch {}
     }
 
-    setRfpData({ open: [], closed: [], loading: true, error: null });
+    setRfpData({ open: [], closed: [], signals: [], loading: true, error: null });
 
     // Pull rich ICP context — the RFP search quality is gated on how
     // well the prompt tells Haiku WHO to look for. Previously we passed
@@ -5346,10 +5346,67 @@ ${isOpen
       }
     };
 
-    // Launch both in parallel. Each settle updates its section of state
+    // ── Buying Signals prompt (separate from published RFPs) ────────
+    const buildSignalsPrompt = () => `You are a procurement intelligence analyst identifying PRE-RFP buying signals — NOT published RFPs, but evidence that a company or agency is ABOUT to issue one. Use web_search to find concrete signals.
+
+━━━ SELLER PROFILE ━━━
+URL: ${sanitizeForPrompt(sellerUrl)}
+Market category: ${sanitizeForPrompt(category)}
+Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+${naicsCodes.length ? `NAICS codes: ${naicsCodes.join(", ")}` : ""}
+
+━━━ WHAT TO LOOK FOR ━━━
+Search for RECENT (last 6 months) signals that a company or agency matching this seller's ICP is preparing to buy:
+
+1. MODERNIZATION ANNOUNCEMENTS — "Company X announces plan to modernize/replace their [system]"
+2. BUDGET AUTHORIZATIONS — Board/council votes approving budget for procurement
+3. EXECUTIVE HIRING — Procurement Manager, VP Strategic Sourcing, RFP Coordinator roles at target accounts
+4. EARNINGS CALL STATEMENTS — CFO/CEO capex commitments: "We will invest $X in [initiative]"
+5. VENDOR EVALUATION — "Company X is evaluating vendors for...", "in the process of selecting..."
+6. CONTRACT EXPIRATIONS — Existing contracts nearing renewal that could go to competitive bid
+7. REGULATORY MANDATES — New compliance requirements forcing technology upgrades
+
+━━━ SEARCH QUERIES (use 3-4) ━━━
+- "${sanitizeForPrompt(category || industries[0] || "technology")}" modernization OR "vendor selection" OR "RFP" 2025 2026
+- "${sanitizeForPrompt(industries[0] || "enterprise")}" "plans to invest" OR "evaluating vendors" OR "issued RFP" 2025
+- ${sanitizeForPrompt(category || industries[0])} procurement hiring "strategic sourcing" OR "procurement manager"
+- "${sanitizeForPrompt(industries[0] || "")}" contract expiring OR renewal OR "new system" 2025 2026
+
+━━━ OUTPUT ━━━
+Return 3-6 buying signals. Each must be a REAL, VERIFIABLE signal — not a published RFP (those go in the RFP tab).
+
+CRITICAL: These are SIGNALS of future buying intent, NOT actual RFPs. Name each signal in plain English.
+
+Return ONLY raw JSON:
+{"signals":[{"signalType":"Modernization Announcement","headline":"Plain English description of what's happening","company":"Company or agency name","detail":"2-3 sentences explaining what the signal is and what it means for a seller","source":"Where you found this (news outlet, company IR page, job board, etc.)","url":"https://...","strength":"Strong|Moderate|Early","relevance":"Why this matters for this specific seller"}]}`;
+
+    const fetchSignals = async () => {
+      try {
+        const d = await claudeFetch({
+          model: OPUS,
+          max_tokens: 3000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
+          messages: [{ role: "user", content: buildSignalsPrompt() }],
+        });
+        if (d.error) return { signals: [], error: d.error.message };
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        const fullText = textBlocks.join(" ").toLowerCase();
+        const noResultsSignals = ["unable to find", "could not find", "no specific", "i apologize", "i couldn't find", "no results", "no matching", "unfortunately"];
+        if (noResultsSignals.some(sig => fullText.includes(sig)) && !fullText.includes('"signals"')) return { signals: [] };
+        let parsed = null;
+        for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
+          parsed = extractJsonWithKey(textBlocks[i], "signals");
+        }
+        if (!parsed) { const joined = textBlocks.join("").trim(); const idx = joined.lastIndexOf('{"signals"'); if (idx >= 0) parsed = safeParseJSON(joined.slice(idx)); }
+        return { signals: (parsed?.signals || []) };
+      } catch (e) { console.warn("RFP signals fetch failed:", e); return { signals: [] }; }
+    };
+
+    // Launch all three in parallel. Each settle updates its section of state
     // so the user sees partial results as they arrive.
     const openP = fetchClass("open");
     const closedP = fetchClass("closed");
+    const signalsP = fetchSignals();
 
     openP.then(res => {
       if (res.rows) setRfpData(prev => ({ ...prev, open: res.rows }));
@@ -5359,18 +5416,23 @@ ${isOpen
       if (res.rows) setRfpData(prev => ({ ...prev, closed: res.rows }));
       else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Closed: ${res.error}` : `Closed RFPs: ${res.error}` }));
     });
+    signalsP.then(res => {
+      if (res.signals?.length) setRfpData(prev => ({ ...prev, signals: res.signals }));
+    });
 
-    const [openRes, closedRes] = await Promise.all([openP, closedP]);
+    const [openRes, closedRes, signalsRes] = await Promise.all([openP, closedP, signalsP]);
     setRfpData(prev => ({ ...prev, loading: false }));
 
     // Cache only if we got ACTUAL data (not empty arrays from failed parses).
     const hasOpenData  = openRes.rows?.length > 0;
     const hasClosedData = closedRes.rows?.length > 0;
-    if (hasOpenData || hasClosedData) {
+    const hasSignalData = signalsRes.signals?.length > 0;
+    if (hasOpenData || hasClosedData || hasSignalData) {
       try {
         localStorage.setItem(rfpCacheKey(), JSON.stringify({
           open: openRes.rows || [],
           closed: closedRes.rows || [],
+          signals: signalsRes.signals || [],
         }));
       } catch {}
     }
@@ -8888,9 +8950,9 @@ ${isOpen
                     style={{position:"relative"}}>
                     <div className={`step-num ${celebrateStep===i?"just-completed":""}`}>{step>i?"✓":i+1}</div>
                     <div className="step-label">{s}</div>
-                    {i === 1 && rfpData.open?.length > 0 && (
+                    {i === 1 && (rfpData.open?.length > 0 || rfpData.signals?.length > 0) && (
                       <span style={{position:"absolute",top:-4,right:-4,background:"var(--red)",color:"white",fontSize:8,fontWeight:800,width:16,height:16,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {rfpData.open.length}
+                        {(rfpData.open?.length || 0) + (rfpData.signals?.length || 0)}
                       </span>
                     )}
                   </button>
@@ -9897,7 +9959,7 @@ ${isOpen
             )}
 
             {icpTab==="rfp"&&sellerICP?.icp&&(()=>{
-              const hasData = rfpData.open.length > 0 || rfpData.closed.length > 0;
+              const hasData = rfpData.open.length > 0 || rfpData.closed.length > 0 || rfpData.signals?.length > 0;
               const everything = [...rfpData.open, ...rfpData.closed];
               return (
               <div style={{marginTop:16}}>
@@ -10065,6 +10127,54 @@ ${isOpen
                           💡 Awarded To = your displacement target or channel partner opportunity. "— unverified" means search couldn't confirm the vendor; click the title link and check the source (FPDS-NG / USAspending / TED) directly.
                         </div>
                         </>)}
+                      </div>
+                    )}
+
+                    {/* Buying Signals — pre-RFP intent (NOT published RFPs) */}
+                    {(rfpData.signals?.length > 0 || (rfpData.loading && hasData)) && (
+                      <div style={{marginTop:24}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                          <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🟡 Buying Signals — Early Intent Indicators</div>
+                          {rfpData.signals?.length > 0 && <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.signals.length} signals)</div>}
+                          {rfpData.loading && !rfpData.signals?.length && (
+                            <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ scanning for signals…</span>
+                          )}
+                        </div>
+                        <div style={{background:"var(--tan-3)",border:"1.5px solid var(--tan-2)",borderRadius:"var(--r-md)",padding:"10px 14px",marginBottom:14,fontSize:12,color:"var(--tan-ink)",lineHeight:1.5}}>
+                          <strong>These are NOT published RFPs.</strong> Buying signals are evidence that a company or agency may be preparing to procure — modernization announcements, budget authorizations, executive hiring, vendor evaluations, and contract expirations. Use these to get ahead of the competition.
+                        </div>
+                        {rfpData.signals?.length > 0 && (
+                          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                            {rfpData.signals.map((s, i) => {
+                              const strengthColor = s.strength === "Strong" ? "var(--green)" : s.strength === "Moderate" ? "var(--amber)" : "var(--ink-3)";
+                              const strengthBg = s.strength === "Strong" ? "var(--green-bg)" : s.strength === "Moderate" ? "var(--amber-bg)" : "var(--bg-2)";
+                              return (
+                                <div key={i} style={{border:"1.5px solid var(--line-0)",borderRadius:10,padding:"14px 16px",background:"var(--surface)"}}>
+                                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:8}}>
+                                    <div style={{flex:1}}>
+                                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                                        <span style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.3px",padding:"2px 8px",borderRadius:6,background:strengthBg,color:strengthColor}}>{s.strength || "Signal"}</span>
+                                        <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.3px",padding:"2px 8px",borderRadius:6,background:"var(--tan-3)",border:"1px solid var(--tan-2)"}}>{s.signalType || "Buying Signal"}</span>
+                                      </div>
+                                      <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",lineHeight:1.4}}>
+                                        {s.url ? <a href={s.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{s.headline || s.company} ↗</a> : (s.headline || s.company)}
+                                      </div>
+                                      {s.company && s.headline && <div style={{fontSize:12,fontWeight:600,color:"var(--ink-2)",marginTop:2}}>{s.company}</div>}
+                                    </div>
+                                  </div>
+                                  <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6,marginBottom:6}}>{s.detail}</div>
+                                  <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                                    <div style={{fontSize:11,color:"var(--ink-3)"}}>Source: {s.source || "Web search"}</div>
+                                    {s.relevance && <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600}}>Why it matters: {s.relevance}</div>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div style={{fontSize:11,color:"var(--ink-3)",marginTop:10,fontStyle:"italic",lineHeight:1.5}}>
+                          💡 Signals indicate buying intent 60-180 days before a formal RFP. The seller who shows up with context already loaded wins. Use these to prioritize outreach and prepare early.
+                        </div>
                       </div>
                     )}
                   </>
