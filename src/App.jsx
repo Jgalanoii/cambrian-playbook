@@ -5085,6 +5085,45 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     return `rfp:${RFP_CACHE_VERSION}:${userScope}:${url}:${cat}`;
   };
 
+  // ── RFP data science logging (fire-and-forget to Supabase) ──────────
+  const logRfpIntel = (items, searchStage, searchType) => {
+    if (!sbToken || !sbUser || !items?.length) return;
+    const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!SB_URL || !SB_KEY) return;
+    const rows = items.slice(0, 20).map(r => ({
+      user_id: sbUser.id,
+      org_id: orgCtx?.id || null,
+      seller_url: sellerUrl || null,
+      market_category: sellerICP?.marketCategory || null,
+      search_stage: searchStage,
+      search_type: searchType,
+      title: (r.title || r.headline || "").slice(0, 500),
+      buyer: (r.buyer || r.company || "").slice(0, 200),
+      source: (r.source || "").slice(0, 100),
+      source_url: (r.url || "").slice(0, 500),
+      is_government: r.isGovernment === true,
+      value_estimate: (r.value || "").slice(0, 50),
+      deadline: r.deadline || null,
+      award_date: r.awardDate || null,
+      awarded_to: (r.awardedTo || "").slice(0, 200),
+      signal_type: (r.signalType || "").slice(0, 100),
+      signal_strength: (r.strength || "").slice(0, 20),
+      signal_detail: (r.detail || "").slice(0, 1000),
+      relevance_score: r.relevanceScore || null,
+      relevance_reason: (r.relevanceReason || r.relevance || "").slice(0, 500),
+      cohort: (r.cohort || "").slice(0, 100),
+      naics_code: (r.naicsOrCpv || "").slice(0, 20),
+      model_used: "claude-opus-4-6",
+    }));
+    // Batch insert — fire and forget
+    fetch(`${SB_URL}/rest/v1/rfp_intel_signals`, {
+      method: "POST",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(rows),
+    }).catch(() => { /* non-critical */ });
+  };
+
   // Split into two parallel calls (open + closed). Each has its own
   // web_search budget and its own prompt so the model can focus. Results
   // render as each settles rather than waiting for both.
@@ -5310,15 +5349,15 @@ Return ONLY raw JSON:
     const signalsP = fetchSignals();
 
     openP.then(res => {
-      if (res.rows) setRfpData(prev => ({ ...prev, open: res.rows }));
+      if (res.rows) { setRfpData(prev => ({ ...prev, open: res.rows })); logRfpIntel(res.rows, "icp_level", "open_rfp"); }
       else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Open: ${res.error}` : `Open RFPs: ${res.error}` }));
     });
     closedP.then(res => {
-      if (res.rows) setRfpData(prev => ({ ...prev, closed: res.rows }));
+      if (res.rows) { setRfpData(prev => ({ ...prev, closed: res.rows })); logRfpIntel(res.rows, "icp_level", "closed_rfp"); }
       else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Closed: ${res.error}` : `Closed RFPs: ${res.error}` }));
     });
     signalsP.then(res => {
-      if (res.signals?.length) setRfpData(prev => ({ ...prev, signals: res.signals }));
+      if (res.signals?.length) { setRfpData(prev => ({ ...prev, signals: res.signals })); logRfpIntel(res.signals, "icp_level", "buying_signal"); }
     });
 
     const [openRes, closedRes, signalsRes] = await Promise.all([openP, closedP, signalsP]);
@@ -5495,9 +5534,9 @@ Return ONLY raw JSON:
     const closedP = fetchAcctClass("closed");
     const sigP = fetchAcctSignals();
 
-    openP.then(r => { if (r.rows?.length) setAccountRfpData(prev => ({ ...prev, open: r.rows })); });
-    closedP.then(r => { if (r.rows?.length) setAccountRfpData(prev => ({ ...prev, closed: r.rows })); });
-    sigP.then(r => { if (r.signals?.length) setAccountRfpData(prev => ({ ...prev, signals: r.signals })); });
+    openP.then(r => { if (r.rows?.length) { setAccountRfpData(prev => ({ ...prev, open: r.rows })); logRfpIntel(r.rows, "account_level", "open_rfp"); } });
+    closedP.then(r => { if (r.rows?.length) { setAccountRfpData(prev => ({ ...prev, closed: r.rows })); logRfpIntel(r.rows, "account_level", "closed_rfp"); } });
+    sigP.then(r => { if (r.signals?.length) { setAccountRfpData(prev => ({ ...prev, signals: r.signals })); logRfpIntel(r.signals, "account_level", "buying_signal"); } });
 
     await Promise.all([openP, closedP, sigP]);
     setAccountRfpData(prev => ({ ...prev, loading: false }));
