@@ -72,7 +72,7 @@ CREATE INDEX idx_ris_signal_type ON rfp_intel_signals(signal_type) WHERE search_
 ALTER TABLE public.rfp_intel_signals ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full" ON public.rfp_intel_signals FOR ALL TO service_role USING (true);
 CREATE POLICY "Users insert own" ON public.rfp_intel_signals FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
-CREATE POLICY "Users read own org" ON public.rfp_intel_signals FOR SELECT TO authenticated USING (org_id IN (SELECT org_id FROM users WHERE id = auth.uid()));
+CREATE POLICY "Users read own org" ON public.rfp_intel_signals FOR SELECT TO authenticated USING (org_id IN (SELECT org_id FROM users WHERE id = auth.uid()::text));
 
 -- ═══════════════════════════════════════════════════════════════
 -- ANALYTICS VIEWS for RFP intelligence
