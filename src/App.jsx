@@ -1137,8 +1137,7 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
         temperature: 0,
         system: ANTI_HALLUCINATION_SYSTEM,
         messages: [
-          { role: 'user', content: prompt },
-          { role: 'assistant', content: '{' }
+          { role: 'user', content: prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.' },
         ],
       }),
     });
@@ -1151,7 +1150,7 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  let fullText = '{';
+  let fullText = '';
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -1272,8 +1271,7 @@ async function callAI(prompt, { maxTokens = 5500 } = {}){
     temperature:0,
     system:ANTI_HALLUCINATION_SYSTEM,
     messages:[
-      {role:"user",content:prompt},
-      {role:"assistant",content:"{"},
+      {role:"user",content:prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.'},
     ],
   });
   if(d?.error) return null;
@@ -5775,8 +5773,7 @@ Return ONLY raw JSON:
         max_tokens:4000,
         temperature:0,
         messages:[
-          {role:"user",content:icpPrompt},
-          {role:"assistant",content:"{"},
+          {role:"user",content:icpPrompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.'},
         ],
       }, { extraHeaders: { "x-billable-run": "1" } });
       if(d2.error){
