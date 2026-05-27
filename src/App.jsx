@@ -3917,7 +3917,29 @@ export default function App(){
   const _step_unused = null; // placeholder
   const[_step,_setStep]=useState(0);
   const step=_step;
-  const setStep=(n)=>{_setStep(n);window.scrollTo({top:0,behavior:"smooth"});};
+  // ── DATA SCIENCE: session tracking refs ───────────────────────────────────
+  const dsSessionRef = useRef(crypto.randomUUID());
+  const dsSessionStart = useRef(Date.now());
+  const logJourney = (action, detail, stepFrom, stepTo) => {
+    if (!sbToken || !sbUser) return;
+    const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    fetch(`${SB_URL}/rest/v1/session_journey`, {
+      method: "POST",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({
+        user_id: sbUser.id,
+        org_id: orgCtx?.id || null,
+        session_id: dsSessionRef.current,
+        step_from: stepFrom ?? null,
+        step_to: stepTo ?? null,
+        action,
+        detail: detail || null,
+        elapsed_since_session_start_ms: Date.now() - dsSessionStart.current,
+      }),
+    }).catch(() => {});
+  };
+  const setStep=(n)=>{const prev=_step;_setStep(n);window.scrollTo({top:0,behavior:"smooth"});logJourney("step_change",{from:prev,to:n},prev,n);};
   const[sellerUrl,setSellerUrl]=useState("");
   const[sellerInput,setSellerInput]=useState("");
   const[sellerStage,setSellerStage]=useState(""); // Bootstrapped/Series A/B/C/D+/PE-Backed/Public
@@ -9190,7 +9212,7 @@ Return ONLY raw JSON:
                     </button>
 
                     {/* REPORTING */}
-                    {sbUser?.email==="itsjoegalano@gmail.com"&&(
+                    {(sbUser?.email==="itsjoegalano@gmail.com"||orgCtx?.userRole==="admin")&&(
                       <>
                         <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
                         <button onClick={()=>{setSuperAdminOpen(true);setMoreMenuOpen(false);}}
@@ -9599,7 +9621,7 @@ Return ONLY raw JSON:
                   <div style={{marginBottom:10}}>
                     <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Company Size <span style={{fontWeight:400,color:"var(--ink-3)"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["1-49","50-499","500-4,999","5,000-49,999","50,000+"].map(v=>pill("headcount",v,"var(--navy)",3))}
+                      {["1-49","50-499","500-4,999","5,000-9,999","10,000-49,999","50,000+"].map(v=>pill("headcount",v,"var(--navy)",3))}
                     </div>
                   </div>
 
@@ -9607,7 +9629,7 @@ Return ONLY raw JSON:
                   <div style={{marginBottom:10}}>
                     <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Revenue Range <span style={{fontWeight:400,color:"var(--ink-3)"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["<$1M","$1M-$10M","$10M-$100M","$100M-$1B","$1B+"].map(v=>pill("revenue",v,"var(--green)",3))}
+                      {["Under $1M","$1M-$10M","$10M-$50M","$50M-$100M","$100M-$500M","$500M-$1B","$1B-$10B","$10B+"].map(v=>pill("revenue",v,"var(--green)",3))}
                     </div>
                   </div>
 
@@ -9615,7 +9637,7 @@ Return ONLY raw JSON:
                   <div style={{marginBottom:10}}>
                     <div style={{fontSize:11,fontWeight:600,color:"var(--ink-2)",marginBottom:4}}>Ownership Type <span style={{fontWeight:400,color:"var(--ink-3)"}}>up to 3</span></div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {["Public","Private","PE-Backed","VC-Backed","Bootstrapped"].map(v=>pill("ownership",v,"var(--tan-0)",3))}
+                      {["Public","Private","PE-backed","VC-backed","Bootstrapped"].map(v=>pill("ownership",v,"var(--tan-0)",3))}
                     </div>
                   </div>
 
@@ -14287,7 +14309,7 @@ Return ONLY raw JSON:
       {/* ReportPanel removed — consolidated into UserDashboard */}
 
       {superAdminOpen && (
-        <SuperAdmin sbUser={sbUser} sbToken={sbToken} onClose={()=>setSuperAdminOpen(false)} />
+        <SuperAdmin sbUser={sbUser} sbToken={sbToken} orgCtx={orgCtx} onClose={()=>setSuperAdminOpen(false)} />
       )}
 
       {/* Disqualify modal */}
