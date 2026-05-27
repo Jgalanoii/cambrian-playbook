@@ -580,8 +580,8 @@ function authHeaders() {
 // Invest in quality at the top of the funnel (ICP, research brief),
 // then let rich context cascade to cheaper models downstream.
 //
-// Opus:   ICP build (amortized, cached), P3 strategy/opening angle
-// Sonnet: P1 overview, P2 executives, P4 solutions, P7 competitive, RFP search
+// Opus:   ICP build (amortized, cached), P3 strategy/opening angle, RFP search
+// Sonnet: P1 overview, P2 executives, P4 solutions, P7 competitive
 // Haiku:  P5-P6, P8-P10, hypothesis, discovery, coaching, post-call
 //
 // Cost: ~$1.15/run (was $0.38 all-Haiku). Margins: 54-71% by tier.
@@ -3758,6 +3758,159 @@ const FAQ_ITEMS = [
   { q: "How accurate is the executive research?", a: "Executive names are verified via web search. For well-known companies, accuracy is high. Always verify before your call — click any executive card to edit." },
 ];
 
+// ── DOWNLOADABLE GUIDES ──────────────────────────────────────────────
+// User-facing guides available in-app with PDF download.
+const APP_GUIDES = {
+  user: {
+    title: "User Guide",
+    subtitle: "Complete walkthrough of the 9-step sales intelligence workflow",
+    icon: "📘",
+    sections: [
+      { h: "Getting Started", body: "Sign up at cambriancatalyst.ai. 3 free runs, no credit card. Each run takes you through the full 9-step workflow." },
+      { h: "Step 0: Start", body: "Sets up your selling identity — who you are, what you sell, and what proof you have.\n\n1. Enter your company URL (e.g., yourcompany.com)\n2. Cambrian researches your company and auto-builds your Ideal Customer Profile\n3. Upload sales materials (PDFs, decks, one-pagers) to ground AI output in YOUR proof\n4. Add proof points (ROI metrics, awards, customer wins) — cited in every brief\n5. Select your funding stage — this calibrates how the tool positions you\n\nTip: Use a URL, not just a company name — URLs give the best results." },
+      { h: "Step 1: ICP & RFPs", body: "Shows your auto-generated Ideal Customer Profile — industries, buyer personas, pain points, conferences, and RFP opportunities.\n\n• Review every field — click any text to edit it\n• Your corrections override AI content in all downstream output\n• Switch to \"RFP Intel\" tab for matching procurement opportunities\n• Adjust Fit Scoring Weights to prioritize different dimensions\n\nTip: Edit the Industries list if the AI picked wrong verticals — this directly affects which companies get matched." },
+      { h: "Step 2: Import", body: "Three ways to add target companies:\n\n• Upload CSV/Excel — columns auto-map (Company, Industry, URL, Employees, Ownership)\n• Quick Entry — type company names one per line\n• Build Target Accounts — AI generates 25-30 ICP-matched companies with industry, headcount, and revenue filters\n\nAll imported companies are automatically scored for ICP fit." },
+      { h: "Step 3: Fit Scores", body: "Every prospect scored on three dimensions — ICP Alignment, Customer Similarity, and Competitive Landscape.\n\n• Strong Fit (75%+) = high-confidence targets\n• Potential Fit (55-74%) = worth pursuing with the right approach\n• Poor Fit (<55%) = needs insider knowledge or a specific angle\n\nClick \"+\" next to any score to add Intel Adjustments — insider knowledge that modifies the AI score." },
+      { h: "Step 4: Accounts", body: "Select up to 3 target outcomes for this account. These shape the entire brief, hypothesis, and coaching.\n\n1. Select 1-3 outcomes (e.g., Revenue Growth, Operational Efficiency)\n2. Set deal value and contact role (optional but improves output)\n3. Click \"Build Brief\"" },
+      { h: "Step 5: Brief", body: "Full company intelligence — 10 sections of live web research.\n\n1. Company Snapshot — revenue, employees, HQ, ownership, funding\n2. Key Executives — current leaders with approach angles\n3. Strategy & Opening — 12-18 month direction, Challenger teaching insight\n4. Solution Mapping — your products matched to their problems\n5. Live Intelligence — recent headlines, growth signals\n6. Open Roles — hiring signals that reveal priorities\n7. Competitive Positioning — who they fight and where they lose\n8. Board & Investors — governance, investment thesis\n9. Financial Deep Dive — revenue trends, capital priorities\n10. Approval Gate Map — steering committees, procurement path\n\nEvery field is editable. Click to correct anything." },
+      { h: "Step 6: Prep", body: "Structured conversation hypothesis using the RIVER framework:\n\n• Reality — what's urgent for this buyer right now\n• Impact — what the problem is costing them\n• Vision — what success looks like in their words\n• Entry Points — who's on the buying committee\n• Route — fastest path to yes\n\nDiscovery questions are tailored to the buyer and your products." },
+      { h: "Step 7: Live Call", body: "Real-time coaching and structured note capture during the conversation.\n\n• Answer gate questions as you learn (click the options)\n• Capture discovery notes in the prospect's own words\n• Press Tab in notes to insert a timestamp\n• Ask Milton for real-time coaching — he has your full session context\n\nDon't try to fill every gate question — capture what comes naturally." },
+      { h: "Step 8: Post-Call", body: "Instant deal assessment, CRM note, and follow-up email.\n\n• Deal Route — Fast Track / Nurture / Disqualify\n• Scorecard — compares pre-call hypothesis to what you heard\n• CRM Note — ready to paste into any CRM\n• Follow-Up Email — sendable quality, copy and personalize\n• Push to HubSpot — one click sends everything" },
+      { h: "Milton AI Coach", body: "Click the chat button (bottom-right) on any step. Milton knows your full session — ICP, brief, hypothesis, discovery capture, and seller context.\n\nBest prompts:\n• \"How should I open this call?\"\n• \"What's the biggest risk in this deal?\"\n• \"Help me handle the 'we already have a vendor' objection\"\n• \"What should I ask about their tech stack?\"" },
+      { h: "HubSpot Integration", body: "Settings → HubSpot → Connect → Authorize in HubSpot.\n\nWhat gets pushed: Company record, rich HTML note with session intelligence, deal (optional), executive contacts, follow-up tasks.\n\nDisconnect: Settings → HubSpot → Disconnect (revokes tokens immediately)." },
+      { h: "Keyboard Shortcuts", body: "⌘K — Command palette (search anything)\n⌘S — Save session\n← → — Navigate between steps\nEscape — Close any modal\nTab (in call notes) — Insert timestamp" },
+    ],
+  },
+  admin: {
+    title: "Admin Guide",
+    subtitle: "User management, org setup, troubleshooting, and support escalation",
+    icon: "📙",
+    sections: [
+      { h: "User Management", body: "Invite: Settings → Team → Invite Member → enter email + role.\n\nRoles:\n• Rep — run briefs, save sessions, push to HubSpot\n• Manager — Rep + view team sessions and reporting\n• Admin — Manager + invite/remove members, change org settings\n\nChange role: Team → click role dropdown → select new role.\nRemove: Team → \"...\" → Remove. Sessions remain in the org." },
+      { h: "Organization Setup", body: "Seller URL: Settings → Account → enter your company URL. Triggers ICP generation.\n\nPlans:\n• Trial: 3 free runs, no credit card\n• Starter ($99/mo): 25 runs\n• Pro ($349/mo): 100 runs\n• Team ($799/mo): 250 runs\n• Enterprise ($2,500/mo): 1,000 runs\n\nRollover: Unused runs carry forward (capped at 1 month's allocation)." },
+      { h: "HubSpot Setup", body: "Settings → HubSpot → Connect. Must be logged into HubSpot in the same browser first.\n\nAfter connecting, \"Push to HubSpot\" appears in brief and post-call action bars.\n\nIf push fails: Disconnect → Reconnect in Settings." },
+      { h: "Troubleshooting — ICP", body: "ICP not building?\n1. Check the URL — use a full domain like company.com\n2. Try with .com — some TLDs don't resolve\n3. Click \"Regenerate ICP\" to force fresh build\n4. Check console (DevTools → Console) for errors\n5. Check run limit — 0 remaining = ICP won't build" },
+      { h: "Troubleshooting — Briefs", body: "Sections blank?\n1. Look for amber banner — \"X sections incomplete\"\n2. Hit Regenerate — free, doesn't count against runs\n3. Some sections (P3 Strategy with Opus) take 15-30 seconds\n4. Check console for specific failures" },
+      { h: "Troubleshooting — HubSpot", body: "• Scope mismatch on connect → scopes in code must match HubSpot App Auth tab\n• Push returns error → Disconnect + Reconnect\n• Companies not in \"My Companies\" → owner_id issue, reconnect\n• Token expired → Disconnect + Reconnect" },
+      { h: "Troubleshooting — Other", body: "Run limit reached: Check usage badge (bottom-left). Rollover credits included. Upgrade in Settings → Plan.\n\nSlow briefs: ICP build (Opus) = 15-25s, P3 (Opus) = 15-30s, other sections = 3-10s parallel. Total 20-40s expected.\n\nLogin issues: Forgot Password on login page. Invite links expire after 7 days.\n\nMilton not responding: Check run limit, refresh page, try simpler question." },
+      { h: "Support Escalation", body: "Level 1 (Self-service): Help \"?\" button, FAQ, Milton.\n\nLevel 2 (Email): joe@cambriancatalyst.ai — 24hr response (business days). Include what you did, what happened, screenshot.\n\nLevel 3 (Technical): Console errors, Network tab, Session ID." },
+    ],
+  },
+  reseller: {
+    title: "Reseller Guide",
+    subtitle: "Setting up clients, managing orgs, pricing, and support escalation",
+    icon: "📗",
+    sections: [
+      { h: "What You Get", body: "You operate your own org with admin access. You can:\n• Invite client users under your org\n• Set seller URLs per client engagement\n• Monitor usage across all clients\n• Run briefs on behalf of clients\n• Export session data for client delivery" },
+      { h: "Client Setup — Option A", body: "Client under your org (simpler): Your org is the umbrella. Invite client team members as reps. Usage counts against your plan. Best for consulting engagements where you run briefs for them." },
+      { h: "Client Setup — Option B", body: "Dedicated client org (cleaner): Ask joe@cambriancatalyst.ai to create a separate org. They get their own plan, usage, and data. Best for clients who will self-serve after onboarding." },
+      { h: "First Walkthrough (25 min)", body: "Minutes 1-5: Quick Brief — enter a company they're pursuing, show the brief building live.\n\nMinutes 5-12: Full Session — walk through ICP, show fit scoring on 3-4 companies.\n\nMinutes 12-18: Call Prep — show RIVER hypothesis, discovery questions, Milton coaching.\n\nMinutes 18-23: Post-Call + CRM — demonstrate HubSpot push, follow-up email.\n\nMinutes 23-25: Close — show session saving, help button. \"Run 3 briefs this week.\"" },
+      { h: "Managing Clients", body: "Monitor usage: Reporting → org usage, sessions per user. Proactive check-in at day 7 if usage is low.\n\nPlan changes: Contact joe@cambriancatalyst.ai with org name, current plan, target plan.\n\nAdd members: Settings → Team → Invite, or have client admin do it.\n\nExport: From any brief — Copy Brief, Copy Summary, Export PDF, Export CSV." },
+      { h: "Pricing", body: "Suggested wholesale (negotiate with Joe):\n• Starter (25 runs): Retail $99 → Reseller $69 (30% margin)\n• Pro (100 runs): Retail $349 → Reseller $244 (30% margin)\n• Team (250 runs): Retail $799 → Reseller $559 (30% margin)\n• Enterprise (1,000 runs): Retail $2,500 → Reseller $1,750 (30% margin)\n\nVolume pricing for 10+ client orgs." },
+      { h: "Support", body: "You handle: Feature questions, ICP corrections, brief regeneration.\n\nEscalate to joe@cambriancatalyst.ai: Technical issues (400 errors, blank screens, login), plan changes, feature requests, HubSpot issues.\n\nResponse: 24 hours on business days." },
+      { h: "Client Success Factors", body: "1. Run 5 briefs in the first week — week 1 usage predicts retention\n2. Edit the ICP in session 1 — makes the tool theirs\n3. Push to HubSpot at least once — proves CRM integration\n4. Use Milton on a real call — the \"aha\" moment\n5. Review fit scores together — builds trust in scoring" },
+    ],
+  },
+};
+
+// Renders markdown-light text: \n\n = paragraph, \n• = bullet, \n1. = numbered
+function GuideText({ text }) {
+  return text.split("\n\n").map((para, pi) => (
+    <div key={pi} style={{marginBottom:10}}>
+      {para.split("\n").map((line, li) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("•")) return <div key={li} style={{paddingLeft:16,position:"relative",lineHeight:1.7}}><span style={{position:"absolute",left:4}}>•</span>{trimmed.slice(1).trim()}</div>;
+        if (/^\d+\./.test(trimmed)) return <div key={li} style={{paddingLeft:16,lineHeight:1.7}}>{trimmed}</div>;
+        return <div key={li} style={{lineHeight:1.7}}>{trimmed}</div>;
+      })}
+    </div>
+  ));
+}
+
+function GuidePanel({ guide, activeGuide, setActiveGuide, onClose }) {
+  const g = APP_GUIDES[activeGuide];
+  if (!g) return null;
+
+  const printGuide = () => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${g.title} — Cambrian Catalyst</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Inter:wght@400;600;700&display=swap');
+  body { font-family: Inter, -apple-system, sans-serif; max-width: 680px; margin: 40px auto; padding: 0 24px; color: #1a1a2e; line-height: 1.7; font-size: 13px; }
+  h1 { font-family: Lora, serif; font-size: 24px; margin-bottom: 4px; color: #1a1a2e; }
+  .sub { font-size: 13px; color: #666; margin-bottom: 32px; }
+  h2 { font-size: 15px; font-weight: 700; margin: 28px 0 8px; padding-bottom: 6px; border-bottom: 1.5px solid #e8e0d4; color: #1a1a2e; }
+  p { margin: 0 0 10px; }
+  ul, ol { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e8e0d4; font-size: 11px; color: #999; text-align: center; }
+  @media print { body { margin: 20px auto; } }
+</style></head><body>
+<h1>${g.icon} ${g.title}</h1>
+<div class="sub">${g.subtitle} — Cambrian Catalyst</div>
+${g.sections.map(s => {
+      const body = s.body.replace(/\n\n/g, "</p><p>")
+        .replace(/\n• /g, "</p><ul><li>").replace(/<\/li>(?=<ul>)/g, "")
+        .replace(/\n(?=\d+\.)/g, "</p><p>");
+      return `<h2>${s.h}</h2><p>${body}</p>`;
+    }).join("\n")}
+<div class="footer">Cambrian Catalyst LLC · cambriancatalyst.ai · Generated ${new Date().toLocaleDateString()}</div>
+</body></html>`;
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 400);
+  };
+
+  const keys = Object.keys(APP_GUIDES);
+  return (
+    <>
+      <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9998}}/>
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:"min(560px, 92vw)",background:"var(--surface)",zIndex:9999,display:"flex",flexDirection:"column",boxShadow:"-4px 0 24px rgba(0,0,0,0.12)",animation:"cmd-fade-in 0.2s ease"}}>
+        {/* Header */}
+        <div style={{padding:"16px 20px",borderBottom:"1px solid var(--line-0)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div>
+            <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,color:"var(--ink-0)"}}>Guides & Documentation</div>
+            <div style={{fontSize:11,color:"var(--ink-3)",marginTop:2}}>Download as PDF or read in-app</div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--ink-3)"}} aria-label="Close">✕</button>
+        </div>
+        {/* Tab bar */}
+        <div style={{display:"flex",gap:4,padding:"10px 20px 0",borderBottom:"1px solid var(--line-0)",flexShrink:0}}>
+          {keys.map(k => (
+            <button key={k} onClick={()=>setActiveGuide(k)}
+              style={{padding:"8px 14px",fontSize:12,fontWeight:activeGuide===k?700:500,color:activeGuide===k?"var(--ink-0)":"var(--ink-3)",background:"none",border:"none",cursor:"pointer",borderBottom:activeGuide===k?"2.5px solid var(--tan-0)":"2.5px solid transparent",marginBottom:-1}}>
+              {APP_GUIDES[k].icon} {APP_GUIDES[k].title}
+            </button>
+          ))}
+        </div>
+        {/* Content */}
+        <div style={{flex:1,overflow:"auto",padding:"20px 24px"}}>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)",fontFamily:"Lora,serif"}}>{g.icon} {g.title}</div>
+            <div style={{fontSize:12,color:"var(--ink-3)",marginTop:4}}>{g.subtitle}</div>
+          </div>
+          {g.sections.map((s, i) => (
+            <div key={i} style={{marginBottom:20}}>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",paddingBottom:6,borderBottom:"1px solid var(--line-0)",marginBottom:8}}>{s.h}</div>
+              <div style={{fontSize:12,color:"var(--ink-1)"}}>
+                <GuideText text={s.body}/>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Footer with download */}
+        <div style={{padding:"12px 20px",borderTop:"1px solid var(--line-0)",display:"flex",gap:8,flexShrink:0}}>
+          <button onClick={printGuide}
+            style={{flex:1,padding:"10px 16px",fontSize:13,fontWeight:700,borderRadius:8,border:"none",background:"var(--tan-0)",color:"white",cursor:"pointer"}}>
+            Download as PDF
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function HelpGuide({ step, style = {} }) {
   const [open, setOpen] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
@@ -4033,6 +4186,8 @@ export default function App(){
   const[miltonMsgCount,setMiltonMsgCount]=useState(0); // total Milton messages this session
   const[resourcesOpen,setResourcesOpen]=useState(false);
   const[contactOpen,setContactOpen]=useState(false);
+  const[guidesOpen,setGuidesOpen]=useState(false);
+  const[activeGuide,setActiveGuide]=useState("user");
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
   const[collapsedBB,setCollapsedBB]=useState(new Set(["sessionSummary"])); // Phase 2b: collapsed brief sections. Session summary starts collapsed — accessed via top action bar.
@@ -5137,9 +5292,9 @@ ${isOpen
     const fetchClass = async (kind) => {
       try {
         const d = await claudeFetch({
-          model: activeModel(),
-          max_tokens: 2500,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+          model: OPUS,
+          max_tokens: 4000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
           messages: [{ role: "user", content: buildPrompt(kind) }],
         });
         if (d.error) return { kind, error: d.error.message || "The AI engine stumbled. Give it another shot." };
@@ -8828,6 +8983,12 @@ ${isOpen
 
                     {/* SUPPORT */}
                     <div style={{height:1,background:"var(--line-0)",margin:"4px 0"}}/>
+                    <div style={{padding:"4px 16px 2px",fontSize:9,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.5px"}}>Support</div>
+                    <button onClick={()=>{setGuidesOpen(true);setMoreMenuOpen(false);}}
+                      style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                      Guides & Downloads
+                    </button>
                     <button onClick={()=>{setContactOpen(true);setMoreMenuOpen(false);}}
                       style={{width:"100%",padding:"8px 16px",border:"none",background:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:10,textAlign:"left"}}
                       onMouseEnter={e=>e.currentTarget.style.background="var(--bg-1)"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
@@ -10065,7 +10226,7 @@ ${isOpen
                         <EF value={sellerICP.marketCategory||""} onChange={v=>setSellerICP(p=>({...p,marketCategory:v}))} placeholder="e.g. Employee Rewards Platform" single/>
                       </div>
                       <div>
-                        <div className="field-label" style={{marginBottom:4}}>Adoption Profile</div>
+                        <div className="field-label" style={{marginBottom:4}}>Adoption Profile<InfoTip text="Where your typical buyer sits on the technology adoption curve: Innovator (risk-seeking, tries unproven tech), Early Adopter (visionary, wants competitive edge), Early Majority (pragmatic, needs proof + references), Late Majority (conservative, buys only when standard). This shapes how the brief frames urgency and proof points."/></div>
                         <EF value={sellerICP.icp.adoptionProfile||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,adoptionProfile:v}}))} placeholder="e.g. Early Majority" single/>
                       </div>
                     </div>
@@ -13659,6 +13820,9 @@ ${isOpen
           </div>
         </div>
       )}
+
+      {/* Guides panel */}
+      {guidesOpen && <GuidePanel activeGuide={activeGuide} setActiveGuide={setActiveGuide} onClose={()=>setGuidesOpen(false)} />}
 
       {/* Contact Us panel */}
       {contactOpen && (
