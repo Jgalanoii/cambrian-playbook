@@ -1653,6 +1653,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ["investor", getInvestorInjection(sellerICP, member.ind)],
     ["baas", getBaasInjection(sellerICP, member.ind)],
     ["charitable", getCharitableInjection(sellerICP, member.ind)],
+    ["medicalPayments", getMedicalPaymentsInjection(sellerICP, member.ind)],
     ["smbMidmarket", getSmbMidmarketInjection(sellerICP, member.ind, member)],
     ["insurance", getInsuranceInjection(sellerICP, member.ind)],
     ["digitalIncentives", getDigIncentivesInjection(sellerICP, member.ind)],
@@ -2690,14 +2691,16 @@ const LEVEL_STYLES = {
 
 function MilestoneCelebration({ milestone, onDismiss }) {
   const m = MILESTONES[milestone];
-  if (!m) return null;
-  const s = LEVEL_STYLES[m.level];
-  const isHype = m.level >= 3;
+  const s = m ? LEVEL_STYLES[m.level] : LEVEL_STYLES[1];
 
   React.useEffect(() => {
+    if (!m) return;
     const t = setTimeout(onDismiss, s.duration);
     return () => clearTimeout(t);
-  }, []);
+  }, [milestone]);
+
+  if (!m) return null;
+  const isHype = m.level >= 3;
 
   return (
     <div style={{
@@ -5311,7 +5314,7 @@ ${isOpen
         const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
         const fullText = textBlocks.join(" ").toLowerCase();
 
-        // Detect when Haiku searched but found nothing — it returns a
+        // Detect when Opus searched but found nothing — it returns a
         // prose apology instead of JSON. This is a DATA gap (no public
         // RFPs for this seller's niche), not a parse failure.
         const noResultsSignals = ["unable to find", "could not find", "no specific", "i apologize", "i couldn't find", "no results", "no matching", "unfortunately"];

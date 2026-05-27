@@ -118,7 +118,7 @@ export default async function handler(req, res) {
   if (req._isGuest) {
     if (!checkGuestLimit(ip)) {
       return res.status(402).json({
-        error: { type: "guest_limit_exceeded", message: "You've used your 3 free tokens. Create a free account to continue." },
+        error: { type: "guest_limit_exceeded", message: "You've used your free tokens. Create a free account to continue." },
         guest_remaining: 0,
       });
     }
