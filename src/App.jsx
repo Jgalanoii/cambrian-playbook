@@ -5177,12 +5177,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
   // Results accumulate in the DB across sessions. Once a good RFP is found,
   // it persists forever and gets re-verified on subsequent searches.
   const loadPreviousRfpIntel = async () => {
-    if (!sbToken || !sbUser) return { open: [], closed: [], signals: [] };
+    if (!sbToken || !sbUser) { console.log("[rfp-persist] Skip DB load — not authenticated"); return { open: [], closed: [], signals: [] }; }
     const SB_URL = import.meta.env.VITE_SUPABASE_URL;
     const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    if (!SB_URL || !SB_KEY) return { open: [], closed: [], signals: [] };
+    if (!SB_URL || !SB_KEY) { console.log("[rfp-persist] Skip DB load — no Supabase config"); return { open: [], closed: [], signals: [] }; }
     const sellerNorm = (sellerUrl || "").toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "").slice(0, 200);
-    if (!sellerNorm) return { open: [], closed: [], signals: [] };
+    if (!sellerNorm) { console.log("[rfp-persist] Skip DB load — no seller URL"); return { open: [], closed: [], signals: [] }; }
     try {
       // Only load non-dismissed results from the last 180 days
       // Match on user_id + seller_url pattern (handles evermoreoutcomes vs evermoreoutcomes.com)
@@ -5261,7 +5261,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     setRfpData({ open: [], closed: [], signals: [], loading: true, error: null });
 
     // Load previously-found results from Supabase for seeding
+    console.log("[rfp-persist] Loading previous results from DB...");
     const prevIntel = await loadPreviousRfpIntel();
+    console.log("[rfp-persist] Previous results:", { open: prevIntel.open.length, closed: prevIntel.closed.length, signals: prevIntel.signals.length });
 
     // Pull rich ICP context — the RFP search quality is gated on how
     // well the prompt tells Haiku WHO to look for. Previously we passed
