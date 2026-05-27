@@ -4126,7 +4126,7 @@ export default function App(){
   const[activeGuide,setActiveGuide]=useState("user");
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
-  const[collapsedBB,setCollapsedBB]=useState(new Set(["sessionSummary"])); // Phase 2b: collapsed brief sections. Session summary starts collapsed — accessed via top action bar.
+  const[collapsedBB,setCollapsedBB]=useState(new Set()); // Phase 2b: collapsed brief sections. Summary now starts expanded at top of brief.
   const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
   // Helpers for collapsible bb blocks. bbHdr() returns onClick + chevron props;
   // bbWrap() returns the wrapper className for the body.
@@ -12601,6 +12601,78 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
+                {/* ── SESSION SUMMARY — executive report (TOP of brief) ── */}
+                {brief && !brief._loadingSections?.overview && !brief._loadingSections?.deepIntel && (()=>{
+                  const summary = buildSessionSummary();
+                  if (!summary) return null;
+                  const isOpen = bbIsOpen("sessionSummary");
+                  return <div id="session-summary-section" className="bb" style={{borderColor:"var(--tan-0)",borderWidth:2}}>
+                    <div className="bb-hdr" onClick={()=>toggleBB("sessionSummary")}>
+                      <div className="bb-icon" style={{fontSize:10}}>📋</div>
+                      <div style={{flex:1}}>
+                        <div className="bb-title">Executive Summary<InfoTip text="Pulls the most important data from every section into one executive report. Copy to clipboard, export as JSON, or push to HubSpot. Updates as you progress through the session."/></div>
+                        <div className="bb-sub">The brief at a glance — all sections, one view</div>
+                      </div>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <button className="copy-btn" onClick={e=>{
+                          e.stopPropagation();
+                          const text = sessionSummaryToText(summary);
+                          navigator.clipboard?.writeText(text);
+                          setEditToast("Summary copied to clipboard");
+                        }}>Copy Summary</button>
+                        <button className="copy-btn" onClick={e=>{
+                          e.stopPropagation();
+                          downloadStageData("Session-Summary", summary);
+                        }}>Export JSON</button>
+                        <span className="bb-arrow">{isOpen?"▾":"▸"}</span>
+                      </div>
+                    </div>
+                    {isOpen && <div className="bb-body" style={{padding:"16px 20px",fontSize:12,lineHeight:1.7}}>
+                      {(summary.topFinding || summary.topOpportunity || summary.topRisk) && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Quick Take</div>
+                        {summary.topFinding && <div style={{marginBottom:4}}><span style={{background:"var(--navy)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>FINDING</span>{summary.topFinding}</div>}
+                        {summary.topOpportunity && <div style={{marginBottom:4}}><span style={{background:"var(--green)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>OPP</span>{summary.topOpportunity}</div>}
+                        {summary.topRisk && <div><span style={{background:"var(--red)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>RISK</span>{summary.topRisk}</div>}
+                      </div>}
+                      {summary.companySnapshot && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Company Profile</div>
+                        <div style={{marginBottom:6,color:"var(--ink-1)"}}>{summary.companySnapshot}</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"4px 16px",fontSize:11,color:"var(--ink-2)"}}>
+                          {summary.revenue && <div><strong>Revenue:</strong> {summary.revenue}</div>}
+                          {summary.employeeCount && <div><strong>Employees:</strong> {summary.employeeCount}</div>}
+                          {summary.headquarters && <div><strong>HQ:</strong> {summary.headquarters}</div>}
+                          {summary.ownership && <div><strong>Ownership:</strong> {summary.ownership}</div>}
+                          {summary.fundingProfile && <div><strong>Funding:</strong> {summary.fundingProfile}</div>}
+                          {summary.founded && <div><strong>Founded:</strong> {summary.founded}</div>}
+                        </div>
+                      </div>}
+                      {summary.executives.length > 0 && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Key Executives</div>
+                        {summary.executives.map((e,i) => <div key={i} style={{marginBottom:3}}><strong>{e.name}</strong> — {e.title}{e.angle ? <span style={{color:"var(--ink-3)"}}> | {e.angle.slice(0,120)}</span> : ""}</div>)}
+                      </div>}
+                      {summary.strategicTheme && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Strategy & Positioning</div>
+                        {summary.strategicTheme && <div style={{marginBottom:4}}><strong>Theme:</strong> {summary.strategicTheme}</div>}
+                        {summary.openingAngle && <div style={{marginBottom:4}}><strong>Opening:</strong> {summary.openingAngle}</div>}
+                        {summary.sellerOpportunity && <div><strong>Seller Opportunity:</strong> {summary.sellerOpportunity}</div>}
+                      </div>}
+                      {summary.fitScore !== null && <div style={{marginBottom:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Fit Score</div>
+                        <div><strong>{summary.fitScore}/100 — {summary.fitLabel}</strong></div>
+                        {summary.fitReason && <div style={{fontSize:11,color:"var(--ink-2)"}}>{summary.fitReason}</div>}
+                      </div>}
+                      <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid var(--line-0)",fontSize:10,color:"var(--ink-3)",textAlign:"center"}}>
+                        Scroll down for full detail on each section · Generated by Cambrian Catalyst | {new Date().toLocaleDateString()}
+                      </div>
+                    </div>}
+                  </div>;
+                })()}
+
+                {/* ── FULL DETAIL — section-by-section research ── */}
+                {brief && !brief._loadingSections?.overview && brief.companySnapshot && (
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.5px",marginTop:16,marginBottom:8,paddingBottom:6,borderBottom:"1px solid var(--line-0)"}}>Full Detail</div>
+                )}
+
                 {/* Company Snapshot */}
                 {brief._loadingSections?.overview && !brief.companySnapshot ? (
                   <div className="bb bb-skeleton">
@@ -13672,167 +13744,7 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
-                {/* ── FULL SESSION SUMMARY — executive report ── */}
-                {brief && !brief._loadingSections?.overview && !brief._loadingSections?.deepIntel && (()=>{
-                  const summary = buildSessionSummary();
-                  if (!summary) return null;
-                  const isOpen = bbIsOpen("sessionSummary");
-                  return <div id="session-summary-section" className="bb" style={{borderColor:"var(--tan-0)",borderWidth:2}}>
-                    <div className="bb-hdr" onClick={()=>toggleBB("sessionSummary")}>
-                      <div className="bb-icon" style={{fontSize:10}}>📋</div>
-                      <div style={{flex:1}}>
-                        <div className="bb-title">Full Session Summary<InfoTip text="Pulls the most important data from every section into one executive report. Copy to clipboard, export as JSON, or push to HubSpot. Updates as you progress through the session."/></div>
-                        <div className="bb-sub">Executive report — all sections, one view. Copy or export for CRM.</div>
-                      </div>
-                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                        <button className="copy-btn" onClick={e=>{
-                          e.stopPropagation();
-                          const text = sessionSummaryToText(summary);
-                          navigator.clipboard?.writeText(text);
-                          setEditToast("Session summary copied to clipboard");
-                        }}>Copy Summary</button>
-                        <button className="copy-btn" onClick={e=>{
-                          e.stopPropagation();
-                          downloadStageData("Session-Summary", summary);
-                        }}>Export JSON</button>
-                        <span className="bb-arrow">{isOpen?"▾":"▸"}</span>
-                      </div>
-                    </div>
-                    {isOpen && <div className="bb-body" style={{padding:"16px 20px",fontSize:12,lineHeight:1.7}}>
-                      {/* Quick Take */}
-                      {(summary.topFinding || summary.topOpportunity || summary.topRisk) && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Quick Take</div>
-                        {summary.topFinding && <div style={{marginBottom:4}}><span style={{background:"var(--navy)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>FINDING</span>{summary.topFinding}</div>}
-                        {summary.topOpportunity && <div style={{marginBottom:4}}><span style={{background:"var(--green)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>OPP</span>{summary.topOpportunity}</div>}
-                        {summary.topRisk && <div><span style={{background:"var(--red)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>RISK</span>{summary.topRisk}</div>}
-                      </div>}
-
-                      {/* Company Profile */}
-                      <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Company Profile</div>
-                        {summary.companySnapshot && <div style={{marginBottom:6,color:"var(--ink-1)"}}>{summary.companySnapshot}</div>}
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"4px 16px",fontSize:11,color:"var(--ink-2)"}}>
-                          {summary.revenue && <div><strong>Revenue:</strong> {summary.revenue}</div>}
-                          {summary.employeeCount && <div><strong>Employees:</strong> {summary.employeeCount}</div>}
-                          {summary.headquarters && <div><strong>HQ:</strong> {summary.headquarters}</div>}
-                          {summary.ownership && <div><strong>Ownership:</strong> {summary.ownership}</div>}
-                          {summary.fundingProfile && <div><strong>Funding:</strong> {summary.fundingProfile}</div>}
-                          {summary.founded && <div><strong>Founded:</strong> {summary.founded}</div>}
-                        </div>
-                      </div>
-
-                      {/* Executives */}
-                      {summary.executives.length > 0 && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Key Executives</div>
-                        {summary.executives.map((e,i) => <div key={i} style={{marginBottom:3}}><strong>{e.name}</strong> — {e.title}{e.angle ? <span style={{color:"var(--ink-3)"}}> | {e.angle.slice(0,120)}</span> : ""}</div>)}
-                      </div>}
-
-                      {/* Strategy */}
-                      <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Strategy & Positioning</div>
-                        {summary.strategicTheme && <div style={{marginBottom:4}}><strong>Theme:</strong> {summary.strategicTheme}</div>}
-                        {summary.openingAngle && <div style={{marginBottom:4}}><strong>Opening:</strong> {summary.openingAngle}</div>}
-                        {summary.sellerOpportunity && <div><strong>Seller Opportunity:</strong> {summary.sellerOpportunity}</div>}
-                      </div>
-
-                      {/* Solutions */}
-                      {summary.solutions.length > 0 && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Solution Fit</div>
-                        {summary.solutions.map((s,i) => <div key={i} style={{marginBottom:6,padding:"6px 10px",background:"var(--bg-0)",borderRadius:6}}>
-                          <div><strong>{s.product}</strong>: {s.jobToBeDone}</div>
-                          {s.measurableOutcome && <div style={{fontSize:11,color:"var(--green)"}}>Target: {s.measurableOutcome}</div>}
-                        </div>)}
-                      </div>}
-
-                      {/* Competitive */}
-                      {(summary.marketPosition || summary.primaryCompetitors.length > 0) && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Competitive Landscape</div>
-                        {summary.marketPosition && <div style={{marginBottom:4}}>{summary.marketPosition}</div>}
-                        {summary.primaryCompetitors.map((c,i) => <div key={i} style={{fontSize:11,color:"var(--ink-2)"}}>vs <strong>{c.name}</strong>: +{c.weakness} / -{c.strength}</div>)}
-                        {summary.displacementAngle && <div style={{marginTop:4,fontStyle:"italic",color:"var(--ink-2)"}}>Displacement: {summary.displacementAngle}</div>}
-                      </div>}
-
-                      {/* Financial */}
-                      {(summary.revenueTrend || summary.capitalPriorities) && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Financial Intelligence</div>
-                        {summary.revenueTrend && <div style={{marginBottom:3}}><strong>Trend:</strong> {summary.revenueTrend}</div>}
-                        {summary.capitalPriorities && <div style={{marginBottom:3}}><strong>Capital:</strong> {summary.capitalPriorities}</div>}
-                        {summary.guidanceQuote && <div style={{fontStyle:"italic",color:"var(--ink-2)"}}>"{summary.guidanceQuote}"</div>}
-                      </div>}
-
-                      {/* Board & Investors */}
-                      {(summary.leadInvestors || summary.boardMandate) && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Board & Investors</div>
-                        {summary.leadInvestors && <div style={{marginBottom:3}}><strong>Investors:</strong> {summary.leadInvestors}</div>}
-                        {summary.investmentThesis && <div style={{marginBottom:3}}><strong>Thesis:</strong> {summary.investmentThesis}</div>}
-                        {summary.boardMandate && <div><strong>Mandate:</strong> {summary.boardMandate}</div>}
-                      </div>}
-
-                      {/* Hiring + Tech */}
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-                        {summary.hiringSummary && <div>
-                          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Hiring Signals</div>
-                          <div style={{fontSize:11,color:"var(--ink-2)"}}>{summary.hiringSummary}</div>
-                          {summary.topRoles.map((r,i) => <div key={i} style={{fontSize:10,color:"var(--ink-3)",marginTop:2}}>{r.title} ({r.dept})</div>)}
-                        </div>}
-                        {Object.values(summary.techStack).some(v=>v) && <div>
-                          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Tech Stack</div>
-                          {["crm","erp","hris","marketing","payments","analytics","infrastructure"].map(k => summary.techStack[k] ? <div key={k} style={{fontSize:10,color:"var(--ink-2)"}}><strong>{k.toUpperCase()}:</strong> {summary.techStack[k]}</div> : null)}
-                        </div>}
-                      </div>
-
-                      {/* Fit Score */}
-                      {summary.fitScore !== null && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Fit Score</div>
-                        <div><strong>{summary.fitScore}/100 — {summary.fitLabel}</strong></div>
-                        {summary.fitReason && <div style={{fontSize:11,color:"var(--ink-2)"}}>{summary.fitReason}</div>}
-                      </div>}
-
-                      {/* Hypothesis */}
-                      {summary.hypothesis && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>RIVER Hypothesis</div>
-                        {summary.hypothesis.reality && <div style={{marginBottom:2}}><strong>Reality:</strong> {summary.hypothesis.reality.slice(0,200)}</div>}
-                        {summary.hypothesis.impact && <div style={{marginBottom:2}}><strong>Impact:</strong> {summary.hypothesis.impact.slice(0,200)}</div>}
-                        {summary.hypothesis.vision && <div style={{marginBottom:2}}><strong>Vision:</strong> {summary.hypothesis.vision.slice(0,200)}</div>}
-                        {summary.hypothesis.route && <div><strong>Route:</strong> {summary.hypothesis.route.slice(0,200)}</div>}
-                      </div>}
-
-                      {/* Discovery */}
-                      {summary.discoveryQuestions.length > 0 && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Top Discovery Questions</div>
-                        {summary.discoveryQuestions.map((q,i) => <div key={i} style={{marginBottom:4}}>{i+1}. {q.question}</div>)}
-                      </div>}
-
-                      {/* Post-Call */}
-                      {summary.postCallSummary && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Post-Call Analysis</div>
-                        <div style={{marginBottom:4}}><strong>Route:</strong> {summary.postCallSummary.dealRoute} — {summary.postCallSummary.dealRouteReason}</div>
-                        {summary.postCallSummary.callSummary && <div style={{marginBottom:4}}><strong>Summary:</strong> {summary.postCallSummary.callSummary.slice(0,300)}</div>}
-                        {summary.postCallSummary.nextSteps.length > 0 && <div>
-                          <strong>Next Steps:</strong>
-                          {summary.postCallSummary.nextSteps.map((s,i) => <div key={i} style={{marginLeft:12}}>{i+1}. {s}</div>)}
-                        </div>}
-                      </div>}
-
-                      {/* Signals */}
-                      {(summary.recentSignals.length > 0 || summary.growthSignals.length > 0) && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Signals</div>
-                        {summary.recentSignals.map((s,i) => <div key={"r"+i} style={{fontSize:11,color:"var(--ink-2)"}}>- {typeof s==="string"?s:s?.title||JSON.stringify(s)}</div>)}
-                        {summary.growthSignals.map((s,i) => <div key={"g"+i} style={{fontSize:11,color:"var(--green)"}}>+ {typeof s==="string"?s:s?.title||JSON.stringify(s)}</div>)}
-                      </div>}
-
-                      {/* Watch-Outs */}
-                      {summary.watchOuts.length > 0 && <div>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Watch-Outs</div>
-                        {summary.watchOuts.map((w,i) => <div key={i} style={{fontSize:11,color:"var(--red)"}}>- {typeof w==="string"?w:w?.title||JSON.stringify(w)}</div>)}
-                      </div>}
-
-                      <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid var(--line-0)",fontSize:10,color:"var(--ink-3)",textAlign:"center"}}>
-                        Generated by Cambrian Catalyst | {summary.dataConfidence ? `${summary.dataConfidence} confidence (${summary.sectionsGrounded}/9 sections)` : ""} | {new Date().toLocaleDateString()}
-                      </div>
-                    </div>}
-                  </div>;
-                })()}
+                {/* Session summary moved to top of brief */}
 
                 {/* Research another company — on ALL briefs */}
                 <div style={{background:"var(--bg-0)",border:"1.5px solid var(--line-0)",borderRadius:"var(--r-md)",padding:"16px 20px",marginTop:8,marginBottom:16}}>
