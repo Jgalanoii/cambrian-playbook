@@ -1165,7 +1165,7 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
         const event = JSON.parse(data);
         if (event.type === 'content_block_delta' && event.delta?.text) {
           fullText += event.delta.text;
-          onChunk(fullText.replace(/<\/?cite[^>]*>/g, ""));
+          onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
         }
       } catch { /* non-critical */ }
     }
