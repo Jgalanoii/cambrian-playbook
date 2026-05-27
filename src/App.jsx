@@ -5170,6 +5170,45 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     }).catch(() => { /* non-critical */ });
   };
 
+  // ── Load previously-found RFP results from Supabase for seeding ──────
+  // Results accumulate in the DB across sessions. Once a good RFP is found,
+  // it persists forever and gets re-verified on subsequent searches.
+  const loadPreviousRfpIntel = async () => {
+    if (!sbToken || !sbUser) return { open: [], closed: [], signals: [] };
+    const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!SB_URL || !SB_KEY) return { open: [], closed: [], signals: [] };
+    const sellerNorm = (sellerUrl || "").toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "").slice(0, 200);
+    if (!sellerNorm) return { open: [], closed: [], signals: [] };
+    try {
+      const r = await fetch(
+        `${SB_URL}/rest/v1/rfp_intel_signals?seller_url=ilike.*${encodeURIComponent(sellerNorm)}*&search_stage=eq.icp_level&order=relevance_score.desc.nullslast&limit=20`,
+        { headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } }
+      );
+      if (!r.ok) return { open: [], closed: [], signals: [] };
+      const rows = await r.json();
+      if (!Array.isArray(rows) || !rows.length) return { open: [], closed: [], signals: [] };
+      const open = rows.filter(r => r.search_type === "open_rfp").map(r => ({
+        title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
+        isGovernment: r.is_government, value: r.value_estimate, deadline: r.deadline,
+        relevanceScore: r.relevance_score, relevanceReason: r.relevance_reason,
+        cohort: r.cohort, naicsOrCpv: r.naics_code, _fromDb: true,
+      }));
+      const closed = rows.filter(r => r.search_type === "closed_rfp").map(r => ({
+        title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
+        isGovernment: r.is_government, value: r.value_estimate, awardDate: r.award_date,
+        awardedTo: r.awarded_to, relevanceScore: r.relevance_score,
+        relevanceReason: r.relevance_reason, cohort: r.cohort, _fromDb: true,
+      }));
+      const signals = rows.filter(r => r.search_type === "buying_signal").map(r => ({
+        signalType: r.signal_type, headline: r.title, company: r.buyer,
+        detail: r.signal_detail, source: r.source, url: r.source_url,
+        strength: r.signal_strength, relevance: r.relevance_reason, _fromDb: true,
+      }));
+      return { open, closed, signals };
+    } catch { /* non-critical */ return { open: [], closed: [], signals: [] }; }
+  };
+
   // Split into two parallel calls (open + closed). Each has its own
   // web_search budget and its own prompt so the model can focus. Results
   // render as each settles rather than waiting for both.
@@ -5192,6 +5231,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     }
 
     setRfpData({ open: [], closed: [], signals: [], loading: true, error: null });
+
+    // Load previously-found results from Supabase for seeding
+    const prevIntel = await loadPreviousRfpIntel();
 
     // Pull rich ICP context — the RFP search quality is gated on how
     // well the prompt tells Haiku WHO to look for. Previously we passed
@@ -5316,7 +5358,7 @@ ${isOpen
     const fetchClass = async (kind) => {
       try {
         // Seed previously-found results so Opus verifies + builds on them
-        const prevResults = kind === "open" ? rfpData.open : rfpData.closed;
+        const prevResults = kind === "open" ? prevIntel.open : prevIntel.closed;
         const seedCtx = prevResults?.length ? `\n\nPREVIOUSLY DISCOVERED (verify these are still active/valid, then find NEW ones beyond this list):\n${prevResults.slice(0,4).map(r => `- "${r.title}" from ${r.buyer} (${r.source}) ${r.url || ""}`).join("\n")}\n` : "";
 
         const d = await claudeFetch({
@@ -5449,7 +5491,7 @@ Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","count
     // Launch all FOUR in parallel — government open, commercial open, closed, signals
     const govOpenP = (async () => {
       try {
-        const prevGov = (rfpData.open || []).filter(r => r.isGovernment);
+        const prevGov = (prevIntel.open || []).filter(r => r.isGovernment);
         const seed = prevGov.length ? `\n\nPREVIOUSLY FOUND (verify + find NEW):\n${prevGov.slice(0,3).map(r=>`- "${r.title}" ${r.buyer} ${r.url||""}`).join("\n")}` : "";
         const d = await claudeFetch({ model: OPUS, max_tokens: 3000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }], messages: [{ role: "user", content: buildGovOpenPrompt() + seed }] });
         if (d.error) return { rows: [] };
@@ -5473,16 +5515,30 @@ Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","count
       const deduped = allRows.filter(r => { const key = (r.url || r.title || "").toLowerCase(); if (seen.has(key)) return false; seen.add(key); return true; });
       return { rows: deduped, error: comm.error };
     });
+    // Helper: merge new results with DB results, dedup by URL, new results take priority
+    const mergeWithDb = (newRows, dbRows) => {
+      const seen = new Set();
+      const merged = [];
+      // New results first (higher priority)
+      for (const r of (newRows || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k)) { seen.add(k); merged.push(r); } }
+      // DB results fill in anything not re-found
+      for (const r of (dbRows || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k)) { seen.add(k); merged.push({ ...r, _fromDb: true }); } }
+      return merged;
+    };
+
     mergedOpenP.then(res => {
-      if (res.rows?.length) { setRfpData(prev => ({ ...prev, open: res.rows })); logRfpIntel(res.rows, "icp_level", "open_rfp"); }
+      const combined = mergeWithDb(res.rows, prevIntel.open);
+      if (combined.length) { setRfpData(prev => ({ ...prev, open: combined })); logRfpIntel((res.rows || []).filter(r => !r._fromDb), "icp_level", "open_rfp"); }
       else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Open: ${res.error}` : `Open RFPs: ${res.error}` }));
     });
     closedP.then(res => {
-      if (res.rows) { setRfpData(prev => ({ ...prev, closed: res.rows })); logRfpIntel(res.rows, "icp_level", "closed_rfp"); }
+      const combined = mergeWithDb(res.rows, prevIntel.closed);
+      if (combined.length) { setRfpData(prev => ({ ...prev, closed: combined })); logRfpIntel((res.rows || []).filter(r => !r._fromDb), "icp_level", "closed_rfp"); }
       else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Closed: ${res.error}` : `Closed RFPs: ${res.error}` }));
     });
     signalsP.then(res => {
-      if (res.signals?.length) { setRfpData(prev => ({ ...prev, signals: res.signals })); logRfpIntel(res.signals, "icp_level", "buying_signal"); }
+      const combined = mergeWithDb(res.signals, prevIntel.signals);
+      if (combined.length) { setRfpData(prev => ({ ...prev, signals: combined })); logRfpIntel((res.signals || []).filter(r => !r._fromDb), "icp_level", "buying_signal"); }
     });
 
     const [openRes, closedRes, signalsRes] = await Promise.all([mergedOpenP, closedP, signalsP]);
