@@ -1589,8 +1589,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // PUBLIC COMPANY: inject SEC filing search instructions for publicly traded targets
   const isPublicCompany = !!(
     (enrichment?.publiclyTraded && !/private/i.test(enrichment.publiclyTraded)) ||
-    (member.publicPrivate && /public/i.test(member.publicPrivate)) ||
-    (fitScores[co]?.ownership && /public/i.test(fitScores[co].ownership))
+    (member.publicPrivate && /public/i.test(member.publicPrivate))
   );
   const secFilingCtx = isPublicCompany ? `\nSEC FILING INTELLIGENCE (PUBLICLY TRADED company — use these authoritative sources):\nSearch queries to include:\n- site:sec.gov "${co}" 10-K (annual report — strategy, capex, risk factors)\n- "${co}" earnings call transcript 2025 (CEO/CFO strategic statements)\n- "${co}" proxy statement DEF 14A (board composition, governance)\nWhat to extract:\n- 10-K Item 7 (MD&A): Forward-looking strategy, capital plans, modernization initiatives, procurement intent\n- 10-K Item 1A (Risk Factors): Competitive gaps, technology needs, regulatory pressures\n- 10-K Item 1 (Business): Segments, revenue breakdown, key customers, market position\n- Proxy (DEF 14A): Board members, committees, activist investors, mandates\n- Earnings calls: CEO/CFO direct quotes on priorities, guidance, investments\nCite specific filing dates and data (e.g. "Per 10-K filed 2/28/2025, revenue grew 12% YoY to $4.2B"). SEC filings are the highest-quality source for public companies.\n` : "";
 
