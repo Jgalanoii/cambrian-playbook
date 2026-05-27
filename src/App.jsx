@@ -5737,51 +5737,17 @@ Return ONLY raw JSON:
     setIcpStatus("Researching your company...");
     setIcpEdits([]); // Clear edits on regeneration — fresh start
 
-    // Phase 1 — research (training-knowledge recall, no web_search tool yet)
-    const researchPrompt =
-      `You are researching the company at https://${url} to inform an Ideal Customer Profile build. The seller may serve B2B, B2C, B2B2C, B2G, or other markets — adapt your research to whatever you discover about their actual audience.\n`+
-      `Use the web_search tool to find the company's actual website, press mentions, LinkedIn, and customer logos.\n`+
-      `Search queries to try:\n`+
-      `1. "${url}" products OR solutions — what they sell and to whom\n`+
-      `2. "${url}" customers OR case studies — named customer logos\n`+
-      `3. site:${url} careers OR jobs — reveals target industries and company sizes they serve\n`+
-      `After searching, return ONLY raw JSON (no prose, no commentary):\n`+
-      `{"companyName":"","tagline":"","products":["product 1","product 2"],"targetCustomers":"who they sell to in plain language","knownCustomers":["logo 1","logo 2","logo 3"],"industries":["vertical 1","vertical 2","vertical 3"],"companySize":"typical customer size","pricingHint":"any pricing signals found","useCases":["use case 1","use case 2"],"competitors":["competitor 1","competitor 2"]}`;
-
-    // Phase 1 uses web_search — critical for obscure sellers Haiku wouldn't
-    // know from training data. 2 searches: one for products/customers, one
-    // for competitors/industry context. More research → more stable ICP.
-    let researchCtx = "";
-    try{
-      // ICP Phase 1 — Sonnet + web search (research only, Opus not needed for fact-gathering)
-      const d1 = await claudeFetch({
-        model: SONNET,
-        max_tokens:2000,
-        temperature:0,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
-        messages:[{role:"user",content:researchPrompt}],
-      });
-      if(d1 && !d1.error){
-        const raw1 = (d1.content||[])
-          .filter(b=>b.type==="text"||b.type==="tool_result")
-          .map(b=>b.type==="text"?b.text:(b.content?.[0]?.text||""))
-          .join(" ").trim();
-        researchCtx = raw1.slice(0,2000);
-      } else {
-        console.warn("ICP phase 1 (research) error:", d1?.error);
-      }
-    }catch(e){ console.warn("ICP research failed:",e.message); }
-
-    // Phase 2 — build full ICP.
-    // Every categorical field is ANCHORED to a fixed enum. Free-text fields
-    // have explicit format constraints. Industries use a canonical taxonomy
-    // so the same seller always maps to the same verticals regardless of
-    // web_search variation. This is the backbone of all downstream analysis.
+    // Single-pass ICP build — Opus with web search does research + ICP in one call.
+    // Previously this was 2 sequential calls (Sonnet research → Opus build, ~45-60s).
+    // Now one streaming Opus call with web search (~20-30s total).
     const icpPrompt =
-      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: ${url}. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n`+
+      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n`+
+      `FIRST: Use web_search to research "${url}" — find what they sell, who they sell to, named customers, competitors, and industry positioning. Try these queries:\n`+
+      `1. "${url}" products OR solutions\n`+
+      `2. "${url}" customers OR case studies OR "powered by"\n`+
+      `Then use your research to build the ICP below. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n\n`+
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
-      (researchCtx?`RESEARCH (use these facts as ground truth):\n${researchCtx.slice(0,1500)}\n\n`:"")+
-      getVerticalInjection({ marketCategory: researchCtx, sellerDescription: url }) +
+      getVerticalInjection({ marketCategory: sellerICP?.marketCategory || "", sellerDescription: url }) +
       `Seller stage: ${sellerStage||"unknown"}.\n`+
       (buildTargetingText() ? `\nSELLER TARGETING PREFERENCES (MUST RESPECT — these override any conflicting inference from the website):\n${buildTargetingText()}\n\n` : "\n")+
       `CRITICAL — CONSISTENCY & ACCURACY RULES:\n`+
@@ -5846,13 +5812,14 @@ Return ONLY raw JSON:
       `\n\nIMPORTANT: linesOfBusiness should have 1-4 entries based on how many distinct buyer profiles the seller serves. A company selling one product to one type of buyer has 1 LOB. A company like Blackhawk Network has 3+ (B2B incentives, B2C gift cards, payments infrastructure). namedCustomerProfiles should have 3-8 entries — one per named customer found in the research, with their industry and use case mapped. If research found no customers, return empty arrays. Leave relevantEvents empty — populated by a separate call.`;
 
     try{
-      // ICP Phase 2 — Opus via STREAMING (keeps connection alive, progressive UI)
-      setIcpStatus("Analyzing market position...");
+      // Single-pass ICP — Opus streaming with web search (research + build in one call)
+      setIcpStatus("Researching your company...");
       const raw = await streamAIWithSearch(
-        icpPrompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.',
+        icpPrompt + '\n\nAfter researching, return ONLY raw JSON starting with {. No prose, no markdown, no explanation.',
         (partial) => {
           // Progressive status updates as JSON fields stream in
-          if (partial.length > 100 && partial.includes('"sellerName"')) setIcpStatus("Found your company...");
+          if (partial.length < 50) setIcpStatus("Researching your company...");
+          else if (partial.length > 100 && partial.includes('"sellerName"')) setIcpStatus("Found your company...");
           if (partial.includes('"industries"')) setIcpStatus("Mapping target industries...");
           if (partial.includes('"buyerPersonas"')) setIcpStatus("Profiling buyer personas...");
           if (partial.includes('"competitiveAlternatives"')) setIcpStatus("Analyzing competitive landscape...");
@@ -5860,7 +5827,7 @@ Return ONLY raw JSON:
           if (partial.includes('"namedCustomerProfiles"')) setIcpStatus("Building customer profiles...");
           if (partial.includes('"winPatterns"')) setIcpStatus("Identifying win patterns...");
         },
-        4000, { maxSearches: 0, anchorKey: "sellerName", model: OPUS }
+        4000, { maxSearches: 2, anchorKey: "sellerName", model: OPUS }
       );
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
@@ -5887,9 +5854,8 @@ Return ONLY raw JSON:
             Object.assign(parsed, sanitized);
 
             // ICP confidence based on research depth
-            const confidence = researchCtx.length > 1000 ? "high" : researchCtx.length > 300 ? "medium" : "low";
-            parsed._confidence = confidence;
-            parsed._researchChars = researchCtx.length;
+            parsed._confidence = "high"; // single-pass Opus with web search = high confidence
+            parsed._researchChars = 0;
             setSellerICP(parsed);
             lastGenSig.current.icp = getIcpSig();
 
