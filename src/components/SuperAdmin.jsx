@@ -22,7 +22,7 @@ const SUPERUSER_EMAIL = "itsjoegalano@gmail.com";
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export default function SuperAdmin({ sbUser, sbToken, onClose }) {
+export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,7 +41,7 @@ export default function SuperAdmin({ sbUser, sbToken, onClose }) {
   const [roleFilter, setRoleFilter] = useState(""); // "" | admin | manager | rep
   const [planFilter, setPlanFilter] = useState(""); // "" | trial | paid | enterprise | suspended
   const [searchQuery, setSearchQuery] = useState("");
-  const isSuperuser = sbUser?.email === SUPERUSER_EMAIL;
+  const isSuperuser = sbUser?.email === SUPERUSER_EMAIL || orgCtx?.userRole === "admin";
 
   const [refreshing, setRefreshing] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
