@@ -5245,32 +5245,54 @@ GOVERNMENT (set isGovernment: true):
 ━━━ OUTPUT ━━━
 Return 4-6 ${isOpen ? "active opportunities" : "recent awards"}, roughly balanced between private and government.
 
-CRITICAL — WHAT IS AN RFP vs WHAT IS NOT:
-  An RFP/procurement opportunity IS:
-  - A formal solicitation document (RFP, RFQ, RFI, sources sought) posted by a BUYER
-  - A government contract notice on SAM.gov, TED Europa, a state portal, or agency website
-  - A corporate procurement posting on Ariba, Coupa, or a company's supplier portal
-  - A published solicitation with a buyer name, scope, and deadline
+STRICT CLASSIFICATION — apply this test to EVERY result before including it:
+${isOpen ? `
+  OPEN RFP CHECKLIST (ALL must be true to include):
+  [ ] Is this a FORMAL SOLICITATION document — an actual RFP, RFQ, RFI, or sources sought notice?
+  [ ] Was it posted by a SPECIFIC BUYER (named organization) seeking vendors?
+  [ ] Does the URL link to a procurement portal, government site, or official solicitation page?
+  [ ] Does it have a solicitation number, deadline, or formal procurement structure?
 
-  An RFP IS NOT (DO NOT RETURN THESE):
-  - Industry research reports or white papers (kff.org, advisory firms, analyst reports)
-  - Blog posts, trend analyses, or market studies about an industry
-  - The seller's OWN marketing materials, case studies, or content
-  - News articles ABOUT procurement trends (these are signals, not RFPs)
-  - Webinars, conferences, or educational content
-  - Product comparison pages or buyer guides
+  If ANY checkbox is false, DO NOT include it as an Open RFP.
 
-  If your web search only returns research/articles/blogs and no actual solicitations,
-  return {"rows":[]} — an empty result is correct. Do NOT pad results with non-RFP content.
+  EXPLICIT REJECTIONS (these are NEVER Open RFPs):
+  - Market research, trend reports, advisory firm analyses (KFF, ATI Advisory, HealthScape, Oliver Wyman, Deloitte, McKinsey)
+  - The seller's OWN website, blog posts, cheat sheets, or marketing content
+  - CMS rules, proposed regulations, or policy documents (these are regulatory signals, not RFPs)
+  - News articles, press releases, or industry commentary ABOUT procurement trends
+  - Vendor comparison pages, webinars, or educational content
+  - "Market-wide signals" or "buying intent signals" — these belong in the SIGNALS category, not here
+
+  ZERO TOLERANCE: A "Pre-RFP Signal" is NOT an Open RFP. If you label something as a signal, it CANNOT be in the Open RFP list. Signals go in the signals search, not here.
+` : `
+  CLOSED RFP / AWARD CHECKLIST (ALL must be true to include):
+  [ ] Is this a VERIFIED contract award — a specific buyer chose a specific vendor?
+  [ ] Can you name BOTH the buyer AND the awarded vendor?
+  [ ] Does the URL link to an official award notice, FPDS record, or the buyer's vendor/member page showing the relationship?
+
+  If ANY checkbox is false, DO NOT include it as a Closed RFP.
+
+  EXPLICIT REJECTIONS (these are NEVER Closed RFPs/Awards):
+  - CMS rules, proposed regulations, or policy documents
+  - Market research, consulting analyses, or advisory reports
+  - Vendor blog posts or marketing content
+  - Industry trend reports or funding announcements
+  - The seller's OWN content
+
+  ACCEPTED sources for closed awards:
+  - Buyer's member/vendor page showing "powered by [vendor]" or "administered by [vendor]"
+  - FPDS-NG or USASpending.gov award records
+  - Official press releases from the BUYER announcing vendor selection
+  - Government award notices
+`}
+  If you cannot find results that pass this checklist, return {"rows":[]}.
+  Returning 0 real RFPs is better than returning 5 fake ones. Our users are procurement professionals — they will immediately spot padded results and lose trust.
 
 DATA INTEGRITY:
-  - Only include ACTUAL procurement solicitations or contract awards you can VERIFY via web_search.
-  - The "source" field must be a procurement portal or official notice (SAM.gov, Ariba, state portal, agency website) — NOT a blog, research site, or news outlet.
-  - The "url" field must link to the ACTUAL solicitation or award notice — NOT to an article about the topic.
+  - The "url" field must link to the ACTUAL solicitation, award notice, or buyer page — NOT to research articles, blogs, or news about the industry.
   ${!isOpen ? "- If awarded vendor cannot be verified, leave \"awardedTo\" empty. Do not guess.\n  " : ""}- Every row MUST include the isGovernment boolean.
-  - relevanceReason should cite ONE specific element of the seller profile above.
-  - Do NOT return RFPs that match any item in Exclusions.
-  - If you cannot find real RFPs, return an empty rows array. Empty is honest; padding with non-RFP content destroys trust.
+  - relevanceReason must be 1-2 sentences MAX — not a paragraph.
+  - Do NOT return results that match any item in Exclusions.
 
 Return ONLY raw JSON (no prose). The outer key MUST be "rows":
 ${isOpen
