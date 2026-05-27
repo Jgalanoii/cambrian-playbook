@@ -5510,21 +5510,34 @@ ${isOpen ? `
 - "[company name]" "${sanitizeForPrompt(competitors[0] || "")}" contract OR award 2024 2025
 `}
 
+━━━ STRICT CLASSIFICATION — apply this test to EVERY result ━━━
+${isOpen ? `OPEN RFP CHECKLIST (ALL must be true):
+[ ] Formal solicitation (RFP/RFQ/RFI/sources sought) from a NAMED BUYER on this list?
+[ ] URL links to a procurement portal, government site, or official solicitation page?
+[ ] Has solicitation number, deadline, or formal procurement structure?
+
+NEVER include: research reports, advisory analyses, news articles, blog posts, the seller's own content, CMS rules/regulations, "market-wide signals," or industry trend pieces. If something is a buying SIGNAL but not a published SOLICITATION, it does not belong here — signals have their own category.` : `CLOSED AWARD CHECKLIST (ALL must be true):
+[ ] Verified contract: a NAMED buyer from the list chose a NAMED vendor?
+[ ] URL links to award notice, FPDS, buyer's vendor page, or official press release?
+
+NEVER include: regulatory documents, advisory reports, vendor blog posts, industry analyses, consulting firm research, or the seller's own content.`}
+
+Return {"rows":[]} if no results pass the checklist. Empty is correct — padding with non-RFP content destroys trust.
+
 ━━━ OUTPUT ━━━
 Return ${isOpen ? "active opportunities" : "recent awards"} that:
-1. Directly involve one of the target accounts listed above (buyer field = one of those names)
-2. Are relevant to what the seller actually sells (not generic/unrelated procurement)
+1. Directly involve one of the target accounts listed above
+2. Pass the checklist above
+3. Are relevant to what the seller actually sells
 
-DATA INTEGRITY:
-- Only include results you can VERIFY via web_search
 - The "buyer" field MUST be one of the target accounts listed above
-- Include source URL when available
-- relevanceReason must cite a SPECIFIC match to the seller's products/services/category
+- relevanceReason: 1-2 sentences MAX citing a specific seller capability match
+- URL must link to the actual solicitation or award — not to articles about the topic
 
 Return ONLY raw JSON:
 ${isOpen
-  ? `{"rows":[{"title":"RFP title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"value":"$500K","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Matches seller's [specific product/capability] — [specific connection]","cohort":"Industry","url":"https://..."}]}`
-  : `{"rows":[{"title":"Contract title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"awardedTo":"Vendor","value":"$1M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Relevant because [specific seller capability match]","cohort":"Industry","url":"https://..."}]}`}`;
+  ? `{"rows":[{"title":"RFP title","buyer":"Company from list above","country":"USA","source":"Procurement portal","isGovernment":false,"value":"$500K","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"1-2 sentences.","cohort":"Industry","url":"https://..."}]}`
+  : `{"rows":[{"title":"Contract title","buyer":"Company from list above","country":"USA","source":"Award source","isGovernment":false,"awardedTo":"Vendor","value":"$1M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"1-2 sentences.","cohort":"Industry","url":"https://..."}]}`}`;
     };
 
     const buildAccountSignalsPrompt = () => `You are a procurement intelligence analyst identifying buying signals at specific target accounts that indicate they may need what this seller offers.
