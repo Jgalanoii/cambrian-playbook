@@ -5123,7 +5123,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
   // RFP cache: keyed by (user, seller URL, marketCategory, RFP schema
   // version). Cache TTL is implicit — the seller URL and marketCategory
   // pin the scope; a Regenerate ICP will naturally produce a new key.
-  const RFP_CACHE_VERSION = "v3"; // bumped 2026-04-15: tier/wall vocabulary purge
+  const RFP_CACHE_VERSION = "v4"; // bumped 2026-05-27: quality rules rebalanced, checklist gate, SLED search
   const rfpCacheKey = () => {
     const userScope = sbUser?.id || "guest";
     const url = (sellerUrl||"").toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
@@ -5243,18 +5243,18 @@ ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
 ━━━ SEARCH STRATEGY (use ALL 4 searches — cast a wide net) ━━━
 ${isOpen ? `
   Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025 2026${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
-  Search 2 (State/Local/SLED): "${sanitizeForPrompt(category || industries[0])}" RFP OR "request for proposals" site:.gov 2025 2026
-  Search 3 (Commercial): "${sanitizeForPrompt(category || industries[0])}" RFP OR procurement OR solicitation 2025 2026
-  Search 4 (Broad): "${sanitizeForPrompt(industries[0] || category)}" "request for proposal" OR "invitation to bid" OR "sources sought" 2025 2026
+  Search 2 (SLED — state/local/education): "${sanitizeForPrompt(category || industries[0])}" RFP OR "request for proposals" OR solicitation site:.gov 2025 2026
+  Search 3 (SLED + Commercial): "${sanitizeForPrompt(industries[0] || category)}" RFP OR "request for proposal" OR procurement 2025 2026
+  Search 4 (Broad + competitors): "${sanitizeForPrompt(industries[0] || category)}" "invitation to bid" OR "sources sought" OR vendor OR "${sanitizeForPrompt(competitors[0] || "RFP")}" 2025 2026
 
-  TIP: State agencies, school districts, and health departments often post RFPs on .gov portals that aren't SAM.gov. Also check Ariba, Coupa, and TED Europa.
+  CRITICAL: State agencies (departments of health, employee trust funds, Medicaid agencies), school districts, counties, and special districts post RFPs on their own .gov portals — NOT on SAM.gov. These are often the highest-value SLED opportunities. Search broadly across .gov sites.
 ` : `
-  Search 1 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
-  Search 2 (Incumbent intel): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" site:.com
-  Search 3 (Competitor awards): "${sanitizeForPrompt(competitors[0] || category)}" "selected" OR "awarded" OR "contract" 2024 OR 2025
-  Search 4 (Press releases): "${sanitizeForPrompt(industries[0] || "SaaS")}" "contract awarded" OR "selects" OR "partners with" 2024 OR 2025
+  Search 1 (Buyer websites): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" OR "vendor" site:.com
+  Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
+  Search 3 (Competitor displacement): "${sanitizeForPrompt(competitors[0] || category)}" "selected" OR "awarded" OR "contract" 2024 OR 2025
+  Search 4 (Press + SLED): "${sanitizeForPrompt(industries[0] || "SaaS")}" "contract awarded" OR "selects vendor" OR "vendor selected" 2024 OR 2025
 
-  TIP: For incumbent intel, search buyer websites directly — member portals, benefits pages, and vendor directories reveal who administers what.
+  CRITICAL: For incumbent intel, buyer websites are the gold standard. Health plan member portals, state agency vendor pages, and benefit program descriptions reveal exactly who administers what. A buyer's page showing "OTC benefits administered by [vendor]" is verified competitive intelligence.
 `}
 
 ━━━ SOURCES ━━━
