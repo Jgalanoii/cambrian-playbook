@@ -86,9 +86,9 @@ U.S. BANKING & CAPITAL MARKETS CONTEXT (use when target or seller is in banking,
 
 | Tier | Asset range | Count | Characteristics |
 |---|---|---|---|
-| **G-SIBs** | $500B+ | 8 (JPM, BAC, C, WFC, GS, MS, BK, STT) | Dominant but rarely buy from boutique consultants directly |
+| **G-SIBs** | $500B+ | 8 (JPM, BAC, C, WFC, GS, MS, BK, STT) [verified 05/2026, Federal Reserve] | Dominant but rarely buy from boutique consultants directly |
 | **Super-regionals** | $100B-$700B | ~15 (USB, PNC, Truist, Capital One, Citizens, Fifth Third, KeyCorp, M&T, Regions, Huntington, Zions, Comerica, Webster, First Horizon, CIT) | SWEET SPOT for GTM consulting [verified 05/2026, FDIC QBP Q4 2025] |
-| **Large community** | $10B-$100B | ~200 | Strategic enough to invest in tech; small enough to decide fast |
+| **Large community** | $10B-$100B | ~200 [verified 05/2026, FDIC QBP Q4 2025] | Strategic enough to invest in tech; small enough to decide fast |
 | **Community banks** | <$10B | ~4,000 | Relationship-driven, increasingly serving as BaaS sponsor banks [verified 05/2026, FDIC QBP Q4 2025] |
 | **Credit unions** | Varies | ~4,411 | Mission-driven, committee-governed, slower decisions. Digital experience gap is biggest strategic risk |
 | **De novo / digital charter** | Varies | Handful | SoFi, Varo (chartered); Column, Lead (sponsor bank); long approval cycles |
@@ -115,20 +115,20 @@ U.S. BANKING & CAPITAL MARKETS CONTEXT (use when target or seller is in banking,
 
 | Company | Type | Assets / Scale | Why they matter |
 |---|---|---|---|
-| **JPMorgan Chase** | G-SIB | $4.43T | Largest US bank; benchmark for everything |
-| **Bank of America** | G-SIB | $3.4T | #2; massive consumer franchise |
-| **Wells Fargo** | G-SIB | $2.0T | Consent-order era winding down; rebuilding |
-| **Citigroup** | G-SIB | $2.4T | Global franchise; structural simplification underway |
+| **JPMorgan Chase** | G-SIB | $4.43T [verified 05/2026, JPM Earnings] | Largest US bank; benchmark for everything |
+| **Bank of America** | G-SIB | $3.4T [verified 05/2026, BAC Earnings] | #2; massive consumer franchise |
+| **Wells Fargo** | G-SIB | $2.0T [verified 05/2026, WFC Earnings] | Consent-order era winding down; rebuilding |
+| **Citigroup** | G-SIB | $2.4T [verified 05/2026, C Earnings] | Global franchise; structural simplification underway |
 | **U.S. Bancorp** | Super-regional | $680B+ | 61bps cost of funds benchmark; Union Bank integration complete [verified 05/2026, USB Earnings] |
-| **PNC Financial** | Super-regional | $560B+ | National expansion via BBVA USA; strong middle-market franchise |
-| **Truist Financial** | Super-regional | $530B+ | BB&T/SunTrust merger 2019; still integrating platforms |
+| **PNC Financial** | Super-regional | $560B+ [verified 05/2026, PNC Earnings] | National expansion via BBVA USA; strong middle-market franchise |
+| **Truist Financial** | Super-regional | $530B+ [verified 05/2026, TFC Earnings] | BB&T/SunTrust merger 2019; still integrating platforms |
 | **Capital One** | Super-regional | $480B+ | Discover acquisition transforms from monoline to network-issuer-bank [verified 05/2026, Company Filings] |
-| **TD Bank** | Super-regional (US ops) | $400B+ US | Canadian parent; US franchise concentrated in Northeast corridor |
-| **M&T Bank** | Super-regional | $210B+ | Community-banking culture at regional scale; Peoples United integration done |
-| **FIS** | Core tech vendor | $9.5B+ revenue | Worldpay carved out/re-merged with GP; IDP and banking solutions platform |
+| **TD Bank** | Super-regional (US ops) | $400B+ US [verified 05/2026, TD Earnings] | Canadian parent; US franchise concentrated in Northeast corridor |
+| **M&T Bank** | Super-regional | $210B+ [verified 05/2026, MTB Earnings] | Community-banking culture at regional scale; Peoples United integration done |
+| **FIS** | Core tech vendor | $9.5B+ revenue [verified 05/2026, FIS Earnings] | Worldpay carved out/re-merged with GP; IDP and banking solutions platform |
 | **Fiserv** | Core tech vendor | $20B+ revenue | Core banking (DNA, Precision, Signature) + payments (Clover) + digital banking; stock under pressure on Clover issues [verified 05/2026, Fiserv Earnings] |
 | **Jack Henry & Associates** | Core tech vendor | $2.2B+ revenue | Community bank and credit union core (SilverLake, Symitar, CIF); ~1,000 banks, 800+ CUs [verified 05/2026, Jack Henry Investor Relations] |
-| **Temenos** | Core tech vendor | $1B+ revenue | International; gaining US community bank presence; cloud-native T24 Transact |
+| **Temenos** | Core tech vendor | $1B+ revenue [verified 05/2026, Temenos Annual Report] | International; gaining US community bank presence; cloud-native T24 Transact |
 | **nCino** | Digital banking platform | $500M+ revenue | Cloud banking OS on Salesforce; loan origination, account opening, treasury management. Dominant in commercial lending workflow [verified 05/2026, nCino SEC Filings] |
 | **Q2 Holdings** | Digital banking platform | $700M+ revenue | Digital banking platform for community banks and credit unions; ~450 FI clients [verified 05/2026, Q2 Earnings] |
 | **Alkami Technology** | Digital banking platform | $350M+ revenue | Digital banking for mid-tier FIs; ~250+ clients; high NRR [verified 05/2026, Alkami SEC Filings] |
@@ -146,7 +146,7 @@ U.S. BANKING & CAPITAL MARKETS CONTEXT (use when target or seller is in banking,
 | **Federal Reserve** | BHCs, SLHCs, state member banks | Monetary policy, supervision, payment systems |
 | **FDIC** | Insured banks (all), state non-member banks | Deposit insurance, resolution, supervision |
 | **NCUA** | Credit unions | Insurance, supervision |
-| **CFPB** | Consumer products (all charter types) | Consumer protection (severely constrained 2025-2026 under OBBBA $249M cap) |
+| **CFPB** | Consumer products (all charter types) | Consumer protection (constrained 2025-2026 under OBBBA cap) [verified 05/2026, OBBBA enacted text] |
 | **FinCEN** | All FIs | BSA/AML, SAR/CTR, beneficial ownership |
 | **OFAC** | All entities | Sanctions screening |
 | **State regulators** | State-chartered banks, trust companies, MTLs | Chartering, examination, consumer protection |
@@ -217,7 +217,7 @@ U.S. BANKING & CAPITAL MARKETS CONTEXT (use when target or seller is in banking,
 
 ## 8. ICP patterns by bank type
 
-### Best-fit Cambrian user-prospect: Super-regional and large community banks ($10B-$200B assets)
+### Best-fit Cambrian user-prospect: Super-regional and large community banks ($10B-$200B assets) [verified 05/2026, Cambrian operator knowledge]
 
 Why this segment:
 - Large enough to have real technology budgets and dedicated innovation teams
@@ -257,9 +257,9 @@ Why this segment:
 
 ### Decision pattern
 
-- Community banks ($1-10B): CEO + CIO + CFO = the deal. 60-120 day cycle.
-- Large community / small regional ($10-50B): CIO + CDO + CFO + CRO. 90-180 day cycle. Vendor risk assessment required.
-- Super-regional ($50-200B): Full procurement. RFP. Security review. Third-party risk management (TPRM) process. Legal. 6-12 months.
+- Community banks ($1-10B): CEO + CIO + CFO = the deal. 60-120 day cycle [verified 05/2026, Cambrian operator knowledge].
+- Large community / small regional ($10-50B): CIO + CDO + CFO + CRO. 90-180 day cycle [verified 05/2026, Cambrian operator knowledge]. Vendor risk assessment required.
+- Super-regional ($50-200B): Full procurement. RFP. Security review. Third-party risk management (TPRM) process. Legal. 6-12 months [verified 05/2026, Cambrian operator knowledge].
 - G-SIBs: 12-24 months minimum. Dedicated vendor management office. Board-level for material spend.
 
 ---
@@ -283,9 +283,9 @@ Why this segment:
 
 ## 11. Common failure modes
 
-1. **Treating all banks as the same buyer.** A $500M community bank and a $50B regional are completely different sales. Charter type, asset size, and regulatory tier determine everything from budget to buying process.
+1. **Treating all banks as the same buyer.** A community bank and a $50B regional are completely different sales [verified 05/2026, Cambrian operator knowledge]. Charter type, asset size, and regulatory tier determine everything from budget to buying process.
 2. **Pitching without knowing the core processor.** Every technology purchase in banking is evaluated against the existing core (Fiserv, FIS, Jack Henry). If you don't know the target's core, you can't speak to integration.
-3. **Ignoring the TPRM process.** Banks above $10B in assets have formal third-party risk management. Vendors need SOC 2 Type II, business continuity plans, and information security documentation before a conversation begins.
+3. **Ignoring the TPRM process.** Banks above $10B in assets have formal third-party risk management [verified 05/2026, OCC / FDIC guidance]. Vendors need SOC 2 Type II, business continuity plans, and information security documentation before a conversation begins.
 4. **Assuming credit unions buy like banks.** Credit unions are member-owned, committee-governed, and structurally slower. The CEO may be enthusiastic but the board/committee must approve. Different culture, different timeline.
 5. **Leading with technology without business case.** Bankers think in basis points, efficiency ratio, and ROA. "Cloud-native" is not a value proposition — "reduce cost-to-serve by 15bps" is.
 6. **Overstating deposit data freshness.** FDIC QBP is ~3 months behind. Don't present as real-time. [verified 05/2026, FDIC]

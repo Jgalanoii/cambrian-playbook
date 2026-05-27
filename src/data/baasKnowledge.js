@@ -186,7 +186,7 @@ B2B NEOBANKS ($10-250M revenue, Mercury/Brex/Ramp tier):
 - Buying behavior: sophisticated, metrics-driven, fast-moving. Evaluate on integration depth, compliance support, and commercial flexibility.
 - Seller implication: speak their language (NRR, CAC, LTV, deposit growth, interchange yield). Reference B2B fintech peers. Emphasize compliance as competitive advantage.
 
-SPONSOR BANKS WITH ACTIVE BAAS PROGRAMS ($5-50B assets):
+SPONSOR BANKS WITH ACTIVE BAAS PROGRAMS ($5-50B assets) [verified 05/2026, FDIC QBP / industry reporting]:
 - Profile: community or mid-size banks that have built BaaS divisions for fee income diversification. Under regulatory pressure to strengthen third-party risk management. Need to scale fintech partnerships while managing compliance burden.
 - Buying behavior: risk-averse (especially post-consent-order wave), compliance-first evaluation, long sales cycles (6-12 months), strong legal/compliance involvement in vendor selection.
 - Seller implication: lead with compliance and risk management value. Reference other sponsor bank clients. Expect heavy legal review and compliance diligence.
@@ -291,7 +291,7 @@ KNOWN TRAPS:
 - The three-party model is "disfavored," not "dead" — some programs still operate it; stating it's obsolete is inaccurate.
 - Consent order details (Evolve, Lineage, Blue Ridge) evolve as enforcement actions progress — verify current status before citing.
 - Post-Synapse regulatory expectations are largely de facto, not de jure — do not cite sub-ledger reconciliation as a formal regulation.
-- Market sizing figures for BaaS vary wildly ($25-75B range) depending on definition — always note methodology.
+- Market sizing figures for BaaS vary wildly ($25-75B range) depending on definition [verified 05/2026, Cambrian operator knowledge / multiple analyst reports] — always note methodology.
 - "Fintech" is not a monolith — consumer neobanks, B2B platforms, vertical SaaS embedded, and lending have fundamentally different BaaS needs, economics, and risk profiles.
 `;
 
@@ -369,7 +369,7 @@ export const BAAS_PLAYBOOK = {
     "embedded finance", "fintech infrastructure", "fintech bank",
     "middleware", "issuer processor", "card issuing",
     "FBO account", "sub-ledger", "Synapse",
-    "Unit", "Treasury Prime", "Synctera", "Increase",
+    "Unit Finance", "Treasury Prime", "Synctera", "Increase",
     "Marqeta", "Galileo", "Lithic", "Highnote",
     "Cross River", "Evolve Bank", "Sutton Bank", "Column",
     "Green Dot", "Pathward", "Lead Bank",

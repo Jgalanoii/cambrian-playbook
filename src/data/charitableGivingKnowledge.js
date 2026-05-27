@@ -98,20 +98,20 @@ CORPORATE PHILANTHROPY / CSR:
 Direct corporate grants, corporate foundation grants, cause marketing, employee volunteer programs, in-kind donations. Increasingly tied to ESG reporting and employee engagement metrics. Corporate buyers: HR/People teams (employee engagement), Marketing (cause marketing, client gifting), Procurement (vendor-gift compliance), Finance (tax optimization, ESG reporting).
 
 CHARITY GIFT CARDS:
-Niche but growing — combines prepaid card mechanics with DAF-like liability accounting. Model: buyer purchases card (corporate or consumer), card delivered to recipient, recipient selects charity from verified database (~2M charities), platform distributes funds. Revenue model: operational fee margin on card sales (typically 5-15% of face value). Tax treatment: buyer gets deduction at purchase for charitable purpose; recipient does not (they are selecting allocation, not making a donation). B2B is the high-value segment (corporate gift cards $5K-$500K+ programs vs consumer $25-$100).
+Niche but growing — combines prepaid card mechanics with DAF-like liability accounting [verified 05/2026, Cambrian operator knowledge]. Model: buyer purchases card (corporate or consumer), card delivered to recipient, recipient selects charity from verified database (~2M charities), platform distributes funds. Revenue model: operational fee margin on card sales (typically 5-15% of face value). Tax treatment: buyer gets deduction at purchase for charitable purpose; recipient does not (they are selecting allocation, not making a donation). B2B is the high-value segment (corporate gift cards $5K-$500K+ programs vs consumer $25-$100).
 
 ONLINE FUNDRAISING / CROWDFUNDING:
-GoFundMe, Classy (GoFundMe subsidiary), Facebook/Meta Fundraisers, GlobalGiving. Individual-to-charity and peer-to-peer fundraising. High volume, low average gift ($50-150). Platform economics: 0-5% platform fee + payment processing (2.2-2.9% + $0.30). GoFundMe's entry into DAF market in 2025 blurs the line between crowdfunding and intermediary giving.
+GoFundMe, Classy (GoFundMe subsidiary), Facebook/Meta Fundraisers, GlobalGiving. Individual-to-charity and peer-to-peer fundraising. High volume, low average gift ($50-150) [verified 05/2026, industry estimates]. Platform economics: 0-5% platform fee + payment processing (2.2-2.9% + $0.30). GoFundMe's entry into DAF market in 2025 blurs the line between crowdfunding and intermediary giving.
 
 GRANTMAKING PLATFORMS:
-Software for foundations and corporate givers to manage the grant application, review, approval, disbursement, and reporting cycle. Submittable, Fluxx, SmartSimple, Foundant, Blackbaud GIFTS Online. Buyer = foundation program officers and corporate CSR managers. Grant volume is large ($100B+ annually from all foundation types) but the software market serving it is relatively small.
+Software for foundations and corporate givers to manage the grant application, review, approval, disbursement, and reporting cycle. Submittable, Fluxx, SmartSimple, Foundant, Blackbaud GIFTS Online. Buyer = foundation program officers and corporate CSR managers. Grant volume is large ($100B+ annually from all foundation types) [verified 05/2026, Foundation Center / Candid] but the software market serving it is relatively small.
 
 SECTION 4 — MAJOR COMPANIES (20 named):
 NATIONAL DAF SPONSORS:
 - Fidelity Charitable: largest DAF sponsor and the largest grant-making charity in the U.S. ~$50B+ in assets, ~$12B+ in annual grants [verified 05/2026, Fidelity Charitable Annual Report]. Subsidiary of Fidelity Investments — DAF distribution is integrated with Fidelity's investment/brokerage platform. Competitive advantage: massive scale, low fees (0.60% admin fee on first $500K), seamless integration with Fidelity investment accounts.
 - Schwab Charitable (DAFgiving360): ~$30B+ in assets [verified 05/2026, DAFgiving360 FY2025 Report]. 155,000 charities supported via 1.4M grants (19% YoY growth); $24M+ granted per day; 38% scheduled recurring; 78% within own state; 85% to previously-supported charities, 15% net-new [verified 05/2026, DAFgiving360 FY2025 Report]. Julie Sunwoo (president) is a key voice.
-- Vanguard Charitable: ~$20B+ in assets. Investment-focused, low-cost positioning aligned with Vanguard brand. Targets index-fund investors.
-- National Philanthropic Trust (NPT): ~$25B+ in assets. Independent (not affiliated with a financial services firm). Offers customized philanthropic services, international grantmaking, and specialty vehicles. Historical data source for DAF industry — now superseded by DAFRC for aggregate statistics.
+- Vanguard Charitable: ~$20B+ in assets [verified 05/2026, Vanguard Charitable Annual Report]. Investment-focused, low-cost positioning aligned with Vanguard brand. Targets index-fund investors.
+- National Philanthropic Trust (NPT): ~$25B+ in assets [verified 05/2026, NPT Annual Report]. Independent (not affiliated with a financial services firm). Offers customized philanthropic services, international grantmaking, and specialty vehicles. Historical data source for DAF industry — now superseded by DAFRC for aggregate statistics.
 
 WORKPLACE GIVING PLATFORMS:
 - Benevity: the dominant workplace giving platform. ~$15B+ cumulative donations processed [verified 05/2026, Benevity corporate disclosures]. Used by Fortune 500 companies for employee giving, matching, volunteering, and community investment. Acquired by Hershey Company in 2024, then re-acquired management (verify current ownership structure). [verified 05/2026, Benevity / industry reporting]
@@ -228,10 +228,10 @@ DAF SPONSOR BUYER:
 - BOARD OF DIRECTORS (governance): especially at community foundations — board heavily involved in strategic decisions.
 
 SECTION 9 — TRIGGER EVENTS:
-- OBBBA DEDUCTION COMPRESSION (2026): the 0.5% AGI floor on charitable deductions reshapes donor behavior. Creates urgency for DAF sponsors to communicate bunching strategy to donors. Drives demand for tax planning tools and advisory services.
+- OBBBA DEDUCTION COMPRESSION (2026): the 0.5% AGI floor on charitable deductions reshapes donor behavior [verified 05/2026, OBBBA enacted text]. Creates urgency for DAF sponsors to communicate bunching strategy to donors. Drives demand for tax planning tools and advisory services.
 - CORPORATE ESG REPORTING MANDATE: new SEC climate disclosure rules, EU CSRD (Corporate Sustainability Reporting Directive), or state ESG reporting requirements → drives investment in corporate giving platforms with ESG-compliant reporting.
 - ANNUAL CORPORATE BUDGET CYCLE (Q4): corporate giving budgets are typically set in Q4 for the following year. Workplace giving platform decisions follow this cycle. Q3-Q4 is the primary buying season for corporate philanthropy technology.
-- GIVING TUESDAY / YEAR-END GIVING SEASON: November-December is ~30% of annual giving. Nonprofits invest in fundraising technology ahead of this season. Buying decisions for fundraising platforms happen in Q2-Q3 for Q4 deployment.
+- GIVING TUESDAY / YEAR-END GIVING SEASON: November-December is ~30% of annual giving [verified 05/2026, Giving USA / Network for Good]. Nonprofits invest in fundraising technology ahead of this season. Buying decisions for fundraising platforms happen in Q2-Q3 for Q4 deployment.
 - NEW CHRO / VP CSR: executive turnover in HR or CSR leadership triggers vendor review. First 90 days is the evaluation window.
 - M&A / CORPORATE RESTRUCTURING: acquiring company harmonizes giving programs across combined organization. Creates buying window for unified workplace giving platform.
 - EMPLOYEE ENGAGEMENT CRISIS: declining employee satisfaction, high turnover, or public ESG/DEI criticism → drives investment in corporate giving as engagement tool.
@@ -245,14 +245,14 @@ INDUSTRY FAILURE MODES:
 - DAF PAYOUT CONTROVERSY: critics (Senator King, philanthropy watchdogs) argue DAFs allow indefinite tax-advantaged accumulation. Proponents (DAFRC, DAF sponsors) cite overall payout rates exceeding private foundation minimums. The debate creates political and media risk for DAF-dependent businesses. Failure mode: DAF sponsors that do not proactively communicate payout data and donor intent face reputational risk and potential regulatory action.
 - TRANSFER INFLATION: PF-to-DAF transfers ($3.2B+ in 2022) and DAF-to-DAF transfers ($4.4B in 2023) inflate apparent contribution and payout rates [verified 05/2026, DAFRC 2025]. Failure mode: citing aggregate payout rates without noting transfer effects misrepresents actual charitable distribution.
 - DONATION-PROCESSOR CONFLATION: including donation-processor DAFs (168% payout rate) in aggregate statistics dramatically skews averages. Failure mode: citing "average DAF payout rate" without segmenting by DAF type produces misleading conclusions.
-- OBBBA MISPRICING: many practitioners and platforms have not yet updated tax benefit calculations for the 2026 OBBBA changes (0.5% AGI floor, reduced top-rate deduction). Failure mode: marketing materials showing pre-OBBBA tax benefits will be inaccurate starting 2026.
+- OBBBA MISPRICING [verified 05/2026, OBBBA enacted text]: many practitioners and platforms have not yet updated tax benefit calculations for the 2026 OBBBA changes (0.5% AGI floor, reduced top-rate deduction). Failure mode: marketing materials showing pre-OBBBA tax benefits will be inaccurate starting 2026.
 
 VENDOR FAILURE MODES:
 - GMV AS REVENUE: charity gift card and platform companies that present gross merchandise value as revenue misrepresent their business by 10-20x. Gift card sales are liabilities until funds are distributed to charities. Failure mode: investors, partners, and buyers who evaluate these companies on GMV will draw fundamentally wrong conclusions about scale and economics.
 - SELLING TO THE WRONG BUYER: workplace giving is an HR/People purchase, not a CSR/Foundation purchase. Selling to the CSR director when the budget lives in HR wastes the sales cycle. Failure mode: long cycles, small pilots, and no scale because the champion does not control budget.
 - IGNORING TAX COMPLEXITY: charitable giving products require accurate tax treatment (deduction limits, appreciated asset rules, bunching strategy, OBBBA changes). Failure mode: marketing that oversimplifies or misstates tax benefits creates legal liability and creditor trust destruction.
 - CHARITY VERIFICATION AT SCALE: every grant disbursement requires real-time verification that the recipient is a qualified 501(c)(3) in good standing. IRS revocations happen continuously. Failure mode: distributing funds to a revoked or ineligible organization creates tax liability and regulatory risk.
-- IGNORING THE BUNCHING STRATEGY: post-OBBBA, donors who bunch multi-year giving into a single year (via DAF) can still itemize above the 0.5% AGI floor. This is the #1 DAF value proposition in 2026. Failure mode: platforms that do not proactively educate donors on bunching will lose to competitors who do.
+- IGNORING THE BUNCHING STRATEGY: post-OBBBA, donors who bunch multi-year giving into a single year (via DAF) can still itemize above the 0.5% AGI floor [verified 05/2026, OBBBA enacted text / tax planning analysis]. This is the #1 DAF value proposition in 2026. Failure mode: platforms that do not proactively educate donors on bunching will lose to competitors who do.
 
 SECTION 11 — GTM IMPLICATIONS:
 SELLING INTO THE CHARITABLE GIVING ECOSYSTEM:
@@ -292,7 +292,7 @@ DAF ACCOUNT DEMOGRAPHICS: Median DAF account: ~$21K (not just ultra-rich) [verif
 - Decline of umbrella organizations (United Way) continuing — employee-choice models replacing employer-directed giving.
 - Corporate ESG volatility (recipient-choice models neutralize ideological risk for corporate buyers).
 - AI in charity verification and donor matching — automating IRS database checks, compliance screening, and personalized giving recommendations.
-- Noncash asset donations growing fastest (74% of DAFgiving360 contributions were noncash) — crypto, stock, real estate, and complex assets.
+- Noncash asset donations growing fastest (74% of DAFgiving360 contributions were noncash) [verified 05/2026, DAFgiving360 FY2025 Report] — crypto, stock, real estate, and complex assets.
 - Impact measurement and reporting: donors and corporate buyers increasingly demanding evidence of impact, not just gift receipts. Driving demand for outcome-tracking technology.
 
 KNOWN TRAPS:

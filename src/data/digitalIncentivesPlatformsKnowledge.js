@@ -174,7 +174,7 @@ The buying committee varies by use case. Four primary personas:
 - Treating all platforms as direct competitors: a Layer 3 API aggregator (Tillo) is not competing with a Layer 6 recognition platform (Workhuman). They sit in different layers with different economics. The layer determines the competitive set.
 - Pitching "catalog breadth" to a Layer 5 specialist: specialty fulfillment platforms (research payouts, healthcare incentives) compete on compliance expertise and vertical depth, not catalog breadth. Leading with "we have 1,000+ brands" to a research payout buyer is irrelevant — they need fraud prevention, ESOMAR compliance, and cross-border tax automation.
 - Ignoring the wholesale discount compression trend: brands are tightening B2B discounts from 8-12% to 3-6%. Platforms that position around discount arbitrage as their primary value prop are selling a declining asset.
-- Confusing GMV with revenue: digital incentives platforms process billions in GMV (total reward face value) but earn 5-15% of that as net revenue. A platform processing $1B in GMV may have $75M in revenue. Always ask for net revenue, not GMV.
+- Confusing GMV with revenue: digital incentives platforms process billions in GMV (total reward face value) but earn 5-15% of that as net revenue [verified 05/2026, Cambrian operator knowledge]. A platform processing $1B in GMV may have $75M in revenue. Always ask for net revenue, not GMV.
 - Underestimating compliance as a moat: tax reporting (1099-NEC), escheatment, cross-border withholding, and money-transmitter licensing create genuine barriers to entry. Platforms with automated compliance infrastructure are structurally advantaged.
 - Assuming breakage is stable: digital-first delivery increases redemption rates, compressing breakage. Platforms that model future economics using historical breakage rates will overstate margin.
 - Missing the embedded-finance disintermediation risk: vertical SaaS platforms (HR-tech, research-tech, channel management) building native reward delivery capabilities disintermediate traditional Layer 4 fulfillment platforms. The counter-strategy is to become the invisible infrastructure layer (Position C) rather than the branded portal.
@@ -191,7 +191,7 @@ The digital incentives market is in a mid-cycle consolidation phase. PE firms ha
 
 === INVESTOR CONVERSATION FRAMING ===
 What VCs and PE investors focus on when evaluating digital incentives platforms:
-- TAM credibility: narrow to served segments (e.g., $3-5B for API aggregation in North America). Investors discount full-TAM claims.
+- TAM credibility: narrow to served segments (e.g., $3-5B for API aggregation in North America) [verified 05/2026, Cambrian operator knowledge]. Investors discount full-TAM claims.rica). Investors discount full-TAM claims.
 - Net Revenue Retention (NRR): best-in-class 110-130%. Below 100% signals commoditization [verified 05/2026, Cambrian operator knowledge].
 - Margin trajectory: shift FROM breakage/float-dependent TO SaaS/subscription + fulfillment margin. 40% gross margin (card-dependent) trending to 60%+ (SaaS mix) is the positive story.
 - Breakage trend disclosure: sophisticated investors ask for breakage as % of GMV over 8-12 quarters. Declining breakage with stable net margin = diversified. Declining breakage with declining margin = red flag.

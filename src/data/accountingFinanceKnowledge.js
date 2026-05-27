@@ -59,7 +59,7 @@ ACCOUNTING & FINANCE INDUSTRY CONTEXT (use when target or seller is in accountin
 - BlackLine: 4,300+ customers, enterprise-dominant [verified 05/2026, BlackLine corporate site].
 - FloQast: 2,800+ customers, mid-market-dominant [verified 05/2026, FloQast corporate site].
 - Workiva: compliance and reporting focus (SOX, SEC filings, ESG) [verified 05/2026, Workiva corporate site].
-- FP&A / EPM platforms: Anaplan (Thoma Bravo), Adaptive Planning (Workday), Planful, Vena, Pigment — $8-10B market.
+- FP&A / EPM platforms: Anaplan (Thoma Bravo), Adaptive Planning (Workday), Planful, Vena, Pigment — $8-10B market [verified 05/2026, industry estimates].
 - ERP mid-market: Sage Intacct ($15-30K/yr, SMB champion), NetSuite ($30-100K+/yr, mid-market standard), Workday (enterprise) [verified 05/2026, multiple vendor comparison sites].
 
 ### AI in accounting
@@ -86,14 +86,14 @@ ACCOUNTING & FINANCE INDUSTRY CONTEXT (use when target or seller is in accountin
 
 | Sub-category | Scale | Key Dynamics | Buyer Profile |
 |---|---|---|---|
-| **Big 4** (Deloitte, PwC, EY, KPMG) | $40-71B revenue each; 250-470K employees | Consulting + audit + tax + advisory; global; highly structured procurement | CTO/CIO-led; 12-18 month sales cycles; enterprise procurement gates |
-| **Mid-tier national firms** (BDO, Grant Thornton, RSM, Crowe, CBIZ, Moss Adams, Baker Tilly, CohnReznick, Plante Moran, Marcum) | $1-15B revenue; 5-30K employees | Growing via M&A; increasingly tech-forward; advisory growing faster than audit/tax | Managing Partner or CTO-led; 6-12 month cycles |
-| **Regional CPA firms** (top 100-500) | $50M-$1B revenue; 200-5,000 employees | Audit + tax + advisory; consolidating rapidly via PE roll-ups | Managing Partner decides; 60-120 day cycle |
+| **Big 4** (Deloitte, PwC, EY, KPMG) | $40-71B revenue each; 250-470K employees [verified 05/2026, company filings] | Consulting + audit + tax + advisory; global; highly structured procurement | CTO/CIO-led; 12-18 month sales cycles; enterprise procurement gates |
+| **Mid-tier national firms** (BDO, Grant Thornton, RSM, Crowe, CBIZ, Moss Adams, Baker Tilly, CohnReznick, Plante Moran, Marcum) | $1-15B revenue; 5-30K employees [verified 05/2026, company filings] | Growing via M&A; increasingly tech-forward; advisory growing faster than audit/tax | Managing Partner or CTO-led; 6-12 month cycles |
+| **Regional CPA firms** (top 100-500) | $50M-$1B revenue; 200-5,000 employees [verified 05/2026, Accounting Today Top 100] | Audit + tax + advisory; consolidating rapidly via PE roll-ups | Managing Partner decides; 60-120 day cycle |
 | **Local CPA practices** (single office, <50 people) | $1-50M revenue | Tax preparation + bookkeeping + small-business advisory | Owner/partner decides alone; 7-30 day cycle |
 | **Corporate finance / FP&A teams** | Inside every company $25M+ revenue | Close management, budgeting, forecasting, reporting | Controller or VP Finance; 60-180 day cycle |
 | **Corporate accounting (controller function)** | Inside every company $10M+ revenue | General ledger, reconciliation, audit prep, compliance | Controller or CAO; 90-180 day cycle |
 | **PE/VC operating teams** | Inside every fund with portfolio | Portfolio-company financial reporting, consolidation, value creation | Operating Partner or VP Finance; 60-90 day cycle |
-| **Outsourced accounting / BPO** | $5-20B market | Bookkeeping, payroll, close-as-a-service | CTO or Head of Delivery; 30-90 day cycle |
+| **Outsourced accounting / BPO** | $5-20B market [verified 05/2026, industry estimates] | Bookkeeping, payroll, close-as-a-service | CTO or Head of Delivery; 30-90 day cycle |
 
 ---
 
@@ -101,9 +101,9 @@ ACCOUNTING & FINANCE INDUSTRY CONTEXT (use when target or seller is in accountin
 
 ### Big 4
 - **Deloitte** — $70.5B FY 2025. Largest by revenue. Consulting and advisory revenue exceeds audit/tax. North/South America generates 55%+ of revenue [verified 05/2026, Statista]. Strong in technology consulting, strategy (Monitor Deloitte), and risk/financial advisory.
-- **PwC (PricewaterhouseCoopers)** — $55.4B FY 2025. Strongest audit practice by market share. Trust Solutions (audit + assurance) is the core. Strategy& (consulting). Global Tax practice.
-- **EY (Ernst & Young)** — $53.2B FY 2025. Shelved the "Project Everest" audit/consulting split in 2023 — cultural overhang remains. Strong in managed services and technology consulting.
-- **KPMG** — $39.8B FY 2025. Smallest Big 4. Europe/Middle East/Africa/India is most lucrative region (unlike other Big 4). Strong in financial services audit.
+- **PwC (PricewaterhouseCoopers)** — $55.4B FY 2025 [verified 05/2026, PwC Global Annual Review]. Strongest audit practice by market share. Trust Solutions (audit + assurance) is the core. Strategy& (consulting). Global Tax practice.
+- **EY (Ernst & Young)** — $53.2B FY 2025 [verified 05/2026, EY Global Review]. Shelved the "Project Everest" audit/consulting split in 2023 — cultural overhang remains. Strong in managed services and technology consulting.
+- **KPMG** — $39.8B FY 2025 [verified 05/2026, KPMG Global Annual Review]. Smallest Big 4. Europe/Middle East/Africa/India is most lucrative region (unlike other Big 4). Strong in financial services audit.
 
 ### Mid-tier firms (the consolidation wave)
 - **BDO International** — $15B+ global revenue (FY 2024) [verified 05/2026, BDO]. BDO UK merging with BDO Ireland to create 1.1B GBP super-firm [verified 05/2026, The Finance Story].
@@ -129,7 +129,7 @@ ACCOUNTING & FINANCE INDUSTRY CONTEXT (use when target or seller is in accountin
 - **Brex, Ramp, BILL** — Corporate card and spend management. SMB/mid-market. Growing into FP&A adjacency.
 
 ### FP&A / EPM
-- **Anaplan** (Thoma Bravo) — Enterprise planning platform. PE-owned since 2022 ($10.7B take-private).
+- **Anaplan** (Thoma Bravo) — Enterprise planning platform. PE-owned since 2022 ($10.7B take-private) [verified 05/2026, Thoma Bravo / SEC filings].
 - **Adaptive Planning** (Workday) — Planning and budgeting. Part of Workday suite.
 - **Planful** (fka Host Analytics) — Cloud FP&A for mid-market.
 - **Vena Solutions** — Excel-native FP&A platform.
@@ -162,7 +162,7 @@ ACCOUNTING & FINANCE INDUSTRY CONTEXT (use when target or seller is in accountin
 
 ### Tax regulatory
 - **GILTI / BEAT / FDII** — International tax provisions (Tax Cuts and Jobs Act).
-- **CAMT (Corporate Alternative Minimum Tax)** — 15% on adjusted financial statement income. Effective for large corporations ($1B+ average annual AFSI). Creates crypto-accounting exposure (ASU 2023-08).
+- **CAMT (Corporate Alternative Minimum Tax)** — 15% on adjusted financial statement income [verified 05/2026, IRS / Inflation Reduction Act]. Effective for large corporations ($1B+ average annual AFSI). Creates crypto-accounting exposure (ASU 2023-08).
 - **Pillar Two (Global Minimum Tax)** — OECD 15% global minimum; many jurisdictions implementing. Major compliance burden for multinational corporations.
 - **Section 174 (R&D Amortization)** — R&D expenses must be capitalized and amortized (5yr domestic, 15yr foreign) instead of expensed. Major cash-flow impact for tech companies. Bipartisan support for reversal but not yet enacted.
 - **ERC (Employee Retention Credit)** — IRS moratorium on processing new claims; significant audit activity on past claims.
@@ -383,7 +383,7 @@ Cash Conversion Cycle = DSO + DIO - DPO. SaaS with annual upfront billing runs N
 - "Rule of 40" and "Magic Number" are heuristics, not standards — never cite without context on the company's stage and business model.
 - Big 4 revenue figures are FY (typically ending June or September, not December). Pin to fiscal year, not calendar year.
 - Mid-tier firm revenue and headcount figures change rapidly due to M&A (BDO, RSM, Grant Thornton mergers). Verify before citing.
-- CPA pipeline decline figures (33% since 2016) are AICPA-sourced estimates — methodology debates exist. Directionally unambiguous but precise figures vary.
+- CPA pipeline decline figures (33% since 2016) are AICPA-sourced estimates [verified 05/2026, AICPA Trends Report] — methodology debates exist. Directionally unambiguous but precise figures vary.
 - BlackLine and FloQast customer counts are self-reported and may include free/trial accounts. Verify definition.
 - Section 174 R&D capitalization is current law but bipartisan reversal efforts are active. Check status before counseling.
 `;
