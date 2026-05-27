@@ -5453,63 +5453,110 @@ Return ONLY raw JSON:
 
     setAccountRfpData({ open: [], closed: [], signals: [], loading: true, error: null, searched: true });
 
-    const category = sellerICP.marketCategory || "";
-    const industries = (sellerICP.icp.industries || []).filter(Boolean);
+    // Pull deep seller context for relevance-focused searches
+    const icp = sellerICP.icp || {};
+    const category     = sellerICP.marketCategory || "";
+    const industries   = (icp.industries || []).filter(Boolean);
+    const products     = (icp.topGains || []).filter(Boolean);
+    const pains        = (icp.topPains || []).filter(Boolean);
+    const buyers       = (icp.buyerPersonas || []).filter(Boolean).map(p => typeof p === "object" ? p.title : p);
+    const differ       = (icp.uniqueDifferentiators || []).filter(Boolean);
+    const customers    = (icp.customerExamples || []).filter(Boolean);
+    const competitors  = (icp.competitiveAlternatives || []).filter(Boolean).map(c => typeof c === "object" ? c.name : c).filter(n => n && !n.toLowerCase().includes("status quo") && !n.toLowerCase().includes("do nothing"));
+    const techSignals  = (icp.techSignals || []).filter(Boolean);
+    const initiative   = icp.priorityInitiative || "";
+    const sellerDesc   = sellerICP.sellerDescription || "";
+    const sellerName   = sellerICP.sellerName || sellerUrl || "";
+
+    const sellerProfileBlock = `
+━━━ SELLER PROFILE (use this to judge relevance — only return RFPs this seller could credibly bid on) ━━━
+Seller: ${sanitizeForPrompt(sellerName)}
+What they sell: ${sanitizeForPrompt(sellerDesc)}
+Market category: ${sanitizeForPrompt(category)}
+Industries served: ${industries.map(i => sanitizeForPrompt(i)).join(", ") || "—"}
+Products/solutions: ${products.slice(0, 3).map(p => sanitizeForPrompt(p)).join(" · ") || "—"}
+Key differentiators: ${differ.slice(0, 2).map(d => sanitizeForPrompt(d)).join(" · ") || "—"}
+Buyer personas: ${buyers.slice(0, 3).join(", ") || "—"}
+Priority buying trigger: ${sanitizeForPrompt(initiative) || "—"}
+Existing customers: ${customers.slice(0, 5).map(c => sanitizeForPrompt(c)).join(", ") || "—"}
+Competitors: ${competitors.slice(0, 3).map(c => sanitizeForPrompt(c)).join(", ") || "—"}
+Tech signals (readiness): ${techSignals.slice(0, 3).map(t => sanitizeForPrompt(t)).join(" · ") || "—"}
+Pain points the seller solves: ${pains.slice(0, 3).map(p => sanitizeForPrompt(p)).join(" · ") || "—"}`;
 
     const buildAccountPrompt = (kind) => {
       const isOpen = kind === "open";
-      return `You are a procurement intelligence analyst. Search for ${isOpen ? "ACTIVE RFPs and procurement opportunities" : "recently AWARDED contracts"} specifically involving these target companies:
+      return `You are a procurement intelligence analyst. Search for ${isOpen ? "ACTIVE RFPs and procurement opportunities" : "recently AWARDED contracts"} specifically involving these target companies that would be relevant to the seller described below.
 
 ━━━ TARGET ACCOUNTS (search for RFPs FROM or ABOUT these companies) ━━━
 ${names.map(n => `• ${n}`).join("\n")}
+${sellerProfileBlock}
 
-━━━ SELLER CONTEXT ━━━
-Seller category: ${sanitizeForPrompt(category)}
-Industries: ${industries.map(i => sanitizeForPrompt(i)).join(", ") || "—"}
+━━━ RELEVANCE FILTER ━━━
+Only return RFPs that the seller above could credibly respond to. Match on:
+- Products/services the seller actually offers
+- Pain points the seller solves
+- Industries the seller serves
+- Technology domains where the seller operates
+An RFP for janitorial services at a target account is NOT relevant to a software seller. Think about what this specific seller does and whether the RFP aligns.
 
 ━━━ SEARCH STRATEGY ━━━
-For each company above, search for:
+For each target account, search for RFPs related to the seller's category:
 ${isOpen ? `
-- "[company name]" RFP OR "request for proposal" 2025 2026
-- "[company name]" procurement OR solicitation OR vendor selection
-- site:sam.gov "[company name]" (for government entities)
-- "[company name]" modernization OR "evaluating vendors"
+- "[company name]" RFP OR "request for proposal" "${sanitizeForPrompt(category || industries[0] || "")}" 2025 2026
+- "[company name]" procurement OR solicitation "${sanitizeForPrompt(products[0] || category || "")}"
+- site:sam.gov "[company name]" ${industries[0] ? sanitizeForPrompt(industries[0]) : ""} 2025
+- "[company name]" "${sanitizeForPrompt(initiative || "vendor selection")}" OR modernization 2025 2026
 ` : `
-- "[company name]" "contract awarded" OR "selects vendor" 2024 2025
-- "[company name]" partnership OR "selected as" provider 2024 2025
+- "[company name]" "contract awarded" "${sanitizeForPrompt(category || industries[0] || "")}" 2024 2025
+- "[company name]" selects OR partners "${sanitizeForPrompt(products[0] || category || "")}" 2024 2025
+- "[company name]" "${sanitizeForPrompt(competitors[0] || "")}" contract OR award 2024 2025
 `}
 
 ━━━ OUTPUT ━━━
-Return ${isOpen ? "active opportunities" : "recent awards"} that directly involve the target accounts listed above. Only include results where one of the named accounts is the BUYER or the SUBJECT.
+Return ${isOpen ? "active opportunities" : "recent awards"} that:
+1. Directly involve one of the target accounts listed above (buyer field = one of those names)
+2. Are relevant to what the seller actually sells (not generic/unrelated procurement)
 
 DATA INTEGRITY:
 - Only include results you can VERIFY via web_search
 - The "buyer" field MUST be one of the target accounts listed above
 - Include source URL when available
+- relevanceReason must cite a SPECIFIC match to the seller's products/services/category
 
 Return ONLY raw JSON:
 ${isOpen
-  ? `{"rows":[{"title":"RFP title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"value":"$500K","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why relevant","cohort":"Industry","url":"https://..."}]}`
-  : `{"rows":[{"title":"Contract title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"awardedTo":"Vendor","value":"$1M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Why relevant","cohort":"Industry","url":"https://..."}]}`}`;
+  ? `{"rows":[{"title":"RFP title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"value":"$500K","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Matches seller's [specific product/capability] — [specific connection]","cohort":"Industry","url":"https://..."}]}`
+  : `{"rows":[{"title":"Contract title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"awardedTo":"Vendor","value":"$1M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Relevant because [specific seller capability match]","cohort":"Industry","url":"https://..."}]}`}`;
     };
 
-    const buildAccountSignalsPrompt = () => `You are a procurement intelligence analyst identifying buying signals at specific target accounts. Search for evidence that these companies are preparing to procure:
+    const buildAccountSignalsPrompt = () => `You are a procurement intelligence analyst identifying buying signals at specific target accounts that indicate they may need what this seller offers.
 
 ━━━ TARGET ACCOUNTS ━━━
 ${names.map(n => `• ${n}`).join("\n")}
+${sellerProfileBlock}
 
-━━━ SELLER CONTEXT ━━━
-Category: ${sanitizeForPrompt(category)}
+━━━ WHAT TO SEARCH FOR ━━━
+Look for signals that these accounts are preparing to buy products/services in the seller's domain:
+1. MODERNIZATION — "[company]" modernizing OR replacing systems related to ${sanitizeForPrompt(category || "their operations")}
+2. HIRING — "[company]" hiring for roles that would own ${sanitizeForPrompt(category || "this domain")} (e.g. ${buyers[0] || "VP"} roles, procurement for ${sanitizeForPrompt(industries[0] || "technology")})
+3. VENDOR EVALUATION — "[company]" evaluating vendors OR RFP for ${sanitizeForPrompt(products[0] || category || "solutions")}
+4. COMPETITIVE DISPLACEMENT — "[company]" ${competitors[0] ? `replacing OR switching from "${sanitizeForPrompt(competitors[0])}"` : "switching vendors"} ${sanitizeForPrompt(category || "")}
+5. BUDGET / INVESTMENT — "[company]" investing in OR budget for ${sanitizeForPrompt(initiative || category || "new technology")}
+6. PAIN POINTS — "[company]" ${pains[0] ? `"${sanitizeForPrompt(pains[0].split("—")[0].trim())}"` : "challenges with " + sanitizeForPrompt(category || "operations")}
 
 ━━━ SEARCH QUERIES (use 3-4) ━━━
-- "${names.slice(0, 3).map(n => sanitizeForPrompt(n)).join('" OR "')}" procurement OR modernization OR "vendor selection" 2025 2026
-- "${names.slice(0, 2).map(n => sanitizeForPrompt(n)).join('" OR "')}" hiring "procurement manager" OR "strategic sourcing"
-- "${names.slice(0, 3).map(n => sanitizeForPrompt(n)).join('" OR "')}" "plans to invest" OR "evaluating" OR "issued RFP"
+- "${names.slice(0, 3).map(n => sanitizeForPrompt(n)).join('" OR "')}" "${sanitizeForPrompt(category || industries[0] || "")}" procurement OR modernization 2025 2026
+- "${names.slice(0, 2).map(n => sanitizeForPrompt(n)).join('" OR "')}" "${sanitizeForPrompt(products[0] || differ[0] || category || "")}" vendor OR RFP OR evaluation
+- "${names.slice(0, 3).map(n => sanitizeForPrompt(n)).join('" OR "')}" ${competitors[0] ? `"${sanitizeForPrompt(competitors[0])}" OR ` : ""}"plans to invest" OR "evaluating" 2025 2026
+${customers.length ? `- "${sanitizeForPrompt(customers[0])}" ${sanitizeForPrompt(category || "")} (search existing customer for reference patterns)` : ""}
 
-Return 3-6 buying signals where one of the TARGET ACCOUNTS above is the subject. These are NOT published RFPs — they are pre-RFP intent signals.
+━━━ RELEVANCE ━━━
+Only return signals related to what the seller actually sells. A hiring signal for a CFO at a target account is only relevant if the seller sells to CFOs. Frame every signal's "relevance" field in terms of the seller's specific products and capabilities.
+
+Return 3-6 buying signals. These are NOT published RFPs — they are pre-RFP intent signals.
 
 Return ONLY raw JSON:
-{"signals":[{"signalType":"Signal Type","headline":"What's happening","company":"Company from list above","detail":"2-3 sentences","source":"Where found","url":"https://...","strength":"Strong|Moderate|Early","relevance":"Why it matters"}]}`;
+{"signals":[{"signalType":"Signal Type","headline":"What's happening","company":"Company from list above","detail":"2-3 sentences explaining the signal and what it means","source":"Where found","url":"https://...","strength":"Strong|Moderate|Early","relevance":"How this connects to [seller name]'s [specific product/service]"}]}`;
 
     const fetchAcctClass = async (kind) => {
       try {
