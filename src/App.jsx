@@ -5162,11 +5162,14 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       naics_code: (r.naicsOrCpv || "").slice(0, 20),
       model_used: "claude-opus-4-6",
     }));
-    // Batch insert — fire and forget
+    // Batch insert — fire and forget (with logging)
     fetch(`${SB_URL}/rest/v1/rfp_intel_signals`, {
       method: "POST",
       headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify(rows),
+    }).then(r => {
+      if (r.ok) console.log(`[rfp-persist] Logged ${rows.length} ${searchType} results to DB`);
+      else console.warn(`[rfp-persist] DB write failed:`, r.status);
     }).catch(() => { /* non-critical */ });
   };
 
@@ -5182,13 +5185,16 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     if (!sellerNorm) return { open: [], closed: [], signals: [] };
     try {
       // Only load non-dismissed results from the last 180 days
+      // Match on user_id + seller_url pattern (handles evermoreoutcomes vs evermoreoutcomes.com)
       const cutoff = new Date(Date.now() - 180 * 86400000).toISOString();
+      const sellerShort = sellerNorm.replace(/\.com$|\.io$|\.ai$|\.org$|\.net$/, "").slice(0, 50);
       const r = await fetch(
-        `${SB_URL}/rest/v1/rfp_intel_signals?seller_url=ilike.*${encodeURIComponent(sellerNorm)}*&search_stage=eq.icp_level&user_dismissed=eq.false&created_at=gte.${cutoff}&order=relevance_score.desc.nullslast&limit=20`,
+        `${SB_URL}/rest/v1/rfp_intel_signals?user_id=eq.${sbUser.id}&seller_url=ilike.*${encodeURIComponent(sellerShort)}*&search_stage=eq.icp_level&user_dismissed=eq.false&created_at=gte.${cutoff}&order=relevance_score.desc.nullslast&limit=30`,
         { headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } }
       );
-      if (!r.ok) return { open: [], closed: [], signals: [] };
+      if (!r.ok) { console.warn("[rfp-persist] DB load failed:", r.status); return { open: [], closed: [], signals: [] }; }
       const rows = await r.json();
+      console.log(`[rfp-persist] Loaded ${rows?.length || 0} previous results from DB for "${sellerShort}"`);
       if (!Array.isArray(rows) || !rows.length) return { open: [], closed: [], signals: [] };
       const open = rows.filter(r => r.search_type === "open_rfp").map(r => ({
         title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
