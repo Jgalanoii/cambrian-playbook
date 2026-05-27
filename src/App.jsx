@@ -5238,8 +5238,8 @@ Priority trigger: ${sanitizeForPrompt(trigger) || "—"}
 Exclusions:       ${disqual.slice(0,3).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
 ${naicsCodes.length ? `NAICS codes (USA): ${naicsCodes.join(", ")}` : ""}
 ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
-
-━━━ SEARCH STRATEGY — USE ALL 6 SEARCHES ━━━
+${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL (follow this methodology) ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
+━━━ SEARCH STRATEGY — USE ALL ${isOpen ? "6" : "4"} SEARCHES ━━━
 ${isOpen ? `
   You have 6 web searches. Use EVERY one. Do NOT stop early.
 
@@ -5272,7 +5272,6 @@ GOVERNMENT (set isGovernment: true):
   - Multilateral: World Bank, UNGM (un.org/ungm), ADB, IDB
   - State/Local: DemandStar, state procurement portals
 
-${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ OUTPUT ━━━
 Return 4-8 ${isOpen ? "active opportunities" : "recent awards"}. ${isOpen ? "Search EVERY tier — federal (SAM.gov), state/SLED (.gov portals), and commercial. Do NOT stop after 2 searches if you haven't found formal solicitations yet — use all your searches." : "Balance between verified buyer-page incumbent intel and formal award records."}
 
