@@ -135,6 +135,9 @@ let KL_CYBERSECURITY_DISCOVERY = "";
 let KL_EDUCATION = ""; // Education technology & institutional learning
 let KL_EDUCATION_SCORING = null;
 let KL_EDUCATION_DISCOVERY = "";
+let KL_ENERGY = ""; // Energy & utilities
+let KL_ENERGY_SCORING = null;
+let KL_ENERGY_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -239,6 +242,9 @@ async function fetchKnowledgeLayer() {
     KL_EDUCATION = d.education || "";
     KL_EDUCATION_SCORING = d.educationScoring || null;
     KL_EDUCATION_DISCOVERY = d.educationDiscovery || "";
+    KL_ENERGY = d.energy || "";
+    KL_ENERGY_SCORING = d.energyScoring || null;
+    KL_ENERGY_DISCOVERY = d.energyDiscovery || "";
     // NOTE: Knowledge tier is plan-dependent (trial gets core only, paid gets
     // all verticals). This function must be re-called after plan upgrades
     // (e.g. Stripe checkout success) so the user gets paid-tier layers
@@ -1020,6 +1026,16 @@ function getEducationInjection(sellerICP, targetIndustry) {
   return "\n" + KL_EDUCATION;
 }
 
+// ── ENERGY & UTILITIES INJECTION ─────────────────────────────────────
+const ENERGY_KW = ["energy", "utilities", "solar", "wind", "renewable", "grid", "transmission", "distribution", "nuclear", "hydrogen", "carbon capture", "ev charging", "natural gas", "oil gas", "power generation", "microgrid", "battery storage", "der", "decarbonization", "clean energy", "ercot", "caiso", "pjm", "nerc", "ferc"];
+function getEnergyInjection(sellerICP, targetIndustry) {
+  if (!KL_ENERGY) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (ENERGY_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_ENERGY;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -1609,6 +1625,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ["predictionMarkets", getPredictionMarketsInjection(sellerICP, member.ind)],
     ["cybersecurity", getCybersecurityInjection(sellerICP, member.ind)],
     ["education", getEducationInjection(sellerICP, member.ind)],
+    ["energy", getEnergyInjection(sellerICP, member.ind)],
     ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
     ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
     ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
@@ -3430,7 +3447,7 @@ function CohortDrillDown({cohort, selected, onSelect, onPickAccount, fitScores =
           <table className="cohort-member-table">
             <thead>
               <tr>
-                <th>Company</th><th>Industry</th><th>Org Size</th><th>Ownership</th><th>Geography</th><th>Fit Check</th><th></th>
+                <th>Company</th><th>Industry</th><th>Org Size</th><th>Ownership</th><th>Geography</th><th>Fit Check<InfoTip text="Scored on 3 dimensions: ICP Alignment (industry + size match), Customer Similarity (how close to your existing wins), and Competitive Landscape (incumbent vendor risk). Strong Fit = 75%+, Potential = 55-74%, Poor = below 55%."/></th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -4768,6 +4785,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (getEducationInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nEDUCATION CONTEXT: Education buyers operate under FERPA, state procurement rules, ESSER funding timelines, and board approval cycles. K-12 districts have 6-18mo buying cycles driven by budget years. Higher ed has provost/CIO dual authority. Frame fit through compliance, funding alignment, and institutional buying patterns.\n`
+          : "") +
+        (getEnergyInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nENERGY/UTILITIES CONTEXT: Utilities are heavily regulated — every purchase involves PUC/FERC approval adding 6-24mo. Regulated utilities earn guaranteed ROI on capex (rate base). IRA created $369B in clean energy incentives reshaping capital allocation. Deregulated markets (ERCOT/PJM/CAISO) have entirely different buying dynamics. Frame fit through regulatory approval path and rate base recovery.\n`
           : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`

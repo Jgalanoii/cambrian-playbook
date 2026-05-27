@@ -49,6 +49,7 @@ import { GAMING_PLAYBOOK } from "../src/data/gamingKnowledge.js";
 import { PREDICTION_MARKETS_PLAYBOOK } from "../src/data/predictionMarketsKnowledge.js";
 import { CYBERSECURITY_INJECTION, CYBERSECURITY_SCORING, CYBERSECURITY_DISCOVERY } from "../src/data/cybersecurityKnowledge.js";
 import { EDUCATION_INJECTION, EDUCATION_SCORING, EDUCATION_DISCOVERY } from "../src/data/educationKnowledge.js";
+import { ENERGY_INJECTION, ENERGY_SCORING, ENERGY_DISCOVERY } from "../src/data/energyKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -310,6 +311,10 @@ export default async function handler(req, res) {
       education: EDUCATION_INJECTION,
       educationScoring: EDUCATION_SCORING,
       educationDiscovery: EDUCATION_DISCOVERY,
+      // Energy & Utilities
+      energy: ENERGY_INJECTION,
+      energyScoring: ENERGY_SCORING,
+      energyDiscovery: ENERGY_DISCOVERY,
     } : {
       // Trial users: basic B2B sales + OKR frameworks only (no vertical depth)
       b2bSales: B2B_SALES_INJECTION,
