@@ -5215,19 +5215,21 @@ Exclusions:       ${disqual.slice(0,3).map(d=>sanitizeForPrompt(d)).join(" · ")
 ${naicsCodes.length ? `NAICS codes (USA): ${naicsCodes.join(", ")}` : ""}
 ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
 
-━━━ SEARCH STRATEGY (use 2-3 of these query patterns) ━━━
+━━━ SEARCH STRATEGY (use ALL 4 searches — cast a wide net) ━━━
 ${isOpen ? `
-  - site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
-  - "${sanitizeForPrompt(industries[0] || "fintech")}" RFP 2025 "${sanitizeForPrompt(buyers[0] || "CFO")}"
-  - ${sanitizeForPrompt(category || industries[0] || "software")} procurement Ariba OR Coupa 2025
-  - site:ted.europa.eu ${sanitizeForPrompt(industries[0] || "software")} 2025${cpvCodes.length ? ` CPV ${cpvCodes[0]}` : ""}
-  - "${sanitizeForPrompt((trigger||"").split(" ").slice(0,4).join(" ") || industries[0])}" RFP request for proposal
+  Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025 2026${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
+  Search 2 (State/Local/SLED): "${sanitizeForPrompt(category || industries[0])}" RFP OR "request for proposals" site:.gov 2025 2026
+  Search 3 (Commercial): "${sanitizeForPrompt(category || industries[0])}" RFP OR procurement OR solicitation 2025 2026
+  Search 4 (Broad): "${sanitizeForPrompt(industries[0] || category)}" "request for proposal" OR "invitation to bid" OR "sources sought" 2025 2026
+
+  TIP: State agencies, school districts, and health departments often post RFPs on .gov portals that aren't SAM.gov. Also check Ariba, Coupa, and TED Europa.
 ` : `
-  - site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
-  - site:fpds.gov ${sanitizeForPrompt(industries[0] || category)} awarded 2024 OR 2025
-  - "${sanitizeForPrompt(competitors[0] || category)}" contract awarded 2024 OR 2025
-  - ${sanitizeForPrompt(industries[0] || "SaaS")} "contract award" press release 2024 OR 2025
-  - "${sanitizeForPrompt(buyers[0] || "CIO")}" selects vendor ${sanitizeForPrompt(category || industries[0])} 2024 OR 2025
+  Search 1 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
+  Search 2 (Incumbent intel): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" site:.com
+  Search 3 (Competitor awards): "${sanitizeForPrompt(competitors[0] || category)}" "selected" OR "awarded" OR "contract" 2024 OR 2025
+  Search 4 (Press releases): "${sanitizeForPrompt(industries[0] || "SaaS")}" "contract awarded" OR "selects" OR "partners with" 2024 OR 2025
+
+  TIP: For incumbent intel, search buyer websites directly — member portals, benefits pages, and vendor directories reveal who administers what.
 `}
 
 ━━━ SOURCES ━━━
