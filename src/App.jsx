@@ -5317,18 +5317,22 @@ DATA INTEGRITY:
 
 Return ONLY raw JSON (no prose). The outer key MUST be "rows":
 ${isOpen
-  ? `{"rows":[{"title":"RFP title","buyer":"Buyer","country":"USA","source":"SAM.gov or Ariba etc","isGovernment":true,"value":"$500K-$2M","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why this matches the seller profile above","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://..."}]}`
-  : `{"rows":[{"title":"Contract title","buyer":"Buyer","country":"USA","source":"FPDS-NG or press URL","isGovernment":true,"awardedTo":"Vendor or empty string","value":"$1.2M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Why relevant","cohort":"Financial Services","url":"https://..."}]}`
+  ? `{"rows":[{"title":"RFP title","buyer":"Buyer","country":"USA","source":"SAM.gov or Ariba etc","isGovernment":true,"value":"$500K-$2M","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"1-2 sentences.","naicsOrCpv":"522320","cohort":"Financial Services","url":"https://..."}]}`
+  : `{"rows":[{"title":"Contract title","buyer":"Buyer","country":"USA","source":"FPDS-NG or press URL","isGovernment":true,"awardedTo":"Vendor or empty string","value":"$1.2M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"1-2 sentences.","cohort":"Financial Services","url":"https://..."}]}`
 }`;
     };
 
     const fetchClass = async (kind) => {
       try {
+        // Seed previously-found results so Opus verifies + builds on them
+        const prevResults = kind === "open" ? rfpData.open : rfpData.closed;
+        const seedCtx = prevResults?.length ? `\n\nPREVIOUSLY DISCOVERED (verify these are still active/valid, then find NEW ones beyond this list):\n${prevResults.slice(0,4).map(r => `- "${r.title}" from ${r.buyer} (${r.source}) ${r.url || ""}`).join("\n")}\n` : "";
+
         const d = await claudeFetch({
           model: OPUS,
           max_tokens: 4000,
           tools: [{ type: "web_search_20250305", name: "web_search", max_uses: kind === "open" ? 6 : 4 }],
-          messages: [{ role: "user", content: buildPrompt(kind) }],
+          messages: [{ role: "user", content: buildPrompt(kind) + seedCtx }],
         });
         if (d.error) return { kind, error: d.error.message || "The AI engine stumbled. Give it another shot." };
 
