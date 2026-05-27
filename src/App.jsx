@@ -1242,7 +1242,7 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
         // Only accumulate text deltas from text blocks (not tool_use/tool_result)
         if (event.type === 'content_block_delta' && event.delta?.text && currentBlockType === 'text') {
           fullText += event.delta.text;
-          if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, ""));
+          if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
         }
       } catch { /* non-critical */ }
     }
@@ -12798,7 +12798,7 @@ Return ONLY raw JSON:
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Growth Signals</div>
                           {(brief.growthSignals||[]).filter(Boolean).map((s,i)=>(
-                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>📈 {s}</div>
+                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>📈 {typeof s==="string"?s:s?.headline||s?.title||JSON.stringify(s)}</div>
                           ))}
                         </div>
                       )}
@@ -12806,7 +12806,7 @@ Return ONLY raw JSON:
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Recent Triggers</div>
                           {(brief.recentSignals||[]).filter(Boolean).map((s,i)=>(
-                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>⚡ {s}</div>
+                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>⚡ {typeof s==="string"?s:s?.headline||s?.title||JSON.stringify(s)}</div>
                           ))}
                         </div>
                       )}
@@ -13586,7 +13586,7 @@ Return ONLY raw JSON:
                         <>
                           <div className="field-label" style={{marginTop:12,marginBottom:7}}>Likely Competitors</div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                            {brief.competitors.filter(Boolean).map((c,i)=><span key={i} className="tag tag-ind">{c}</span>)}
+                            {brief.competitors.filter(Boolean).map((c,i)=><span key={i} className="tag tag-ind">{typeof c==="string"?c:c?.name||JSON.stringify(c)}</span>)}
                           </div>
                         </>
                       )}
@@ -13817,14 +13817,14 @@ Return ONLY raw JSON:
                       {/* Signals */}
                       {(summary.recentSignals.length > 0 || summary.growthSignals.length > 0) && <div style={{marginBottom:16}}>
                         <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Signals</div>
-                        {summary.recentSignals.map((s,i) => <div key={"r"+i} style={{fontSize:11,color:"var(--ink-2)"}}>- {s}</div>)}
-                        {summary.growthSignals.map((s,i) => <div key={"g"+i} style={{fontSize:11,color:"var(--green)"}}>+ {s}</div>)}
+                        {summary.recentSignals.map((s,i) => <div key={"r"+i} style={{fontSize:11,color:"var(--ink-2)"}}>- {typeof s==="string"?s:s?.title||JSON.stringify(s)}</div>)}
+                        {summary.growthSignals.map((s,i) => <div key={"g"+i} style={{fontSize:11,color:"var(--green)"}}>+ {typeof s==="string"?s:s?.title||JSON.stringify(s)}</div>)}
                       </div>}
 
                       {/* Watch-Outs */}
                       {summary.watchOuts.length > 0 && <div>
                         <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Watch-Outs</div>
-                        {summary.watchOuts.map((w,i) => <div key={i} style={{fontSize:11,color:"var(--red)"}}>- {w}</div>)}
+                        {summary.watchOuts.map((w,i) => <div key={i} style={{fontSize:11,color:"var(--red)"}}>- {typeof w==="string"?w:w?.title||JSON.stringify(w)}</div>)}
                       </div>}
 
                       <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid var(--line-0)",fontSize:10,color:"var(--ink-3)",textAlign:"center"}}>
