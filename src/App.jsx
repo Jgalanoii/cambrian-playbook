@@ -5733,9 +5733,18 @@ Return ONLY raw JSON:
               console.warn("ICP built but not cached (contains Unknown/placeholder values)");
             }
           }
-        }catch(e){ console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200)); }
+        }catch(e){
+          console.warn("ICP JSON parse failed:",e.message,raw.slice(0,200));
+          setSellerICP(prev => prev || ({ _error: "ICP build returned an unexpected format. Click Regenerate ICP to try again — this usually resolves on retry." }));
+        }
+      } else {
+        console.warn("ICP phase 2 returned no text content");
+        setSellerICP(prev => prev || ({ _error: "ICP build didn't return usable data. Click Regenerate ICP to try again." }));
       }
-    }catch(e){ console.warn("ICP build phase 2 failed:",e.message); }
+    }catch(e){
+      console.warn("ICP build phase 2 failed:",e.message);
+      setSellerICP(prev => prev || ({ _error: "ICP build failed — our AI engine may be temporarily busy. Click Regenerate ICP to retry." }));
+    }
     setIcpLoading(false);
 
     // ── EVENTS ENRICHMENT (separate web-search call) ────────────────
@@ -9951,6 +9960,19 @@ Return ONLY raw JSON:
                 <div className="load-spin" style={{width:32,height:32,borderWidth:3}}/>
                 <div style={{fontSize:15,color:"var(--ink-1)",fontWeight:500}}>{getQuip("icp")}</div>
                 <div style={{fontSize:13,color:"var(--ink-3)"}}>Building your ICP for {sellerUrl}</div>
+              </div>
+            )}
+
+            {sellerICP?._error&&!sellerICP?.icp&&(
+              <div style={{maxWidth:520,margin:"40px auto",textAlign:"center"}}>
+                <div style={{background:"var(--red-bg)",border:"1.5px solid var(--red)",borderRadius:"var(--r-md)",padding:"20px 24px",marginBottom:16}}>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--red)",marginBottom:6}}>ICP Build Issue</div>
+                  <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{sellerICP._error}</div>
+                </div>
+                <button onClick={()=>{setSellerICP(null);buildSellerICP(sellerUrl,{forceRefresh:true});}}
+                  style={{padding:"10px 20px",fontSize:13,fontWeight:700,borderRadius:8,border:"none",background:"var(--tan-0)",color:"white",cursor:"pointer"}}>
+                  Regenerate ICP
+                </button>
               </div>
             )}
 
