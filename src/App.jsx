@@ -5344,7 +5344,7 @@ ${isOpen
 
     // ── Buying Signals prompt (separate from published RFPs) ────────
     const buildSignalsPrompt = () => `You are a procurement intelligence analyst identifying PRE-RFP buying signals — NOT published RFPs, but evidence that a company or agency is ABOUT to issue one. Use web_search to find concrete signals.
-
+${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ SELLER PROFILE ━━━
 URL: ${sanitizeForPrompt(sellerUrl)}
 Market category: ${sanitizeForPrompt(category)}
@@ -5481,7 +5481,7 @@ Pain points the seller solves: ${pains.slice(0, 3).map(p => sanitizeForPrompt(p)
 ━━━ TARGET ACCOUNTS (search for RFPs FROM or ABOUT these companies) ━━━
 ${names.map(n => `• ${n}`).join("\n")}
 ${sellerProfileBlock}
-
+${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ RELEVANCE FILTER ━━━
 Only return RFPs that the seller above could credibly respond to. Match on:
 - Products/services the seller actually offers
@@ -5531,7 +5531,7 @@ ${isOpen
 ━━━ TARGET ACCOUNTS ━━━
 ${names.map(n => `• ${n}`).join("\n")}
 ${sellerProfileBlock}
-
+${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ WHAT TO SEARCH FOR ━━━
 Look for signals that these accounts are preparing to buy products/services in the seller's domain:
 1. MODERNIZATION — "[company]" modernizing OR replacing systems related to ${sanitizeForPrompt(category || "their operations")}
