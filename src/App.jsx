@@ -138,6 +138,12 @@ let KL_EDUCATION_DISCOVERY = "";
 let KL_ENERGY = ""; // Energy & utilities
 let KL_ENERGY_SCORING = null;
 let KL_ENERGY_DISCOVERY = "";
+let KL_HR_TECH = ""; // HR Technology & workforce management
+let KL_HR_TECH_SCORING = null;
+let KL_HR_TECH_DISCOVERY = "";
+let KL_GOVERNMENT = ""; // Government & public sector
+let KL_GOVERNMENT_SCORING = null;
+let KL_GOVERNMENT_DISCOVERY = "";
 
 async function fetchKnowledgeLayer() {
   try {
@@ -245,6 +251,12 @@ async function fetchKnowledgeLayer() {
     KL_ENERGY = d.energy || "";
     KL_ENERGY_SCORING = d.energyScoring || null;
     KL_ENERGY_DISCOVERY = d.energyDiscovery || "";
+    KL_HR_TECH = d.hrTech || "";
+    KL_HR_TECH_SCORING = d.hrTechScoring || null;
+    KL_HR_TECH_DISCOVERY = d.hrTechDiscovery || "";
+    KL_GOVERNMENT = d.government || "";
+    KL_GOVERNMENT_SCORING = d.governmentScoring || null;
+    KL_GOVERNMENT_DISCOVERY = d.governmentDiscovery || "";
     // NOTE: Knowledge tier is plan-dependent (trial gets core only, paid gets
     // all verticals). This function must be re-called after plan upgrades
     // (e.g. Stripe checkout success) so the user gets paid-tier layers
@@ -1036,6 +1048,26 @@ function getEnergyInjection(sellerICP, targetIndustry) {
   return "\n" + KL_ENERGY;
 }
 
+// ── GOVERNMENT & PUBLIC SECTOR INJECTION ─────────────────────────────
+const GOVERNMENT_KW = ["government", "federal", "state government", "local government", "public sector", "govtech", "defense", "dod", "fedramp", "fisma", "cmmc", "far", "dfars", "gsa", "gwac", "idiq", "govcon", "sbir", "sam.gov", "sled", "municipality", "civic tech", "contractor"];
+function getGovernmentInjection(sellerICP, targetIndustry) {
+  if (!KL_GOVERNMENT) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (GOVERNMENT_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_GOVERNMENT;
+}
+
+// ── HR TECHNOLOGY INJECTION ──────────────────────────────────────────
+const HR_TECH_KW = ["hcm", "hris", "payroll", "benefits", "talent acquisition", "ats", "talent management", "workforce management", "wfm", "human resources", "hr tech", "hrtech", "peo", "eor", "employer of record", "employee experience", "people analytics", "compensation management", "learning management", "onboarding", "performance management", "engagement survey", "time attendance"];
+function getHrTechInjection(sellerICP, targetIndustry) {
+  if (!KL_HR_TECH) return "";
+  const text = [sellerICP?.marketCategory, sellerICP?.sellerDescription, ...(sellerICP?.icp?.industries || []), targetIndustry].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return "";
+  if (HR_TECH_KW.filter(kw => text.includes(kw)).length < 1) return "";
+  return "\n" + KL_HR_TECH;
+}
+
 // ── PLAIN AI CALL — JSON synthesis from research ──────────────────────────────
 
 // Shared retry wrapper for non-streaming Claude calls. Handles transient
@@ -1626,6 +1658,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ["cybersecurity", getCybersecurityInjection(sellerICP, member.ind)],
     ["education", getEducationInjection(sellerICP, member.ind)],
     ["energy", getEnergyInjection(sellerICP, member.ind)],
+    ["hrTech", getHrTechInjection(sellerICP, member.ind)],
+    ["government", getGovernmentInjection(sellerICP, member.ind)],
     ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
     ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
     ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
@@ -4788,6 +4822,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (getEnergyInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nENERGY/UTILITIES CONTEXT: Utilities are heavily regulated — every purchase involves PUC/FERC approval adding 6-24mo. Regulated utilities earn guaranteed ROI on capex (rate base). IRA created $369B in clean energy incentives reshaping capital allocation. Deregulated markets (ERCOT/PJM/CAISO) have entirely different buying dynamics. Frame fit through regulatory approval path and rate base recovery.\n`
+          : "") +
+        (getHrTechInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nHR TECHNOLOGY CONTEXT: HR tech buying cycles tied to open enrollment (Oct-Dec decisions) and fiscal year start. Enterprise HCM (Workday/Oracle/SAP) vs mid-market (ADP/UKG/Paylocity) is a binary market. CHRO now reports to CEO (post-COVID elevation). EOR/PEO explosion driven by distributed workforce. Frame fit through employee lifecycle coverage and compliance acceleration.\n`
+          : "") +
+        (getGovernmentInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nGOVERNMENT/PUBLIC SECTOR CONTEXT: Federal IT $100B+, SLED $100B+. FAR/DFARS govern all procurement. Contracting Officer (CO) has sole legal authority. Fiscal year end (Sep 30 federal, Jun 30 most states) drives 30-40% of annual spend. FedRAMP/StateRAMP required for cloud. Past performance is the #1 evaluation criterion. ATO process adds 12-18mo. Frame fit through contract vehicle access, compliance posture, and past performance.\n`
           : "") +
         (KL_SMB_MIDMARKET && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET CONTEXT (background only — do NOT adjust dimension scores based on this): SMB (<100 employees) = owner-operator, single-DM, weeks-to-close. Lower mid ($10M-$50M) = function-head, 3-6mo cycles. Core mid ($50M-$500M) = formal procurement, 4-8mo. Upper mid ($500M-$1B) = buying committees, 6-12mo. PE-backed accounts buy on EBITDA/exit timeline. Size match is ALREADY captured in Step B of dim1.\n`

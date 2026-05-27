@@ -50,6 +50,8 @@ import { PREDICTION_MARKETS_PLAYBOOK } from "../src/data/predictionMarketsKnowle
 import { CYBERSECURITY_INJECTION, CYBERSECURITY_SCORING, CYBERSECURITY_DISCOVERY } from "../src/data/cybersecurityKnowledge.js";
 import { EDUCATION_INJECTION, EDUCATION_SCORING, EDUCATION_DISCOVERY } from "../src/data/educationKnowledge.js";
 import { ENERGY_INJECTION, ENERGY_SCORING, ENERGY_DISCOVERY } from "../src/data/energyKnowledge.js";
+import { HR_TECH_INJECTION, HR_TECH_SCORING, HR_TECH_DISCOVERY } from "../src/data/hrTechKnowledge.js";
+import { GOVERNMENT_INJECTION, GOVERNMENT_SCORING, GOVERNMENT_DISCOVERY } from "../src/data/governmentKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -315,6 +317,14 @@ export default async function handler(req, res) {
       energy: ENERGY_INJECTION,
       energyScoring: ENERGY_SCORING,
       energyDiscovery: ENERGY_DISCOVERY,
+      // HR Technology & Workforce Management
+      hrTech: HR_TECH_INJECTION,
+      hrTechScoring: HR_TECH_SCORING,
+      hrTechDiscovery: HR_TECH_DISCOVERY,
+      // Government & Public Sector
+      government: GOVERNMENT_INJECTION,
+      governmentScoring: GOVERNMENT_SCORING,
+      governmentDiscovery: GOVERNMENT_DISCOVERY,
     } : {
       // Trial users: basic B2B sales + OKR frameworks only (no vertical depth)
       b2bSales: B2B_SALES_INJECTION,
