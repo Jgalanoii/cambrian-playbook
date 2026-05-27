@@ -74,8 +74,14 @@ export default async function handler(req, res) {
 
   // Only stream and bill on successful Anthropic responses
   if (response.status < 200 || response.status >= 300) {
-    const errBody = await response.text();
-    res.status(response.status).end(errBody);
+    const errBody = await response.text().catch(() => "");
+    console.error(`[claude-stream] Anthropic error ${response.status}:`, errBody.slice(0, 500));
+    try {
+      const parsed = JSON.parse(errBody);
+      res.status(response.status).json(parsed);
+    } catch {
+      res.status(response.status).json({ error: { type: "upstream_error", message: `AI service returned ${response.status}` } });
+    }
     return;
   }
 

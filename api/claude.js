@@ -84,7 +84,26 @@ export default async function handler(req, res) {
     res.setHeader("x-fallback-model", fallbackModel);
   }
 
-  const data = await response.json();
+  // Guard against non-JSON responses (Anthropic 500/503 returns HTML)
+  if (!response.ok && response.status !== 529) {
+    const errBody = await response.text().catch(() => "");
+    console.error(`[claude] Anthropic error ${response.status}:`, errBody.slice(0, 500));
+    try {
+      const parsed = JSON.parse(errBody);
+      return res.status(response.status).json(parsed);
+    } catch {
+      return res.status(response.status).json({ error: { type: "upstream_error", message: `AI service returned ${response.status}` } });
+    }
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (parseErr) {
+    console.error("[claude] Failed to parse Anthropic response as JSON:", parseErr.message);
+    return res.status(502).json({ error: { type: "parse_error", message: "AI service returned an unparseable response" } });
+  }
+
   if (usedFallback) {
     data._fallbackModel = res.getHeader("x-fallback-model");
   }
