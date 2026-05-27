@@ -198,7 +198,7 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
   };
 
   useEffect(() => {
-    if ((tab === "sessions" || tab === "insights") && canViewTeam && teamSessions.length === 0) loadTeamSessions();
+    if ((tab === "team" || tab === "sessions" || tab === "insights") && canViewTeam && teamSessions.length === 0) loadTeamSessions();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, canViewTeam]);
 
