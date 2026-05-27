@@ -4141,6 +4141,7 @@ export default function App(){
     return false;
   };
   const[rfpData,setRfpData]=useState({open:[],closed:[],signals:[],loading:false,error:null});
+  const[accountRfpData,setAccountRfpData]=useState({open:[],closed:[],signals:[],loading:false,error:null,searched:false});
   const[rfpFilter,setRfpFilter]=useState("all"); // "all" | "private" | "government"
   const[rows,setRows]=useState([]);
   const[headers,setHeaders]=useState([]);
@@ -4721,6 +4722,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 
       // Score all accounts — keep everything, don't filter
       const allMembers = cohortsBuilt.flatMap(c => c.members);
+      // Stage 2 RFP search — search against actual prospect names
+      fetchAccountRFPs(allMembers);
       scoreFit(allMembers, buildSellerCtx()).then(() => {
         setFitScores(prev => {
           const strong = Object.values(prev).filter(v => v.score >= 65).length;
@@ -5438,6 +5441,123 @@ Return ONLY raw JSON:
         }));
       } catch {}
     }
+  };
+
+  // ── STAGE 2: ACCOUNT-LEVEL RFP SEARCH ─────────────────────────────
+  // Runs against actual prospect account names from the user's list.
+  // Triggered after accounts are imported/generated. Uses Opus + web search.
+  const fetchAccountRFPs = async (accounts) => {
+    if (!accounts?.length || !sellerICP?.icp) return;
+    const names = accounts.map(a => a.company).filter(Boolean).slice(0, 20);
+    if (!names.length) return;
+
+    setAccountRfpData({ open: [], closed: [], signals: [], loading: true, error: null, searched: true });
+
+    const category = sellerICP.marketCategory || "";
+    const industries = (sellerICP.icp.industries || []).filter(Boolean);
+
+    const buildAccountPrompt = (kind) => {
+      const isOpen = kind === "open";
+      return `You are a procurement intelligence analyst. Search for ${isOpen ? "ACTIVE RFPs and procurement opportunities" : "recently AWARDED contracts"} specifically involving these target companies:
+
+━━━ TARGET ACCOUNTS (search for RFPs FROM or ABOUT these companies) ━━━
+${names.map(n => `• ${n}`).join("\n")}
+
+━━━ SELLER CONTEXT ━━━
+Seller category: ${sanitizeForPrompt(category)}
+Industries: ${industries.map(i => sanitizeForPrompt(i)).join(", ") || "—"}
+
+━━━ SEARCH STRATEGY ━━━
+For each company above, search for:
+${isOpen ? `
+- "[company name]" RFP OR "request for proposal" 2025 2026
+- "[company name]" procurement OR solicitation OR vendor selection
+- site:sam.gov "[company name]" (for government entities)
+- "[company name]" modernization OR "evaluating vendors"
+` : `
+- "[company name]" "contract awarded" OR "selects vendor" 2024 2025
+- "[company name]" partnership OR "selected as" provider 2024 2025
+`}
+
+━━━ OUTPUT ━━━
+Return ${isOpen ? "active opportunities" : "recent awards"} that directly involve the target accounts listed above. Only include results where one of the named accounts is the BUYER or the SUBJECT.
+
+DATA INTEGRITY:
+- Only include results you can VERIFY via web_search
+- The "buyer" field MUST be one of the target accounts listed above
+- Include source URL when available
+
+Return ONLY raw JSON:
+${isOpen
+  ? `{"rows":[{"title":"RFP title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"value":"$500K","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"Why relevant","cohort":"Industry","url":"https://..."}]}`
+  : `{"rows":[{"title":"Contract title","buyer":"Company from list above","country":"USA","source":"Source","isGovernment":false,"awardedTo":"Vendor","value":"$1M","awardDate":"YYYY-MM-DD","relevanceScore":78,"relevanceReason":"Why relevant","cohort":"Industry","url":"https://..."}]}`}`;
+    };
+
+    const buildAccountSignalsPrompt = () => `You are a procurement intelligence analyst identifying buying signals at specific target accounts. Search for evidence that these companies are preparing to procure:
+
+━━━ TARGET ACCOUNTS ━━━
+${names.map(n => `• ${n}`).join("\n")}
+
+━━━ SELLER CONTEXT ━━━
+Category: ${sanitizeForPrompt(category)}
+
+━━━ SEARCH QUERIES (use 3-4) ━━━
+- "${names.slice(0, 3).map(n => sanitizeForPrompt(n)).join('" OR "')}" procurement OR modernization OR "vendor selection" 2025 2026
+- "${names.slice(0, 2).map(n => sanitizeForPrompt(n)).join('" OR "')}" hiring "procurement manager" OR "strategic sourcing"
+- "${names.slice(0, 3).map(n => sanitizeForPrompt(n)).join('" OR "')}" "plans to invest" OR "evaluating" OR "issued RFP"
+
+Return 3-6 buying signals where one of the TARGET ACCOUNTS above is the subject. These are NOT published RFPs — they are pre-RFP intent signals.
+
+Return ONLY raw JSON:
+{"signals":[{"signalType":"Signal Type","headline":"What's happening","company":"Company from list above","detail":"2-3 sentences","source":"Where found","url":"https://...","strength":"Strong|Moderate|Early","relevance":"Why it matters"}]}`;
+
+    const fetchAcctClass = async (kind) => {
+      try {
+        const d = await claudeFetch({
+          model: OPUS, max_tokens: 4000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+          messages: [{ role: "user", content: buildAccountPrompt(kind) }],
+        });
+        if (d.error) return { kind, error: d.error.message };
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        const fullText = textBlocks.join(" ").toLowerCase();
+        const noResults = ["unable to find", "could not find", "no specific", "i apologize", "no results", "no matching"].some(s => fullText.includes(s)) && !fullText.includes('"rows"');
+        if (noResults) return { kind, rows: [] };
+        let parsed = null;
+        for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) parsed = extractJsonWithKey(textBlocks[i], "rows");
+        if (!parsed) { const j = textBlocks.join("").trim(); const idx = j.lastIndexOf('{"rows"'); if (idx >= 0) parsed = safeParseJSON(j.slice(idx)); }
+        return { kind, rows: (parsed?.rows || []).map(r => ({ ...r, isGovernment: r.isGovernment === true || r.isGovernment === "true", _accountLevel: true })) };
+      } catch (e) { return { kind, rows: [], error: e.message }; }
+    };
+
+    const fetchAcctSignals = async () => {
+      try {
+        const d = await claudeFetch({
+          model: OPUS, max_tokens: 3000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
+          messages: [{ role: "user", content: buildAccountSignalsPrompt() }],
+        });
+        if (d.error) return { signals: [] };
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        const fullText = textBlocks.join(" ").toLowerCase();
+        if (["unable to find", "could not find", "no specific", "i apologize"].some(s => fullText.includes(s)) && !fullText.includes('"signals"')) return { signals: [] };
+        let parsed = null;
+        for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) parsed = extractJsonWithKey(textBlocks[i], "signals");
+        if (!parsed) { const j = textBlocks.join("").trim(); const idx = j.lastIndexOf('{"signals"'); if (idx >= 0) parsed = safeParseJSON(j.slice(idx)); }
+        return { signals: (parsed?.signals || []).map(s => ({ ...s, _accountLevel: true })) };
+      } catch { return { signals: [] }; }
+    };
+
+    const openP = fetchAcctClass("open");
+    const closedP = fetchAcctClass("closed");
+    const sigP = fetchAcctSignals();
+
+    openP.then(r => { if (r.rows?.length) setAccountRfpData(prev => ({ ...prev, open: r.rows })); });
+    closedP.then(r => { if (r.rows?.length) setAccountRfpData(prev => ({ ...prev, closed: r.rows })); });
+    sigP.then(r => { if (r.signals?.length) setAccountRfpData(prev => ({ ...prev, signals: r.signals })); });
+
+    await Promise.all([openP, closedP, sigP]);
+    setAccountRfpData(prev => ({ ...prev, loading: false }));
   };
 
   // Auto-fire RFP fetch as soon as the ICP becomes available. Keyed by a
@@ -6296,6 +6416,8 @@ Return ONLY raw JSON:
     setStep(3);
     const allMembers=b.flatMap(c=>c.members);
     scoreFit(allMembers, buildSellerCtx());
+    // Stage 2 RFP search — search against actual prospect names
+    fetchAccountRFPs(allMembers);
   };
 
   // ── QUICK ENTRY: enrich a single company name → suggest URL ────────────
@@ -8961,9 +9083,9 @@ Return ONLY raw JSON:
                     style={{position:"relative"}}>
                     <div className={`step-num ${celebrateStep===i?"just-completed":""}`}>{step>i?"✓":i+1}</div>
                     <div className="step-label">{s}</div>
-                    {i === 1 && (rfpData.open?.length > 0 || rfpData.signals?.length > 0) && (
+                    {i === 1 && ((rfpData.open?.length || 0) + (rfpData.signals?.length || 0) + (accountRfpData.open?.length || 0) + (accountRfpData.signals?.length || 0) > 0) && (
                       <span style={{position:"absolute",top:-4,right:-4,background:"var(--red)",color:"white",fontSize:8,fontWeight:800,width:16,height:16,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {(rfpData.open?.length || 0) + (rfpData.signals?.length || 0)}
+                        {(rfpData.open?.length || 0) + (rfpData.signals?.length || 0) + (accountRfpData.open?.length || 0) + (accountRfpData.signals?.length || 0)}
                       </span>
                     )}
                   </button>
@@ -10004,7 +10126,15 @@ Return ONLY raw JSON:
                   </div>
                 )}
                 {!rfpData.loading && !rfpData.error && !hasData && (
-                  <EmptyState icon="📡" title="No RFPs matched — yet" sub="We searched SAM.gov, Ariba, and TED Europa. Your ICP might be too niche for public procurement right now — broaden your industries or check back later." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="↻ Search again"/>
+                  <div>
+                    <EmptyState icon="📡" title="No broad RFPs matched your ICP" sub="We searched SAM.gov, Ariba, and TED Europa against your ICP profile. No published RFPs matched this time." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="↻ Search again"/>
+                    {!accountRfpData.searched && (
+                      <div style={{background:"var(--navy-bg)",border:"1.5px solid var(--navy)",borderRadius:"var(--r-md)",padding:"14px 18px",marginTop:12,textAlign:"center"}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}>Stage 2: Account-Level Search</div>
+                        <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6}}>When you import or generate prospect accounts, we'll automatically run a second search targeting those specific companies for RFPs, contract awards, and buying signals.</div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {hasData && (
                   <>
@@ -10202,6 +10332,106 @@ Return ONLY raw JSON:
                       </div>
                     )}
                   </>
+                )}
+
+                {/* ── STAGE 2: ACCOUNT-LEVEL RFP INTEL ──────────────────── */}
+                {accountRfpData.searched && (
+                  <div style={{marginTop:32,borderTop:"2px solid var(--navy)",paddingTop:20}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                      <div style={{fontSize:15,fontWeight:700,color:"var(--navy)",fontFamily:"Lora,serif"}}>Stage 2: Account-Level Intel</div>
+                      <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:6,background:"var(--navy-bg)",color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.3px"}}>Your Prospects</span>
+                      {accountRfpData.loading && <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ searching your accounts…</span>}
+                    </div>
+                    <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:14}}>
+                      RFPs, awards, and buying signals found specifically for companies in your prospect list — not just your ICP category.
+                    </div>
+
+                    {accountRfpData.loading && !accountRfpData.open.length && !accountRfpData.signals?.length && (
+                      <div style={{textAlign:"center",padding:"30px 0"}}>
+                        <div className="load-spin" style={{width:24,height:24,borderWidth:3,margin:"0 auto 10px"}}/>
+                        <div style={{fontSize:13,color:"var(--ink-1)"}}>Searching for RFPs and buying signals across your prospect accounts…</div>
+                      </div>
+                    )}
+
+                    {!accountRfpData.loading && !accountRfpData.open.length && !accountRfpData.closed.length && !accountRfpData.signals?.length && (
+                      <div style={{background:"var(--bg-1)",border:"1.5px dashed var(--line-2)",borderRadius:"var(--r-md)",padding:20,textAlign:"center",fontSize:12,color:"var(--ink-2)"}}>
+                        No RFPs or buying signals found for your current prospect accounts. This doesn't mean they're not buying — it means nothing was publicly discoverable right now.
+                      </div>
+                    )}
+
+                    {/* Account-level Open RFPs */}
+                    {accountRfpData.open.length > 0 && (
+                      <div style={{marginBottom:20}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>🟢 Open RFPs from Your Accounts ({accountRfpData.open.length})</div>
+                        <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
+                          <table className="tbl"><thead><tr>
+                            <th>RFP Title</th><th>Buyer</th><th>Source</th><th>Value</th><th>Deadline</th><th>Fit</th>
+                          </tr></thead><tbody>
+                            {accountRfpData.open.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                              <tr key={i}>
+                                <td style={{maxWidth:260}}><div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.url?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>:r.title}</div><div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div></td>
+                                <td style={{fontSize:12,fontWeight:600,color:"var(--navy)"}}>{r.buyer}</td>
+                                <td><span style={{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",background:r.isGovernment?"var(--navy-bg)":"#F0FDF4",color:r.isGovernment?"var(--navy)":"#166534"}}>{r.source}</span></td>
+                                <td style={{fontSize:12,fontWeight:600,color:"var(--green)",whiteSpace:"nowrap"}}>{r.value}</td>
+                                <td style={{fontSize:11,color:"var(--amber)",whiteSpace:"nowrap"}}>{r.deadline}</td>
+                                <td><div style={{fontSize:12,fontWeight:700,color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>{r.relevanceScore}%</div></td>
+                              </tr>
+                            ))}
+                          </tbody></table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Account-level Closed RFPs */}
+                    {accountRfpData.closed.length > 0 && (
+                      <div style={{marginBottom:20}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>🔵 Recent Awards from Your Accounts ({accountRfpData.closed.length})</div>
+                        <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
+                          <table className="tbl"><thead><tr>
+                            <th>Contract</th><th>Buyer</th><th>Awarded To</th><th>Value</th><th>Date</th><th>Fit</th>
+                          </tr></thead><tbody>
+                            {accountRfpData.closed.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
+                              <tr key={i}>
+                                <td style={{maxWidth:240}}><div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.url?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>:r.title}</div><div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div></td>
+                                <td style={{fontSize:12,fontWeight:600,color:"var(--navy)"}}>{r.buyer}</td>
+                                <td style={{fontSize:12,fontWeight:600,color:r.awardedTo?"var(--tan-0)":"var(--ink-3)"}}>{r.awardedTo||"—"}</td>
+                                <td style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
+                                <td style={{fontSize:11,whiteSpace:"nowrap"}}>{r.awardDate}</td>
+                                <td><div style={{fontSize:12,fontWeight:700,color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>{r.relevanceScore}%</div></td>
+                              </tr>
+                            ))}
+                          </tbody></table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Account-level Buying Signals */}
+                    {accountRfpData.signals?.length > 0 && (
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>🟡 Buying Signals from Your Accounts ({accountRfpData.signals.length})</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                          {accountRfpData.signals.map((s, i) => {
+                            const sc = s.strength === "Strong" ? "var(--green)" : s.strength === "Moderate" ? "var(--amber)" : "var(--ink-3)";
+                            const sb = s.strength === "Strong" ? "var(--green-bg)" : s.strength === "Moderate" ? "var(--amber-bg)" : "var(--bg-2)";
+                            return (
+                              <div key={i} style={{border:"1.5px solid var(--line-0)",borderRadius:10,padding:"12px 14px",background:"var(--surface)"}}>
+                                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                                  <span style={{fontSize:10,fontWeight:700,textTransform:"uppercase",padding:"2px 8px",borderRadius:6,background:sb,color:sc}}>{s.strength||"Signal"}</span>
+                                  <span style={{fontSize:10,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",padding:"2px 8px",borderRadius:6,background:"var(--tan-3)",border:"1px solid var(--tan-2)"}}>{s.signalType||"Buying Signal"}</span>
+                                  {s.company && <span style={{fontSize:11,fontWeight:600,color:"var(--navy)"}}>{s.company}</span>}
+                                </div>
+                                <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",lineHeight:1.4,marginBottom:4}}>
+                                  {s.url?<a href={s.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{s.headline} ↗</a>:s.headline}
+                                </div>
+                                <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6}}>{s.detail}</div>
+                                {s.relevance && <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginTop:4}}>Why it matters: {s.relevance}</div>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               );
