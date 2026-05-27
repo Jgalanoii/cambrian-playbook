@@ -5220,8 +5220,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 
     const buildPrompt = (kind) => {
       const isOpen = kind === "open";
-      return `You are a procurement intelligence analyst helping a seller find relevant RFPs. Use web_search with SPECIFIC queries. ${isOpen ? "Focus on ACTIVE (open) opportunities posted in the last 90 days." : "Focus on AWARDED (closed) contracts from the last 18 months that reveal incumbent vendors."}
-${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
+      return `You are a procurement intelligence analyst. ${isOpen ? "Find ACTIVE, PUBLISHED procurement solicitations (RFPs, RFQs, RFIs, sources sought). Search AGGRESSIVELY — use ALL your web searches." : "Find AWARDED contracts and verified vendor relationships that reveal incumbents."}
 
 ━━━ SELLER PROFILE ━━━
 URL: ${sanitizeForPrompt(sellerUrl)}
@@ -5240,14 +5239,18 @@ Exclusions:       ${disqual.slice(0,3).map(d=>sanitizeForPrompt(d)).join(" · ")
 ${naicsCodes.length ? `NAICS codes (USA): ${naicsCodes.join(", ")}` : ""}
 ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
 
-━━━ SEARCH STRATEGY (use ALL 4 searches — cast a wide net) ━━━
+━━━ SEARCH STRATEGY — USE ALL 6 SEARCHES ━━━
 ${isOpen ? `
-  Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025 2026${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
-  Search 2 (SLED — state/local/education): "${sanitizeForPrompt(category || industries[0])}" RFP OR "request for proposals" OR solicitation site:.gov 2025 2026
-  Search 3 (SLED + Commercial): "${sanitizeForPrompt(industries[0] || category)}" RFP OR "request for proposal" OR procurement 2025 2026
-  Search 4 (Broad + competitors): "${sanitizeForPrompt(industries[0] || category)}" "invitation to bid" OR "sources sought" OR vendor OR "${sanitizeForPrompt(competitors[0] || "RFP")}" 2025 2026
+  You have 6 web searches. Use EVERY one. Do NOT stop early.
 
-  CRITICAL: State agencies (departments of health, employee trust funds, Medicaid agencies), school districts, counties, and special districts post RFPs on their own .gov portals — NOT on SAM.gov. These are often the highest-value SLED opportunities. Search broadly across .gov sites.
+  Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025 2026${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
+  Search 2 (State agencies): "${sanitizeForPrompt(category || industries[0])}" RFP OR "request for proposals" site:.gov 2025 2026
+  Search 3 (State + local): "${sanitizeForPrompt(industries[0] || category)}" solicitation OR procurement OR "bid opportunity" site:.gov 2025 2026
+  Search 4 (Commercial): "${sanitizeForPrompt(industries[0] || category)}" RFP OR "request for proposal" 2025 2026 -site:kff.org -site:advisory
+  Search 5 (Competitors in RFPs): "${sanitizeForPrompt(competitors[0] || category)}" RFP OR solicitation OR "vendor selection" 2025 2026
+  Search 6 (NAICS + broad): ${naicsCodes.length ? `NAICS ${naicsCodes[0]} ` : ""}"${sanitizeForPrompt(category || industries[0])}" procurement OR RFP OR "sources sought" 2025 2026
+
+  STATE AGENCIES ARE KEY: Departments of health, employee trust funds, Medicaid agencies, state retirement systems, and public employee benefit boards post RFPs on their own .gov portals — NOT on SAM.gov. These are often the highest-value opportunities. Do NOT skip the .gov searches.
 ` : `
   Search 1 (Buyer websites): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" OR "vendor" site:.com
   Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
@@ -5269,8 +5272,9 @@ GOVERNMENT (set isGovernment: true):
   - Multilateral: World Bank, UNGM (un.org/ungm), ADB, IDB
   - State/Local: DemandStar, state procurement portals
 
+${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ OUTPUT ━━━
-Return 4-6 ${isOpen ? "active opportunities" : "recent awards"}, roughly balanced between private and government.
+Return 4-8 ${isOpen ? "active opportunities" : "recent awards"}. ${isOpen ? "Search EVERY tier — federal (SAM.gov), state/SLED (.gov portals), and commercial. Do NOT stop after 2 searches if you haven't found formal solicitations yet — use all your searches." : "Balance between verified buyer-page incumbent intel and formal award records."}
 
 QUALITY RULES:
 ${isOpen ? `
@@ -5324,7 +5328,7 @@ ${isOpen
         const d = await claudeFetch({
           model: OPUS,
           max_tokens: 4000,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: kind === "open" ? 6 : 4 }],
           messages: [{ role: "user", content: buildPrompt(kind) }],
         });
         if (d.error) return { kind, error: d.error.message || "The AI engine stumbled. Give it another shot." };
