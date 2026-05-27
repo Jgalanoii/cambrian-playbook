@@ -16,7 +16,7 @@ import { BUYING_SIGNALS } from "../src/data/prompts/briefGeneration.js";
 import { JOLT_EFFECT, CHALLENGER_FRAMEWORK } from "../src/data/negotiationFrameworks.js";
 import { NAICS_CATEGORY_MAP, CPV_CATEGORY_MAP } from "../src/data/rfpSources.js";
 import { ICP_KNOWLEDGE_INJECTION, DISCOVERY_KNOWLEDGE_INJECTION, MURPHY_RWAS, FOUR_FORCES, SPICED, WBD_SCORECARD, DUNFORD_POSITIONING, DISQUALIFICATION, FINTECH_ICP, ICP_FAILURE_MODES, FITZPATRICK_MOM_TEST, MOORE_CHASM, SIXSENSE_ABM, LAJA_CXL, DISCOVERY_QUESTION_BANK } from "../src/data/icpFitKnowledge.js";
-import { VERTICAL_PLAYBOOKS, matchVerticals, buildVerticalInjection } from "../src/data/verticalPlaybooks.js";
+import { VERTICAL_PLAYBOOKS } from "../src/data/verticalPlaybooks.js";
 import { COMPETITIVE_INJECTION, DISCOVERY_SCORECARD_INJECTION, OFFER_FIT_INJECTION, BATTLE_CARD_FRAMEWORK, DISCOVERY_SCORECARD, OFFER_FIT_FRAMEWORK, REP_ONBOARDING, QBR_FRAMEWORK, SOLUTION_FIT_CARDS, PRICING_NEGOTIATION, ARCHETYPE_BATTLE_CARDS, POST_SALE_EXPANSION, SALES_METHODOLOGY_FRAMEWORKS } from "../src/data/advancedKnowledge.js";
 import { PAYMENTS_INDUSTRY_INJECTION, PAYMENTS_SCORING_CONTEXT, PAYMENTS_DISCOVERY_INJECTION } from "../src/data/paymentsKnowledge.js";
 import { COMPLIANCE_FRAMEWORKS, COMPLIANCE_VERTICAL_MAP, COMPLIANCE_DISCLAIMER, HANDOFF_PROTOCOL } from "../src/data/complianceKnowledge.js";
@@ -336,23 +336,17 @@ export default async function handler(req, res) {
       preRfpSignal: PRE_RFP_SIGNAL_INJECTION,
       preRfpIntentKeywords: PRE_RFP_INTENT_KEYWORDS,
       preRfpScoringRubric: PRE_RFP_SCORING_RUBRIC,
-    } : {
-      // Trial users: basic B2B sales + OKR frameworks only (no vertical depth)
-      b2bSales: B2B_SALES_INJECTION,
-      b2bSalesDiscovery: B2B_SALES_DISCOVERY,
-      okrKpi: OKR_KPI_INJECTION,
-      okrKpiDiscovery: OKR_KPI_DISCOVERY,
-    }),
-    // Frameworks available to all tiers
+    } : {}),
+    // Frameworks available to all tiers (trial + paid)
+    b2bSales: B2B_SALES_INJECTION,
+    b2bSalesDiscovery: B2B_SALES_DISCOVERY,
+    okrKpi: OKR_KPI_INJECTION,
+    okrKpiDiscovery: OKR_KPI_DISCOVERY,
     fitzpatrickMomTest: FITZPATRICK_MOM_TEST,
     mooreChasm: MOORE_CHASM,
     sixsenseAbm: SIXSENSE_ABM,
     lajaCxl: LAJA_CXL,
     discoveryQuestionBank: DISCOVERY_QUESTION_BANK,
     salesMethodologyFrameworks: SALES_METHODOLOGY_FRAMEWORKS,
-    // B2B sales available to all (core product functionality)
-    ...(isPaid ? {} : { b2bSales: B2B_SALES_INJECTION, b2bSalesDiscovery: B2B_SALES_DISCOVERY }),
-    okrKpi: OKR_KPI_INJECTION,
-    okrKpiDiscovery: OKR_KPI_DISCOVERY,
   });
 }

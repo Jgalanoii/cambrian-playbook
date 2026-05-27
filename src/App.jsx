@@ -100,13 +100,16 @@ let KL_MEDICAL_PAYMENTS = ""; // Medical & healthcare payments (flex cards, SNAP
 let KL_MEDICAL_PAYMENTS_SCORING = null;
 let KL_MEDICAL_PAYMENTS_DISCOVERY = "";
 let KL_SMB_MIDMARKET = ""; // SMB & mid-market cross-cutting (buying patterns by size)
+let KL_SMB_MIDMARKET_SCORING = null;
 let KL_SMB_MIDMARKET_DISCOVERY = "";
 let KL_INSURANCE = ""; // Insurance industry (carriers, MGAs, brokers, reinsurers, insurtech)
 let KL_INSURANCE_SCORING = null;
 let KL_INSURANCE_DISCOVERY = "";
 let KL_EXEC_PERSPECTIVES = ""; // Executive Perspectives — role-keyed C-suite intelligence
+let KL_EXEC_PERSPECTIVES_SCORING = null;
 let KL_EXEC_PERSPECTIVES_DISCOVERY = "";
 let KL_APPROVAL_GATES = ""; // Approval Gates — steering committees, deal desk, gate mapping
+let KL_APPROVAL_GATES_SCORING = null;
 let KL_APPROVAL_GATES_DISCOVERY = "";
 let KL_RETAIL = ""; // Retail & E-commerce
 let KL_RETAIL_SCORING = null;
@@ -118,8 +121,10 @@ let KL_MANUFACTURING = ""; // Manufacturing
 let KL_MANUFACTURING_SCORING = null;
 let KL_MANUFACTURING_DISCOVERY = "";
 let KL_PE_HOLDCO = ""; // PE-backed holdco / post-merger commercial integration
+let KL_PE_HOLDCO_SCORING = null;
 let KL_PE_HOLDCO_DISCOVERY = "";
 let KL_DIG_INCENTIVES = ""; // Digital incentives platforms — market economics, stack taxonomy
+let KL_DIG_INCENTIVES_SCORING = null;
 let KL_DIG_INCENTIVES_DISCOVERY = "";
 let KL_CANNABIS = ""; // Cannabis B2B (MSOs, dispensaries, 280E, seed-to-sale)
 let KL_CANNABIS_DISCOVERY = "";
@@ -216,13 +221,16 @@ async function fetchKnowledgeLayer() {
     KL_MEDICAL_PAYMENTS_SCORING = d.medicalPaymentsScoring || null;
     KL_MEDICAL_PAYMENTS_DISCOVERY = d.medicalPaymentsDiscovery || "";
     KL_SMB_MIDMARKET = d.smbMidmarket || "";
+    KL_SMB_MIDMARKET_SCORING = d.smbMidmarketScoring || null;
     KL_SMB_MIDMARKET_DISCOVERY = d.smbMidmarketDiscovery || "";
     KL_INSURANCE = d.insuranceIndustry || "";
     KL_INSURANCE_SCORING = d.insuranceScoring || null;
     KL_INSURANCE_DISCOVERY = d.insuranceDiscovery || "";
     KL_EXEC_PERSPECTIVES = d.executivePerspectives || "";
+    KL_EXEC_PERSPECTIVES_SCORING = d.executivePerspectivesScoring || null;
     KL_EXEC_PERSPECTIVES_DISCOVERY = d.executivePerspectivesDiscovery || "";
     KL_APPROVAL_GATES = d.approvalGates || "";
+    KL_APPROVAL_GATES_SCORING = d.approvalGatesScoring || null;
     KL_APPROVAL_GATES_DISCOVERY = d.approvalGatesDiscovery || "";
     KL_RETAIL = d.retailIndustry || "";
     KL_RETAIL_SCORING = d.retailScoring || null;
@@ -234,8 +242,10 @@ async function fetchKnowledgeLayer() {
     KL_MANUFACTURING_SCORING = d.manufacturingScoring || null;
     KL_MANUFACTURING_DISCOVERY = d.manufacturingDiscovery || "";
     KL_PE_HOLDCO = d.peHoldco || "";
+    KL_PE_HOLDCO_SCORING = d.peHoldcoScoring || null;
     KL_PE_HOLDCO_DISCOVERY = d.peHoldcoDiscovery || "";
     KL_DIG_INCENTIVES = d.digitalIncentivesPlatforms || "";
+    KL_DIG_INCENTIVES_SCORING = d.digitalIncentivesPlatformsScoring || null;
     KL_DIG_INCENTIVES_DISCOVERY = d.digitalIncentivesPlatformsDiscovery || "";
     // High-risk / regulated industry verticals
     KL_CANNABIS = d.cannabisPlaybook?.layerContent || "";
@@ -1672,6 +1682,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
     ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
     ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
+    // Cross-cutting layers (always injected when present, not keyword-gated)
+    ["accounting", KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : ""],
+    ["b2bSales", KL_B2B_SALES ? "\n" + KL_B2B_SALES : ""],
+    ["okrKpi", KL_OKR_KPI ? "\n" + KL_OKR_KPI : ""],
   ];
   const _klActiveVersions = _klInjections.filter(([, v]) => v).map(([name]) => name);
   const _klInjectionText = _klInjections.map(([, v]) => v).join("");
@@ -5002,6 +5016,21 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (getInvestorInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nINVESTOR/PE/VC CALIBRATION: PE-backed companies have 3-5yr hold timelines creating urgency. Operating partners influence tooling decisions. VC-backed companies prioritize growth rate over profitability. Frame fit through EBITDA impact for PE, NRR/ARR for VC, multi-decade value for family office.\n`
+          : "") +
+        (KL_PE_HOLDCO_SCORING && KL_PE_HOLDCO
+          ? `\nPE-BACKED HOLDCO VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_PE_HOLDCO_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_PE_HOLDCO_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_DIG_INCENTIVES_SCORING && getDigIncentivesInjection(sellerICP, batch.map(m=>m.ind).join(" "))
+          ? `\nDIGITAL INCENTIVES VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_DIG_INCENTIVES_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_DIG_INCENTIVES_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+          : "") +
+        (KL_SMB_MIDMARKET_SCORING && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
+          ? `\nSMB/MID-MARKET VERTICAL CALIBRATION:\n`+
+            `High-fit: ${KL_SMB_MIDMARKET_SCORING.highFitSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
+            `High-friction: ${KL_SMB_MIDMARKET_SCORING.highFrictionSegments.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
