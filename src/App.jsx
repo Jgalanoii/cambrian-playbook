@@ -5830,6 +5830,45 @@ Return ONLY raw JSON:
             parsed._researchChars = researchCtx.length;
             setSellerICP(parsed);
             lastGenSig.current.icp = getIcpSig();
+
+            // ── DATA SCIENCE: competitor_intel ────────────────────────────
+            // Log verified competitor-customer relationships from ICP build
+            if (sbToken && sbUser && parsed.icp?.competitiveAlternatives?.length) {
+              const SB_URL_CI = import.meta.env.VITE_SUPABASE_URL;
+              const SB_KEY_CI = import.meta.env.VITE_SUPABASE_ANON_KEY;
+              const ciRows = [];
+              (parsed.icp.competitiveAlternatives || []).forEach(comp => {
+                if (typeof comp !== "object" || !comp.name || !comp.theirCustomers?.length) return;
+                comp.theirCustomers.forEach(cust => {
+                  const custName = typeof cust === "object" ? cust.name : cust;
+                  const evidence = typeof cust === "object" ? (cust.evidence || "") : "";
+                  if (!custName) return;
+                  ciRows.push({
+                    market_category: (parsed.marketCategory || "").slice(0, 100),
+                    seller_url: (url || "").slice(0, 200),
+                    competitor_name: (comp.name || "").slice(0, 200),
+                    competitor_domain: null,
+                    customer_name: (custName || "").slice(0, 200),
+                    customer_domain: null,
+                    customer_industry: null,
+                    customer_size_band: null,
+                    evidence_type: evidence ? "ai_generated" : "user_reported",
+                    evidence_url: null,
+                    evidence_summary: (evidence || "").slice(0, 500),
+                    confidence: evidence ? "ai_generated" : "ai_generated",
+                    discovered_by: sbUser.id,
+                  });
+                });
+              });
+              if (ciRows.length > 0) {
+                // Use upsert with on_conflict to avoid duplicates
+                fetch(`${SB_URL_CI}/rest/v1/competitor_intel`, {
+                  method: "POST",
+                  headers: { apikey: SB_KEY_CI, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal,resolution=ignore-duplicates" },
+                  body: JSON.stringify(ciRows),
+                }).catch(() => {});
+              }
+            }
             // Optimistically increment local usage counter (server increments authoritatively)
             setOrgCtx(prev => {
               if (!prev) return prev;
@@ -6221,6 +6260,7 @@ Return ONLY raw JSON:
       if(res?.[0]?.id){setCurrentSessionId(res[0].id);setSessionName(nm);}
     }
     setSaveStatus('saved');setTimeout(()=>setSaveStatus(''),3000);
+    logJourney("session_saved", { session_name: (nm || "").slice(0, 100), step });
     loadSessions();
   };
 
@@ -6704,6 +6744,7 @@ Return ONLY raw JSON:
     // Clear account docs only when switching to a different company (not on regenerate)
     if (selectedAccount?.company !== member.company) setAccountDocs([]);
     setSelectedAccount(member);
+    logJourney("account_selected", { company: (member.company || "").slice(0, 200), industry: (member.ind || member.industry || "").slice(0, 100), fit_score: member.fitScore ?? member.fit_score ?? null });
     setBriefLoading(true);
     setLastBriefTime(Date.now());
     setBriefError("");
@@ -7194,6 +7235,85 @@ Return ONLY raw JSON:
           return current;
         });
       }, 0);
+
+      // ── DATA SCIENCE: brief_quality_signals + kl_effectiveness ──────────
+      // Fires after all mergers and consistency checks have applied.
+      setTimeout(() => {
+        setBrief(current => {
+          if (!current?.companySnapshot || !sbToken || !sbUser) return current;
+          const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+          const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          const dsHeaders = { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+
+          // Count completed vs failed sections
+          const sectionChecks = [
+            ["companySnapshot", !!(current.companySnapshot && current.companySnapshot.length > 30)],
+            ["executives", !!(current.keyExecutives?.some(e => e?.name))],
+            ["strategy", !!(current.strategicTheme && current.strategicTheme.length > 20)],
+            ["solutions", !!(current.solutionMapping?.some(s => s?.product))],
+            ["headlines", !!(current.recentHeadlines?.length > 0)],
+            ["roles", !!(current.openRoles?.roles?.some(r => r?.title))],
+            ["competitive", !!(current.competitivePositioning?.marketPosition)],
+            ["boardInvestors", !!(current.boardAndInvestors?.boardMembers?.length > 0)],
+            ["financials", !!(current.financialDeepDive?.revenueTrend)],
+            ["sentiment", !!(current.publicSentiment?.onlineSentiment || current.publicSentiment?.employeeScore)],
+          ];
+          const completed = sectionChecks.filter(([,ok]) => ok).length;
+          const failed = sectionChecks.filter(([,ok]) => !ok).map(([name]) => name);
+
+          // brief_quality_signals
+          fetch(`${SB_URL}/rest/v1/brief_quality_signals`, {
+            method: "POST",
+            headers: dsHeaders,
+            body: JSON.stringify({
+              org_id: orgCtx?.id || null,
+              user_id: sbUser.id,
+              seller_url: (sellerUrl || "").slice(0, 200),
+              market_category: (sellerICP?.marketCategory || "").slice(0, 100),
+              target_company: (member.company || "").slice(0, 200),
+              target_industry: (member.ind || member.industry || "").slice(0, 100),
+              target_domain: (member.company_url || "").slice(0, 200),
+              sections_attempted: 10,
+              sections_completed: completed,
+              sections_failed: failed,
+              models_used: { p1: "sonnet", p2: "sonnet", p3: "opus", p4: "sonnet", p5: "sonnet", p6: "sonnet", p7: "sonnet", p8: "sonnet", p9: "sonnet", p10: "haiku" },
+              kl_versions: current._klVersions || [],
+              data_confidence: current._dataConfidence || null,
+              apollo_enrichment_used: !!(member._enrichment?.organization),
+            }),
+          }).catch(() => {});
+
+          // kl_effectiveness — one row per active KL
+          const klVersions = current._klVersions || [];
+          if (klVersions.length > 0) {
+            const klRows = klVersions.map(klName => ({
+              org_id: orgCtx?.id || null,
+              market_category: (sellerICP?.marketCategory || "").slice(0, 100),
+              kl_name: (klName || "").slice(0, 100),
+              kl_version: null,
+              target_industry: (member.ind || member.industry || "").slice(0, 100),
+              target_company: (member.company || "").slice(0, 200),
+              sections_it_influenced: completed,
+              user_edited_kl_content: false,
+              fit_score_with_kl: member.fitScore ?? member.fit_score ?? null,
+            }));
+            fetch(`${SB_URL}/rest/v1/kl_effectiveness`, {
+              method: "POST",
+              headers: dsHeaders,
+              body: JSON.stringify(klRows),
+            }).catch(() => {});
+          }
+
+          // session_journey: brief_generated
+          logJourney("brief_generated", {
+            company: (member.company || "").slice(0, 200),
+            sections_completed: completed,
+            data_confidence: current._dataConfidence || null,
+          }, 5, 5);
+
+          return current;
+        });
+      }, 1500);
     });
   };
 
@@ -7693,7 +7813,38 @@ Return ONLY raw JSON:
       } catch { /* partial JSON */ }
     }, 3500);
 
-    setPostCall(result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:"Following up — "+(selectedAccount?.company||""),emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"});
+    const postCallResult = result||{callSummary:"Unable to generate synthesis. Review your discovery notes and try again.",riverScorecard:{reality:"",impact:"",vision:"",entryPoints:"",route:""},dealRoute:"NURTURE",dealRouteReason:"Insufficient data captured to route definitively.",dealRisk:"Incomplete discovery",nextSteps:["Schedule follow-up call","Share relevant case study","Confirm economic buyer"],crmNote:"Call completed. Review notes for next steps.",emailSubject:"Following up — "+(selectedAccount?.company||""),emailBody:"Hi,\n\nThank you for your time today. I'll follow up with next steps shortly.\n\nBest,"};
+    setPostCall(postCallResult);
+
+    // ── DATA SCIENCE: discovery_signals ──────────────────────────────────
+    if (sbToken && sbUser) {
+      const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const allGatesDS = RIVER_STAGES.flatMap(s => s.gates.map(g => g.id));
+      const answeredGates = allGatesDS.filter(id => gateAnswers[id]).length;
+      fetch(`${SB_URL}/rest/v1/discovery_signals`, {
+        method: "POST",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({
+          org_id: orgCtx?.id || null,
+          user_id: sbUser.id,
+          market_category: (sellerICP?.marketCategory || "").slice(0, 100),
+          target_company: (selectedAccount?.company || "").slice(0, 200),
+          target_industry: (selectedAccount?.ind || selectedAccount?.industry || "").slice(0, 100),
+          fit_score: selectedAccount?.fitScore ?? selectedAccount?.fit_score ?? null,
+          hypothesis_generated: !!riverHypo,
+          gate_questions_answered: answeredGates,
+          gate_questions_total: allGatesDS.length,
+          notes_length: (notes || "").length,
+          milton_messages_sent: miltonMsgCount || 0,
+          deal_route: (postCallResult.dealRoute || "").slice(0, 50),
+          deal_confidence: postCallResult.dealConfidence ?? null,
+          deal_risk: (postCallResult.dealRisk || "").slice(0, 200),
+          next_steps_count: (postCallResult.nextSteps || []).length,
+        }),
+      }).catch(() => {});
+    }
+
     setPostLoading(false);
     setStep(8);
   };
@@ -7718,6 +7869,7 @@ Return ONLY raw JSON:
         if(d.created?.contacts)parts.push(`${d.created.contacts} contact${d.created.contacts>1?"s":""}`);
         setCopied("hs_ok");setTimeout(()=>setCopied(""),4000);
         celebrate("hubspot_pushed");
+        logJourney("hubspot_pushed", { company: (data?.company?.name || selectedAccount?.company || "").slice(0, 200), action, created: d.created });
         setChatMessages(prev=>[...prev,{role:"assistant",content:`Pushed to HubSpot: ${parts.join(", ")} created.`}]);
       }else{
         console.error("[hubspot] Push failed:", r.status, JSON.stringify(d));
