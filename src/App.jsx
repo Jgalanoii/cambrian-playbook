@@ -5245,12 +5245,32 @@ GOVERNMENT (set isGovernment: true):
 ━━━ OUTPUT ━━━
 Return 4-6 ${isOpen ? "active opportunities" : "recent awards"}, roughly balanced between private and government.
 
+CRITICAL — WHAT IS AN RFP vs WHAT IS NOT:
+  An RFP/procurement opportunity IS:
+  - A formal solicitation document (RFP, RFQ, RFI, sources sought) posted by a BUYER
+  - A government contract notice on SAM.gov, TED Europa, a state portal, or agency website
+  - A corporate procurement posting on Ariba, Coupa, or a company's supplier portal
+  - A published solicitation with a buyer name, scope, and deadline
+
+  An RFP IS NOT (DO NOT RETURN THESE):
+  - Industry research reports or white papers (kff.org, advisory firms, analyst reports)
+  - Blog posts, trend analyses, or market studies about an industry
+  - The seller's OWN marketing materials, case studies, or content
+  - News articles ABOUT procurement trends (these are signals, not RFPs)
+  - Webinars, conferences, or educational content
+  - Product comparison pages or buyer guides
+
+  If your web search only returns research/articles/blogs and no actual solicitations,
+  return {"rows":[]} — an empty result is correct. Do NOT pad results with non-RFP content.
+
 DATA INTEGRITY:
-  - Only include RFPs you can VERIFY via web_search. Do not invent titles, buyers, values, or vendor names.
+  - Only include ACTUAL procurement solicitations or contract awards you can VERIFY via web_search.
+  - The "source" field must be a procurement portal or official notice (SAM.gov, Ariba, state portal, agency website) — NOT a blog, research site, or news outlet.
+  - The "url" field must link to the ACTUAL solicitation or award notice — NOT to an article about the topic.
   ${!isOpen ? "- If awarded vendor cannot be verified, leave \"awardedTo\" empty. Do not guess.\n  " : ""}- Every row MUST include the isGovernment boolean.
-  - Include the source URL in the "url" field when available — this is how the user verifies your work.
-  - relevanceReason should cite ONE specific element of the seller profile above (e.g. "matches their Financial Services focus and ~$250K deal size").
+  - relevanceReason should cite ONE specific element of the seller profile above.
   - Do NOT return RFPs that match any item in Exclusions.
+  - If you cannot find real RFPs, return an empty rows array. Empty is honest; padding with non-RFP content destroys trust.
 
 Return ONLY raw JSON (no prose). The outer key MUST be "rows":
 ${isOpen
