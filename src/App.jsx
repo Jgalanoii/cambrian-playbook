@@ -5181,8 +5181,10 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     const sellerNorm = (sellerUrl || "").toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "").slice(0, 200);
     if (!sellerNorm) return { open: [], closed: [], signals: [] };
     try {
+      // Only load non-dismissed results from the last 180 days
+      const cutoff = new Date(Date.now() - 180 * 86400000).toISOString();
       const r = await fetch(
-        `${SB_URL}/rest/v1/rfp_intel_signals?seller_url=ilike.*${encodeURIComponent(sellerNorm)}*&search_stage=eq.icp_level&order=relevance_score.desc.nullslast&limit=20`,
+        `${SB_URL}/rest/v1/rfp_intel_signals?seller_url=ilike.*${encodeURIComponent(sellerNorm)}*&search_stage=eq.icp_level&user_dismissed=eq.false&created_at=gte.${cutoff}&order=relevance_score.desc.nullslast&limit=20`,
         { headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } }
       );
       if (!r.ok) return { open: [], closed: [], signals: [] };
@@ -5192,21 +5194,41 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
         isGovernment: r.is_government, value: r.value_estimate, deadline: r.deadline,
         relevanceScore: r.relevance_score, relevanceReason: r.relevance_reason,
-        cohort: r.cohort, naicsOrCpv: r.naics_code, _fromDb: true,
+        cohort: r.cohort, naicsOrCpv: r.naics_code, _fromDb: true, _dbId: r.id,
       }));
       const closed = rows.filter(r => r.search_type === "closed_rfp").map(r => ({
         title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
         isGovernment: r.is_government, value: r.value_estimate, awardDate: r.award_date,
         awardedTo: r.awarded_to, relevanceScore: r.relevance_score,
-        relevanceReason: r.relevance_reason, cohort: r.cohort, _fromDb: true,
+        relevanceReason: r.relevance_reason, cohort: r.cohort, _fromDb: true, _dbId: r.id,
       }));
       const signals = rows.filter(r => r.search_type === "buying_signal").map(r => ({
         signalType: r.signal_type, headline: r.title, company: r.buyer,
         detail: r.signal_detail, source: r.source, url: r.source_url,
-        strength: r.signal_strength, relevance: r.relevance_reason, _fromDb: true,
+        strength: r.signal_strength, relevance: r.relevance_reason, _fromDb: true, _dbId: r.id,
       }));
       return { open, closed, signals };
     } catch { /* non-critical */ return { open: [], closed: [], signals: [] }; }
+  };
+
+  // ── Dismiss an RFP result (mark as irrelevant in Supabase + remove from UI)
+  const dismissRfpResult = async (item, category) => {
+    // Remove from UI immediately
+    if (category === "open") setRfpData(prev => ({ ...prev, open: prev.open.filter(r => r !== item) }));
+    else if (category === "closed") setRfpData(prev => ({ ...prev, closed: prev.closed.filter(r => r !== item) }));
+    else if (category === "signal") setRfpData(prev => ({ ...prev, signals: prev.signals.filter(r => r !== item) }));
+    // Mark dismissed in Supabase if it has a DB id
+    if (item._dbId && sbToken) {
+      const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (SB_URL && SB_KEY) {
+        fetch(`${SB_URL}/rest/v1/rfp_intel_signals?id=eq.${item._dbId}`, {
+          method: "PATCH",
+          headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+          body: JSON.stringify({ user_dismissed: true }),
+        }).catch(() => { /* non-critical */ });
+      }
+    }
   };
 
   // Split into two parallel calls (open + closed). Each has its own
@@ -10540,9 +10562,12 @@ Return ONLY raw JSON:
                                 <td style={{fontSize:11,color:"var(--amber)",whiteSpace:"nowrap"}}>{r.deadline}</td>
                                 <td style={{fontSize:11}}>{r.cohort}</td>
                                 <td>
-                                  <div style={{fontSize:12,fontWeight:700,
-                                    color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>
-                                    {r.relevanceScore}%
+                                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                                    <span style={{fontSize:12,fontWeight:700,
+                                      color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>
+                                      {r.relevanceScore}%
+                                    </span>
+                                    <button onClick={()=>dismissRfpResult(r,"open")} title="Dismiss — not relevant" style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"var(--ink-3)",padding:"0 2px",lineHeight:1}}>✕</button>
                                   </div>
                                 </td>
                               </tr>
@@ -10600,9 +10625,12 @@ Return ONLY raw JSON:
                                   <td style={{fontSize:11,color:"var(--ink-2)",whiteSpace:"nowrap"}}>{r.awardDate}</td>
                                   <td style={{fontSize:11}}>{r.cohort}</td>
                                   <td>
-                                    <div style={{fontSize:12,fontWeight:700,
-                                      color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>
-                                      {r.relevanceScore}%
+                                    <div style={{display:"flex",alignItems:"center",gap:4}}>
+                                      <span style={{fontSize:12,fontWeight:700,
+                                        color:r.relevanceScore>=75?"var(--green)":r.relevanceScore>=50?"var(--amber)":"var(--red)"}}>
+                                        {r.relevanceScore}%
+                                      </span>
+                                      <button onClick={()=>dismissRfpResult(r,"closed")} title="Dismiss — not relevant" style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"var(--ink-3)",padding:"0 2px",lineHeight:1}}>✕</button>
                                     </div>
                                   </td>
                                 </tr>
@@ -10636,7 +10664,8 @@ Return ONLY raw JSON:
                               const strengthColor = s.strength === "Strong" ? "var(--green)" : s.strength === "Moderate" ? "var(--amber)" : "var(--ink-3)";
                               const strengthBg = s.strength === "Strong" ? "var(--green-bg)" : s.strength === "Moderate" ? "var(--amber-bg)" : "var(--bg-2)";
                               return (
-                                <div key={i} style={{border:"1.5px solid var(--line-0)",borderRadius:10,padding:"14px 16px",background:"var(--surface)"}}>
+                                <div key={i} style={{border:"1.5px solid var(--line-0)",borderRadius:10,padding:"14px 16px",background:"var(--surface)",position:"relative"}}>
+                                  <button onClick={()=>dismissRfpResult(s,"signal")} title="Dismiss" style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--ink-3)",padding:"2px 4px",lineHeight:1}}>✕</button>
                                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:8}}>
                                     <div style={{flex:1}}>
                                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
