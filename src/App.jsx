@@ -10363,20 +10363,20 @@ Return ONLY raw JSON:
                           </thead>
                           <tbody>
                             {rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
-                              <tr key={i}>
-                                <td style={{maxWidth:280}}>
-                                  <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>
+                              <tr key={i} style={{verticalAlign:"top"}}>
+                                <td style={{maxWidth:240,minWidth:160}}>
+                                  <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2,lineHeight:1.4}}>
                                     {r.url ? (
                                       <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                     ) : r.title}
                                   </div>
-                                  <div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div>
+                                  <div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div>
                                 </td>
-                                <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"var(--ink-3)"}}>{r.country}</span></td>
-                                <td><span style={{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",
+                                <td style={{fontSize:11,lineHeight:1.4,maxWidth:120}}>{r.buyer}<br/><span style={{fontSize:10,color:"var(--ink-3)"}}>{r.country}</span></td>
+                                <td><span style={{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",whiteSpace:"nowrap",
                                   background:r.isGovernment?"var(--navy-bg)":"#F0FDF4",
                                   color:r.isGovernment?"var(--navy)":"#166534"}}>{r.source}</span></td>
-                                <td style={{fontSize:12,fontWeight:600,color:"var(--green)",whiteSpace:"nowrap"}}>{r.value}</td>
+                                <td style={{fontSize:11,fontWeight:600,color:"var(--green)",whiteSpace:"nowrap"}}>{r.value}</td>
                                 <td style={{fontSize:11,color:"var(--amber)",whiteSpace:"nowrap"}}>{r.deadline}</td>
                                 <td style={{fontSize:11}}>{r.cohort}</td>
                                 <td>
@@ -10423,20 +10423,20 @@ Return ONLY raw JSON:
                             </thead>
                             <tbody>
                               {rfpData.closed.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
-                                <tr key={i}>
-                                  <td style={{maxWidth:240}}>
-                                    <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>
+                                <tr key={i} style={{verticalAlign:"top"}}>
+                                  <td style={{maxWidth:240,minWidth:160}}>
+                                    <div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2,lineHeight:1.4}}>
                                       {r.url ? (
                                         <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                       ) : r.title}
                                     </div>
-                                    <div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div>
+                                    <div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div>
                                   </td>
-                                  <td style={{fontSize:12}}>{r.buyer}<br/><span style={{fontSize:10,color:"var(--ink-3)"}}>{r.country}</span></td>
-                                  <td style={{fontSize:12,fontWeight:600,color:r.awardedTo?"var(--tan-0)":"var(--ink-3)",fontStyle:r.awardedTo?"normal":"italic"}}>
+                                  <td style={{fontSize:11,lineHeight:1.4,maxWidth:120}}>{r.buyer}<br/><span style={{fontSize:10,color:"var(--ink-3)"}}>{r.country}</span></td>
+                                  <td style={{fontSize:11,fontWeight:600,color:r.awardedTo?"var(--tan-0)":"var(--ink-3)",fontStyle:r.awardedTo?"normal":"italic",maxWidth:120}}>
                                     {r.awardedTo || "— unverified"}
                                   </td>
-                                  <td style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
+                                  <td style={{fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
                                   <td style={{fontSize:11,color:"var(--ink-2)",whiteSpace:"nowrap"}}>{r.awardDate}</td>
                                   <td style={{fontSize:11}}>{r.cohort}</td>
                                   <td>
@@ -10541,9 +10541,9 @@ Return ONLY raw JSON:
                             <th>RFP Title</th><th>Buyer</th><th>Source</th><th>Value</th><th>Deadline</th><th>Fit</th>
                           </tr></thead><tbody>
                             {accountRfpData.open.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
-                              <tr key={i}>
-                                <td style={{maxWidth:260}}><div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.url?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>:r.title}</div><div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div></td>
-                                <td style={{fontSize:12,fontWeight:600,color:"var(--navy)"}}>{r.buyer}</td>
+                              <tr key={i} style={{verticalAlign:"top"}}>
+                                <td style={{maxWidth:220,minWidth:140}}><div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2,lineHeight:1.4}}>{r.url?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>:r.title}</div><div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div></td>
+                                <td style={{fontSize:11,fontWeight:600,color:"var(--navy)"}}>{r.buyer}</td>
                                 <td><span style={{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",background:r.isGovernment?"var(--navy-bg)":"#F0FDF4",color:r.isGovernment?"var(--navy)":"#166534"}}>{r.source}</span></td>
                                 <td style={{fontSize:12,fontWeight:600,color:"var(--green)",whiteSpace:"nowrap"}}>{r.value}</td>
                                 <td style={{fontSize:11,color:"var(--amber)",whiteSpace:"nowrap"}}>{r.deadline}</td>
@@ -10564,9 +10564,9 @@ Return ONLY raw JSON:
                             <th>Contract</th><th>Buyer</th><th>Awarded To</th><th>Value</th><th>Date</th><th>Fit</th>
                           </tr></thead><tbody>
                             {accountRfpData.closed.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
-                              <tr key={i}>
-                                <td style={{maxWidth:240}}><div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2}}>{r.url?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>:r.title}</div><div style={{fontSize:11,color:"var(--ink-3)"}}>{r.relevanceReason}</div></td>
-                                <td style={{fontSize:12,fontWeight:600,color:"var(--navy)"}}>{r.buyer}</td>
+                              <tr key={i} style={{verticalAlign:"top"}}>
+                                <td style={{maxWidth:220,minWidth:140}}><div style={{fontWeight:600,fontSize:12,color:"var(--ink-0)",marginBottom:2,lineHeight:1.4}}>{r.url?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>:r.title}</div><div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div></td>
+                                <td style={{fontSize:11,fontWeight:600,color:"var(--navy)"}}>{r.buyer}</td>
                                 <td style={{fontSize:12,fontWeight:600,color:r.awardedTo?"var(--tan-0)":"var(--ink-3)"}}>{r.awardedTo||"—"}</td>
                                 <td style={{fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{r.value}</td>
                                 <td style={{fontSize:11,whiteSpace:"nowrap"}}>{r.awardDate}</td>
