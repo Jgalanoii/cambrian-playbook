@@ -5427,14 +5427,54 @@ Return ONLY raw JSON:
       } catch (e) { console.warn("RFP signals fetch failed:", e); return { signals: [] }; }
     };
 
-    // Launch all three in parallel. Each settle updates its section of state
-    // so the user sees partial results as they arrive.
-    const openP = fetchClass("open");
+    // Build a dedicated government/SLED open RFP prompt — separate call to ensure SLED coverage
+    const buildGovOpenPrompt = () => `You are a government procurement analyst. Find ACTIVE solicitations (RFPs, RFQs, RFIs, sources sought) from government and public-sector entities that this seller could respond to. Focus ONLY on government/SLED — no commercial.
+
+Seller: ${sanitizeForPrompt(sellerUrl)} — ${sanitizeForPrompt(category)}
+Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+${naicsCodes.length ? `NAICS: ${naicsCodes.join(", ")}` : ""}
+
+Use ALL 4 searches on government sources:
+1. site:sam.gov "${sanitizeForPrompt(category || industries[0])}" ${naicsCodes.length ? `NAICS ${naicsCodes[0]}` : "2025 2026"}
+2. "${sanitizeForPrompt(category || industries[0])}" RFP OR solicitation site:.gov 2025 2026
+3. "${sanitizeForPrompt(trigger || category)}" "request for proposals" OR procurement site:.gov
+4. site:bidnet.com OR site:demandstar.com "${sanitizeForPrompt(category || industries[0])}" RFP 2025 2026
+
+State agencies, employee trust funds, Medicaid agencies, school districts, and health departments post on their OWN .gov portals. Search specifically for those.
+
+Only return ACTUAL solicitations with a named government buyer and a procurement portal URL. No research, no articles, no regulations, no news. Return {"rows":[]} if none found.
+
+Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","country":"USA","source":"Portal name","isGovernment":true,"value":"$500K","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"1-2 sentences.","naicsOrCpv":"","cohort":"","url":"https://..."}]}`;
+
+    // Launch all FOUR in parallel — government open, commercial open, closed, signals
+    const govOpenP = (async () => {
+      try {
+        const prevGov = (rfpData.open || []).filter(r => r.isGovernment);
+        const seed = prevGov.length ? `\n\nPREVIOUSLY FOUND (verify + find NEW):\n${prevGov.slice(0,3).map(r=>`- "${r.title}" ${r.buyer} ${r.url||""}`).join("\n")}` : "";
+        const d = await claudeFetch({ model: OPUS, max_tokens: 3000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }], messages: [{ role: "user", content: buildGovOpenPrompt() + seed }] });
+        if (d.error) return { rows: [] };
+        const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
+        const fullText = textBlocks.join(" ").toLowerCase();
+        if (["unable to find", "could not find", "no specific", "i apologize", "no results"].some(s => fullText.includes(s)) && !fullText.includes('"rows"')) return { rows: [] };
+        let parsed = null;
+        for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) parsed = extractJsonWithKey(textBlocks[i], "rows");
+        if (!parsed) { const j = textBlocks.join("").trim(); const idx = j.lastIndexOf('{"rows"'); if (idx >= 0) parsed = safeParseJSON(j.slice(idx)); }
+        return { rows: (parsed?.rows || []).map(r => ({ ...r, isGovernment: true })) };
+      } catch { return { rows: [] }; }
+    })();
+    const commercialOpenP = fetchClass("open");
     const closedP = fetchClass("closed");
     const signalsP = fetchSignals();
 
-    openP.then(res => {
-      if (res.rows) { setRfpData(prev => ({ ...prev, open: res.rows })); logRfpIntel(res.rows, "icp_level", "open_rfp"); }
+    // Merge government + commercial open RFP results, dedup by URL
+    const mergedOpenP = Promise.all([govOpenP, commercialOpenP]).then(([gov, comm]) => {
+      const allRows = [...(gov.rows || []), ...((comm.rows || []))];
+      const seen = new Set();
+      const deduped = allRows.filter(r => { const key = (r.url || r.title || "").toLowerCase(); if (seen.has(key)) return false; seen.add(key); return true; });
+      return { rows: deduped, error: comm.error };
+    });
+    mergedOpenP.then(res => {
+      if (res.rows?.length) { setRfpData(prev => ({ ...prev, open: res.rows })); logRfpIntel(res.rows, "icp_level", "open_rfp"); }
       else if (res.error) setRfpData(prev => ({ ...prev, error: prev.error ? `${prev.error} · Open: ${res.error}` : `Open RFPs: ${res.error}` }));
     });
     closedP.then(res => {
@@ -5445,7 +5485,7 @@ Return ONLY raw JSON:
       if (res.signals?.length) { setRfpData(prev => ({ ...prev, signals: res.signals })); logRfpIntel(res.signals, "icp_level", "buying_signal"); }
     });
 
-    const [openRes, closedRes, signalsRes] = await Promise.all([openP, closedP, signalsP]);
+    const [openRes, closedRes, signalsRes] = await Promise.all([mergedOpenP, closedP, signalsP]);
     setRfpData(prev => ({ ...prev, loading: false }));
 
     // Cache only if we got ACTUAL data (not empty arrays from failed parses).
