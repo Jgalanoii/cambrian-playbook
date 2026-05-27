@@ -569,8 +569,8 @@ function authHeaders() {
 // Invest in quality at the top of the funnel (ICP, research brief),
 // then let rich context cascade to cheaper models downstream.
 //
-// Opus:   ICP build (amortized, cached), P3 strategy/opening angle, RFP search
-// Sonnet: P1 overview, P2 executives, P4 solutions, P7 competitive
+// Opus:   ICP Phase 2 (build), P3 strategy/opening angle, RFP search
+// Sonnet: ICP Phase 1 (research), P1 overview, P2 executives, P4 solutions, P7 competitive
 // Haiku:  P5-P6, P8-P10, hypothesis, discovery, coaching, post-call
 //
 // Cost: ~$1.15/run (was $0.38 all-Haiku). Margins: 54-71% by tier.
@@ -5698,9 +5698,9 @@ Return ONLY raw JSON:
     // for competitors/industry context. More research → more stable ICP.
     let researchCtx = "";
     try{
-      // ICP Phase 1 — Opus (foundation, cached/amortized)
+      // ICP Phase 1 — Sonnet + web search (research only, Opus not needed for fact-gathering)
       const d1 = await claudeFetch({
-        model: OPUS,
+        model: SONNET,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -10789,14 +10789,19 @@ Return ONLY raw JSON:
                       <div style={{fontSize:11,color:"var(--ink-3)"}}>
                         Competitive alternatives:
                         <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
-                          {(sellerICP.icp.competitiveAlternatives||[]).filter(Boolean).map((c,i)=>(
+                          {(sellerICP.icp.competitiveAlternatives||[]).filter(Boolean).map((c,i)=>{
+                            const cName = typeof c === "object" ? c.name : c;
+                            if (!cName) return null;
+                            return (
                             <span key={i} style={{background:"var(--bg-0)",border:"1px solid var(--line-0)",borderRadius:20,padding:"2px 8px",fontSize:11,color:"var(--ink-1)",display:"flex",alignItems:"center",gap:3}}>
                               <span contentEditable suppressContentEditableWarning
-                                onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==c)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.map((x,j)=>j===i?v:x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}));}}
-                                style={{outline:"none",cursor:"text"}}>{c}</span>
+                                onBlur={e=>{const v=e.target.textContent.trim();if(v&&v!==cName)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.map((x,j)=>j===i?(typeof x==="object"?{...x,name:v}:v):x)}}));else if(!v)setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}));}}
+                                style={{outline:"none",cursor:"text"}}>{cName}</span>
+                              {typeof c === "object" && c.theirCustomers?.length > 0 && <span style={{fontSize:9,color:"var(--ink-3)",marginLeft:2}}>({c.theirCustomers.length} customers)</span>}
                               <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,competitiveAlternatives:p.icp.competitiveAlternatives.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:10,color:"var(--ink-3)",padding:0}}>✕</button>
                             </span>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
