@@ -5245,54 +5245,45 @@ GOVERNMENT (set isGovernment: true):
 ━━━ OUTPUT ━━━
 Return 4-6 ${isOpen ? "active opportunities" : "recent awards"}, roughly balanced between private and government.
 
-STRICT CLASSIFICATION — apply this test to EVERY result before including it:
+QUALITY RULES:
 ${isOpen ? `
-  OPEN RFP CHECKLIST (ALL must be true to include):
-  [ ] Is this a FORMAL SOLICITATION document — an actual RFP, RFQ, RFI, or sources sought notice?
-  [ ] Was it posted by a SPECIFIC BUYER (named organization) seeking vendors?
-  [ ] Does the URL link to a procurement portal, government site, or official solicitation page?
-  [ ] Does it have a solicitation number, deadline, or formal procurement structure?
+  INCLUDE (these ARE Open RFPs):
+  ✓ Formal solicitations (RFP/RFQ/RFI/sources sought) posted by a named buyer on a procurement portal
+  ✓ Government notices on SAM.gov, state portals, or agency procurement pages with solicitation numbers
+  ✓ Corporate procurement postings on Ariba, Coupa, or a company's supplier/vendor page
+  ✓ Published bid opportunities with a buyer, scope, and deadline
 
-  If ANY checkbox is false, DO NOT include it as an Open RFP.
+  EXCLUDE (these are NOT Open RFPs — they belong in the Signals category):
+  ✗ Market research, trend reports, or advisory analyses (KFF, ATI, HealthScape, Oliver Wyman)
+  ✗ The seller's OWN content (blog posts, cheat sheets, marketing)
+  ✗ CMS rules or proposed regulations (regulatory signals, not solicitations)
+  ✗ News articles ABOUT procurement trends
+  ✗ Items you label as "Pre-RFP Signal" or "Buying Intent" — those go in signals, not here
 
-  EXPLICIT REJECTIONS (these are NEVER Open RFPs):
-  - Market research, trend reports, advisory firm analyses (KFF, ATI Advisory, HealthScape, Oliver Wyman, Deloitte, McKinsey)
-  - The seller's OWN website, blog posts, cheat sheets, or marketing content
-  - CMS rules, proposed regulations, or policy documents (these are regulatory signals, not RFPs)
-  - News articles, press releases, or industry commentary ABOUT procurement trends
-  - Vendor comparison pages, webinars, or educational content
-  - "Market-wide signals" or "buying intent signals" — these belong in the SIGNALS category, not here
-
-  ZERO TOLERANCE: A "Pre-RFP Signal" is NOT an Open RFP. If you label something as a signal, it CANNOT be in the Open RFP list. Signals go in the signals search, not here.
+  Return {"rows":[]} if no formal solicitations found. 1-2 real RFPs beats 5 padded results.
 ` : `
-  CLOSED RFP / AWARD CHECKLIST (ALL must be true to include):
-  [ ] Is this a VERIFIED contract award — a specific buyer chose a specific vendor?
-  [ ] Can you name BOTH the buyer AND the awarded vendor?
-  [ ] Does the URL link to an official award notice, FPDS record, or the buyer's vendor/member page showing the relationship?
+  INCLUDE (these ARE Closed Awards / Incumbent Intel):
+  ✓ A named buyer's website/member page showing which vendor administers their program
+     Example: "Anthem member page shows OTC cards administered by NationsBenefits" — VALID
+  ✓ FPDS-NG or USASpending.gov award records
+  ✓ Press releases from the BUYER announcing "selected [vendor] for [scope]"
+  ✓ Government contract award notices
+  ✓ Vendor relationship visible on the buyer's own site (e.g. "powered by", "provided by")
 
-  If ANY checkbox is false, DO NOT include it as a Closed RFP.
+  EXCLUDE (these are NOT Closed Awards):
+  ✗ CMS rules, proposed regulations, or policy documents
+  ✗ Market research, consulting analyses, or advisory reports
+  ✗ Vendor's OWN blog posts or marketing content (the vendor talking about themselves)
+  ✗ Industry trend reports or funding announcements
 
-  EXPLICIT REJECTIONS (these are NEVER Closed RFPs/Awards):
-  - CMS rules, proposed regulations, or policy documents
-  - Market research, consulting analyses, or advisory reports
-  - Vendor blog posts or marketing content
-  - Industry trend reports or funding announcements
-  - The seller's OWN content
-
-  ACCEPTED sources for closed awards:
-  - Buyer's member/vendor page showing "powered by [vendor]" or "administered by [vendor]"
-  - FPDS-NG or USASpending.gov award records
-  - Official press releases from the BUYER announcing vendor selection
-  - Government award notices
+  Return {"rows":[]} if no verified awards found. But look hard — buyer websites, member portals,
+  and benefit program pages often reveal vendor relationships that are gold for competitive intel.
 `}
-  If you cannot find results that pass this checklist, return {"rows":[]}.
-  Returning 0 real RFPs is better than returning 5 fake ones. Our users are procurement professionals — they will immediately spot padded results and lose trust.
-
 DATA INTEGRITY:
-  - The "url" field must link to the ACTUAL solicitation, award notice, or buyer page — NOT to research articles, blogs, or news about the industry.
-  ${!isOpen ? "- If awarded vendor cannot be verified, leave \"awardedTo\" empty. Do not guess.\n  " : ""}- Every row MUST include the isGovernment boolean.
-  - relevanceReason must be 1-2 sentences MAX — not a paragraph.
-  - Do NOT return results that match any item in Exclusions.
+  - URL must link to the solicitation, award notice, or buyer page — not research articles.
+  ${!isOpen ? "- If awarded vendor cannot be verified, leave \"awardedTo\" empty.\n  " : ""}- Every row MUST include the isGovernment boolean.
+  - relevanceReason: 1-2 sentences MAX.
+  - Do NOT return results matching Exclusions.
 
 Return ONLY raw JSON (no prose). The outer key MUST be "rows":
 ${isOpen
@@ -5510,19 +5501,12 @@ ${isOpen ? `
 - "[company name]" "${sanitizeForPrompt(competitors[0] || "")}" contract OR award 2024 2025
 `}
 
-━━━ STRICT CLASSIFICATION — apply this test to EVERY result ━━━
-${isOpen ? `OPEN RFP CHECKLIST (ALL must be true):
-[ ] Formal solicitation (RFP/RFQ/RFI/sources sought) from a NAMED BUYER on this list?
-[ ] URL links to a procurement portal, government site, or official solicitation page?
-[ ] Has solicitation number, deadline, or formal procurement structure?
-
-NEVER include: research reports, advisory analyses, news articles, blog posts, the seller's own content, CMS rules/regulations, "market-wide signals," or industry trend pieces. If something is a buying SIGNAL but not a published SOLICITATION, it does not belong here — signals have their own category.` : `CLOSED AWARD CHECKLIST (ALL must be true):
-[ ] Verified contract: a NAMED buyer from the list chose a NAMED vendor?
-[ ] URL links to award notice, FPDS, buyer's vendor page, or official press release?
-
-NEVER include: regulatory documents, advisory reports, vendor blog posts, industry analyses, consulting firm research, or the seller's own content.`}
-
-Return {"rows":[]} if no results pass the checklist. Empty is correct — padding with non-RFP content destroys trust.
+━━━ QUALITY RULES ━━━
+${isOpen ? `INCLUDE: Formal solicitations (RFP/RFQ/RFI) posted by a target account, with procurement portal URL.
+EXCLUDE: Research reports, advisory analyses, news articles, the seller's own content, regulations.
+Return {"rows":[]} if no formal solicitations found.` : `INCLUDE: Verified vendor relationships — the target account's website/member page showing "administered by [vendor]", FPDS awards, press releases announcing vendor selection.
+EXCLUDE: Research reports, advisory analyses, vendor blog posts, the seller's own content, regulations.
+Look hard — buyer websites and member portals often reveal vendor relationships. Return {"rows":[]} only if genuinely nothing found.`}
 
 ━━━ OUTPUT ━━━
 Return ${isOpen ? "active opportunities" : "recent awards"} that:
