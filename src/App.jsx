@@ -5241,16 +5241,20 @@ ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
 ${!isOpen && KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ SEARCH STRATEGY — USE ALL ${isOpen ? "6" : "4"} SEARCHES ━━━
 ${isOpen ? `
-  You have 6 web searches. Use EVERY one. Do NOT stop early. Vary your queries — don't repeat similar searches.
+  You have 6 web searches. Use EVERY one. Do NOT stop early. Each search MUST be different — vary the terms and target sites.
 
-  Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "RFP")}" 2025 2026${naicsCodes.length ? ` OR NAICS ${naicsCodes[0]}` : ""}
-  Search 2 (State-specific SLED): "${sanitizeForPrompt(category || industries[0])}" RFP "employee trust" OR "department of health" OR "Medicaid" OR "retirement system" OR "state comptroller" site:.gov
-  Search 3 (Aggregator): "${sanitizeForPrompt(category || industries[0])}" RFP 2025 2026 site:bidnet.com OR site:demandstar.com OR site:findrfp.com OR site:govwin.com
-  Search 4 (Commercial): "${sanitizeForPrompt(industries[0] || category)}" RFP OR "request for proposal" 2025 2026 -site:kff.org -site:advisory.com
-  Search 5 (Competitors in RFPs): "${sanitizeForPrompt(competitors[0] || category)}" RFP OR solicitation OR "vendor selection" 2025 2026
-  Search 6 (Niche SLED): "supplemental benefits" OR "flex card" OR "${sanitizeForPrompt(category)}" RFP OR solicitation OR procurement site:.gov 2024 OR 2025 OR 2026
+  Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "")}" 2025 2026${naicsCodes.length ? ` NAICS ${naicsCodes[0]}` : ""}
+  Search 2 (SLED — state/local): "${sanitizeForPrompt(category || industries[0])}" RFP OR solicitation OR procurement site:.gov 2025 2026
+  Search 3 (Aggregator sites): "${sanitizeForPrompt(category || industries[0])}" RFP 2025 2026 site:bidnet.com OR site:demandstar.com OR site:findrfp.com OR site:govwin.com
+  Search 4 (Private/commercial): "${sanitizeForPrompt(industries[0] || category)}" "request for proposal" OR RFP OR "vendor selection" 2025 2026
+  Search 5 (Competitor + category): "${sanitizeForPrompt(competitors[0] || industries[0] || category)}" RFP OR solicitation OR procurement 2025 2026
+  Search 6 (SLED niche — use the seller's SPECIFIC product/service terms, not generic industry labels): "${sanitizeForPrompt(trigger || category)}" RFP OR solicitation site:.gov 2024 OR 2025 OR 2026
 
-  IMPORTANT: Broad queries like "insurance RFP site:.gov" return 10,000+ results and miss specific state agencies. Use SPECIFIC terms from the seller's category in your queries. State employee trust funds, Medicaid agencies, and health departments post RFPs on their own portals.
+  SEARCH QUALITY GUIDANCE:
+  - Do NOT use broad terms like "insurance RFP site:.gov" — too many results, state agencies get buried.
+  - DO use the seller's specific product category and service terms. A cybersecurity seller needs "endpoint detection" or "SIEM", not "technology." A benefits admin seller needs "supplemental benefits" or "flex card", not "insurance."
+  - State agencies, school districts, municipalities, and special districts post on their OWN .gov portals — not SAM.gov. These are high-value SLED opportunities.
+  - Procurement aggregators (BidNet, DemandStar, GovWin) index thousands of SLED solicitations that individual .gov searches miss.
 ` : `
   Search 1 (Buyer websites): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" OR "vendor" site:.com
   Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
