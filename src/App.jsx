@@ -3996,6 +3996,7 @@ export default function App(){
   const celebratedRef=useRef(new Set()); // track which milestones fired this session
   const celebrate=(id)=>{if(!celebratedRef.current.has(id)&&MILESTONES[id]){celebratedRef.current.add(id);setActiveCelebration(id);}};
   const[icpLoading,setIcpLoading]=useState(false);
+  const[icpStatus,setIcpStatus]=useState(""); // progressive status during ICP build
   const[icpTab,setIcpTab]=useState("icp"); // "icp" | "rfp"
   const[sellerICPInput,setSellerICPInput]=useState(""); // seller's own ICP description
   const[icpDelta,setIcpDelta]=useState(null); // {alignments:[], gaps:[], recommendations:[]}
@@ -5678,6 +5679,7 @@ Return ONLY raw JSON:
     }
 
     setIcpLoading(true);
+    setIcpStatus("Researching your company...");
     setIcpEdits([]); // Clear edits on regeneration — fresh start
 
     // Phase 1 — research (training-knowledge recall, no web_search tool yet)
@@ -5789,32 +5791,37 @@ Return ONLY raw JSON:
       `\n\nIMPORTANT: linesOfBusiness should have 1-4 entries based on how many distinct buyer profiles the seller serves. A company selling one product to one type of buyer has 1 LOB. A company like Blackhawk Network has 3+ (B2B incentives, B2C gift cards, payments infrastructure). namedCustomerProfiles should have 3-8 entries — one per named customer found in the research, with their industry and use case mapped. If research found no customers, return empty arrays. Leave relevantEvents empty — populated by a separate call.`;
 
     try{
-      // ICP Phase 2 — Opus (ICP quality drives everything downstream)
-      const d2 = await claudeFetch({
-        model: OPUS,
-        max_tokens:4000,
-        temperature:0,
-        messages:[
-          {role:"user",content:icpPrompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.'},
-        ],
-      }, { extraHeaders: { "x-billable-run": "1" } });
-      if(d2.error){
-        console.warn("ICP phase 2 error:",d2.error);
-        // Surface usage limit errors
-        if (d2.error.type === "usage_limit_exceeded" || d2.error.type === "max_limit_exceeded" || d2.error.type === "max_not_available") {
+      // ICP Phase 2 — Opus via STREAMING (keeps connection alive, progressive UI)
+      setIcpStatus("Analyzing market position...");
+      const raw = await streamAIWithSearch(
+        icpPrompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.',
+        (partial) => {
+          // Progressive status updates as JSON fields stream in
+          if (partial.length > 100 && partial.includes('"sellerName"')) setIcpStatus("Found your company...");
+          if (partial.includes('"industries"')) setIcpStatus("Mapping target industries...");
+          if (partial.includes('"buyerPersonas"')) setIcpStatus("Profiling buyer personas...");
+          if (partial.includes('"competitiveAlternatives"')) setIcpStatus("Analyzing competitive landscape...");
+          if (partial.includes('"linesOfBusiness"')) setIcpStatus("Mapping lines of business...");
+          if (partial.includes('"namedCustomerProfiles"')) setIcpStatus("Building customer profiles...");
+          if (partial.includes('"winPatterns"')) setIcpStatus("Identifying win patterns...");
+        },
+        4000, { maxSearches: 0, anchorKey: "sellerName", model: OPUS }
+      );
+      if (!raw || (typeof raw === "object" && raw.error)) {
+        const err = raw?.error;
+        console.warn("ICP phase 2 error:", err);
+        if (err?.type === "usage_limit_exceeded" || err?.type === "max_limit_exceeded") {
           setSellerICP(prev => prev || ({ _error: "You've reached your plan limit. Upgrade to continue building ICPs." }));
-          setIcpLoading(false);
-          return;
+          setIcpLoading(false); setIcpStatus(""); return;
         }
-        // Surface a user-actionable error in state so the UI can show it.
-        if (d2.error.type === "unavailable" || d2.error.type === "overloaded_error") {
+        if (err?.type === "unavailable" || err?.type === "overloaded_error") {
           setSellerICP(prev => prev || ({ _error: "Our AI engine is temporarily overloaded. Click Regenerate ICP in a moment to retry." }));
         }
-        setIcpLoading(false);
-        return;
+        setIcpLoading(false); setIcpStatus(""); return;
       }
-      const raw=(d2.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      const jsonStr = raw.startsWith("{")? raw : "{"+raw;
+      setIcpStatus("Processing results...");
+      const rawText = typeof raw === "string" ? raw : JSON.stringify(raw);
+      const jsonStr = rawText.startsWith("{") ? rawText : "{" + rawText;
       const m = jsonStr.match(/\{[\s\S]*\}/);
       if(m){
         try{
@@ -5908,6 +5915,7 @@ Return ONLY raw JSON:
       setSellerICP(prev => prev || ({ _error: "ICP build failed — our AI engine may be temporarily busy. Click Regenerate ICP to retry." }));
     }
     setIcpLoading(false);
+    setIcpStatus("");
 
     // ── EVENTS ENRICHMENT (separate web-search call) ────────────────
     // Fires after ICP is set. Uses web search to find REAL conference
@@ -10138,7 +10146,7 @@ Return ONLY raw JSON:
               {/* ICP builds in background — reviewed on next step */}
               {icpLoading&&!sellerICP&&(
                 <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--ink-3)",padding:"8px 0",marginTop:8}}>
-                  <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> {getQuip("icp")}
+                  <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> {icpStatus || getQuip("icp")}
                 </div>
               )}
               {sellerICP&&!icpLoading&&(
@@ -10246,8 +10254,9 @@ Return ONLY raw JSON:
             {icpLoading&&!sellerICP&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:"60px 0",textAlign:"center"}}>
                 <div className="load-spin" style={{width:32,height:32,borderWidth:3}}/>
-                <div style={{fontSize:15,color:"var(--ink-1)",fontWeight:500}}>{getQuip("icp")}</div>
+                <div style={{fontSize:15,color:"var(--ink-1)",fontWeight:500}}>{icpStatus || getQuip("icp")}</div>
                 <div style={{fontSize:13,color:"var(--ink-3)"}}>Building your ICP for {sellerUrl}</div>
+                {icpStatus && <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginTop:-8}}>{icpStatus}</div>}
               </div>
             )}
 
