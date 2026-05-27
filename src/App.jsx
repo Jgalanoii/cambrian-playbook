@@ -5238,7 +5238,7 @@ Priority trigger: ${sanitizeForPrompt(trigger) || "—"}
 Exclusions:       ${disqual.slice(0,3).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
 ${naicsCodes.length ? `NAICS codes (USA): ${naicsCodes.join(", ")}` : ""}
 ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
-${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL (follow this methodology) ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
+${!isOpen && KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ SEARCH STRATEGY — USE ALL ${isOpen ? "6" : "4"} SEARCHES ━━━
 ${isOpen ? `
   You have 6 web searches. Use EVERY one. Do NOT stop early.
@@ -5277,20 +5277,7 @@ Return 4-8 ${isOpen ? "active opportunities" : "recent awards"}. ${isOpen ? "Sea
 
 QUALITY RULES:
 ${isOpen ? `
-  INCLUDE (these ARE Open RFPs):
-  ✓ Formal solicitations (RFP/RFQ/RFI/sources sought) posted by a named buyer on a procurement portal
-  ✓ Government notices on SAM.gov, state portals, or agency procurement pages with solicitation numbers
-  ✓ Corporate procurement postings on Ariba, Coupa, or a company's supplier/vendor page
-  ✓ Published bid opportunities with a buyer, scope, and deadline
-
-  EXCLUDE (these are NOT Open RFPs — they belong in the Signals category):
-  ✗ Market research, trend reports, or advisory analyses (KFF, ATI, HealthScape, Oliver Wyman)
-  ✗ The seller's OWN content (blog posts, cheat sheets, marketing)
-  ✗ CMS rules or proposed regulations (regulatory signals, not solicitations)
-  ✗ News articles ABOUT procurement trends
-  ✗ Items you label as "Pre-RFP Signal" or "Buying Intent" — those go in signals, not here
-
-  Return {"rows":[]} if no formal solicitations found. 1-2 real RFPs beats 5 padded results.
+  Only return ACTUAL solicitations — a named buyer seeking vendors, with a procurement portal URL. Do NOT return research articles, advisory reports, news, regulations, or the seller's own content. Those belong in signals, not here. Empty is fine if no real solicitations found.
 ` : `
   INCLUDE (these ARE Closed Awards / Incumbent Intel):
   ✓ A named buyer's website/member page showing which vendor administers their program
