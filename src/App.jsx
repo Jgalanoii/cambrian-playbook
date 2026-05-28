@@ -1670,6 +1670,30 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       (member.company_url ? `Website: ${member.company_url}\n` : "") +
       "\n" : "";
 
+  // FIRMOGRAPHICS SINGLE SOURCE OF TRUTH — compact block injected into EVERY micro-call.
+  // Establishes non-negotiable facts so P1/P2/P4/P5/P7/P9 never contradict each other.
+  // Priority: Apollo > member-level (from scoring/enrichment) > empty
+  const _fg = {
+    employees: enrichment?.employeeCount || member.employees || "",
+    ownership: enrichment?.publiclyTraded || member.publicPrivate || "",
+    industry: enrichment?.industry ? `${enrichment.industry}${enrichment.subIndustry ? ` / ${enrichment.subIndustry}` : ""}` : (member.ind || ""),
+    hq: enrichment?.headquarters || "",
+    founded: enrichment?.founded || "",
+    revenue: enrichment?.revenue || "",
+    website: member.company_url || enrichment?.linkedIn || "",
+  };
+  const firmographicsTruth = Object.values(_fg).some(v => v)
+    ? `\nESTABLISHED FACTS about ${co} (do NOT contradict — these come from verified sources):\n` +
+      (_fg.employees ? `Employees: ${_fg.employees}\n` : "") +
+      (_fg.ownership ? `Ownership: ${_fg.ownership}\n` : "") +
+      (_fg.industry ? `Industry: ${_fg.industry}\n` : "") +
+      (_fg.hq ? `Headquarters: ${_fg.hq}\n` : "") +
+      (_fg.founded ? `Founded: ${_fg.founded}\n` : "") +
+      (_fg.revenue ? `Revenue: ${_fg.revenue}\n` : "") +
+      (_fg.website ? `Website: ${_fg.website}\n` : "") +
+      `If your web search returns a DIFFERENT number for any of these, use the number above — it's been verified.\n\n`
+    : "";
+
   // PUBLIC COMPANY: inject SEC filing search instructions for publicly traded targets
   const isPublicCompany = !!(
     (enrichment?.publiclyTraded && !/private/i.test(enrichment.publiclyTraded)) ||
@@ -2016,6 +2040,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       // p5 focuses on news, sentiment, and signals. Open roles are handled
       // by the dedicated p6 call which has its own web_search budget + fallback.
       const prompt =
+        firmographicsTruth +
         `Search for recent information about "${co}". Use at least one search specifically for press releases.\n\n`+
         `SEARCH STRATEGY (you have 2 searches — use BOTH, one for each purpose):\n`+
         `- Search 1 (NEWS): "${co}" news OR press release 2025 OR 2026\n`+
@@ -2195,6 +2220,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         temperature: 0,
         tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
         messages: [{ role: "user", content:
+          firmographicsTruth +
           `Search for CURRENT open job listings at "${co}". This is critical sales intelligence — hiring patterns reveal strategic priorities and budget allocation.\n\n` +
           `SEARCH STRATEGY (use both searches):\n` +
           `1. Search: "${co} open jobs" OR "${co} careers hiring"\n` +
@@ -2281,6 +2307,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
           deepIntelIdentity+
+          firmographicsTruth+
           `Research the competitive landscape of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
           `COMPETITOR ACCURACY (CRITICAL): Only list companies that DIRECTLY compete with ${co} in the SAME product category. A competitor must offer a substitute product that a buyer would evaluate alongside ${co}. Companies in adjacent categories (analytics, CRM, data platforms, etc.) are NOT competitors unless they directly compete for the same budget and use case. If web search returns no clear competitors, return fewer entries or empty array — do NOT fill with companies from your training data that seem vaguely related. A wrong competitor name makes the rep look uninformed.\n\n`+
@@ -2310,6 +2337,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
           deepIntelIdentity+
+          firmographicsTruth+
           `Research the board of directors, investors, and governance of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}board of directors" and "${co} investors funding".\n`+
           (isPublicCompany
@@ -2340,6 +2368,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
           deepIntelIdentity+
+          firmographicsTruth+
           `Research the financial performance and trajectory of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           (isPublicCompany
             ? `This is a PUBLIC COMPANY. Use SEC filings as primary sources:\n`+
@@ -2378,9 +2407,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const d = await claudeFetch({
         model:activeModel(), max_tokens:2000,
         messages:[{role:"user",content:
+          firmographicsTruth+
           `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `SELLER CONTEXT: ${sellerICP?.sellerDescription || sellerUrl}. Deal size: ${dealSize}. Stage: ${sellerICP?.icp?.salesCycle || "unknown"}.\n`+
-          `TARGET CONTEXT: ${co} — Industry: ${member.ind || "unknown"}. Size: ${member.employees || "unknown"} employees.\n\n`+
+          `TARGET CONTEXT: ${co} — Industry: ${_fg.industry || "unknown"}. Size: ${_fg.employees || "unknown"} employees. Ownership: ${_fg.ownership || "unknown"}.\n\n`+
           (KL_APPROVAL_GATES ? `APPROVAL GATES KNOWLEDGE:\n${KL_APPROVAL_GATES.slice(0, 3000)}\n\n` : "") +
           `Return raw JSON with TWO sections:\n`+
           `{"gateMap":{\n`+
