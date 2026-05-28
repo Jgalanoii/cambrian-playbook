@@ -12687,12 +12687,12 @@ Return ONLY raw JSON:
                   const total = prospectRfps.length + prospectSignals.length;
                   if (!total) return null;
                   return (
-                    <div style={{background:prospectRfps.length?"var(--red-bg)":"var(--amber-bg)",border:`2px solid ${prospectRfps.length?"var(--red)":"var(--amber)"}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
-                      <div style={{fontSize:13,fontWeight:700,color:prospectRfps.length?"var(--red)":"var(--amber)",marginBottom:6}}>
-                        {prospectRfps.length ? `🔴 ${prospectRfps.length} Active RFP${prospectRfps.length>1?"s":""} for ${selectedAccount.company}` : `🟡 ${prospectSignals.length} Buying Signal${prospectSignals.length>1?"s":""} for ${selectedAccount.company}`}
+                    <div style={{background:prospectRfps.length?"var(--green-bg)":"var(--amber-bg)",border:`2px solid ${prospectRfps.length?"var(--green)":"var(--amber)"}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                      <div style={{fontSize:13,fontWeight:700,color:prospectRfps.length?"var(--green)":"var(--amber)",marginBottom:6}}>
+                        {prospectRfps.length ? `🟢 ${prospectRfps.length} Active RFP${prospectRfps.length>1?"s":""} for ${selectedAccount.company}` : `🟡 ${prospectSignals.length} Buying Signal${prospectSignals.length>1?"s":""} for ${selectedAccount.company}`}
                       </div>
                       {prospectRfps.map((rfp, idx) => (
-                        <div key={"r"+idx} style={{fontSize:11,color:"var(--ink-1)",marginTop:4,paddingLeft:12,borderLeft:"2px solid var(--red)"}}>
+                        <div key={"r"+idx} style={{fontSize:11,color:"var(--ink-1)",marginTop:4,paddingLeft:12,borderLeft:"2px solid var(--green)"}}>
                           {rfp.url ? <a href={rfp.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-1)",textDecoration:"none"}}>{rfp.title} ↗</a> : rfp.title} {rfp.deadline ? `— deadline: ${rfp.deadline}` : ""}
                         </div>
                       ))}
