@@ -1266,19 +1266,19 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
 
 // callAI: JSON-specific wrapper around claudeFetch. Delegates all HTTP/retry
 // logic to claudeFetch, then extracts + repairs JSON from the response.
-async function callAI(prompt, { maxTokens = 5500 } = {}){
+async function callAI(prompt, { maxTokens = 5500, skipJsonSuffix = false } = {}){
   const d = await claudeFetch({
     model:activeModel(),
     max_tokens:maxTokens,
     temperature:0,
     system:ANTI_HALLUCINATION_SYSTEM,
     messages:[
-      {role:"user",content:prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.'},
+      {role:"user",content:prompt + (skipJsonSuffix ? '' : '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.')},
     ],
   });
-  if(d?.error) return null;
+  if(d?.error) { console.warn("[callAI] API error:", JSON.stringify(d.error).slice(0,200)); return null; }
   let raw=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/<\/?cite[^>]*>/g,"").trim();
-  if(!raw) return null;
+  if(!raw) { console.warn("[callAI] Empty response from API"); return null; }
   // Strip markdown fences, thinking tags, and prose before JSON
   raw = raw.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, "").trim();
   // Find the first { and last } to extract JSON
@@ -4951,7 +4951,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [specific named customer from profiles above] — same vertical, comparable size, identical use case. Be specific about WHY they're similar.","incumbentRisk":"Name the incumbent vendor ONLY if certain. If uncertain: 'No verified incumbent.'","bestLOB":"Which seller line of business best fits this prospect","closestCustomer":"Name of the seller's existing customer most similar to this prospect","orgSize":"Employee count if confident — empty string if not","ownership":"CURRENT status only — Private if acquired/delisted","ownershipType":"public | pe-backed | vc-backed | private | bootstrapped"}]}`;
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
-      const result = await callAI(prompt, { maxTokens: 7500 });
+      const result = await callAI(prompt, { maxTokens: 7500, skipJsonSuffix: true });
       console.log(`[scoreFit] Batch result:`, result ? `${result.scores?.length || 0} scores` : "NULL");
       if (!result?.scores || !Array.isArray(result.scores)) {
         console.warn("[scoreFit] Batch returned no/invalid scores. Full result:", JSON.stringify(result)?.slice(0, 300));
