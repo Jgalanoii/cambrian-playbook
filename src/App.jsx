@@ -1607,7 +1607,7 @@ function buildUserEditContext(edits, userEdits) {
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
 // wait for p1. This cuts time-to-first-paint from ~3-5s to instant.
-function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null, icpEdits=[], accountDocs=[]){
+function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, selectedOutcomes, productPageUrl, onStatus, productUrls=[], sellerICP=null, caches={}, onStream=null, icpEdits=[], accountDocs=[], _crossSessionCtx=""){
   const co  = sanitizeForPrompt(member.company);
   const url = member.company_url || co;
   const safeSellerUrl = sanitizeForPrompt(sellerUrl);
@@ -1745,11 +1745,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // Smart 2-tier KL injection: prioritize by RELEVANCE to target industry, not file size
   const _klInjectionText = _rankAndCapKls(_klInjections, member.ind, sellerICP);
 
+  // ── Cross-session intelligence: query prior competitor intel + prior briefs ──
+  // Uses pre-fetched crossSessionCtx if available (populated by caller before invoking generateBrief)
+  const crossSessionCtx = _crossSessionCtx || "";
+
   const baseFull = baseLight +
     `${universalCtx}\n`+
     `SELLER CONTEXT:\n${sellerCtx}${prodCtx}\n`+
     proofPack +
     _klInjectionText +
+    crossSessionCtx +
     `DEAL: ${dealCtx}\n\n`;
 
   onStatus("Researching "+co+"...");
@@ -1918,7 +1923,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found in search results",`+
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
-    `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"}}`,
+    `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"},`+
+    `"outreachEmail":{"subject":"Short, specific email subject referencing ${co} or a recent event found in search — never generic. Under 60 chars.","body":"3-5 sentences. Cold outreach email from ${sellerUrl} to a decision-maker at ${co}. (1) Open with ONE specific research finding about ${co} — a recent initiative, hire, challenge, or news item FROM YOUR SEARCH RESULTS. (2) Connect it to ONE specific outcome ${sellerUrl} delivers. (3) End with a soft CTA — suggest a 15-minute call, not a demo. Tone: human, direct, no buzzwords. Write it as a real email someone would actually send. No '[Your Name]' placeholders — end with a simple sign-off."}}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
       const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -2047,6 +2053,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     companySnapshot: `Researching ${co}...`,
     _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true, roles:true, deepIntel:true},
     _klVersions: _klActiveVersions, // which knowledge layers were injected for this brief
+    _generatedAt: Date.now(),
   };
 
   // Per-section merger functions, applied via setBrief(prev => merger(prev))
@@ -2097,6 +2104,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
     if (r3?.openingAngle) next.openingAngle = r3.openingAngle;
+    if (r3?.outreachEmail) next.outreachEmail = r3.outreachEmail;
     // Only fill publicSentiment fields that aren't already set by p5 (mergeLive).
     // p5 has richer sentiment from web_search; p3 should backfill, not overwrite.
     if (r3?.publicSentiment) {
@@ -3718,18 +3726,18 @@ const PAGE_GUIDES = {
     "Discovery questions (Sales + Architecture tracks) are shown for each stage",
     "Ask Milton for real-time coaching — he has your full session context",
   ]},
-  8: { title: "Post-Call Analysis", items: [
+  8: { title: "Solution Architecture", items: [
+    "The SA Review evaluates product-to-customer fit based on your discovery capture",
+    "Missing Discovery Data warnings tell you exactly what to capture on the next call",
+    "Operational Maturity assessment shows where the account is in their problem-solving journey",
+    "Confirmed Solutions include implementation phasing (Phase 1/2/3) and risk assessment",
+  ]},
+  9: { title: "Post-Call Analysis", items: [
     "Deal Route (Fast Track / Nurture / Disqualify) is based on your discovery capture",
     "The Scorecard compares your pre-call hypothesis to what you actually heard",
     "CRM Note is ready to paste — copy it directly into your CRM",
     "The Follow-Up Email is sendable quality — copy and personalize",
     "Download the Customer-Facing Call Summary for a professional recap to share with the prospect",
-  ]},
-  9: { title: "Solution Architecture", items: [
-    "The SA Review evaluates product-to-customer fit based on your discovery capture",
-    "Missing Discovery Data warnings tell you exactly what to capture on the next call",
-    "DMAIC Stage assessment shows where the account is in their operational maturity",
-    "Confirmed Solutions include implementation phasing (Phase 1/2/3) and risk assessment",
   ]},
 };
 
@@ -3763,7 +3771,8 @@ const APP_GUIDES = {
       { h: "Step 5: Brief", body: "Full company intelligence — 10 sections of live web research.\n\n1. Company Snapshot — revenue, employees, HQ, ownership, funding\n2. Key Executives — current leaders with approach angles\n3. Strategy & Opening — 12-18 month direction, Challenger teaching insight\n4. Solution Mapping — your products matched to their problems\n5. Live Intelligence — recent headlines, growth signals\n6. Open Roles — hiring signals that reveal priorities\n7. Competitive Positioning — who they fight and where they lose\n8. Board & Investors — governance, investment thesis\n9. Financial Deep Dive — revenue trends, capital priorities\n10. Approval Gate Map — steering committees, procurement path\n\nEvery field is editable. Click to correct anything." },
       { h: "Step 6: Prep", body: "Structured conversation hypothesis using the RIVER framework:\n\n• Reality — what's urgent for this buyer right now\n• Impact — what the problem is costing them\n• Vision — what success looks like in their words\n• Entry Points — who's on the buying committee\n• Route — fastest path to yes\n\nDiscovery questions are tailored to the buyer and your products." },
       { h: "Step 7: Live Call", body: "Real-time coaching and structured note capture during the conversation.\n\n• Answer gate questions as you learn (click the options)\n• Capture discovery notes in the prospect's own words\n• Press Tab in notes to insert a timestamp\n• Ask Milton for real-time coaching — he has your full session context\n\nDon't try to fill every gate question — capture what comes naturally." },
-      { h: "Step 8: Post-Call", body: "Instant deal assessment, CRM note, and follow-up email.\n\n• Deal Route — Fast Track / Nurture / Disqualify\n• Scorecard — compares pre-call hypothesis to what you heard\n• CRM Note — ready to paste into any CRM\n• Follow-Up Email — sendable quality, copy and personalize\n• Push to HubSpot — one click sends everything" },
+      { h: "Step 8: Solution Fit", body: "Solution architecture review based on what you actually heard in the call.\n\n• Buyer Readiness — where they are on the adoption curve\n• Operational Maturity — how mature their problem-solving process is\n• Confirmed Solutions — products validated by discovery, with SA rationale\n• Architecture Gaps — customer needs not fully addressed\n• Implementation Roadmap — recommended phasing based on discovery" },
+      { h: "Step 9: Post-Call", body: "Instant deal assessment, CRM note, and follow-up email.\n\n• Deal Route — Fast Track / Nurture / Disqualify\n• Scorecard — compares pre-call hypothesis to what you heard\n• CRM Note — ready to paste into any CRM\n• Follow-Up Email — sendable quality, copy and personalize\n• Push to HubSpot — one click sends everything" },
       { h: "Milton AI Coach", body: "Click the chat button (bottom-right) on any step. Milton knows your full session — ICP, brief, hypothesis, discovery capture, and seller context.\n\nBest prompts:\n• \"How should I open this call?\"\n• \"What's the biggest risk in this deal?\"\n• \"Help me handle the 'we already have a vendor' objection\"\n• \"What should I ask about their tech stack?\"" },
       { h: "HubSpot Integration", body: "Settings → HubSpot → Connect → Authorize in HubSpot.\n\nWhat gets pushed: Company record, rich HTML note with session intelligence, deal (optional), executive contacts, follow-up tasks.\n\nDisconnect: Settings → HubSpot → Disconnect (revokes tokens immediately)." },
       { h: "Keyboard Shortcuts", body: "⌘K — Command palette (search anything)\n⌘S — Save session\n← → — Navigate between steps\nEscape — Close any modal\nTab (in call notes) — Insert timestamp" },
@@ -3977,10 +3986,12 @@ export default function App(){
   useEffect(()=>{ sessionStorage.removeItem('cambrian_auth'); },[]);
   const[showSavePrompt,setShowSavePrompt]=useState(false);
   const[savedSessions,setSavedSessions]=useState([]);
+  const[hasMoreSessions,setHasMoreSessions]=useState(false);
   const[currentSessionId,setCurrentSessionId]=useState(null);
   const[sessionName,setSessionName]=useState('');
   const[showSessions,setShowSessions]=useState(false);
   const[saveStatus,setSaveStatus]=useState('');
+  const[autoSaveError,setAutoSaveError]=useState(false);
 
   // ── SESSION HELPERS (localStorage fallback for guest mode) ──────────────
   const STORAGE_KEY = "cambrian_session_v1";
@@ -3991,6 +4002,12 @@ export default function App(){
     setCohorts([]); setRows([]); setSelectedAccount(null); setPostCall(null);
     setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
     setStep(0);
+  };
+  const clearAccount = () => {
+    setSelectedAccount(null); setBrief(null); setRiverHypo(null); setPostCall(null);
+    setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
+    setContactRole(''); setSelectedOutcomes([]);
+    setStep(3);
   };
   const lastSaved = () => null; // reserved for future use
   const _step_unused = null; // placeholder
@@ -4157,6 +4174,7 @@ export default function App(){
   const[targetOwnership,setTargetOwnership]=useState([]); // up to 3, e.g. ["Public","PE-backed","Private"]
   const[disqualified,setDisqualified]=useState({}); // {companyName: "reason"}
   const[dqModalTarget,setDqModalTarget]=useState(null); // company name for disqualify modal
+  const[undoAction,setUndoAction]=useState(null); // {label, undo, timerId}
   // Auto-populate target generation dropdowns from structured targeting preferences
   React.useEffect(() => {
     const hArr = Array.isArray(icpTargeting.headcount) ? icpTargeting.headcount : (icpTargeting.headcount ? [icpTargeting.headcount] : []);
@@ -5133,6 +5151,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       // Progressive state update — merge this batch's results so the table
       // fills in as batches return rather than waiting for all batches.
       setFitScores(prev => ({ ...prev, ...map }));
+      // Log prospect events for cross-session intelligence
+      Object.entries(map).forEach(([co, fs]) => logProspectEvent(co, "scored", { score: fs.score, label: fs.label }));
 
       // ── Phase 1B: Persist fit scores to account_outputs (fire-and-forget) ──
       if (sbToken && sbUser) {
@@ -5275,6 +5295,18 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
   };
 
   // ── RFP data science logging (fire-and-forget to Supabase) ──────────
+  // ── Cross-session: log prospect events for data science ──
+  const logProspectEvent = (company, eventType, metadata = {}) => {
+    if (!sbToken || !sbUser) return;
+    const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!SB_URL || !SB_KEY) return;
+    fetch(`${SB_URL}/rest/v1/prospect_events`, {
+      method: "POST", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ user_id: sbUser.id, org_id: orgCtx?.id || null, seller_url: sellerUrl || null, company: (company||"").slice(0,200), event_type: eventType, metadata }),
+    }).catch(() => {});
+  };
+
   const logRfpIntel = (items, searchStage, searchType) => {
     if (!sbToken || !sbUser || !items?.length) return;
     const SB_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -5361,24 +5393,42 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     } catch { /* non-critical */ return { open: [], closed: [], signals: [] }; }
   };
 
-  // ── Dismiss an RFP result (mark as irrelevant in Supabase + remove from UI)
-  const dismissRfpResult = async (item, category) => {
+  // ── Dismiss an RFP result (with 5-second undo window)
+  const dismissRfpResult = (item, category) => {
+    // Clear any existing undo
+    if (undoAction?.timerId) clearTimeout(undoAction.timerId);
     // Remove from UI immediately
     if (category === "open") setRfpData(prev => ({ ...prev, open: prev.open.filter(r => r !== item) }));
     else if (category === "closed") setRfpData(prev => ({ ...prev, closed: prev.closed.filter(r => r !== item) }));
     else if (category === "signal") setRfpData(prev => ({ ...prev, signals: prev.signals.filter(r => r !== item) }));
-    // Mark dismissed in Supabase if it has a DB id
-    if (item._dbId && sbToken) {
-      const SB_URL = import.meta.env.VITE_SUPABASE_URL;
-      const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      if (SB_URL && SB_KEY) {
-        fetch(`${SB_URL}/rest/v1/rfp_intel_signals?id=eq.${item._dbId}`, {
-          method: "PATCH",
-          headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-          body: JSON.stringify({ user_dismissed: true }),
-        }).catch(() => { /* non-critical */ });
+    // Commit to Supabase after undo window
+    const commitDismiss = () => {
+      if (item._dbId && sbToken) {
+        const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (SB_URL && SB_KEY) {
+          fetch(`${SB_URL}/rest/v1/rfp_intel_signals?id=eq.${item._dbId}`, {
+            method: "PATCH",
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+            body: JSON.stringify({ user_dismissed: true }),
+          }).catch(() => {});
+        }
       }
-    }
+      setUndoAction(null);
+    };
+    const timerId = setTimeout(commitDismiss, 5000);
+    setUndoAction({
+      label: `Dismissed "${(item.title || "result").slice(0, 40)}${(item.title||"").length > 40 ? "..." : ""}"`,
+      undo: () => {
+        clearTimeout(timerId);
+        // Restore to UI
+        if (category === "open") setRfpData(prev => ({ ...prev, open: [...prev.open, item] }));
+        else if (category === "closed") setRfpData(prev => ({ ...prev, closed: [...prev.closed, item] }));
+        else if (category === "signal") setRfpData(prev => ({ ...prev, signals: [...prev.signals, item] }));
+        setUndoAction(null);
+      },
+      timerId,
+    });
   };
 
   // Split into two parallel calls (open + closed). Each has its own
@@ -5396,6 +5446,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           const parsed = JSON.parse(cached);
           if ((parsed?.open?.length > 0) || (parsed?.closed?.length > 0) || (parsed?.signals?.length > 0)) {
             setRfpData({ open: parsed.open || [], closed: parsed.closed || [], signals: parsed.signals || [], loading: false, error: null });
+            // If cache is >48 hours old, trigger a background refresh
+            const cacheAge = parsed._cachedAt ? Date.now() - parsed._cachedAt : Infinity;
+            if (cacheAge > 48 * 3600000) {
+              console.log("[rfp-cache] Stale cache (", Math.round(cacheAge/3600000), "hrs) — background refresh");
+              fetchRFPIntel({ forceRefresh: true });
+            }
             // Merge DB results in background — don't block the cache render
             loadPreviousRfpIntel().then(dbResults => {
               if (!dbResults.open.length && !dbResults.closed.length && !dbResults.signals.length) return;
@@ -5450,6 +5506,28 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       .flatMap(([,codes]) => codes).slice(0, 4);
 
     const fixGov = r => ({ ...r, isGovernment: r.isGovernment === true || r.isGovernment === "true" });
+
+    // Post-fetch quality filter — reject junk URLs, self-references, low relevance
+    const BLOCKED_DOMAINS = ["linkedin.com","youtube.com","wikipedia.org","twitter.com","facebook.com","medium.com","reddit.com","instagram.com","tiktok.com"];
+    const BLOG_PATHS = ["/blog/","/news/","/article/","/press-release/","/insights/","/resources/"];
+    const sellerDomain = (sellerUrl||"").replace(/^https?:\/\//,"").replace(/\/.*/,"").toLowerCase();
+    const validateRfpResult = (r) => {
+      const url = (r.url||"").toLowerCase();
+      if (!url.startsWith("http")) return false;
+      // Reject seller's own domain
+      if (sellerDomain && url.includes(sellerDomain)) return false;
+      // Reject blocked social/content domains
+      if (BLOCKED_DOMAINS.some(d => url.includes(d))) return false;
+      // Reject blog/news paths (unless .gov)
+      if (!url.includes(".gov") && BLOG_PATHS.some(p => url.includes(p))) return false;
+      // Reject self-contradiction: buyer = seller
+      const buyer = (r.buyer||"").toLowerCase();
+      const sellerName = (sellerICP?.sellerName||sellerUrl||"").toLowerCase().replace(/\.com|\.ai|\.io/g,"").trim();
+      if (sellerName && buyer.includes(sellerName)) return false;
+      // Relevance floor
+      if (typeof r.relevanceScore === "number" && r.relevanceScore < 30) return false;
+      return true;
+    };
 
     const buildPrompt = (kind) => {
       const isOpen = kind === "open";
@@ -5515,6 +5593,9 @@ Return 4-8 ${isOpen ? "active opportunities" : "recent awards"}. ${isOpen ? "Sea
 QUALITY RULES:
 ${isOpen ? `
   Only return ACTUAL solicitations — a named buyer seeking vendors, with a procurement portal URL. Do NOT return research articles, advisory reports, news, regulations, or the seller's own content. Those belong in signals, not here. Empty is fine if no real solicitations found.
+  NEVER return URLs to blog posts, news articles, market research reports, or the seller's own website (${sanitizeForPrompt(sellerUrl)}).
+  Every URL must point to a procurement portal, solicitation page, or government contract listing — NOT an article ABOUT procurement.
+  Do NOT return LinkedIn, YouTube, Wikipedia, Medium, Reddit, or social media links.
 ` : `
   INCLUDE (these ARE Closed Awards / Incumbent Intel):
   ✓ A named buyer's website/member page showing which vendor administers their program
@@ -5675,7 +5756,7 @@ Use ALL 4 searches on government sources:
 
 State agencies, employee trust funds, Medicaid agencies, school districts, and health departments post on their OWN .gov portals. Search specifically for those.
 
-Only return ACTUAL solicitations with a named government buyer and a procurement portal URL. No research, no articles, no regulations, no news. Return {"rows":[]} if none found.
+Only return ACTUAL solicitations with a named government buyer and a procurement portal URL. No research, no articles, no regulations, no news, no blog posts. NEVER return the seller's own website (${sanitizeForPrompt(sellerUrl)}). Every URL must be a government procurement portal or solicitation page. Return {"rows":[]} if none found.
 
 Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","country":"USA","source":"Portal name","isGovernment":true,"value":"$500K","deadline":"YYYY-MM-DD","relevanceScore":85,"relevanceReason":"1-2 sentences.","naicsOrCpv":"","cohort":"","url":"https://..."}]}`;
 
@@ -5706,14 +5787,14 @@ Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","count
       const deduped = allRows.filter(r => { const key = (r.url || r.title || "").toLowerCase(); if (seen.has(key)) return false; seen.add(key); return true; });
       return { rows: deduped, error: comm.error };
     });
-    // Helper: merge new results with DB results, dedup by URL, new results take priority
+    // Helper: merge new results with DB results, dedup by URL, validate quality, new results take priority
     const mergeWithDb = (newRows, dbRows) => {
       const seen = new Set();
       const merged = [];
-      // New results first (higher priority)
-      for (const r of (newRows || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k)) { seen.add(k); merged.push(r); } }
-      // DB results fill in anything not re-found
-      for (const r of (dbRows || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k)) { seen.add(k); merged.push({ ...r, _fromDb: true }); } }
+      // New results first (higher priority) — validated
+      for (const r of (newRows || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k) && validateRfpResult(r)) { seen.add(k); merged.push(r); } }
+      // DB results fill in anything not re-found — validated
+      for (const r of (dbRows || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k) && validateRfpResult(r)) { seen.add(k); merged.push({ ...r, _fromDb: true }); } }
       return merged;
     };
 
@@ -5745,6 +5826,7 @@ Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","count
           open: openRes.rows || [],
           closed: closedRes.rows || [],
           signals: signalsRes.signals || [],
+          _cachedAt: Date.now(),
         }));
       } catch {}
     }
@@ -6614,11 +6696,16 @@ Return ONLY raw JSON:
   // ── SUPABASE SESSION SAVE/LOAD ────────────────────────────────────────────
   const getSessionSnap=()=>({step,sellerUrl,sellerInput,sellerStage,icpTargeting,productUrls,sellerICP,sellerICPInput,icpDelta,icpEdits,userEdits,favorites,products,sellerDocs:sellerDocs.map(d=>({...d,content:d.content.slice(0,500)})),accountDocs:accountDocs.map(d=>({...d,content:d.content.slice(0,500)})),sellerProofPoints,sellerExclusions,rows,headers,mapping,fileName,importMode,cohorts,selectedCohort,fitScores,accountQueue,selectedAccount,selectedOutcomes,dealValue,dealClassification,brief,riverHypo,gateAnswers,riverData,notes,postCall,solutionFit,contactRole,miltonMsgCount,fitWeights,intelAdjustments,disqualified});
 
-  const loadSessions=async()=>{
+  const loadSessions=async(append=false)=>{
     if(!sbUser||!sbToken) return;
     try{
-      const rows=await sbSessions('GET',`sessions?user_id=eq.${sbUser.id}&order=updated_at.desc&limit=100`,sbToken);
-      if(rows) setSavedSessions(rows);
+      const offset = append ? savedSessions.length : 0;
+      const rows=await sbSessions('GET',`sessions?user_id=eq.${sbUser.id}&order=updated_at.desc&limit=100&offset=${offset}`,sbToken);
+      if(rows) {
+        if(append) setSavedSessions(prev=>[...prev,...rows]);
+        else setSavedSessions(rows);
+        setHasMoreSessions(rows.length >= 100);
+      }
     }catch(e){ console.warn("[sessions] Load failed:", e.message); }
   };
 
@@ -6635,12 +6722,12 @@ Return ONLY raw JSON:
         const res=await sbSessions('POST','sessions',sbToken,{user_id:sbUser.id,name:nm,seller_url:sellerUrl,data});
         if(res?.[0]?.id){setCurrentSessionId(res[0].id);setSessionName(nm);}
       }
-      setSaveStatus('saved');setTimeout(()=>setSaveStatus(''),3000);
+      setSaveStatus('saved');setAutoSaveError(false);setTimeout(()=>setSaveStatus(''),3000);
       logJourney("session_saved", { session_name: (nm || "").slice(0, 100), step });
       loadSessions();
     }catch(e){
       console.warn("[sessions] Save failed:", e.message);
-      setSaveStatus('');
+      setSaveStatus('save-error');setTimeout(()=>setSaveStatus(''),5000);
     }
   };
 
@@ -6688,6 +6775,11 @@ Return ONLY raw JSON:
     setShowSessions(false);setStep(d.step!=null?d.step:(d.sellerUrl?1:0));
     // Reset auto-save snapshot so restored state isn't immediately re-saved
     lastAutoSaveSnap.current = JSON.stringify(d);
+    // Stale session warning — 14+ days old
+    if (s.updated_at) {
+      const ageDays = Math.floor((Date.now() - new Date(s.updated_at).getTime()) / 86400000);
+      if (ageDays >= 14) setEditToast(`This session was last saved ${ageDays} days ago — company data may have changed`);
+    }
   };
 
   const deleteSession=async(id)=>{
@@ -6709,6 +6801,16 @@ Return ONLY raw JSON:
   // (nothing worth saving yet). Uses a snapshot comparison to avoid redundant
   // writes.
   const lastAutoSaveSnap = useRef(null);
+  const autoSaveRetryRef = useRef(null);
+  const doAutoSave = async (snap, nm) => {
+    await sbSessions('POST', 'users?on_conflict=id', sbToken, { id: sbUser.id, email: sbUser.email, name: sbUser.user_metadata?.full_name || sbUser.email, role: 'rep' });
+    if (currentSessionId) {
+      await sbSessions('PATCH', `sessions?id=eq.${currentSessionId}`, sbToken, { name: nm, seller_url: sellerUrl, data: snap });
+    } else {
+      const res = await sbSessions('POST', 'sessions', sbToken, { user_id: sbUser.id, name: nm, seller_url: sellerUrl, data: snap });
+      if (res?.[0]?.id) { setCurrentSessionId(res[0].id); setSessionName(nm); }
+    }
+  };
   useEffect(() => {
     if (!sbUser || !sbToken || !sellerUrl) return;
     const timer = setTimeout(async () => {
@@ -6716,23 +6818,26 @@ Return ONLY raw JSON:
       const snapJson = JSON.stringify(snap);
       if (snapJson === lastAutoSaveSnap.current) return; // no changes
       lastAutoSaveSnap.current = snapJson;
+      const nm = sessionName || sellerUrl || 'Session ' + new Date().toLocaleDateString();
       try {
-        const nm = sessionName || sellerUrl || 'Session ' + new Date().toLocaleDateString();
-        await sbSessions('POST', 'users?on_conflict=id', sbToken, { id: sbUser.id, email: sbUser.email, name: sbUser.user_metadata?.full_name || sbUser.email, role: 'rep' });
-        if (currentSessionId) {
-          await sbSessions('PATCH', `sessions?id=eq.${currentSessionId}`, sbToken, { name: nm, seller_url: sellerUrl, data: snap });
-        } else {
-          const res = await sbSessions('POST', 'sessions', sbToken, { user_id: sbUser.id, name: nm, seller_url: sellerUrl, data: snap });
-          if (res?.[0]?.id) { setCurrentSessionId(res[0].id); setSessionName(nm); }
-        }
-        setSaveStatus('auto-saved'); setTimeout(() => setSaveStatus(''), 3000);
-      } catch (e) { console.warn('[auto-save] failed:', e.message); }
+        await doAutoSave(snap, nm);
+        setSaveStatus('auto-saved'); setAutoSaveError(false); setTimeout(() => setSaveStatus(''), 3000);
+      } catch (e) {
+        console.warn('[auto-save] failed:', e.message);
+        setAutoSaveError(true);
+        // Retry once after 10s
+        if (autoSaveRetryRef.current) clearTimeout(autoSaveRetryRef.current);
+        autoSaveRetryRef.current = setTimeout(async () => {
+          try { await doAutoSave(snap, nm); setAutoSaveError(false); setSaveStatus('auto-saved'); setTimeout(() => setSaveStatus(''), 3000); }
+          catch { /* give up after retry */ }
+        }, 10000);
+      }
     }, 30000);
     return () => clearTimeout(timer);
   }, [sellerUrl, sellerICP, sellerICPInput, icpDelta, products, sellerDocs, sellerProofPoints,
       rows, cohorts, fitScores, accountQueue, selectedAccount, brief, riverHypo,
       gateAnswers, riverData, notes, postCall, solutionFit, dealValue, dealClassification,
-      sellerStage, icpTargeting, productUrls, contactRole]);
+      sellerStage, icpTargeting, productUrls, contactRole, intelAdjustments, disqualified]);
 
   // ── KEYBOARD SHORTCUTS (Phase 2c) ─────────────────────────────────────────
   // Global keydown listener. Only fires when no input/textarea has focus
@@ -6801,7 +6906,7 @@ Return ONLY raw JSON:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(brief?.companySnapshot && !brief._loadingSections?.overview) celebrate("brief_built"); },[brief?.companySnapshot]);
+  useEffect(()=>{ if(brief?.companySnapshot && !Object.values(brief._loadingSections || {}).some(Boolean)) celebrate("brief_built"); },[brief?.companySnapshot, brief?._loadingSections]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(riverHypo?.reality) celebrate("hypothesis_ready"); },[riverHypo?.reality]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -7171,6 +7276,31 @@ Return ONLY raw JSON:
     let skeleton, mergers, earlyDone, allDone;
     try {
       const effectiveSellerUrl = overrideSellerUrl || sellerUrl;
+      // ── Cross-session intelligence: pre-fetch competitor context ──
+      let crossCtx = "";
+      try {
+        const SB_URL_CS = import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY_CS = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (SB_URL_CS && SB_KEY_CS && sbToken && member.ind) {
+          const [compRes, priorRes] = await Promise.all([
+            fetch(`${SB_URL_CS}/rest/v1/competitor_intel?industry=ilike.*${encodeURIComponent(member.ind.slice(0,30))}*&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&select=competitor_name,customer_names,evidence_type&limit=8`, {
+              headers: { apikey: SB_KEY_CS, Authorization: `Bearer ${sbToken}` }
+            }).then(r=>r.ok?r.json():[]).catch(()=>[]),
+            fetch(`${SB_URL_CS}/rest/v1/account_outputs?output_type=eq.brief&company=eq.${encodeURIComponent(co)}&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&is_latest=eq.true&select=created_at&limit=1`, {
+              headers: { apikey: SB_KEY_CS, Authorization: `Bearer ${sbToken}` }
+            }).then(r=>r.ok?r.json():[]).catch(()=>[]),
+          ]);
+          if (compRes.length > 0) {
+            crossCtx += `\n═══ COMPETITOR INTELLIGENCE (from prior research) ═══\n`;
+            compRes.forEach(c => { crossCtx += `- ${c.competitor_name}: serves ${(c.customer_names||[]).slice(0,3).join(", ")} (${c.evidence_type||"observed"})\n`; });
+            crossCtx += `Use this to position against known competitors in ${member.ind}.\n\n`;
+          }
+          if (priorRes.length > 0) {
+            const priorAge = Math.floor((Date.now() - new Date(priorRes[0].created_at).getTime()) / 86400000);
+            crossCtx += `NOTE: This company was previously briefed ${priorAge} day${priorAge===1?"":"s"} ago. Focus on NEW developments.\n\n`;
+          }
+        }
+      } catch { /* non-critical */ }
       const result = generateBrief(
         member, effectiveSellerUrl, sellerDocs, products,
         selectedCohort, selectedOutcomes, "",
@@ -7180,7 +7310,8 @@ Return ONLY raw JSON:
         { execs: cachedExecs, brief: cachedBrief },
         onStream,
         icpEdits,
-        accountDocs
+        accountDocs,
+        crossCtx
       );
       skeleton = result.skeleton;
       mergers = result.mergers;
@@ -7667,6 +7798,7 @@ Return ONLY raw JSON:
             }),
           }).catch(() => {});
 
+          logProspectEvent(member.company, "briefed", { sections: Object.keys(current).filter(k=>!k.startsWith("_")).length });
           // ── Phase 1C: Persist brief to account_outputs (fire-and-forget) ──
           const trimStr = (v, max = 2000) => typeof v === "string" ? v.slice(0, max) : v;
           const trimmedBrief = {
@@ -8029,12 +8161,19 @@ Return ONLY raw JSON:
       `  - NEVER reference fabricated facts, metrics, or company traits in the question. Only cite what is verifiable.\n`+
       `  - SALES questions: state the approach used in 'framework' (e.g. 'Past behavior', 'Social proof', 'Cost of inaction', 'Empathy labeling')\n`+
       `  - ARCHITECTURE questions: state the SA focus in 'lens' (e.g. 'Business alignment', 'Stakeholder mapping', 'Integration topology', 'Quality attributes', 'Operational maturity', 'Pilot scoping')\n`+
+      `Stage-specific SALES focus (each stage unlocks a DIFFERENT conversation dimension):\n`+
+      `  - Reality: PAST BEHAVIOR only (Mom Test) — what they tried, what broke, how they handle it TODAY. Never ask about the future here.\n`+
+      `  - Impact: COST OF INACTION — frame in dollars, hours, or consequences the economic buyer feels. Push for a number.\n`+
+      `  - Vision: SUCCESS IN THEIR WORDS — what good looks like for THEM, not a product feature pitch. Specific and measurable.\n`+
+      `  - Entry Points: BUYING COMMITTEE — who decides, who blocks, who influences. What is THEIR personal win if this succeeds.\n`+
+      `  - Route: COMMITMENT TEST — are they ready to act or still exploring? What would need to be true to move forward?\n`+
       `Stage-specific architecture focus:\n`+
       `  - Reality: current systems/tools/data flows touching this problem TODAY\n`+
       `  - Impact: where data integrity, throughput, or quality breaks in the current flow\n`+
       `  - Vision: what a successful Day 30 / Day 90 looks like operationally — who uses it, what changes\n`+
       `  - Entry Points: who configures, who owns IT/security/compliance review, who owns budget\n`+
-      `  - Route: smallest 30-day pilot scope, success metric, adjacent-system handoffs\n\n`+
+      `  - Route: smallest 30-day pilot scope, success metric, adjacent-system handoffs\n`+
+      `CRITICAL: Every question across all 5 stages MUST be UNIQUE in intent and phrasing. Do NOT ask about "success" in both Vision and Route. Do NOT ask "who else is involved" in both Entry Points and Reality. Each question opens a NEW conversation dimension. If two questions could get the same answer, one of them is wrong.\n\n`+
 
       `Return ONLY raw JSON, start with {:\n`+
       `{"reality":[`+
@@ -8307,7 +8446,10 @@ Return ONLY raw JSON:
     }
 
     setPostLoading(false);
-    setStep(8);
+    setStep(9);
+    // Log prospect event for cross-session intelligence
+    const route = postCall?.dealRoute || "UNKNOWN";
+    logProspectEvent(selectedAccount?.company, route === "FAST_TRACK" ? "advanced" : "called", { dealRoute: route });
   };
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};
@@ -9051,8 +9193,8 @@ Return ONLY raw JSON:
   }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
-  const STEPS=["Start","ICP & RFPs","Import","Fit Scores","Accounts","Brief","Prep","Live Call","Post-Call","Solution Fit"];
-  const STEP_TIPS=["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Deal routing, CRM note, follow-up email, and solutioning","Solution architecture review, stakeholder mapping, next steps"];
+  const STEPS=["Start","ICP & RFPs","Import","Fit Scores","Accounts","Brief","Prep","Live Call","Solution Fit","Post-Call & Next Steps"];
+  const STEP_TIPS=["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Solution architecture review, stakeholder mapping, and fit assessment","Deal routing, CRM note, follow-up email, and next steps"];
   const chatContextLabel = selectedAccount?.company
     ? `${STEPS[step]} · ${selectedAccount.company}`
     : STEPS[step];
@@ -9073,8 +9215,8 @@ Return ONLY raw JSON:
       5: "The rep is reading their account brief. Help them interpret the company overview, solution mapping, executives, open positions, and strategic signals. Everything is editable — they can click any text to refine.",
       6: "The rep is reviewing their RIVER hypothesis and talk tracks. Help them refine the opening angle, teaching insight, and JOLT indecision plan. Guide them to start the in-call phase when ready.",
       7: "The rep is on a live call or preparing for one. Help with discovery questions, gate answers, objection handling, and real-time coaching. Keep answers SHORT — they may be mid-conversation.",
-      8: "The rep is reviewing post-call analysis. Help them understand the deal route, RIVER scorecard, CRM note, follow-up email, and next steps.",
-      9: "The rep is reviewing the Solution Architecture assessment. Help them understand confirmed solutions, architecture gaps, and the implementation roadmap.",
+      8: "The rep is reviewing the Solution Architecture assessment. Help them understand confirmed solutions, architecture gaps, and the implementation roadmap.",
+      9: "The rep is reviewing post-call analysis. Help them understand the deal route, RIVER scorecard, CRM note, follow-up email, and next steps.",
     };
 
     // Build the knowledge layer context Milton uses internally
@@ -9326,8 +9468,8 @@ Return ONLY raw JSON:
     { id:"nav-brief",   icon:"📋", label:"Go to Brief",        section:"Navigate", action:()=>setStep(5) },
     { id:"nav-hypo",    icon:"🧪", label:"Go to Hypothesis",   section:"Navigate", action:()=>setStep(6) },
     { id:"nav-incall",  icon:"🎙", label:"Go to In-Call",      section:"Navigate", action:()=>setStep(7) },
-    { id:"nav-post",    icon:"📬", label:"Go to Post-Call",    section:"Navigate", action:()=>setStep(8) },
-    { id:"nav-sa",      icon:"🏗", label:"Go to Solution Fit", section:"Navigate", action:()=>setStep(9) },
+    { id:"nav-sa",      icon:"🏗", label:"Go to Solution Fit", section:"Navigate", action:()=>setStep(8) },
+    { id:"nav-post",    icon:"📬", label:"Go to Post-Call",    section:"Navigate", action:()=>setStep(9) },
     // Actions
     { id:"act-save",    icon:"💾", label:"Save session",        section:"Actions", hint:"⌘S", action:saveSession },
     { id:"act-print",   icon:"🖨", label: exportLocked ? "🔒 Export (paid plans)" : "Print / Save as PDF", section:"Actions", hint:"⌘P", action: exportLocked ? ()=>setUpgradeOpen(true) : doExport },
@@ -9515,8 +9657,8 @@ Return ONLY raw JSON:
                 {/* Call Transcripts hint */}
                 <div style={{padding:"12px 14px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
                   <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)",marginBottom:4}}>🎙 Call Transcripts</div>
-                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Upload call transcripts on the Post-Call page (Step 8). Supported: Gong, Chorus, Otter, Zoom, VTT/SRT files.</div>
-                  {step!==8&&<button className="btn btn-secondary btn-sm" style={{marginTop:8}} onClick={()=>{setResourcesOpen(false);setStep(8);}}>Go to Post-Call →</button>}
+                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Upload call transcripts on the Post-Call page (Step 9). Supported: Gong, Chorus, Otter, Zoom, VTT/SRT files.</div>
+                  {step!==9&&<button className="btn btn-secondary btn-sm" style={{marginTop:8}} onClick={()=>{setResourcesOpen(false);setStep(9);}}>Go to Post-Call →</button>}
                 </div>
               </div>
             )}
@@ -9727,9 +9869,9 @@ Return ONLY raw JSON:
               <button onClick={saveSession}
                 style={{fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:8,cursor:"pointer",
                   border:"1.5px solid "+(sbUser?"var(--green)":"var(--amber)"),
-                  background:(saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green-bg)":sbUser?"var(--surface)":"var(--amber-bg)",
-                  color:sbUser?((saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green)":"var(--green)"):"#7A5010"}}>
-                {!sbUser?"🔒 Save":saveStatus==="saving"?"⏳":(saveStatus==="saved"||saveStatus==="auto-saved")?"✓":"💾"} {saveStatus==="auto-saved"?"Auto-saved":saveStatus==="saved"?"Saved":"Save"}
+                  background:autoSaveError?"var(--red-bg)":(saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green-bg)":saveStatus==="save-error"?"var(--red-bg)":sbUser?"var(--surface)":"var(--amber-bg)",
+                  color:autoSaveError?"var(--red)":(saveStatus==="saved"||saveStatus==="auto-saved")?"var(--green)":saveStatus==="save-error"?"var(--red)":sbUser?"var(--green)":"#7A5010"}}>
+                {!sbUser?"🔒 Save":autoSaveError?"⚠ Save failed":saveStatus==="saving"?"⏳":(saveStatus==="saved"||saveStatus==="auto-saved")?"✓":saveStatus==="save-error"?"⚠ Error":"💾"} {autoSaveError?"— click to retry":saveStatus==="auto-saved"?"Auto-saved":saveStatus==="saved"?"Saved":saveStatus==="save-error"?"Save failed":"Save"}
               </button>
             )}
 
@@ -9925,6 +10067,12 @@ Return ONLY raw JSON:
                     </div>
                   </div>
                 ))}
+                {hasMoreSessions&&(
+                  <button onClick={()=>loadSessions(true)} style={{width:"100%",padding:"8px",borderRadius:8,border:"1.5px dashed var(--line-0)",background:"none",color:"var(--ink-2)",fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:4}}>
+                    Load more sessions...
+                  </button>
+                )}
+                {savedSessions.length>0&&<div style={{textAlign:"center",fontSize:10,color:"var(--ink-3)",marginTop:4}}>{savedSessions.length} session{savedSessions.length===1?"":"s"} loaded</div>}
               </div>
               <div style={{padding:12,borderTop:"1px solid var(--line-0)"}}>
                 <input value={sessionName} onChange={e=>setSessionName(e.target.value)} placeholder={sellerUrl||"Session name..."} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid var(--line-0)",fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
@@ -10088,14 +10236,30 @@ Return ONLY raw JSON:
                 </div>
               )}
 
-              {/* Value prop for guests */}
+              {/* Landing hero for guests */}
               {!sbUser && (
-                <div style={{textAlign:"center",marginBottom:24,padding:"0 8px"}}>
-                  <div style={{fontSize:17,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,marginBottom:8,fontFamily:"Lora,serif"}}>Be the most prepared person in every conversation.</div>
-                  <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7}}>Deep research on strategy, leadership, pain points, and the exact angle that earns trust. When you know more, everyone in the room has a better conversation — including the prospect.</div>
+                <div style={{textAlign:"center",marginBottom:32,padding:"20px 8px 0"}}>
+                  <div style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",lineHeight:1.3,marginBottom:10,fontFamily:"Lora,serif",letterSpacing:"-0.5px"}}>Stop winging your sales calls.</div>
+                  <div style={{fontSize:16,color:"var(--ink-2)",lineHeight:1.7,maxWidth:560,margin:"0 auto 20px"}}>Deep company intelligence, tailored talk tracks, and AI coaching — in 30 seconds. When you walk in prepared, every conversation is better for everyone in the room.</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,maxWidth:600,margin:"0 auto 24px",textAlign:"left"}}>
+                    {[
+                      {icon:"🔍",title:"Research",desc:"Executives, strategy, sentiment, financials — live web research, not stale data"},
+                      {icon:"🎯",title:"Prepare",desc:"RIVER hypothesis, tailored talk tracks, and discovery questions for YOUR products"},
+                      {icon:"🏆",title:"Close",desc:"Real-time coaching, deal routing, CRM-ready notes, and follow-up emails"},
+                    ].map(f=>(
+                      <div key={f.title} style={{background:"var(--bg-1)",borderRadius:10,padding:"14px 16px",border:"1px solid var(--line-0)"}}>
+                        <div style={{fontSize:18,marginBottom:6}}>{f.icon}</div>
+                        <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:3}}>{f.title}</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>{f.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:8}}>3 free runs, no credit card required</div>
                 </div>
               )}
 
+              {/* Capability strip — shown for all users */}
+              {sbUser && (
               <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
                 {[["⚡","Deep brief in 30 seconds"],["🎯","Know their pain before the call"],["🔍","Live research, not stale data"],["📋","Walk in with a plan"],["🎙","AI coaching with Milton"]].map(([icon,label])=>(
                   <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"var(--ink-3)"}}>
@@ -10103,6 +10267,7 @@ Return ONLY raw JSON:
                   </div>
                 ))}
               </div>
+              )}
               {/* Mode toggle: Full Session vs Quick Brief (guests get Quick Brief only) */}
               {!sbUser ? (
                 <div style={{background:"var(--navy-bg)",border:"2px solid var(--navy)",borderRadius:"var(--r-md)",padding:"16px",marginBottom:20}}>
@@ -10822,6 +10987,7 @@ Return ONLY raw JSON:
                                     {r.url ? (
                                       <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                     ) : r.title}
+                                    {r._fromDb && <span style={{fontSize:9,color:"var(--ink-3)",marginLeft:4,fontWeight:400}}>(cached)</span>}
                                   </div>
                                   <div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div>
                                 </td>
@@ -10885,6 +11051,7 @@ Return ONLY raw JSON:
                                       {r.url ? (
                                         <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                       ) : r.title}
+                                      {r._fromDb && <span style={{fontSize:9,color:"var(--ink-3)",marginLeft:4,fontWeight:400}}>(cached)</span>}
                                     </div>
                                     <div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div>
                                   </td>
@@ -12549,6 +12716,19 @@ Return ONLY raw JSON:
               {briefLoading?"Hang tight — live research in progress.":"Discovery doesn't have to suck. Built from live research and proprietary intelligence. All fields are editable. When you walk in this prepared, the conversation is better for everyone in the room."}
             </div>
 
+            {/* Brief age indicator */}
+            {!briefLoading && brief?._generatedAt && (()=>{
+              const ageMs = Date.now() - brief._generatedAt;
+              const ageDays = Math.floor(ageMs / 86400000);
+              const isStale = ageDays >= 7;
+              return ageDays >= 1 ? (
+                <div style={{fontSize:11,color:isStale?"var(--amber)":"var(--ink-3)",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                  {isStale ? "⚠" : "🕐"} Researched {ageDays === 1 ? "yesterday" : `${ageDays} days ago`}
+                  {isStale && <span style={{fontWeight:600}}> — data may be stale</span>}
+                </div>
+              ) : null;
+            })()}
+
             {/* ICP changed since brief was built */}
             {!briefLoading && brief && icpLastEditTime > 0 && lastBriefTime > 0 && icpLastEditTime > lastBriefTime && (
               <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
@@ -12643,8 +12823,11 @@ Return ONLY raw JSON:
                       {hubspotPushing==="push_brief"?"Pushing...":copied==="hs_ok"?"Pushed ✓":"Push to HubSpot"}
                     </button>}
                     <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
+                    {(briefLoading || brief?._error || brief?._failedSections?.length > 0 || Object.values(brief?._loadingSections || {}).some(Boolean)) && (
                     <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                    )}
                     {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
+                    <button className="btn btn-secondary" onClick={clearAccount} title="Clear this account and go back to Fit Scores">Switch Account</button>
                   </div>
                 </div>
 
@@ -13603,6 +13786,26 @@ Return ONLY raw JSON:
                 </div>
                 ) : null}
 
+                {/* Outreach Email */}
+                {brief.outreachEmail ? (
+                <div className="bb bb-arrive">
+                  <div className="bb-hdr">
+                    <div className="bb-icon" style={{fontSize:12}}>✉</div>
+                    <div style={{flex:1}}><div className="bb-title">Outreach Email</div><div className="bb-sub">Research-grounded cold outreach — ready to send</div></div>
+                    <button className="copy-btn" onClick={()=>copyText("Subject: "+(brief.outreachEmail.subject||"")+"\n\n"+(brief.outreachEmail.body||""),"outreach")}>{copied==="outreach"?"Copied ✓":"Copy Email"}</button>
+                  </div>
+                  <div className="bb-body">
+                    <div style={{fontWeight:600,marginBottom:8,color:"var(--ink-0)",fontSize:13}}>Subject: {brief.outreachEmail.subject}</div>
+                    <EF value={brief.outreachEmail.body||""} onChange={v=>patchBrief(b=>{if(!b.outreachEmail)b.outreachEmail={};b.outreachEmail.body=v;},"outreachEmail")}/>
+                  </div>
+                </div>
+                ) : brief._loadingSections?.strategy ? (
+                <div className="bb bb-skeleton">
+                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>✉</div><div><div className="bb-title">Outreach Email</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                  <div className="bb-body"><div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"60%",height:14,marginTop:6}}/></div>
+                </div>
+                ) : null}
+
                 {/* ═══ DEEP INTELLIGENCE LAYERS ═══ */}
 
                 {/* Financial Deep Dive */}
@@ -13941,7 +14144,9 @@ Return ONLY raw JSON:
 
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
+                  {(briefLoading || brief?._error || brief?._failedSections?.length > 0 || Object.values(brief?._loadingSections || {}).some(Boolean)) && (
                   <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
+                  )}
                   <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>
                 </div>
@@ -14220,9 +14425,11 @@ Return ONLY raw JSON:
 
             <div className="actions-row">
               <button className="btn btn-secondary" onClick={()=>setStep(5)}>← Back to Brief</button>
+              {(riverHypoLoading || !riverHypo || riverHypo?.reality?.includes("Could not generate")) && (
               <button className="btn btn-secondary" onClick={()=>{if(!checkNoChange("hypo",getHypoSig,()=>buildRiverHypo(brief,selectedAccount)))buildRiverHypo(brief,selectedAccount);}} disabled={riverHypoLoading}>
                 {riverHypoLoading ? "⏳ Regenerating..." : "↻ Regenerate"}
               </button>
+              )}
               <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Hypothesis", riverHypo)} />
               {hubspotStatus?.connected&&<button className="btn btn-secondary" onClick={pushSessionToHubSpot} disabled={!!hubspotPushing}
                 style={{display:"flex",alignItems:"center",gap:5}}>
@@ -14251,8 +14458,8 @@ Return ONLY raw JSON:
                 <div style={{fontSize:12,color:"var(--ink-3)"}}>confidence</div>
                 <button className="btn btn-secondary btn-sm" onClick={()=>setStep(6)}>← Hypothesis</button>
                 <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
-                <button className="btn btn-green btn-sm" onClick={runPostCall} disabled={postLoading}>
-                  {postLoading?"Routing...":"End Call →"}
+                <button className="btn btn-green btn-sm" onClick={()=>{buildSolutionFit();setStep(8);}} disabled={solutionFitLoading}>
+                  {solutionFitLoading?"Analyzing...":"End Call →"}
                 </button>
               </div>
             </div>
@@ -14518,8 +14725,24 @@ Return ONLY raw JSON:
           </div>
         )}
 
-        {/* ── STEP 8: POST-CALL ── */}
+        {/* ── STEP 8: SOLUTION FIT REVIEW ── */}
         {step===8&&(
+          <S9SolutionFit
+            solutionFit={solutionFit}
+            solutionFitLoading={solutionFitLoading}
+            selectedAccount={selectedAccount}
+            onRun={buildSolutionFit}
+            onRegenerate={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}
+            onBack={()=>setStep(7)}
+            onExport={doExport}
+            onCSV={()=>csvExport("Solution-Fit", solutionFit)}
+            onNext={()=>{runPostCall();setStep(9);}}
+            onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}
+          />
+        )}
+
+        {/* ── STEP 9: POST-CALL ── */}
+        {step===9&&(
           <div className="page">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div>
@@ -14668,36 +14891,20 @@ Return ONLY raw JSON:
                   </div>
                 </div>
                 <div className="actions-row">
-                  <button className="btn btn-secondary" onClick={()=>setStep(7)}>← Back to Call</button>
+                  <button className="btn btn-secondary" onClick={()=>setStep(8)}>← Back to Solution Fit</button>
                   <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Post-Call", postCall)} />
                   <button className="btn btn-gold" onClick={showCustomerBrief} style={{display:"flex",alignItems:"center",gap:5}}>
                     📄 Download Customer Ready Call Summary
                   </button>
+                  {(postLoading || postCall?.dealRoute==="Unknown" || postCall?.callSummary?.includes("failed")) && (
                   <button className="btn btn-gold" disabled={postLoading} onClick={()=>{const go=()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);};if(!checkNoChange("postCall",getPostCallSig,go))go();}}>{postLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
-                  <button className="btn btn-green btn-lg" onClick={()=>{buildSolutionFit();setStep(9);}}>
-                    Solution Fit Review →
-                  </button>
-                  <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
-                  <button className="btn btn-secondary" onClick={()=>{setStep(2);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");clearSession();}}>New Dataset</button>
+                  )}
+                  <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
+                  <button className="btn btn-secondary" onClick={()=>{setStep(2);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");clearSession();}}>New Dataset</button>
                 </div>
               </>
             )}
           </div>
-        )}
-
-        {/* ── STEP 9: SOLUTION FIT REVIEW ── */}
-        {step===9&&(
-          <S9SolutionFit
-            solutionFit={solutionFit}
-            solutionFitLoading={solutionFitLoading}
-            selectedAccount={selectedAccount}
-            onRun={buildSolutionFit}
-            onRegenerate={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}
-            onBack={()=>setStep(8)}
-            onExport={doExport}
-            onCSV={()=>csvExport("Solution-Fit", solutionFit)}
-            onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}
-          />
         )}
 
         </div>{/* end stage-transition wrapper */}
@@ -14709,6 +14916,16 @@ Return ONLY raw JSON:
           background:"var(--green)",color:"var(--surface)",padding:"8px 20px",borderRadius:10,fontSize:12,fontWeight:600,
           boxShadow:"0 4px 16px rgba(0,0,0,0.15)",animation:"fadeInUp 0.3s ease",maxWidth:400,textAlign:"center"}}>
           ✓ {editToast}
+        </div>
+      )}
+
+      {/* Undo toast — 5-second window to reverse destructive actions */}
+      {undoAction && (
+        <div className="no-print undo-toast" style={{position:"fixed",bottom:60,left:"50%",transform:"translateX(-50%)",zIndex:10001,
+          display:"flex",alignItems:"center",gap:14,background:"var(--ink-0)",color:"var(--surface)",padding:"10px 18px",borderRadius:12,fontSize:13,fontWeight:600,
+          boxShadow:"0 6px 24px rgba(0,0,0,0.25)",animation:"fadeInUp 0.3s ease"}}>
+          <span>{undoAction.label}</span>
+          <button onClick={undoAction.undo} style={{padding:"4px 14px",borderRadius:6,border:"1.5px solid var(--surface)",background:"transparent",color:"var(--surface)",fontSize:12,fontWeight:700,cursor:"pointer"}}>Undo</button>
         </div>
       )}
 
@@ -14884,7 +15101,15 @@ Return ONLY raw JSON:
                 "Other",
               ].map(reason => (
                 <button key={reason}
-                  onClick={()=>{setDisqualified(prev=>({...prev,[dqModalTarget]:reason}));setDqModalTarget(null);}}
+                  onClick={()=>{
+                    const co=dqModalTarget;
+                    if(undoAction?.timerId) clearTimeout(undoAction.timerId);
+                    setDisqualified(prev=>({...prev,[co]:reason}));
+                    logProspectEvent(co, "disqualified", { reason });
+                    setDqModalTarget(null);
+                    const timerId=setTimeout(()=>setUndoAction(null),5000);
+                    setUndoAction({label:`Disqualified "${co}"`,undo:()=>{clearTimeout(timerId);setDisqualified(prev=>{const next={...prev};delete next[co];return next;});setUndoAction(null);},timerId});
+                  }}
                   style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid var(--line-0)",background:"var(--surface)",fontSize:12,fontWeight:500,cursor:"pointer",textAlign:"left",color:"var(--ink-1)"}}
                   onMouseEnter={e=>{e.target.style.background="var(--red-bg)";e.target.style.borderColor="var(--red)";e.target.style.color="var(--red)";}}
                   onMouseLeave={e=>{e.target.style.background="var(--surface)";e.target.style.borderColor="var(--line-0)";e.target.style.color="var(--ink-1)";}}>
@@ -14905,7 +15130,7 @@ Return ONLY raw JSON:
         <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.4)"}}
           onClick={()=>setIntelModalTarget(null)}>
           <div style={{background:"var(--surface)",borderRadius:"var(--r-lg)",padding:"24px 28px",maxWidth:440,width:"90%",boxShadow:"0 8px 30px rgba(0,0,0,0.15)",outline:"none"}}
-            onClick={e=>e.stopPropagation()} tabIndex={-1} ref={el=>el&&el.focus()} onKeyDown={e=>{if(e.key==='Escape')setIntelModalTarget(null);}}>
+            onClick={e=>e.stopPropagation()} tabIndex={-1} ref={el=>{if(el&&!el.dataset.focused){el.focus();el.dataset.focused="1";}}} onKeyDown={e=>{if(e.key==='Escape')setIntelModalTarget(null);}}>
             <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Intel Adjustment — {intelModalTarget}</div>
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
               Add insider knowledge that affects this company's fit score. This won't change the AI scoring — it's your personal adjustment based on facts you know.

@@ -464,7 +464,6 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
       label: "MY COMPANY",
       items: [
         { id: "team", label: "Team", show: canViewTeam },
-        { id: "invite", label: "Invite", show: isAdmin },
         { id: "settings", label: "Settings", show: true },
       ].filter(i => i.show),
     },
@@ -548,6 +547,15 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
             <div>
               <div className="admin-section-title">Dashboard</div>
               <div className="admin-section-sub">Your organization at a glance</div>
+
+              {/* Loading skeleton — prevents blank flash on first render */}
+              {!savedSessions && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "20px 0" }}>
+                  {[85, 70, 60, 90].map((w, i) => (
+                    <div key={i} style={{ height: 14, width: w + "%", background: "var(--bg-2)", borderRadius: 6, animation: "pulse 1.5s infinite" }} />
+                  ))}
+                </div>
+              )}
 
               {/* Metric cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 20 }}>
@@ -715,20 +723,12 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
               {members.length === 0 && (
                 <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "24px 0" }}>No team members found.</div>
               )}
-            </div>
-          )}
 
-          {tab === "team" && !canViewTeam && (
-            <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "40px 0" }}>
-              Team visibility is a manager or admin perk. Ask your admin to level you up if you need it.
-            </div>
-          )}
-
-          {/* ═══ INVITE (admin only) ═══ */}
-          {tab === "invite" && isAdmin && (
-            <div>
-              <div className="admin-section-title">Invite Team Members</div>
-              <div className="admin-section-sub">Add colleagues to your organization</div>
+              {/* ── Invite section (merged into Team tab) ── */}
+              {isAdmin && (<>
+              <div style={{ borderTop: "1.5px solid var(--line-0)", marginTop: 24, paddingTop: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink-0)", marginBottom: 4 }}>Invite Team Members</div>
+                <div style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 12 }}>Add colleagues to your organization</div>
 
               {/* Mode toggle */}
               <div style={{ display: "flex", gap: 0, border: "1.5px solid var(--line-0)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
@@ -851,6 +851,14 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
                   No pending invitations. Invite your team -- they will thank you after their first brief.
                 </div>
               )}
+              </div>
+              </>)}
+            </div>
+          )}
+
+          {tab === "team" && !canViewTeam && (
+            <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "40px 0" }}>
+              Team visibility is a manager or admin perk. Ask your admin to level you up if you need it.
             </div>
           )}
 

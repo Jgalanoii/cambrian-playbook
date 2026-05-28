@@ -1,6 +1,14 @@
-// stages/S9_SolutionFit.jsx — Post-call Solution Architecture review
+// stages/S9_SolutionFit.jsx — Solution Architecture review (now Step 8)
 // Presentational component. buildSolutionFit() stays in App.jsx to keep
 // state access simple; this just renders and routes callback intent.
+
+const friendlyStage = {
+  Define: "Early Discovery — knows the problem exists",
+  Measure: "Quantifying — starting to measure the gap",
+  Analyze: "Root Cause — understands why it's broken",
+  Improve: "Solution Ready — actively evaluating fixes",
+  Control: "Optimizing — has a process, seeking better",
+};
 
 export default function S9SolutionFit({
   solutionFit,
@@ -8,16 +16,17 @@ export default function S9SolutionFit({
   selectedAccount,
   onRun,           // click "Run Solution Fit Review"
   onRegenerate,    // click "↻ Regenerate"
-  onBack,          // "← Post-Call"
+  onBack,          // "← Live Call"
   onExport,        // "🖨 Save as PDF"
   onDownloadData,  // "💾 Data" — JSON download (legacy)
   onCSV,           // "📊 CSV" — CSV export
+  onNext,          // "Route Deal →" — fires runPostCall + advances
   onNextAccount,   // "Next Account"
 }) {
   return (
     <div className="page">
       <div className="page-title">Solution Architecture Review</div>
-      <div className="page-sub">Post-call solution fit re-evaluation for <strong>{selectedAccount?.company}</strong> — aligned to what you actually heard, not just what you assumed.</div>
+      <div className="page-sub">Solution fit evaluation for <strong>{selectedAccount?.company}</strong> — aligned to what you actually heard, not just what you assumed.</div>
 
       {solutionFitLoading && (
         <div className="card">
@@ -57,7 +66,7 @@ export default function S9SolutionFit({
           {solutionFit.adoptionProfile && (
             <div style={{background:"var(--navy-bg)",border:"1px solid var(--navy)",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-                <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px"}}>📊 Adoption Profile (Moore)</div>
+                <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px"}}>Buyer Readiness</div>
                 <span style={{background:"var(--navy)",color:"var(--surface)",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{solutionFit.adoptionProfile}</span>
               </div>
               {solutionFit.adoptionImplication && <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{solutionFit.adoptionImplication}</div>}
@@ -67,7 +76,7 @@ export default function S9SolutionFit({
           {solutionFit.dmiacStage && (
             <div style={{background:"var(--bg-2)",border:"1px solid var(--line-0)",borderRadius:14,padding:"16px 20px",marginBottom:20}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,flexWrap:"wrap"}}>
-                <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,color:"var(--ink-0)"}}>DMAIC Stage:</div>
+                <div style={{fontFamily:"Lora,serif",fontSize:15,fontWeight:600,color:"var(--ink-0)"}}>Operational Maturity:</div>
                 {(()=>{
                   const map={Define:"var(--red)",Measure:"var(--amber)",Analyze:"var(--navy)",Improve:"var(--green)",Control:"var(--purple)"};
                   const bgmap={Define:"var(--red-bg)",Measure:"var(--amber-bg)",Analyze:"var(--navy-bg)",Improve:"var(--green-bg)",Control:"var(--purple-bg)"};
@@ -76,6 +85,7 @@ export default function S9SolutionFit({
                   return<span style={{background:bg,color:c,border:"1.5px solid "+c+"44",borderRadius:20,padding:"4px 16px",fontSize:14,fontWeight:700}}>{solutionFit.dmiacStage}</span>;
                 })()}
               </div>
+              {friendlyStage[solutionFit.dmiacStage] && <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:6,fontStyle:"italic"}}>{friendlyStage[solutionFit.dmiacStage]}</div>}
               {solutionFit.dmiacRationale && <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:solutionFit.entryStrategy?10:0}}>{solutionFit.dmiacRationale}</div>}
               {solutionFit.entryStrategy && (
                 <div style={{background:"var(--ink-0)",borderRadius:8,padding:"10px 14px"}}>
@@ -241,16 +251,17 @@ export default function S9SolutionFit({
           {/* SA Recommendation */}
           {solutionFit.saRecommendation && (
             <div style={{background:"var(--ink-0)",borderRadius:14,padding:"20px 22px",marginBottom:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>🏗 Senior SA Recommendation</div>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Senior SA Recommendation</div>
               <div style={{fontSize:15,color:"var(--surface)",lineHeight:1.7,fontStyle:"italic"}}>"{solutionFit.saRecommendation}"</div>
             </div>
           )}
 
           <div className="actions-row">
-            <button className="btn btn-secondary" onClick={onBack}>← Post-Call</button>
+            <button className="btn btn-secondary" onClick={onBack}>← Live Call</button>
             <button className="btn btn-secondary" onClick={onRegenerate}>↻ Regenerate</button>
-            <button className="btn btn-navy" onClick={onExport}>🖨 Save as PDF</button>
-            {(onCSV||onDownloadData) && <button className="btn btn-secondary" onClick={onCSV||onDownloadData}>📊 CSV</button>}
+            <button className="btn btn-navy" onClick={onExport}>Save as PDF</button>
+            {(onCSV||onDownloadData) && <button className="btn btn-secondary" onClick={onCSV||onDownloadData}>CSV</button>}
+            {onNext && <button className="btn btn-green btn-lg" onClick={onNext}>Route Deal →</button>}
             <button className="btn btn-primary" onClick={onNextAccount}>Next Account</button>
           </div>
         </>
@@ -260,7 +271,7 @@ export default function S9SolutionFit({
         <div style={{background:"var(--bg-1)",border:"1.5px dashed var(--line-2)",borderRadius:12,padding:32,textAlign:"center"}}>
           <div style={{fontSize:28,marginBottom:12}}>🏗</div>
           <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>Solution Architecture Review</div>
-          <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>Re-evaluate solution fit against what you heard in the call. Maps customer needs to your solutions using SA principles.</div>
+          <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>Evaluate solution fit against what you heard in the call. Maps customer needs to your solutions using SA principles.</div>
           <button className="btn btn-primary btn-lg" onClick={onRun}>Run Solution Fit Review →</button>
         </div>
       )}
