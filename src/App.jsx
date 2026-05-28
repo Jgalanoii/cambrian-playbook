@@ -9427,44 +9427,43 @@ Return ONLY raw JSON:
   // ── LANDING PAGE — visible to everyone, always the front door ──
   if(!authed && showLanding) return (
     <div style={{minHeight:"100vh",background:"var(--surface)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",fontFamily:"DM Sans,sans-serif"}}>
-      <div style={{maxWidth:680,width:"100%",textAlign:"center"}}>
-        <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--tan-0)",letterSpacing:"1px",textTransform:"uppercase",marginBottom:12}}>Cambrian Catalyst</div>
-        <h1 style={{fontFamily:"Lora,serif",fontSize:36,fontWeight:700,color:"var(--ink-0)",lineHeight:1.2,marginBottom:12,letterSpacing:"-0.5px"}}>Sales discovery doesn't have to suck.</h1>
-        <div style={{fontSize:15,fontWeight:600,color:"var(--tan-0)",letterSpacing:"0.3px",marginBottom:20,fontStyle:"italic"}}>Smart People Go Further. Evolve How You Sell.</div>
-        <p style={{fontSize:18,color:"var(--ink-2)",lineHeight:1.7,marginBottom:32,maxWidth:520,margin:"0 auto 32px"}}>
-          Deep company intelligence, tailored talk tracks, and AI coaching — in 30 seconds. When you walk in prepared, every conversation is better for everyone in the room.
+      <div style={{maxWidth:640,width:"100%",textAlign:"center"}}>
+        <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--tan-0)",letterSpacing:"1px",textTransform:"uppercase",marginBottom:16}}>Cambrian Catalyst</div>
+        <h1 style={{fontFamily:"Lora,serif",fontSize:38,fontWeight:700,color:"var(--ink-0)",lineHeight:1.2,marginBottom:12,letterSpacing:"-0.5px"}}>Sales discovery doesn't have to suck.</h1>
+        <div style={{fontSize:15,fontWeight:600,color:"var(--tan-0)",letterSpacing:"0.3px",marginBottom:24,fontStyle:"italic"}}>Smart People Go Further. Evolve How You Sell.</div>
+        <p style={{fontSize:17,color:"var(--ink-1)",lineHeight:1.8,marginBottom:12,maxWidth:540,margin:"0 auto 12px"}}>
+          You know that feeling — 10 minutes before the call, scrambling through LinkedIn and a stale CRM note, hoping something sticks. We built this so you never wing it again.
         </p>
-        <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:40}}>
+        <p style={{fontSize:16,color:"var(--ink-2)",lineHeight:1.8,marginBottom:36,maxWidth:540,margin:"0 auto 36px"}}>
+          Give us 30 seconds and a company name. We'll hand you back a full intelligence brief, a conversation strategy, and an AI coach who's actually been paying attention.
+        </p>
+        <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:48}}>
           <button onClick={()=>setShowLanding(false)}
             style={{padding:"14px 32px",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
-            Get Started Free
+            Try It Free
           </button>
           <button onClick={()=>setShowLanding(false)}
             style={{padding:"14px 32px",borderRadius:10,background:"transparent",color:"var(--ink-0)",fontSize:15,fontWeight:700,border:"2px solid var(--ink-0)",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
             Sign In
           </button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:16,textAlign:"left",marginBottom:40}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:16,textAlign:"left",marginBottom:48}}>
           {[
-            {icon:"🔍",title:"Research",desc:"Executives, strategy, sentiment, financials — live web research grounded in 38 industry knowledge layers"},
-            {icon:"🎯",title:"Prepare",desc:"RIVER hypothesis, Challenger teaching insights, and 20 discovery questions tailored to YOUR products"},
-            {icon:"🏆",title:"Close",desc:"Real-time AI coaching, deal routing, CRM-ready notes, and follow-up emails that sound like you were listening"},
+            {icon:"🔍",title:"Know more than they expect",desc:"Live research on their strategy, leadership, pain points, and the competitors they're already talking to. Not last quarter's data — today's."},
+            {icon:"🎙",title:"Walk in with a point of view",desc:"A structured conversation plan grounded in what you sell and what they need. Talk tracks that sound like you, not a script."},
+            {icon:"🏆",title:"Leave with a next step",desc:"Real-time coaching during the call, a deal route when it's over, and a follow-up email that proves you were listening."},
           ].map(f=>(
             <div key={f.title} style={{background:"var(--bg-1)",borderRadius:12,padding:"20px",border:"1px solid var(--line-0)"}}>
               <div style={{fontSize:24,marginBottom:8}}>{f.icon}</div>
-              <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{f.title}</div>
+              <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{f.title}</div>
               <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.6}}>{f.desc}</div>
             </div>
           ))}
         </div>
-        <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:24,flexWrap:"wrap"}}>
-          {["Deep briefs in 30 seconds","38 industry knowledge layers","CRM integration","AI sales coach"].map(t=>(
-            <div key={t} style={{fontSize:12,color:"var(--ink-3)",display:"flex",alignItems:"center",gap:5}}>
-              <span style={{color:"var(--green)",fontWeight:700}}>✓</span> {t}
-            </div>
-          ))}
+        <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7,maxWidth:480,margin:"0 auto 20px"}}>
+          Built for reps who take their craft seriously. Free to start — no credit card, no demo call, no 47-slide deck about our "synergies."
         </div>
-        <div style={{fontSize:13,color:"var(--ink-3)"}}>3 free runs, no credit card required</div>
+        <div style={{fontSize:12,color:"var(--ink-3)"}}>3 free runs. You'll know if it's for you by the second one.</div>
       </div>
     </div>
   );
