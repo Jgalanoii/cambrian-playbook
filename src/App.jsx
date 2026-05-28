@@ -6050,7 +6050,7 @@ Return ONLY raw JSON:
           if (partial.includes('"namedCustomerProfiles"')) setIcpStatus("Building customer profiles...");
           if (partial.includes('"winPatterns"')) setIcpStatus("Identifying win patterns...");
         },
-        4000, { maxSearches: 2, anchorKey: "sellerName", model: OPUS }
+        3000, { maxSearches: 1, anchorKey: "sellerName", model: OPUS }
       );
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
