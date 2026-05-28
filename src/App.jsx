@@ -3160,21 +3160,21 @@ function PasswordGate({ onAuth }) {
         <div style={{maxWidth:960,margin:"0 auto",display:"flex",gap:40,alignItems:"flex-start",flexWrap:"wrap"}}>
           {/* Left — value prop */}
           <div style={{flex:"1 1 400px",minWidth:280}}>
-            <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}}>Smart People Go Further. Evolve How You Sell.</div>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}}>Smart People Go Further.</div>
             <div style={{fontFamily:"Lora,serif",fontSize:32,fontWeight:700,color:"var(--ink-0)",lineHeight:1.25,marginBottom:16}}>
-              Your prospects can tell<br/>when you didn't<br/>do your homework.
+              Sales discovery<br/>doesn't have to <span style={{color:"var(--tan-0)"}}>suck.</span>
             </div>
             <div style={{fontSize:16,color:"var(--ink-1)",lineHeight:1.7,marginBottom:8,maxWidth:480}}>
-              Cambrian Catalyst does it for you — deep company intel, executive profiles, tailored talk tracks, and a deal strategy that makes buyers think you've been studying them for weeks. In about 15 minutes.
+              30 seconds and a company name. We'll hand you a full intelligence brief, a conversation strategy, and an AI coach who's actually been paying attention.
             </div>
             <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:24,maxWidth:480,fontStyle:"italic"}}>
               Named for the Cambrian Explosion — when life evolved more in 20 million years than in the previous 3 billion. Your sales prep is due for the same leap.
             </div>
             <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:24}}>
               {[
-                {num:"10x",label:"faster prep"},
-                {num:"Deep",label:"industry, target & persona intel"},
-                {num:"15+",label:"industry verticals"},
+                {num:"30s",label:"to a full brief"},
+                {num:"38",label:"industry knowledge layers"},
+                {num:"9",label:"step deal playbook"},
               ].map(s=>(
                 <div key={s.label} style={{textAlign:"center"}}>
                   <div style={{fontSize:28,fontWeight:700,color:"var(--tan-0)",fontFamily:"Lora,serif"}}>{s.num}</div>
@@ -10898,7 +10898,7 @@ Return ONLY raw JSON:
                 </div>
                 <div className="page-sub" style={{marginBottom:0}}>
                   {icpTab==="icp"
-                    ? <>Built from <strong>{sellerUrl}</strong> — review and edit before we find your best-fit companies.
+                    ? <>Built from <strong>{sellerUrl}</strong> — your playbook for who to call and why.
                         {sellerICP?._confidence && (
                           <span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,
                             background:sellerICP._confidence==="high"?"var(--green-bg)":sellerICP._confidence==="medium"?"var(--amber-bg)":"var(--red-bg)",
@@ -11043,8 +11043,8 @@ Return ONLY raw JSON:
                     </div>
 
                     {/* Open RFPs */}
-                    <div style={{marginBottom:24}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                    <div style={{marginBottom:24,borderTop:"3px solid var(--green)",borderRadius:8,background:"var(--surface)",padding:"14px 0 0"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"0 14px"}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🟢 Open RFPs — Active Opportunities</div>
                         <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.open.filter(r=>rfpFilter==="all"||(rfpFilter==="government"&&r.isGovernment===true)||(rfpFilter==="private"&&r.isGovernment===false)).length} shown)</div>
                         {rfpData.loading && rfpData.open.length===0 && (
@@ -11101,8 +11101,8 @@ Return ONLY raw JSON:
 
                     {/* Closed RFPs — render section even while still loading, so a "still loading…" hint shows */}
                     {(rfpData.closed.length>0 || (rfpData.loading && rfpData.open.length>0)) && (
-                      <div>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <div style={{borderTop:"3px solid var(--navy)",borderRadius:8,background:"var(--surface)",padding:"14px 0 0"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"0 14px"}}>
                           <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Closed RFPs — Last 18 Months (Incumbent Intel)</div>
                           {rfpData.closed.length>0 && <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.closed.length} awards)</div>}
                           {rfpData.loading && rfpData.closed.length===0 && (
@@ -11170,8 +11170,8 @@ Return ONLY raw JSON:
 
                     {/* Buying Signals — pre-RFP intent (NOT published RFPs) */}
                     {(rfpData.signals?.length > 0 || (rfpData.loading && hasData)) && (
-                      <div style={{marginTop:24}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <div style={{marginTop:24,borderTop:"3px solid var(--amber)",borderRadius:8,background:"var(--surface)",padding:"14px 0 0"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"0 14px"}}>
                           <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🟡 Buying Signals — Early Intent Indicators</div>
                           {rfpData.signals?.length > 0 && <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.signals.length} signals)</div>}
                           {rfpData.loading && !rfpData.signals?.length && (
@@ -12264,7 +12264,7 @@ Return ONLY raw JSON:
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div>
                 <div className="page-title">Fit Check — Your Best Matches</div>
-                <div className="page-sub">Fit Check: all {rows.length} companies ranked by how well they fit your buyer profile. Click any company to build a deep research brief.</div>
+                <div className="page-sub">{rows.length} companies scored and ranked. Click any row to start a brief.</div>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 {hubspotStatus?.connected&&(
@@ -12786,7 +12786,7 @@ Return ONLY raw JSON:
         {step===5&&(
           <div className="page">
             {/* Brief header with logos */}
-            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:6}}>
+            <div className="page-hero" style={{display:"flex",alignItems:"center",gap:16,marginBottom:6}}>
               <CompanyLogo domain={sellerUrl} name={sellerICP?.sellerName} size={44}/>
               <div style={{fontSize:18,color:"var(--ink-3)",fontWeight:300}}>→</div>
               <CompanyLogo domain={selectedAccount?.company_url} name={selectedAccount?.company} size={44}/>
@@ -14322,7 +14322,7 @@ Return ONLY raw JSON:
               {riverHypoLoading
                 ? "Building your hypothesis — usually finishes before you're done reading the brief. Good problem to have."
                 : riverHypo
-                  ? "Your pre-call hypothesis is ready. This isn't a script — it's a strategy built on what you actually know. Edit anything before you go live."
+                  ? `Your pre-call hypothesis is ready. This isn't a script — it's a strategy built on what you actually know about ${selectedAccount?.company||"this account"}. Edit anything before you go live.`
                   : "Generate your RIVER hypothesis below."}
             </div>
 

@@ -405,8 +405,13 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .outcome-sub { font-size: 11px; color: var(--ink-2); line-height: 1.4; }
 
 /* ── BRIEF BLOCKS ────────────────────────────────────── */
-.bb { background: var(--surface); box-shadow: var(--sh-1); border: none; border-radius: var(--r-md); overflow: hidden; margin-bottom: 10px; transition: box-shadow var(--t-med) var(--ease); }
+.bb { background: var(--surface); box-shadow: var(--sh-1); border: none; border-radius: var(--r-md); overflow: hidden; margin-bottom: 10px; transition: box-shadow var(--t-med) var(--ease), transform var(--t-med) var(--ease); }
 .bb:hover { box-shadow: var(--sh-2); }
+.bb-accent-green { border-top: 3px solid var(--green); }
+.bb-accent-navy { border-top: 3px solid var(--navy); }
+.bb-accent-tan { border-top: 3px solid var(--tan-0); }
+.bb-accent-amber { border-top: 3px solid var(--amber); }
+.page-hero { background: linear-gradient(170deg, var(--surface) 0%, var(--bg-1) 100%); border-radius: 0 0 16px 16px; margin: -20px -20px 20px; padding: 28px 24px 20px; }
 .bb-hdr { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bg-0); border-bottom: 1px solid var(--line-1); }
 .bb-icon { width: 24px; height: 24px; border-radius: var(--r-sm); background: var(--ink-0); display: flex; align-items: center; justify-content: center; font-family: 'Lora', serif; font-size: 12px; font-weight: 700; color: var(--tan-0); flex-shrink: 0; }
 .bb-title { font-family: 'Lora', serif; font-size: 15px; font-weight: 600; color: var(--ink-0); }
