@@ -6161,6 +6161,49 @@ Return ONLY raw JSON:
     setIcpLoading(false);
     setIcpStatus("");
 
+    // ── BACKGROUND ENRICHMENT: deeper customer + competitor research ──
+    // ICP is rendered. Now fire a Sonnet search to fill in gaps:
+    // named customers, competitor evidence, deeper market intel.
+    // Merges into the already-rendered ICP without blocking.
+    try {
+      const currentIcp = sellerICP;
+      if (currentIcp?.icp && sbToken) {
+        claudeFetch({
+          model: SONNET, max_tokens: 2000, temperature: 0,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+          messages: [{ role: "user", content:
+            `Research customers and competitors for "${url}". Search for "${url}" case studies OR customers OR partners.\n\n` +
+            `Current known customers: ${(currentIcp.icp.customerExamples || []).join(", ") || "none found yet"}\n` +
+            `Current competitors: ${(currentIcp.icp.competitiveAlternatives || []).map(c => typeof c === "object" ? c.name : c).join(", ") || "none found yet"}\n\n` +
+            `Return ONLY raw JSON: {"newCustomers":["customer 1","customer 2"],"competitorEvidence":[{"competitor":"name","customer":"their customer","evidence":"source URL or description"}]}\n` +
+            `Only include customers/evidence you found via web search. Empty arrays if nothing new found.`
+          }],
+        }).then(async d => {
+          if (!d || d.error) return;
+          const raw = (d.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+          try {
+            const cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, "").trim();
+            const fb = cleaned.indexOf("{"); const lb = cleaned.lastIndexOf("}");
+            if (fb < 0 || lb <= fb) return;
+            const parsed = JSON.parse(cleaned.slice(fb, lb + 1));
+            if (parsed.newCustomers?.length || parsed.competitorEvidence?.length) {
+              setSellerICP(prev => {
+                if (!prev?.icp) return prev;
+                const updated = { ...prev, icp: { ...prev.icp } };
+                if (parsed.newCustomers?.length) {
+                  const existing = new Set((updated.icp.customerExamples || []).map(c => c.toLowerCase()));
+                  const fresh = parsed.newCustomers.filter(c => c && !existing.has(c.toLowerCase()));
+                  if (fresh.length) updated.icp.customerExamples = [...(updated.icp.customerExamples || []), ...fresh];
+                }
+                console.log("[icp-enrich] Added", parsed.newCustomers?.length || 0, "customers,", parsed.competitorEvidence?.length || 0, "competitor evidence");
+                return updated;
+              });
+            }
+          } catch { /* non-critical */ }
+        }).catch(() => { /* non-critical */ });
+      }
+    } catch { /* non-critical */ }
+
     // ── EVENTS ENRICHMENT (separate web-search call) ────────────────
     // Fires after ICP is set. Uses web search to find REAL conference
     // dates, cities, and URLs — never fabricated from training data.
