@@ -4953,8 +4953,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt, { maxTokens: 7500 });
       console.log(`[scoreFit] Batch result:`, result ? `${result.scores?.length || 0} scores` : "NULL");
-      if (!result?.scores) {
-        console.warn("[scoreFit] Batch returned no scores. Full result:", JSON.stringify(result)?.slice(0, 200));
+      if (!result?.scores || !Array.isArray(result.scores)) {
+        console.warn("[scoreFit] Batch returned no/invalid scores. Full result:", JSON.stringify(result)?.slice(0, 300));
         return;
       }
 
@@ -5099,9 +5099,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         }
       }
 
-      setCohorts(prev => prev.map(c => ({
+      setCohorts(prev => (prev || []).map(c => ({
         ...c,
-        members: c.members.map(m => memberUpdates[m.company]
+        members: (c.members || []).map(m => memberUpdates[m.company]
           ? { ...m,
               employees:     m.employees     || memberUpdates[m.company].orgSize,
               publicPrivate: m.publicPrivate || memberUpdates[m.company].ownership }
