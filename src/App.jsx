@@ -9429,7 +9429,8 @@ Return ONLY raw JSON:
     <div style={{minHeight:"100vh",background:"var(--surface)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",fontFamily:"DM Sans,sans-serif"}}>
       <div style={{maxWidth:680,width:"100%",textAlign:"center"}}>
         <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--tan-0)",letterSpacing:"1px",textTransform:"uppercase",marginBottom:12}}>Cambrian Catalyst</div>
-        <h1 style={{fontFamily:"Lora,serif",fontSize:36,fontWeight:700,color:"var(--ink-0)",lineHeight:1.2,marginBottom:16,letterSpacing:"-0.5px"}}>Stop winging your sales calls.</h1>
+        <h1 style={{fontFamily:"Lora,serif",fontSize:36,fontWeight:700,color:"var(--ink-0)",lineHeight:1.2,marginBottom:12,letterSpacing:"-0.5px"}}>Sales discovery doesn't have to suck.</h1>
+        <div style={{fontSize:15,fontWeight:600,color:"var(--tan-0)",letterSpacing:"0.3px",marginBottom:20,fontStyle:"italic"}}>Smart People Go Further. Evolve How You Sell.</div>
         <p style={{fontSize:18,color:"var(--ink-2)",lineHeight:1.7,marginBottom:32,maxWidth:520,margin:"0 auto 32px"}}>
           Deep company intelligence, tailored talk tracks, and AI coaching — in 30 seconds. When you walk in prepared, every conversation is better for everyone in the room.
         </p>
@@ -10291,7 +10292,8 @@ Return ONLY raw JSON:
               {/* Landing hero for guests */}
               {!sbUser && (
                 <div style={{textAlign:"center",marginBottom:32,padding:"20px 8px 0"}}>
-                  <div style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",lineHeight:1.3,marginBottom:10,fontFamily:"Lora,serif",letterSpacing:"-0.5px"}}>Stop winging your sales calls.</div>
+                  <div style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",lineHeight:1.3,marginBottom:6,fontFamily:"Lora,serif",letterSpacing:"-0.5px"}}>Sales discovery doesn't have to suck.</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--tan-0)",letterSpacing:"0.3px",marginBottom:10,fontStyle:"italic"}}>Smart People Go Further. Evolve How You Sell.</div>
                   <div style={{fontSize:16,color:"var(--ink-2)",lineHeight:1.7,maxWidth:560,margin:"0 auto 20px"}}>Deep company intelligence, tailored talk tracks, and AI coaching — in 30 seconds. When you walk in prepared, every conversation is better for everyone in the room.</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,maxWidth:600,margin:"0 auto 24px",textAlign:"left"}}>
                     {[
