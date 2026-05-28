@@ -48,6 +48,7 @@ let KL_FISHER_URY = "";
 let KL_GRAHAM = "";
 let KL_FIT_RULES = { highFriction: { industries: [] }, highFit: { industries: [] }, stageThresholds: [], signals: { positive: [], negative: [] } };
 let KL_BUYING_SIGNALS = { positive: [], negative: [] };
+let KL_FOUR_FORCES = null; // Moesta push/pull/anxiety/habit framework
 let KL_JOLT = { description: "", steps: [] };
 let KL_CHALLENGER = { teachingAngle: "", mobilizer: { definition: "", identify: "", notMobilizers: [] } };
 let KL_NAICS = {};
@@ -164,6 +165,7 @@ async function fetchKnowledgeLayer() {
     KL_GRAHAM = d.graham || "";
     KL_FIT_RULES = d.fitScoringRules || KL_FIT_RULES;
     KL_BUYING_SIGNALS = d.buyingSignals || KL_BUYING_SIGNALS;
+    KL_FOUR_FORCES = d.fourForces || null;
     KL_JOLT = d.joltEffect || KL_JOLT;
     KL_CHALLENGER = d.challenger || KL_CHALLENGER;
     KL_NAICS = d.naicsCodes || {};
@@ -590,6 +592,53 @@ function setTrackingContext(targetCompany, sellerUrl, briefType) {
   _trackingCtx["x-brief-type"] = briefType || "brief";
 }
 // ── VERTICAL PLAYBOOK MATCHER ────────────────────────────────────────────
+// ── Smart KL cap: rank by RELEVANCE to target/seller, tier 1 = full, tier 2 = truncated ──
+// Prevents 400 errors from oversized prompts while maximizing intelligence per token.
+// Tier 1 (full depth, max 2): best match for TARGET industry + SELLER market
+// Tier 2 (summary, max 3): remaining matches truncated to 500 chars
+// Cross-cutting: always inject with size caps (exec perspectives 4KB, approval gates 3KB, others 2KB)
+function _rankAndCapKls(klPairs, targetIndustry, sellerICPCtx) {
+  const CROSS_CUTTING = new Set(["executivePerspectives", "approvalGates", "peHoldco", "accounting", "b2bSales", "okrKpi", "vertical"]);
+  const KL_SUMMARY_LIMIT = 500;
+  const crossCutLimits = { accounting: 2000, b2bSales: 2000, okrKpi: 2000, executivePerspectives: 4000, approvalGates: 3000, peHoldco: 4000 };
+
+  const targetLow = (targetIndustry || "").toLowerCase();
+  const sellerLow = [sellerICPCtx?.marketCategory, sellerICPCtx?.sellerDescription, ...(sellerICPCtx?.icp?.industries || [])].filter(Boolean).join(" ").toLowerCase();
+
+  const active = klPairs.filter(([, v]) => v);
+  const verticals = active.filter(([name]) => !CROSS_CUTTING.has(name));
+  const crossCutting = active.filter(([name]) => CROSS_CUTTING.has(name));
+
+  // Score verticals by relevance to target and seller
+  const scored = verticals.map(([name, content]) => {
+    const domain = name.replace(/Deep$/, "").replace(/Services$/, " services").replace(/Incentives$/, " incentives").toLowerCase();
+    const targetHit = targetLow.includes(domain) ? 100 : 0;
+    const sellerHit = sellerLow.includes(domain) ? 90 : 0;
+    return { name, content, relevance: Math.max(targetHit, sellerHit, 10) };
+  }).sort((a, b) => b.relevance - a.relevance);
+
+  // Tier 1 (full, max 2) + Tier 2 (truncated, max 3 more)
+  const verticalText = scored.slice(0, 5).map((v, i) => {
+    if (i < 2) return v.content; // Tier 1: full depth
+    const t = v.content.slice(0, KL_SUMMARY_LIMIT);
+    const nl = t.lastIndexOf("\n");
+    return (nl > 200 ? t.slice(0, nl) : t) + "\n[...context-limited]\n";
+  }).join("");
+
+  // Cross-cutting with size caps
+  const crossText = crossCutting.map(([name, content]) => {
+    const limit = crossCutLimits[name];
+    if (limit && content.length > limit) {
+      const t = content.slice(0, limit);
+      const nl = t.lastIndexOf("\n");
+      return (nl > 300 ? t.slice(0, nl) : t) + "\n[...context-limited]\n";
+    }
+    return content;
+  }).join("");
+
+  return verticalText + crossText;
+}
+
 // Matches vertical playbooks for BOTH the seller and the target prospect.
 // Seller verticals tell you HOW to sell (your methodology, compliance, USPs).
 // Target verticals tell you WHO you're selling to (their buyers, triggers, heuristics).
@@ -1693,7 +1742,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ["okrKpi", KL_OKR_KPI ? "\n" + KL_OKR_KPI : ""],
   ];
   const _klActiveVersions = _klInjections.filter(([, v]) => v).map(([name]) => name);
-  const _klInjectionText = _klInjections.map(([, v]) => v).join("");
+  // Smart 2-tier KL injection: prioritize by RELEVANCE to target industry, not file size
+  const _klInjectionText = _rankAndCapKls(_klInjections, member.ind, sellerICP);
 
   const baseFull = baseLight +
     `${universalCtx}\n`+
@@ -4125,6 +4175,7 @@ export default function App(){
   const[quickEntries,setQuickEntries]=useState([{name:"",url:""}]);
   const[fitScores,setFitScores]=useState({}); // {company: {score, label, reason, color}}
   const[fitScoring,setFitScoring]=useState(false);
+  const[fitScoreExpected,setFitScoreExpected]=useState(0);
   // ── Fit Check table sort state ──
   const[fitSortKey,setFitSortKey]=useState(null);
   const[fitSortDir,setFitSortDir]=useState("asc");
@@ -4714,6 +4765,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     if(!members?.length) { console.warn("[scoreFit] No members, skipping"); return; }
     console.log(`[scoreFit] Starting for ${members.length} members, sellerCtx: "${(sellerCtx||"").slice(0,60)}..."`);
     setFitScoring(true);
+    setFitScoreExpected(members.length);
     setLastScoreTime(Date.now());
     // Lighter than the brief/hypothesis proof pack — scoreFit runs
     // per-batch of 20 accounts and we want it fast. Inject the most
@@ -4969,7 +5021,10 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           ? `\nSMB/MID-MARKET VERTICAL CALIBRATION:\n`+
             `High-fit: ${KL_SMB_MIDMARKET_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
             `High-friction: ${KL_SMB_MIDMARKET_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
-          : "") + `\n`+
+          : "") +
+        (KL_FOUR_FORCES ? `\nBUYER DECISION FORCES (Moesta): Purchase happens when Push (${KL_FOUR_FORCES.push||"pain with status quo"}) + Pull (${KL_FOUR_FORCES.pull||"promise of new solution"}) exceeds Anxiety (${KL_FOUR_FORCES.anxiety||"fears about switching"}) + Habit (${KL_FOUR_FORCES.habit||"inertia of current state"}). High-friction industries have structurally high Anxiety + Habit.\n` : "") +
+        (KL_BUYING_SIGNALS?.positive?.length ? `\nBUYING SIGNALS: Positive (increases fit): ${KL_BUYING_SIGNALS.positive.slice(0,5).join("; ")}. Negative (decreases fit): ${(KL_BUYING_SIGNALS.negative||[]).slice(0,5).join("; ")}.\n` : "") +
+        `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
         `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [specific named customer from profiles above] — same vertical, comparable size, identical use case. Be specific about WHY they're similar.","incumbentRisk":"Name the incumbent vendor ONLY if certain. If uncertain: 'No verified incumbent.'","bestLOB":"Which seller line of business best fits this prospect","closestCustomer":"Name of the seller's existing customer most similar to this prospect","orgSize":"Employee count if confident — empty string if not","ownership":"CURRENT status only — Private if acquired/delisted","ownershipType":"public | pe-backed | vc-backed | private | bootstrapped"}]}`;
@@ -6795,7 +6850,8 @@ Return ONLY raw JSON:
         `What is the PRIMARY website domain for the company "${name.trim()}"?\n` +
         `Return ONLY raw JSON: {"url":"company.com","industry":"Primary vertical","employees":"e.g. ~5,000"}\n` +
         `ACCURACY: Only return a URL you are CERTAIN is correct. A wrong URL is worse than no URL. Only return employee count for well-known companies. Empty string for any field you are not confident about.\n` +
-        `If unknown or uncertain, return {"url":"","industry":"","employees":""}`
+        `If unknown or uncertain, return {"url":"","industry":"","employees":""}`,
+        { skipJsonSuffix: true }
       );
       console.log("[suggestUrl]", name, "→", r);
       if (r?.url) {
@@ -6821,12 +6877,12 @@ Return ONLY raw JSON:
       ind: e._industry || "",
       employees: e._employees || "",
       publicPrivate: "",
-      acv: 0, src: "Quick Entry", outcome: "",
+      acv: 0, src: (sellerICP?.marketCategory || "Imported Accounts"), outcome: "",
     }));
     const syntheticRows = entries.map(e => ({
       company: e.name.trim(),
       company_url: (e.url || e._suggested || "").trim(),
-      industry: e._industry || "", acv: "0", lead_source: "Quick Entry", outcome: "",
+      industry: e._industry || "", acv: "0", lead_source: (sellerICP?.marketCategory || "Imported Accounts"), outcome: "",
     }));
     setRows(syntheticRows);
     setMapping({ company: "company", industry: "industry", acv: "0", lead_source: "lead_source", company_url: "company_url", outcome: "outcome", close_date: "", product: "" });
@@ -6834,10 +6890,10 @@ Return ONLY raw JSON:
     setFileName(`quick_entry_${entries.length}_accounts`);
 
     const cohort = {
-      id: "qe", name: "Quick Entry", color: "var(--tan-0)",
+      id: "qe", name: (sellerICP?.marketCategory || "Imported Accounts"), color: "var(--tan-0)",
       size: entries.length, pct: 100, avgACV: 0,
       topInd: [...new Set(members.map(m => m.ind).filter(Boolean))].slice(0, 3),
-      topSrc: ["Quick Entry"], topOut: [], members,
+      topSrc: [(sellerICP?.marketCategory || "Imported Accounts")], topOut: [], members,
     };
     setCohorts([cohort]);
     setSelectedCohort(cohort);
@@ -7769,41 +7825,45 @@ Return ONLY raw JSON:
       "CHALLENGER CUSTOMER: " + challengerCtx + "\n" +
       (KL_SALES_FRAMEWORKS.length ? "SALES METHODOLOGY: " + KL_SALES_FRAMEWORKS.slice(0, 5).map(f => `${f.name} (${f.author}): ${f.principle.split(".")[0]}`).join(". ") + ".\n" : "") +
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
-      getVerticalInjection(sellerICP, member.ind) +
-      getPaymentsInjection(sellerICP, member.ind) +
-      getComplianceInjection(sellerICP, member.ind) +
-      getRealEstateInjection(sellerICP, member.ind) +
-      getBankingInjection(sellerICP, member.ind) +
-      getHealthcareInjection(sellerICP, member.ind) +
-      getAiMlInjection(sellerICP, member.ind) +
-      getFintechDeepInjection(sellerICP, member.ind) +
-      getRewardsInjection(sellerICP, member.ind) +
-      getQsrInjection(sellerICP, member.ind) +
-      getInvestorInjection(sellerICP, member.ind) +
-      getBaasInjection(sellerICP, member.ind) +
-      getCharitableInjection(sellerICP, member.ind) +
-      getMedicalPaymentsInjection(sellerICP, member.ind) +
-      getSmbMidmarketInjection(sellerICP, member.ind, member) +
-      getInsuranceInjection(sellerICP, member.ind) +
-      getDigIncentivesInjection(sellerICP, member.ind) +
-      getRetailInjection(sellerICP, member.ind) +
-      getProfServicesInjection(sellerICP, member.ind) +
-      getManufacturingInjection(sellerICP, member.ind) +
-      getCannabisInjection(sellerICP, member.ind) +
-      getCryptoInjection(sellerICP, member.ind) +
-      getGamingInjection(sellerICP, member.ind) +
-      getPredictionMarketsInjection(sellerICP, member.ind) +
-      getCybersecurityInjection(sellerICP, member.ind) +
-      getEducationInjection(sellerICP, member.ind) +
-      getEnergyInjection(sellerICP, member.ind) +
-      getHrTechInjection(sellerICP, member.ind) +
-      getGovernmentInjection(sellerICP, member.ind) +
-      (KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : "") +
-      (KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : "") +
-      (KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : "") +
-      (KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : "") +
-      (KL_B2B_SALES ? "\n" + KL_B2B_SALES : "") +
-      (KL_OKR_KPI ? "\n" + KL_OKR_KPI : "") +
+      // Cap KL injections to top 5 verticals + cross-cutting (prevents 400 from oversized prompts)
+      (()=>{
+        const hypoKls = [
+          ["vertical", getVerticalInjection(sellerICP, member.ind)],
+          ["payments", getPaymentsInjection(sellerICP, member.ind)],
+          ["compliance", getComplianceInjection(sellerICP, member.ind)],
+          ["realEstate", getRealEstateInjection(sellerICP, member.ind)],
+          ["banking", getBankingInjection(sellerICP, member.ind)],
+          ["healthcare", getHealthcareInjection(sellerICP, member.ind)],
+          ["aiMl", getAiMlInjection(sellerICP, member.ind)],
+          ["fintechDeep", getFintechDeepInjection(sellerICP, member.ind)],
+          ["rewards", getRewardsInjection(sellerICP, member.ind)],
+          ["qsr", getQsrInjection(sellerICP, member.ind)],
+          ["investor", getInvestorInjection(sellerICP, member.ind)],
+          ["baas", getBaasInjection(sellerICP, member.ind)],
+          ["charitable", getCharitableInjection(sellerICP, member.ind)],
+          ["medicalPayments", getMedicalPaymentsInjection(sellerICP, member.ind)],
+          ["smbMidmarket", getSmbMidmarketInjection(sellerICP, member.ind, member)],
+          ["insurance", getInsuranceInjection(sellerICP, member.ind)],
+          ["digitalIncentives", getDigIncentivesInjection(sellerICP, member.ind)],
+          ["retail", getRetailInjection(sellerICP, member.ind)],
+          ["professionalServices", getProfServicesInjection(sellerICP, member.ind)],
+          ["manufacturing", getManufacturingInjection(sellerICP, member.ind)],
+          ["cannabis", getCannabisInjection(sellerICP, member.ind)],
+          ["crypto", getCryptoInjection(sellerICP, member.ind)],
+          ["gaming", getGamingInjection(sellerICP, member.ind)],
+          ["predictionMarkets", getPredictionMarketsInjection(sellerICP, member.ind)],
+          ["cybersecurity", getCybersecurityInjection(sellerICP, member.ind)],
+          ["education", getEducationInjection(sellerICP, member.ind)],
+          ["energy", getEnergyInjection(sellerICP, member.ind)],
+          ["hrTech", getHrTechInjection(sellerICP, member.ind)],
+          ["government", getGovernmentInjection(sellerICP, member.ind)],
+          ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
+          ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
+          ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
+        ];
+        // Smart 2-tier injection (same as brief — prioritize by relevance, not size)
+        return _rankAndCapKls(hypoKls, member.ind, sellerICP);
+      })() +
       "\n" +
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
       "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
@@ -7925,6 +7985,7 @@ Return ONLY raw JSON:
       (KL_APPROVAL_GATES_DISCOVERY ? KL_APPROVAL_GATES_DISCOVERY + "\n" : "") +
       (KL_PE_HOLDCO_DISCOVERY ? KL_PE_HOLDCO_DISCOVERY + "\n" : "") +
 
+      (KL_FOUR_FORCES ? `═══ FOUR FORCES PROBING (Moesta) ═══\nAsk about switching anxiety ("What concerns you about changing from your current approach?"), incumbent habit ("What keeps you with the current solution even when it's painful?"), push signals ("What has changed that makes this problem more urgent now?"), and pull signals ("What does success look like with a new approach?").\n\n` : "") +
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
       `UNIVERSAL TRUTH: Every company universally wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Root sales questions in which of these six the seller addresses.\n`+
       KL_NEGOTIATIONS + `\n`+
@@ -11987,7 +12048,7 @@ Return ONLY raw JSON:
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                   {fitScoring&&<div style={{fontSize:12,color:"var(--tan-0)"}}>⏳ Evaluating fit...</div>}
-                  {Object.keys(fitScores).length>0&&!fitScoring&&<div style={{fontSize:12,color:"var(--green)"}}>✓ Fit scores ready</div>}
+                  {Object.keys(fitScores).length>=fitScoreExpected&&fitScoreExpected>0&&!fitScoring&&<div style={{fontSize:12,color:"var(--green)"}}>✓ Fit scores ready</div>}
                   {accountQueue.length>0&&(
                     <>
                       <button className="btn btn-secondary btn-sm" onClick={()=>setAccountQueue([])}>Clear</button>
@@ -12746,7 +12807,7 @@ Return ONLY raw JSON:
                 )}
 
                 {/* First-brief guidance — contextual callout for new users */}
-                {brief && !brief._loadingSections?.overview && !brief._loadingSections?.executives && !briefError && !brief._error && (
+                {brief && !Object.values(brief._loadingSections || {}).some(Boolean) && !briefError && !brief._error && (
                   (() => {
                     // Show guidance only once per session — dismissed on click
                     const key = "cambrian_brief_guided";
