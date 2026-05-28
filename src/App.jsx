@@ -9426,44 +9426,76 @@ Return ONLY raw JSON:
 
   // ── LANDING PAGE — visible to everyone, always the front door ──
   if(!authed && showLanding) return (
-    <div style={{minHeight:"100vh",background:"var(--surface)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",fontFamily:"DM Sans,sans-serif"}}>
-      <div style={{maxWidth:640,width:"100%",textAlign:"center"}}>
-        <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--tan-0)",letterSpacing:"1px",textTransform:"uppercase",marginBottom:16}}>Cambrian Catalyst</div>
-        <h1 style={{fontFamily:"Lora,serif",fontSize:38,fontWeight:700,color:"var(--ink-0)",lineHeight:1.2,marginBottom:12,letterSpacing:"-0.5px"}}>Sales discovery doesn't have to suck.</h1>
-        <div style={{fontSize:15,fontWeight:600,color:"var(--tan-0)",letterSpacing:"0.3px",marginBottom:24,fontStyle:"italic"}}>Smart People Go Further. Evolve How You Sell.</div>
-        <p style={{fontSize:17,color:"var(--ink-1)",lineHeight:1.8,marginBottom:12,maxWidth:540,margin:"0 auto 12px"}}>
-          You know that feeling — 10 minutes before the call, scrambling through LinkedIn and a stale CRM note, hoping something sticks. We built this so you never wing it again.
-        </p>
-        <p style={{fontSize:16,color:"var(--ink-2)",lineHeight:1.8,marginBottom:36,maxWidth:540,margin:"0 auto 36px"}}>
-          Give us 30 seconds and a company name. We'll hand you back a full intelligence brief, a conversation strategy, and an AI coach who's actually been paying attention.
-        </p>
-        <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:48}}>
-          <button onClick={()=>setShowLanding(false)}
-            style={{padding:"14px 32px",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
-            Try It Free
-          </button>
-          <button onClick={()=>setShowLanding(false)}
-            style={{padding:"14px 32px",borderRadius:10,background:"transparent",color:"var(--ink-0)",fontSize:15,fontWeight:700,border:"2px solid var(--ink-0)",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
-            Sign In
-          </button>
+    <div style={{minHeight:"100vh",fontFamily:"DM Sans,sans-serif",overflow:"hidden"}}>
+      {/* ── Nav bar ── */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 32px",maxWidth:1200,margin:"0 auto"}}>
+        <div style={{fontFamily:"Lora,serif",fontSize:18,fontWeight:700,color:"var(--ink-0)"}}>Cambrian <span style={{color:"var(--tan-0)"}}>Catalyst</span></div>
+        <button onClick={()=>setShowLanding(false)}
+          style={{padding:"8px 20px",borderRadius:8,background:"none",color:"var(--ink-0)",fontSize:13,fontWeight:700,border:"1.5px solid var(--ink-0)",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
+          Sign In
+        </button>
+      </div>
+
+      {/* ── Hero ── */}
+      <div style={{background:"linear-gradient(170deg, var(--surface) 0%, var(--bg-1) 50%, var(--tan-bg, #faf6f0) 100%)",padding:"80px 32px 60px",textAlign:"center"}}>
+        <div style={{maxWidth:900,margin:"0 auto"}}>
+          <div style={{fontSize:13,fontWeight:700,color:"var(--tan-0)",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:20}}>Smart People Go Further</div>
+          <h1 style={{fontFamily:"Lora,serif",fontSize:"clamp(36px, 5vw, 56px)",fontWeight:700,color:"var(--ink-0)",lineHeight:1.15,marginBottom:16,letterSpacing:"-1px"}}>
+            Sales discovery<br/>doesn't have to <span style={{color:"var(--tan-0)"}}>suck.</span>
+          </h1>
+          <p style={{fontSize:"clamp(16px, 2vw, 20px)",color:"var(--ink-2)",lineHeight:1.7,marginBottom:12,maxWidth:620,margin:"0 auto 12px"}}>
+            You know that feeling — 10 minutes before the call, scrambling through LinkedIn and a stale CRM note, hoping something sticks.
+          </p>
+          <p style={{fontSize:"clamp(15px, 1.8vw, 18px)",color:"var(--ink-1)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px",fontWeight:500}}>
+            Give us 30 seconds and a company name. We'll hand you back a full intelligence brief, a conversation strategy, and an AI coach who's actually been paying attention.
+          </p>
+          <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:16}}>
+            <button onClick={()=>setShowLanding(false)}
+              style={{padding:"16px 40px",borderRadius:12,background:"var(--ink-0)",color:"var(--surface)",fontSize:16,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"DM Sans,sans-serif",boxShadow:"0 4px 16px rgba(0,0,0,0.12)",transition:"transform 0.15s",letterSpacing:"0.2px"}}
+              onMouseOver={e=>e.target.style.transform="translateY(-2px)"} onMouseOut={e=>e.target.style.transform="none"}>
+              Try It Free
+            </button>
+          </div>
+          <div style={{fontSize:13,color:"var(--ink-3)"}}>No credit card. No demo call. No 47-slide deck about our "synergies."</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:16,textAlign:"left",marginBottom:48}}>
-          {[
-            {icon:"🔍",title:"Know more than they expect",desc:"Live research on their strategy, leadership, pain points, and the competitors they're already talking to. Not last quarter's data — today's."},
-            {icon:"🎙",title:"Walk in with a point of view",desc:"A structured conversation plan grounded in what you sell and what they need. Talk tracks that sound like you, not a script."},
-            {icon:"🏆",title:"Leave with a next step",desc:"Real-time coaching during the call, a deal route when it's over, and a follow-up email that proves you were listening."},
-          ].map(f=>(
-            <div key={f.title} style={{background:"var(--bg-1)",borderRadius:12,padding:"20px",border:"1px solid var(--line-0)"}}>
-              <div style={{fontSize:24,marginBottom:8}}>{f.icon}</div>
-              <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{f.title}</div>
-              <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.6}}>{f.desc}</div>
-            </div>
-          ))}
+      </div>
+
+      {/* ── Tagline divider ── */}
+      <div style={{textAlign:"center",padding:"32px 20px",background:"var(--ink-0)",color:"var(--surface)"}}>
+        <div style={{fontFamily:"Lora,serif",fontSize:"clamp(18px, 2.5vw, 24px)",fontWeight:600,fontStyle:"italic",letterSpacing:"0.3px"}}>Evolve How You Sell.</div>
+      </div>
+
+      {/* ── Value cards ── */}
+      <div style={{padding:"60px 32px",background:"var(--surface)"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:24}}>
+            {[
+              {icon:"🔍",title:"Know more than they expect",desc:"Live research on their strategy, leadership, pain points, and the competitors they're already talking to. Not last quarter's data — today's.",accent:"var(--green)"},
+              {icon:"🎙",title:"Walk in with a point of view",desc:"A structured conversation plan grounded in what you sell and what they need. Talk tracks that sound like you, not a script.",accent:"var(--navy)"},
+              {icon:"🏆",title:"Leave with a next step",desc:"Real-time coaching during the call, a deal route when it's over, and a follow-up email that proves you were listening.",accent:"var(--tan-0)"},
+            ].map(f=>(
+              <div key={f.title} style={{background:"var(--bg-0)",borderRadius:16,padding:"32px 28px",border:"1px solid var(--line-0)",borderTop:`3px solid ${f.accent}`,transition:"box-shadow 0.2s"}}
+                onMouseOver={e=>e.currentTarget.style.boxShadow="0 8px 32px rgba(0,0,0,0.08)"} onMouseOut={e=>e.currentTarget.style.boxShadow="none"}>
+                <div style={{fontSize:32,marginBottom:14}}>{f.icon}</div>
+                <div style={{fontSize:17,fontWeight:700,color:"var(--ink-0)",marginBottom:8,fontFamily:"Lora,serif"}}>{f.title}</div>
+                <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7}}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.7,maxWidth:480,margin:"0 auto 20px"}}>
-          Built for reps who take their craft seriously. Free to start — no credit card, no demo call, no 47-slide deck about our "synergies."
+      </div>
+
+      {/* ── Bottom CTA ── */}
+      <div style={{textAlign:"center",padding:"48px 32px 64px",background:"var(--bg-1)"}}>
+        <div style={{fontSize:15,color:"var(--ink-1)",lineHeight:1.7,maxWidth:500,margin:"0 auto 24px"}}>
+          Built for reps who take their craft seriously.
         </div>
-        <div style={{fontSize:12,color:"var(--ink-3)"}}>3 free runs. You'll know if it's for you by the second one.</div>
+        <button onClick={()=>setShowLanding(false)}
+          style={{padding:"14px 36px",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"DM Sans,sans-serif",boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}
+          onMouseOver={e=>e.target.style.transform="translateY(-2px)"} onMouseOut={e=>e.target.style.transform="none"}>
+          Get Started Free
+        </button>
+        <div style={{fontSize:12,color:"var(--ink-3)",marginTop:12}}>3 free runs. You'll know if it's for you by the second one.</div>
       </div>
     </div>
   );
