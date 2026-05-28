@@ -12678,22 +12678,32 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
-                {/* RFP alert — active procurement opportunities */}
-                {rfpData.open?.length > 0 && (
-                  <div style={{background:"var(--red-bg)",border:"2px solid var(--red)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"var(--red)",marginBottom:6}}>
-                      {"\uD83D\uDD34"} {rfpData.open.length} Active RFP{rfpData.open.length > 1 ? "s" : ""} Detected
-                    </div>
-                    <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.6}}>
-                      Live procurement opportunities matching your ICP were found. Check the RFP Intel tab on the ICP page for details — these represent active buying intent.
-                    </div>
-                    {rfpData.open.slice(0, 3).map((rfp, idx) => (
-                      <div key={idx} style={{fontSize:11,color:"var(--ink-2)",marginTop:4,paddingLeft:12,borderLeft:"2px solid var(--red)"}}>
-                        {rfp.title || rfp.agency || "Active opportunity"} {rfp.deadline ? `— deadline: ${rfp.deadline}` : ""}
+                {/* RFP/Signal alert — ONLY if THIS SPECIFIC PROSPECT has an active RFP or signal */}
+                {(()=>{
+                  const co = selectedAccount?.company?.toLowerCase() || "";
+                  if (!co) return null;
+                  const prospectRfps = [...(rfpData.open || []), ...(accountRfpData.open || [])].filter(r => (r.buyer || "").toLowerCase().includes(co) || co.includes((r.buyer || "").toLowerCase()));
+                  const prospectSignals = [...(rfpData.signals || []), ...(accountRfpData.signals || [])].filter(s => (s.company || s.buyer || "").toLowerCase().includes(co) || co.includes((s.company || s.buyer || "").toLowerCase()));
+                  const total = prospectRfps.length + prospectSignals.length;
+                  if (!total) return null;
+                  return (
+                    <div style={{background:prospectRfps.length?"var(--red-bg)":"var(--amber-bg)",border:`2px solid ${prospectRfps.length?"var(--red)":"var(--amber)"}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                      <div style={{fontSize:13,fontWeight:700,color:prospectRfps.length?"var(--red)":"var(--amber)",marginBottom:6}}>
+                        {prospectRfps.length ? `🔴 ${prospectRfps.length} Active RFP${prospectRfps.length>1?"s":""} for ${selectedAccount.company}` : `🟡 ${prospectSignals.length} Buying Signal${prospectSignals.length>1?"s":""} for ${selectedAccount.company}`}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {prospectRfps.map((rfp, idx) => (
+                        <div key={"r"+idx} style={{fontSize:11,color:"var(--ink-1)",marginTop:4,paddingLeft:12,borderLeft:"2px solid var(--red)"}}>
+                          {rfp.url ? <a href={rfp.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-1)",textDecoration:"none"}}>{rfp.title} ↗</a> : rfp.title} {rfp.deadline ? `— deadline: ${rfp.deadline}` : ""}
+                        </div>
+                      ))}
+                      {prospectSignals.map((s, idx) => (
+                        <div key={"s"+idx} style={{fontSize:11,color:"var(--ink-2)",marginTop:4,paddingLeft:12,borderLeft:"2px solid var(--amber)"}}>
+                          {s.signalType || "Signal"}: {s.headline || s.detail?.slice(0,100) || "Buying intent detected"}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
                 {/* Data Confidence badge — anti-hallucination transparency */}
                 {brief._dataConfidence && (
