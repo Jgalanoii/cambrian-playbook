@@ -5188,13 +5188,14 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       // Match on user_id + seller_url pattern (handles evermoreoutcomes vs evermoreoutcomes.com)
       const cutoff = new Date(Date.now() - 180 * 86400000).toISOString();
       const sellerShort = sellerNorm.replace(/\.com$|\.io$|\.ai$|\.org$|\.net$/, "").slice(0, 50);
-      const r = await fetch(
-        `${SB_URL}/rest/v1/rfp_intel_signals?user_id=eq.${sbUser.id}&seller_url=ilike.*${encodeURIComponent(sellerShort)}*&search_stage=eq.icp_level&user_dismissed=eq.false&created_at=gte.${cutoff}&order=relevance_score.desc.nullslast&limit=30`,
-        { headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } }
-      );
-      if (!r.ok) { console.warn("[rfp-persist] DB load failed:", r.status); return { open: [], closed: [], signals: [] }; }
+      // Query by seller_url pattern — no user_id filter so org-wide results persist
+      // RLS policy (migration 026) already scopes to authenticated user
+      const queryUrl = `${SB_URL}/rest/v1/rfp_intel_signals?seller_url=ilike.*${encodeURIComponent(sellerShort)}*&search_stage=eq.icp_level&user_dismissed=eq.false&created_at=gte.${cutoff}&order=relevance_score.desc.nullslast&limit=30`;
+      console.log("[rfp-persist] Query:", queryUrl.replace(SB_URL, ""));
+      const r = await fetch(queryUrl, { headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` } });
+      if (!r.ok) { const errText = await r.text().catch(()=>""); console.warn("[rfp-persist] DB load failed:", r.status, errText.slice(0,200)); return { open: [], closed: [], signals: [] }; }
       const rows = await r.json();
-      console.log(`[rfp-persist] Loaded ${rows?.length || 0} previous results from DB for "${sellerShort}"`);
+      console.log(`[rfp-persist] Loaded ${rows?.length || 0} previous results from DB for "${sellerShort}"`, rows?.length ? `(first: ${rows[0]?.title?.slice(0,50)})` : "(empty)");
       if (!Array.isArray(rows) || !rows.length) return { open: [], closed: [], signals: [] };
       const open = rows.filter(r => r.search_type === "open_rfp").map(r => ({
         title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
@@ -5243,8 +5244,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
   const fetchRFPIntel = async ({ forceRefresh = false } = {}) => {
     if (!sellerICP?.icp) return;
 
-    // Cache hit — instant return with live data. Only serve from cache if
-    // there's ACTUAL content (not just empty arrays from a prior failed fetch).
+    // Cache hit — serve cached data immediately, then merge DB results in background.
+    // DB merge ensures persisted results (manual seeds, prior session finds) always surface.
     if (!forceRefresh) {
       try {
         const cached = localStorage.getItem(rfpCacheKey());
@@ -5252,10 +5253,27 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           const parsed = JSON.parse(cached);
           if ((parsed?.open?.length > 0) || (parsed?.closed?.length > 0) || (parsed?.signals?.length > 0)) {
             setRfpData({ open: parsed.open || [], closed: parsed.closed || [], signals: parsed.signals || [], loading: false, error: null });
+            // Merge DB results in background — don't block the cache render
+            loadPreviousRfpIntel().then(dbResults => {
+              if (!dbResults.open.length && !dbResults.closed.length && !dbResults.signals.length) return;
+              const seen = new Set();
+              const dedup = (newArr, dbArr) => {
+                const merged = [];
+                for (const r of (newArr || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k)) { seen.add(k); merged.push(r); } }
+                for (const r of (dbArr || [])) { const k = (r.url || r.title || "").toLowerCase(); if (!seen.has(k)) { seen.add(k); merged.push({ ...r, _fromDb: true }); } }
+                return merged;
+              };
+              setRfpData(prev => ({
+                ...prev,
+                open: dedup(prev.open, dbResults.open),
+                closed: dedup(prev.closed, dbResults.closed),
+                signals: dedup(prev.signals, dbResults.signals),
+              }));
+            }).catch(() => { /* non-critical */ });
             return;
           }
         }
-      } catch {}
+      } catch { /* non-critical */ }
     }
 
     setRfpData({ open: [], closed: [], signals: [], loading: true, error: null });
