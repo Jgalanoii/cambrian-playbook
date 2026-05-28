@@ -3979,6 +3979,14 @@ class ErrorBoundary extends React.Component {
 
 export default function App(){
   const[authed,setAuthed]=useState(false);
+  // Show landing page unless user has a stored session or is on an auth redirect (invite/reset/OAuth)
+  const[showLanding,setShowLanding]=useState(()=>{
+    try {
+      const hasToken = sessionStorage.getItem("sb_token") || localStorage.getItem("sb_token");
+      const hasAuthHash = window.location.hash.includes("access_token") || window.location.search.includes("token=");
+      return !hasToken && !hasAuthHash;
+    } catch { return true; }
+  });
   const[sbUser,setSbUser]=useState(null);
   const[sbToken,setSbToken]=useState('');
 
@@ -9415,6 +9423,50 @@ Return ONLY raw JSON:
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+
+  // ── LANDING PAGE — visible to everyone, always the front door ──
+  if(!authed && showLanding) return (
+    <div style={{minHeight:"100vh",background:"var(--surface)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",fontFamily:"DM Sans,sans-serif"}}>
+      <div style={{maxWidth:680,width:"100%",textAlign:"center"}}>
+        <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--tan-0)",letterSpacing:"1px",textTransform:"uppercase",marginBottom:12}}>Cambrian Catalyst</div>
+        <h1 style={{fontFamily:"Lora,serif",fontSize:36,fontWeight:700,color:"var(--ink-0)",lineHeight:1.2,marginBottom:16,letterSpacing:"-0.5px"}}>Stop winging your sales calls.</h1>
+        <p style={{fontSize:18,color:"var(--ink-2)",lineHeight:1.7,marginBottom:32,maxWidth:520,margin:"0 auto 32px"}}>
+          Deep company intelligence, tailored talk tracks, and AI coaching — in 30 seconds. When you walk in prepared, every conversation is better for everyone in the room.
+        </p>
+        <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:40}}>
+          <button onClick={()=>setShowLanding(false)}
+            style={{padding:"14px 32px",borderRadius:10,background:"var(--ink-0)",color:"var(--surface)",fontSize:15,fontWeight:700,border:"none",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
+            Get Started Free
+          </button>
+          <button onClick={()=>setShowLanding(false)}
+            style={{padding:"14px 32px",borderRadius:10,background:"transparent",color:"var(--ink-0)",fontSize:15,fontWeight:700,border:"2px solid var(--ink-0)",cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>
+            Sign In
+          </button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:16,textAlign:"left",marginBottom:40}}>
+          {[
+            {icon:"🔍",title:"Research",desc:"Executives, strategy, sentiment, financials — live web research grounded in 38 industry knowledge layers"},
+            {icon:"🎯",title:"Prepare",desc:"RIVER hypothesis, Challenger teaching insights, and 20 discovery questions tailored to YOUR products"},
+            {icon:"🏆",title:"Close",desc:"Real-time AI coaching, deal routing, CRM-ready notes, and follow-up emails that sound like you were listening"},
+          ].map(f=>(
+            <div key={f.title} style={{background:"var(--bg-1)",borderRadius:12,padding:"20px",border:"1px solid var(--line-0)"}}>
+              <div style={{fontSize:24,marginBottom:8}}>{f.icon}</div>
+              <div style={{fontSize:15,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{f.title}</div>
+              <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.6}}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:24,flexWrap:"wrap"}}>
+          {["Deep briefs in 30 seconds","38 industry knowledge layers","CRM integration","AI sales coach"].map(t=>(
+            <div key={t} style={{fontSize:12,color:"var(--ink-3)",display:"flex",alignItems:"center",gap:5}}>
+              <span style={{color:"var(--green)",fontWeight:700}}>✓</span> {t}
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:13,color:"var(--ink-3)"}}>3 free runs, no credit card required</div>
+      </div>
+    </div>
+  );
 
   if(!authed) return <PasswordGate onAuth={async(u,tok)=>{
     setAuthed(true);setSbUser(u);setSbToken(tok);setAuthToken(tok);fetchKnowledgeLayer();
