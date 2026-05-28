@@ -1659,6 +1659,17 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       enrichedPeople.slice(0, 8).map(p => `- ${p.name}, ${p.title}${p.department ? ` (${p.department})` : ""}${p.linkedIn ? ` — ${p.linkedIn}` : ""}`).join("\n") + "\n" : "") +
     "\n" : "";
 
+  // FALLBACK FIRMOGRAPHICS: when Apollo isn't available, use whatever we have from
+  // Quick Entry enrichment or scoring backfill. This prevents the brief from guessing
+  // a different employee count than what's already shown in the Fit Check table.
+  const fallbackFirmographics = !enrichment && (member.employees || member.publicPrivate || member.ind)
+    ? `\nKNOWN COMPANY DATA (use as ground truth — do NOT contradict these with different numbers):\n` +
+      (member.employees ? `Employees: ${member.employees}\n` : "") +
+      (member.publicPrivate ? `Ownership: ${member.publicPrivate}\n` : "") +
+      (member.ind ? `Industry: ${member.ind}\n` : "") +
+      (member.company_url ? `Website: ${member.company_url}\n` : "") +
+      "\n" : "";
+
   // PUBLIC COMPANY: inject SEC filing search instructions for publicly traded targets
   const isPublicCompany = !!(
     (enrichment?.publiclyTraded && !/private/i.test(enrichment.publiclyTraded)) ||
@@ -1679,6 +1690,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `SELLER NAME CONSISTENCY: Always refer to the selling organization as "${canonicalSellerName}" — not "${sellerUrl}" or any other variation. Use this exact name in every section.\n`+
     identityAnchor +
     enrichmentCtx +
+    fallbackFirmographics +
     secFilingCtx +
     `RULE: All fields describe ${co} NOT the seller. ASCII only.\n`+
     `EMPTY FIELD RULE (CRITICAL): If a fact is unknown, return an EMPTY STRING "". NEVER return "Not found", "Not specified", "Not available", "N/A", "Unknown", "[Verify]", or any placeholder text. The UI handles empty fields gracefully — placeholder text breaks the display. Empty string is ALWAYS correct for unknown data.\n`+
@@ -1779,7 +1791,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"e.g. $2.4B (FY2024) — use ONLY figures from web search or Apollo data. Empty string if not found.","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"The company's OWN employee headcount (e.g. ~600), NOT platform users, customers served, or partner network size. If Apollo/enrichment data says a number, use that. For BaaS/platform companies, this is the company's staff, not the people using their products.",`+
+    `"revenue":"e.g. $2.4B (FY2024) — use ONLY figures from web search or Apollo data. Empty string if not found.","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"MUST match the 'Employees' number from KNOWN COMPANY DATA or VERIFIED COMPANY DATA above if provided. Do NOT return a different number. If no ground truth provided, use web search. This is the company's OWN headcount — NOT platform users, customers served, or partner network.",`+
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if you are certain it's correct (e.g. linkedin.com/company/gusto). A wrong LinkedIn link is worse than no link. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
