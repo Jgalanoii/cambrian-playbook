@@ -1779,7 +1779,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"e.g. $2.4B (FY2024) — use ONLY figures from web search or Apollo data. Empty string if not found.","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"e.g. ~200,000",`+
+    `"revenue":"e.g. $2.4B (FY2024) — use ONLY figures from web search or Apollo data. Empty string if not found.","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"The company's OWN employee headcount (e.g. ~600), NOT platform users, customers served, or partner network size. If Apollo/enrichment data says a number, use that. For BaaS/platform companies, this is the company's staff, not the people using their products.",`+
     `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if you are certain it's correct (e.g. linkedin.com/company/gusto). A wrong LinkedIn link is worse than no link. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
@@ -1939,7 +1939,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 3800, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
+    }, 4500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
   );
   // relationshipSignals feature tabled
 
@@ -4829,12 +4829,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `━━━ DIMENSION 1: ICP ALIGNMENT (40 points max) ━━━\n`+
         `Pick dim1 using this 3-step lookup. Do NOT do arithmetic — just pick the value from each row.\n\n`+
         `STEP A — INDUSTRY: Seller's target industries: [${(sellerICP?.icp?.industries||[]).join(", ")}]\n`+
-        `  Pick ONE:\n`+
-        `  32 = target's industry IS one of the seller's target industries, or a direct sub-segment (e.g. "Fintech" matches "Finance")\n`+
+        `  Pick ONE (IN PRIORITY ORDER — stop at the FIRST that matches):\n`+
+        `  32 = target's industry IS one of the seller's target industries, or a direct sub-segment (e.g. "Fintech" matches "Finance", "Banking" matches "Financial Services"). THIS ALWAYS WINS — even if the industry also appears in the high-friction list below.\n`+
         `  26 = target is in a DIFFERENT industry but shares the same buyer persona or problem domain\n`+
         `  20 = no meaningful industry connection\n`+
-        `  10 = HIGH-FRICTION INDUSTRY (${(KL_FIT_RULES.highFriction?.industries||[]).map(i=>i.name).join(", ")})\n`+
-        `  RULE: sub-sectors always match their parent. Fintech=Finance. HealthIT=Healthcare. AdTech=Media.\n\n`+
+        `  10 = HIGH-FRICTION INDUSTRY AND target is NOT in the seller's target industries. High-friction industries: (${(KL_FIT_RULES.highFriction?.industries||[]).map(i=>i.name).join(", ")}). ONLY apply 10 if the target industry has NO match to any seller target industry.\n`+
+        `  RULE: sub-sectors always match their parent. Fintech=Finance=Banking=Financial Services. HealthIT=Healthcare. AdTech=Media. BaaS=Banking=Financial Services.\n\n`+
         `STEP B — SIZE: Seller's target: ${sellerICP?.icp?.companySize || "any"} | Brackets: 1-49 | 50-499 | 500-4,999 | 5,000-49,999 | 50,000+\n`+
         `  Add to your Step A value:\n`+
         `  +5 = target is in the SAME bracket as seller's ICP\n`+
@@ -14084,38 +14084,10 @@ Return ONLY raw JSON:
                 )}
 
 
-                {/* Contacts + Watch-outs */}
-                <div className="field-grid-2" style={{gap:12,marginBottom:14}}>
-                  <div className="bb" style={{margin:0}}>
-                    <div className="bb-hdr">
-                      <div><div className="bb-title" style={{fontSize:14}}>In-Roads</div>
-                      <div className="bb-sub">Mid-level champions who feel the pain daily</div></div>
-                    </div>
-                    <div className="bb-body">
-                      {(brief.keyContacts||[]).filter(c=>c?.name||c?.title).map((c,i)=>(
-                        <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<((brief.keyContacts||[]).filter(x=>x?.name||x?.title).length-1)?"1px solid var(--tan-3)":"none"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                            <div style={{width:30,height:30,borderRadius:"50%",background:"var(--green)",color:"var(--surface)",fontFamily:"Lora,serif",fontWeight:700,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                              {c.initials||c.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}
-                            </div>
-                            <div>
-                              {c.name ? (
-                                <>
-                                  <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{c.name}</div>
-                                  <div style={{fontSize:12,color:"var(--green)",fontWeight:600}}>{c.title||""}</div>
-                                </>
-                              ) : (
-                                <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)"}}>{c.title||"Likely contact"}</div>
-                              )}
-                            </div>
-                          </div>
-                          <EF value={c.angle||""} onChange={v=>patchBrief(b=>{b.keyContacts[i]={...b.keyContacts[i],angle:v};})} placeholder="Why they feel this pain and how to reach them..."/>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bb" style={{margin:0}}>
-                    <div className="bb-hdr"><div className="bb-title" style={{fontSize:12}}>Watch-Outs</div></div>
+                {/* Watch-outs */}
+                <div style={{marginBottom:14}}>
+                  <div className="bb">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>⚠</div><div><div className="bb-title">Watch-Outs</div><div className="bb-sub">Procurement risks, incumbent lock-in, and credibility gaps</div></div></div>
                     <div className="bb-body">
                       {(brief.watchOuts||[]).filter(Boolean).length > 0
                         ? (brief.watchOuts||[]).filter(Boolean).map((w,i)=>(
