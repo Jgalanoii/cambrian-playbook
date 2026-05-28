@@ -4757,6 +4757,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         (customerList.length
           ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
             `Score using EXACTLY these fixed values (pick the HIGHEST that applies):\n`+
+            `  30 = target IS one of the seller's named customers (from customerExamples or namedCustomerProfiles). The maximum score — they already buy from the seller.\n`+
             `  27 = same industry AND similar size (within one bracket) as a named customer\n`+
             `  17 = same industry, different size (2+ brackets apart)\n`+
             `  10 = different industry but similar buyer persona or use case\n`+
@@ -4986,16 +4987,34 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       // Snap a dimension score to the nearest allowed fixed value.
       // This prevents the model from interpolating between fixed points.
       const DIM1_VALID = [10, 12, 13, 15, 20, 22, 23, 25, 26, 28, 29, 31, 32, 34, 35, 37, 38, 40]; // stepA(10/20/26/32) + stepB(0/2/5) + stepC(0/1/3)
-      const DIM2_VALID = [3, 10, 15, 17, 27]; // fixed lookup values
+      const DIM2_VALID = [3, 10, 15, 17, 27, 30]; // fixed lookup values (30 = known customer)
       const DIM3_VALID = [10, 20, 26]; // fixed lookup values
       const snap = (val, allowed) => allowed.reduce((best, v) => Math.abs(v - val) < Math.abs(best - val) ? v : best, allowed[0]);
+
+      // Detect known customers — client-side override for dim2
+      const customerNames = (sellerICP?.icp?.customerExamples || []).map(c => (typeof c === "string" ? c : "").toLowerCase().trim()).filter(Boolean);
+      const profileNames = (sellerICP?.icp?.namedCustomerProfiles || []).map(c => (typeof c === "object" ? c.name : c || "").toLowerCase().trim()).filter(Boolean);
+      const allKnownNames = [...new Set([...customerNames, ...profileNames])];
+      const isKnownCustomer = (company) => {
+        const norm = company.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "");
+        return allKnownNames.some(known => {
+          const knownNorm = known.replace(/[^a-z0-9\s]/g, "");
+          return norm.includes(knownNorm) || knownNorm.includes(norm);
+        });
+      };
 
       result.scores.forEach(s => {
         // Compute total from per-dimension scores with user-adjustable weights
         // Snap to nearest fixed value to prevent interpolation variance
         const rawD1 = snap(Math.max(0, Math.min(40, Number(s.dim1) || 0)), DIM1_VALID);
-        const rawD2 = snap(Math.max(0, Math.min(30, Number(s.dim2) || 0)), DIM2_VALID);
+        let rawD2 = snap(Math.max(0, Math.min(30, Number(s.dim2) || 0)), DIM2_VALID);
         const rawD3 = snap(Math.max(0, Math.min(30, Number(s.dim3) || 0)), DIM3_VALID);
+        // Override dim2 for known customers
+        if (isKnownCustomer(s.company)) {
+          rawD2 = 30;
+          s.customerSimilarity = `${s.company} is an existing customer — maximum customer similarity.`;
+          s._isKnownCustomer = true;
+        }
         // Apply weights: normalize raw scores to 0-1, then scale by weight
         const d1 = (rawD1 / 40) * fitWeights.dim1;
         const d2 = (rawD2 / 30) * fitWeights.dim2;
@@ -5035,6 +5054,51 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       // Progressive state update — merge this batch's results so the table
       // fills in as batches return rather than waiting for all batches.
       setFitScores(prev => ({ ...prev, ...map }));
+
+      // ── Phase 1B: Persist fit scores to account_outputs (fire-and-forget) ──
+      if (sbToken && sbUser) {
+        const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (SB_URL && SB_KEY) {
+          const outputRows = Object.entries(map).map(([company, score]) => {
+            const matchedMember = batch.find(m => m.company === company) || batch.find(m => m.company.toLowerCase() === company.toLowerCase());
+            return {
+              org_id: orgCtx?.id || null,
+              user_id: sbUser.id,
+              seller_url: (sellerUrl || "").slice(0, 200),
+              target_company: (company || "").slice(0, 200),
+              target_domain: (matchedMember?.company_url || "").slice(0, 200),
+              target_industry: (matchedMember?.ind || "").slice(0, 100),
+              output_type: "fit_score",
+              output_version: 1,
+              fit_score: score.score ?? null,
+              fit_label: (score.label || "").slice(0, 50),
+              dim1: score.rawDim1 || null,
+              dim2: score.rawDim2 || null,
+              dim3: score.rawDim3 || null,
+              deal_route: null,
+              deal_confidence: null,
+              data_confidence: null,
+              sections_completed: null,
+              data: score,
+              is_latest: true,
+            };
+          });
+          // Batch insert up to 10 rows per POST
+          for (let i = 0; i < outputRows.length; i += 10) {
+            const chunk = outputRows.slice(i, i + 10);
+            fetch(`${SB_URL}/rest/v1/account_outputs`, {
+              method: "POST",
+              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal,resolution=merge-duplicates" },
+              body: JSON.stringify(chunk),
+            }).then(r => {
+              if (r.ok) console.log(`[output-persist] Logged ${chunk.length} fit_score rows to account_outputs`);
+              else console.warn(`[output-persist] fit_score write failed:`, r.status);
+            }).catch(() => {});
+          }
+        }
+      }
+
       setCohorts(prev => prev.map(c => ({
         ...c,
         members: c.members.map(m => memberUpdates[m.company]
@@ -6666,6 +6730,7 @@ Return ONLY raw JSON:
         `ACCURACY: Only return a URL you are CERTAIN is correct. A wrong URL is worse than no URL. Only return employee count for well-known companies. Empty string for any field you are not confident about.\n` +
         `If unknown or uncertain, return {"url":"","industry":"","employees":""}`
       );
+      console.log("[suggestUrl]", name, "→", r);
       if (r?.url) {
         setQuickEntries(prev => prev.map((e, j) => j === idx ? {
           ...e,
@@ -7477,6 +7542,50 @@ Return ONLY raw JSON:
               data_confidence: current._dataConfidence || null,
               apollo_enrichment_used: !!(member._enrichment?.organization),
             }),
+          }).catch(() => {});
+
+          // ── Phase 1C: Persist brief to account_outputs (fire-and-forget) ──
+          const trimStr = (v, max = 2000) => typeof v === "string" ? v.slice(0, max) : v;
+          const trimmedBrief = {
+            companySnapshot: trimStr(current.companySnapshot),
+            keyExecutives: current.keyExecutives,
+            strategicTheme: trimStr(current.strategicTheme),
+            sellerOpportunity: trimStr(current.sellerOpportunity),
+            openingAngle: trimStr(current.openingAngle),
+            elevatorPitch: trimStr(current.elevatorPitch),
+            solutionMapping: current.solutionMapping,
+            competitivePositioning: current.competitivePositioning,
+            financialDeepDive: current.financialDeepDive,
+            boardAndInvestors: current.boardAndInvestors,
+            tldr: trimStr(current.tldr),
+          };
+          fetch(`${SB_URL}/rest/v1/account_outputs`, {
+            method: "POST",
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal,resolution=merge-duplicates" },
+            body: JSON.stringify({
+              org_id: orgCtx?.id || null,
+              user_id: sbUser.id,
+              seller_url: (sellerUrl || "").slice(0, 200),
+              target_company: (member.company || "").slice(0, 200),
+              target_domain: (member.company_url || "").slice(0, 200),
+              target_industry: (member.ind || member.industry || "").slice(0, 100),
+              output_type: "brief",
+              output_version: 1,
+              fit_score: null,
+              fit_label: null,
+              dim1: null,
+              dim2: null,
+              dim3: null,
+              deal_route: null,
+              deal_confidence: null,
+              data_confidence: current._dataConfidence || null,
+              sections_completed: completed,
+              data: trimmedBrief,
+              is_latest: true,
+            }),
+          }).then(r => {
+            if (r.ok) console.log(`[output-persist] Logged brief for ${member.company} to account_outputs`);
+            else console.warn(`[output-persist] brief write failed:`, r.status);
           }).catch(() => {});
 
           // kl_effectiveness — one row per active KL
@@ -14663,10 +14772,31 @@ Return ONLY raw JSON:
             <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:16,lineHeight:1.5}}>
               Add insider knowledge that affects this company's fit score. This won't change the AI scoring — it's your personal adjustment based on facts you know.
             </div>
+            {/* Semantic intel presets */}
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",marginBottom:4}}>Quick presets</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {[
+                  { label: "Known Customer", value: 40, icon: "\u2B50", reason: "Existing customer \u2014 warm relationship, proven budget" },
+                  { label: "Warm Intro", value: 25, icon: "\uD83E\uDD1D", reason: "Warm introduction through mutual connection" },
+                  { label: "Active Eval", value: 20, icon: "\uD83D\uDD0D", reason: "Actively evaluating solutions in this category" },
+                  { label: "Signed Competitor", value: -25, icon: "\uD83D\uDEAB", reason: "Recently signed multi-year deal with competitor" },
+                  { label: "Budget Freeze", value: -15, icon: "\u2744\uFE0F", reason: "Announced hiring freeze or budget cuts" },
+                ].map(p=>(
+                  <button key={p.label} onClick={e=>{e.stopPropagation();const t=intelModalTarget;setIntelAdjustments(prev=>({...prev,[t]:{...(prev[t]||{}),modifier:p.value,reason:p.reason}}));}}
+                    style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,
+                      border:"1.5px solid "+((intelAdjustments[intelModalTarget]?.modifier===p.value)?(p.value>0?"var(--green)":"var(--red)"):"var(--line-0)"),
+                      background:(intelAdjustments[intelModalTarget]?.modifier===p.value)?(p.value>0?"var(--green-bg)":"var(--red-bg)"):"var(--surface)",
+                      color:(intelAdjustments[intelModalTarget]?.modifier===p.value)?(p.value>0?"var(--green)":"var(--red)"):"var(--ink-2)"}}>
+                    <span>{p.icon}</span> {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div style={{marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",marginBottom:4}}>Score modifier</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {[-20,-15,-10,-5,5,10,15,20].map(v=>(
+                {[-30,-25,-20,-15,-10,-5,5,10,15,20,25,30,40].map(v=>(
                   <button key={v} onClick={e=>{e.stopPropagation();const t=intelModalTarget;setIntelAdjustments(prev=>({...prev,[t]:{...(prev[t]||{}),modifier:v}}));}}
                     style={{padding:"4px 10px",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",
                       border:"1.5px solid "+((intelAdjustments[intelModalTarget]?.modifier===v)?(v>0?"var(--green)":"var(--red)"):"var(--line-0)"),
