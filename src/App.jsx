@@ -1147,6 +1147,18 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
     await sleep(wait);
   }
   if (!response || !response.body) return null;
+  // Handle non-success responses (400, 402, 500) — don't try to read as SSE stream
+  if (!response.ok) {
+    try {
+      const errBody = await response.text();
+      const parsed = JSON.parse(errBody);
+      if (response.status === 402 || parsed?.error?.type === "usage_limit_exceeded" || parsed?.error?.type === "guest_limit_exceeded") {
+        window.dispatchEvent(new CustomEvent("usage-limit-exceeded", { detail: parsed }));
+      }
+      console.warn(`[streamAI] HTTP ${response.status}:`, errBody.slice(0, 200));
+    } catch { /* non-critical */ }
+    return null;
+  }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -1211,6 +1223,18 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
     await sleep(wait);
   }
   if (!response || !response.body) return null;
+  // Handle non-success responses (400, 402, 500) — don't try to read as SSE stream
+  if (!response.ok) {
+    try {
+      const errBody = await response.text();
+      const parsed = JSON.parse(errBody);
+      if (response.status === 402 || parsed?.error?.type === "usage_limit_exceeded" || parsed?.error?.type === "guest_limit_exceeded") {
+        window.dispatchEvent(new CustomEvent("usage-limit-exceeded", { detail: parsed }));
+      }
+      console.warn(`[streamAIWithSearch] HTTP ${response.status}:`, errBody.slice(0, 200));
+    } catch { /* non-critical */ }
+    return null;
+  }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -4805,78 +4829,78 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `The percentages below are historical averages for CONTEXT. They tell you what kind of company tends to score well, but the ACTUAL score is always dim1+dim2+dim3 from the fixed tables above. NEVER set a total score to match a calibration percentage.\n`+
         (KL_PAYMENTS_SCORING && getPaymentsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nPAYMENTS VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_PAYMENTS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_PAYMENTS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_PAYMENTS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_PAYMENTS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_REAL_ESTATE_SCORING && getRealEstateInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nREAL ESTATE VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_REAL_ESTATE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_REAL_ESTATE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_REAL_ESTATE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_REAL_ESTATE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_BANKING_SCORING && getBankingInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nBANKING/FINSERV VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_BANKING_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_BANKING_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_BANKING_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_BANKING_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_HEALTHCARE_SCORING && getHealthcareInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nHEALTHCARE VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_HEALTHCARE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_HEALTHCARE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_HEALTHCARE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_HEALTHCARE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_AI_ML_SCORING && getAiMlInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nAI/ML VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_AI_ML_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_AI_ML_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_AI_ML_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_AI_ML_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_FINTECH_DEEP_SCORING && getFintechDeepInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nFINTECH VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_FINTECH_DEEP_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_FINTECH_DEEP_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_FINTECH_DEEP_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_FINTECH_DEEP_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_REWARDS_SCORING && getRewardsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nREWARDS/INCENTIVES VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_REWARDS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_REWARDS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_REWARDS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_REWARDS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_QSR_SCORING && getQsrInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nQSR/RESTAURANT VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_QSR_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_QSR_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_QSR_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_QSR_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_BAAS_SCORING && getBaasInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nBAAS/SPONSOR BANKING VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_BAAS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_BAAS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_BAAS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_BAAS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_CHARITABLE_SCORING && getCharitableInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nCHARITABLE GIVING/DAF VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_CHARITABLE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_CHARITABLE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_CHARITABLE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_CHARITABLE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_MEDICAL_PAYMENTS_SCORING && getMedicalPaymentsInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nMEDICAL/HEALTHCARE PAYMENTS VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_MEDICAL_PAYMENTS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_MEDICAL_PAYMENTS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_MEDICAL_PAYMENTS_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_MEDICAL_PAYMENTS_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_INSURANCE_SCORING && getInsuranceInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nINSURANCE VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_INSURANCE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_INSURANCE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_INSURANCE_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_INSURANCE_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_RETAIL_SCORING && getRetailInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nRETAIL/E-COMMERCE VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_RETAIL_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_RETAIL_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_RETAIL_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_RETAIL_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_PROF_SERVICES_SCORING && getProfServicesInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nPROFESSIONAL SERVICES VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_PROF_SERVICES_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_PROF_SERVICES_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_PROF_SERVICES_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_PROF_SERVICES_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_MANUFACTURING_SCORING && getManufacturingInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nMANUFACTURING VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_MANUFACTURING_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_MANUFACTURING_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_MANUFACTURING_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_MANUFACTURING_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (getCannabisInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nCANNABIS/REGULATED INDUSTRY CONTEXT: Cannabis companies face 280E tax burden, banking access challenges, state-by-state licensing, and seed-to-sale compliance. MSOs operate across regulatory jurisdictions. Frame fit through compliance readiness and regulatory burden reduction.\n`
@@ -4892,36 +4916,36 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (KL_CYBERSECURITY_SCORING && getCybersecurityInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nCYBERSECURITY VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_CYBERSECURITY_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "SOC teams under compliance mandates"}\n`+
-            `High-friction: ${KL_CYBERSECURITY_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+            `High-fit: ${KL_CYBERSECURITY_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "SOC teams under compliance mandates"}\n`+
+            `High-friction: ${KL_CYBERSECURITY_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "—"}\n`
           : getCybersecurityInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nCYBERSECURITY CONTEXT: Cybersecurity companies sell to CISOs and SOC teams under compliance mandates. Frame fit through threat landscape urgency and compliance acceleration.\n`
           : "") +
         (KL_EDUCATION_SCORING && getEducationInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nEDUCATION VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_EDUCATION_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "K-12 districts, higher ed"}\n`+
-            `High-friction: ${KL_EDUCATION_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+            `High-fit: ${KL_EDUCATION_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "K-12 districts, higher ed"}\n`+
+            `High-friction: ${KL_EDUCATION_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "—"}\n`
           : getEducationInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nEDUCATION CONTEXT: FERPA, state procurement rules, ESSER funding. K-12: 6-18mo cycles. Higher ed: provost/CIO dual authority.\n`
           : "") +
         (KL_ENERGY_SCORING && getEnergyInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nENERGY/UTILITIES VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_ENERGY_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "Regulated IOUs, renewable developers"}\n`+
-            `High-friction: ${KL_ENERGY_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+            `High-fit: ${KL_ENERGY_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "Regulated IOUs, renewable developers"}\n`+
+            `High-friction: ${KL_ENERGY_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "—"}\n`
           : getEnergyInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nENERGY/UTILITIES CONTEXT: Heavily regulated. PUC/FERC approval adds 6-24mo. IRA $369B clean energy incentives.\n`
           : "") +
         (KL_HR_TECH_SCORING && getHrTechInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nHR TECHNOLOGY VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_HR_TECH_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "Mid-market employers, open enrollment"}\n`+
-            `High-friction: ${KL_HR_TECH_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+            `High-fit: ${KL_HR_TECH_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "Mid-market employers, open enrollment"}\n`+
+            `High-friction: ${KL_HR_TECH_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "—"}\n`
           : getHrTechInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nHR TECHNOLOGY CONTEXT: Buying cycles tied to open enrollment (Oct-Dec). Enterprise HCM vs mid-market is binary.\n`
           : "") +
         (KL_GOVERNMENT_SCORING && getGovernmentInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nGOVERNMENT VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_GOVERNMENT_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "Civilian IT, SLED"}\n`+
-            `High-friction: ${KL_GOVERNMENT_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ") || "—"}\n`
+            `High-fit: ${KL_GOVERNMENT_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "Civilian IT, SLED"}\n`+
+            `High-friction: ${KL_GOVERNMENT_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || "" || "—"}\n`
           : getGovernmentInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nGOVERNMENT CONTEXT: FAR/DFARS. FedRAMP required. Past performance is #1. ATO adds 12-18mo.\n`
           : "") +
@@ -4933,18 +4957,18 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (KL_PE_HOLDCO_SCORING && KL_PE_HOLDCO
           ? `\nPE-BACKED HOLDCO VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_PE_HOLDCO_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_PE_HOLDCO_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_PE_HOLDCO_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_PE_HOLDCO_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_DIG_INCENTIVES_SCORING && getDigIncentivesInjection(sellerICP, batch.map(m=>m.ind).join(" "))
           ? `\nDIGITAL INCENTIVES VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_DIG_INCENTIVES_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_DIG_INCENTIVES_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_DIG_INCENTIVES_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_DIG_INCENTIVES_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") +
         (KL_SMB_MIDMARKET_SCORING && getSmbMidmarketInjection(sellerICP, batch.map(m=>m.ind).join(" "), batch[0])
           ? `\nSMB/MID-MARKET VERTICAL CALIBRATION:\n`+
-            `High-fit: ${KL_SMB_MIDMARKET_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`+
-            `High-friction: ${KL_SMB_MIDMARKET_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")").join("; ")}\n`
+            `High-fit: ${KL_SMB_MIDMARKET_SCORING.highFitSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`+
+            `High-friction: ${KL_SMB_MIDMARKET_SCORING.highFrictionSegments?.map(s=>s.segment+" ("+s.avgFit+")")?.join("; ") || ""}\n`
           : "") + `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
