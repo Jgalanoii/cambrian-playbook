@@ -5310,7 +5310,7 @@ Priority trigger: ${sanitizeForPrompt(trigger) || "—"}
 Exclusions:       ${disqual.slice(0,3).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
 ${naicsCodes.length ? `NAICS codes (USA): ${naicsCodes.join(", ")}` : ""}
 ${cpvCodes.length ? `CPV codes (EU):    ${cpvCodes.join(", ")}` : ""}
-${!isOpen && KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
+${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 ━━━ SEARCH STRATEGY — USE ALL ${isOpen ? "6" : "4"} SEARCHES ━━━
 ${isOpen ? `
   You have 6 web searches. Use EVERY one. Do NOT stop early. Each search MUST be different — vary the terms and target sites.
@@ -5505,7 +5505,7 @@ Return ONLY raw JSON:
 Seller: ${sanitizeForPrompt(sellerUrl)} — ${sanitizeForPrompt(category)}
 Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
 ${naicsCodes.length ? `NAICS: ${naicsCodes.join(", ")}` : ""}
-
+${KL_RFP_SEARCH_GUIDANCE ? `\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 Use ALL 4 searches on government sources:
 1. site:sam.gov "${sanitizeForPrompt(category || industries[0])}" ${naicsCodes.length ? `NAICS ${naicsCodes[0]}` : "2025 2026"}
 2. "${sanitizeForPrompt(category || industries[0])}" RFP OR solicitation site:.gov 2025 2026
@@ -6412,26 +6412,32 @@ Return ONLY raw JSON:
 
   const loadSessions=async()=>{
     if(!sbUser||!sbToken) return;
-    const rows=await sbSessions('GET',`sessions?user_id=eq.${sbUser.id}&order=updated_at.desc&limit=100`,sbToken);
-    if(rows) setSavedSessions(rows);
+    try{
+      const rows=await sbSessions('GET',`sessions?user_id=eq.${sbUser.id}&order=updated_at.desc&limit=100`,sbToken);
+      if(rows) setSavedSessions(rows);
+    }catch(e){ console.warn("[sessions] Load failed:", e.message); }
   };
 
   const saveSession=async()=>{
     if(!sbUser||!sbToken){setShowSavePrompt(true);return;}
     setSaveStatus('saving');
-    const nm=sessionName||sellerUrl||'Session '+new Date().toLocaleDateString();
-    const data=getSessionSnap();
-    // Upsert user record
-    await sbSessions('POST','users?on_conflict=id',sbToken,{id:sbUser.id,email:sbUser.email,name:sbUser.user_metadata?.full_name||sbUser.email});
-    if(currentSessionId){
-      await sbSessions('PATCH',`sessions?id=eq.${currentSessionId}`,sbToken,{name:nm,seller_url:sellerUrl,data});
-    } else {
-      const res=await sbSessions('POST','sessions',sbToken,{user_id:sbUser.id,name:nm,seller_url:sellerUrl,data});
-      if(res?.[0]?.id){setCurrentSessionId(res[0].id);setSessionName(nm);}
+    try{
+      const nm=sessionName||sellerUrl||'Session '+new Date().toLocaleDateString();
+      const data=getSessionSnap();
+      await sbSessions('POST','users?on_conflict=id',sbToken,{id:sbUser.id,email:sbUser.email,name:sbUser.user_metadata?.full_name||sbUser.email});
+      if(currentSessionId){
+        await sbSessions('PATCH',`sessions?id=eq.${currentSessionId}`,sbToken,{name:nm,seller_url:sellerUrl,data});
+      } else {
+        const res=await sbSessions('POST','sessions',sbToken,{user_id:sbUser.id,name:nm,seller_url:sellerUrl,data});
+        if(res?.[0]?.id){setCurrentSessionId(res[0].id);setSessionName(nm);}
+      }
+      setSaveStatus('saved');setTimeout(()=>setSaveStatus(''),3000);
+      logJourney("session_saved", { session_name: (nm || "").slice(0, 100), step });
+      loadSessions();
+    }catch(e){
+      console.warn("[sessions] Save failed:", e.message);
+      setSaveStatus('');
     }
-    setSaveStatus('saved');setTimeout(()=>setSaveStatus(''),3000);
-    logJourney("session_saved", { session_name: (nm || "").slice(0, 100), step });
-    loadSessions();
   };
 
   const restoreSession=(s)=>{
@@ -6481,9 +6487,11 @@ Return ONLY raw JSON:
   };
 
   const deleteSession=async(id)=>{
-    await sbSessions('DELETE',`sessions?id=eq.${id}`,sbToken);
-    if(id===currentSessionId) setCurrentSessionId(null);
-    loadSessions();
+    try{
+      await sbSessions('DELETE',`sessions?id=eq.${id}`,sbToken);
+      if(id===currentSessionId) setCurrentSessionId(null);
+      loadSessions();
+    }catch(e){ console.warn("[sessions] Delete failed:", e.message); }
   };
 
   React.useEffect(()=>{if(sbUser&&sbToken) loadSessions();},[sbUser]);
@@ -13646,7 +13654,7 @@ Return ONLY raw JSON:
                           <div key={i} className="signal-row" style={{marginBottom:8}}>
                             <div className="sig-dot" style={{background:"var(--red)"}}/>
                             <div style={{flex:1}}>
-                              <EF value={w||""} onChange={v=>patchBrief(b=>{b.watchOuts[i]=v;})} single/>
+                              <EF value={typeof w==="string"?(w||""):(w?.text||w?.title||JSON.stringify(w)||"")} onChange={v=>patchBrief(b=>{b.watchOuts[i]=v;})} single/>
                             </div>
                           </div>
                         ))
