@@ -1,0 +1,34 @@
+name: nightly-backup
+
+# Runs at 2 AM EST (7 AM UTC) every night.
+# Exports all Supabase tables + knowledge layers to a GitHub artifact.
+# Artifacts retained 90 days. Requires SUPABASE_SERVICE_KEY secret.
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 7 AM UTC = 2 AM EST
+  workflow_dispatch: {}   # manual trigger from Actions tab
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Run nightly backup
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/nightly-backup.mjs
+
+      - name: Upload backup artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: backup-${{ github.run_id }}
+          path: backups/
+          retention-days: 90
