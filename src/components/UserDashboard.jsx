@@ -989,7 +989,11 @@ export default function UserDashboard({ orgCtx, setOrgCtx, sbUser, sbToken, save
               )}
 
               {sessionsLoading && (
-                <div style={{ textAlign: "center", color: "var(--ink-3)", fontSize: 13, padding: "24px 0" }}>Loading sessions...</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "20px 0" }}>
+                  {[85, 70, 90, 65, 80].map((w, i) => (
+                    <div key={i} style={{ height: 14, width: w + "%", background: "var(--bg-2)", borderRadius: 6, animation: "pulse 1.5s infinite" }} />
+                  ))}
+                </div>
               )}
 
               {!sessionsLoading && teamSessions.length > 0 && (

@@ -4902,7 +4902,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         (customerList.length
           ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
             `Score using EXACTLY these fixed values (pick the HIGHEST that applies):\n`+
-            `  30 = target IS one of the seller's named customers (from customerExamples or namedCustomerProfiles). The maximum score — they already buy from the seller.\n`+
+            `  30 = target IS one of the seller's named customers (from customerExamples or namedCustomerProfiles). The maximum score — they already buy from the seller. CRITICAL: Use FUZZY matching — "Wyndham Hotels" matches "Wyndham", "JP Morgan" matches "JPMorgan Chase". If ANY part of the company name matches a customer name, score 30.\n`+
             `  27 = same industry AND similar size (within one bracket) as a named customer\n`+
             `  17 = same industry, different size (2+ brackets apart)\n`+
             `  10 = different industry but similar buyer persona or use case\n`+
@@ -5093,6 +5093,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (KL_FOUR_FORCES ? `\nBUYER DECISION FORCES (Moesta): Purchase happens when Push (${KL_FOUR_FORCES.push||"pain with status quo"}) + Pull (${KL_FOUR_FORCES.pull||"promise of new solution"}) exceeds Anxiety (${KL_FOUR_FORCES.anxiety||"fears about switching"}) + Habit (${KL_FOUR_FORCES.habit||"inertia of current state"}). High-friction industries have structurally high Anxiety + Habit.\n` : "") +
         (KL_BUYING_SIGNALS?.positive?.length ? `\nBUYING SIGNALS: Positive (increases fit): ${KL_BUYING_SIGNALS.positive.slice(0,5).join("; ")}. Negative (decreases fit): ${(KL_BUYING_SIGNALS.negative||[]).slice(0,5).join("; ")}.\n` : "") +
+        // ── KL injections previously siloed — now enriching scoring intelligence ──
+        (KL_APPROVAL_GATES_SCORING?.description ? `\nAPPROVAL GATE COMPLEXITY (affects deal viability): ${KL_APPROVAL_GATES_SCORING.description.slice(0,200)}. Companies with complex procurement (>3 gates, legal/security/compliance reviews) take longer to close — factor into fit assessment.\n` : "") +
+        (KL_EXEC_PERSPECTIVES_SCORING?.description ? `\nEXECUTIVE BUYING PATTERNS: ${KL_EXEC_PERSPECTIVES_SCORING.description.slice(0,200)}. C-suite engagement level affects deal velocity and close probability.\n` : "") +
         `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
@@ -5198,6 +5201,25 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         };
         memberUpdates[matchedName]   = { orgSize: s.orgSize||"", ownership: s.ownership||"", ownershipType: s.ownershipType||"" };
       });
+
+      // ── Known customer override — client-side catch for fuzzy name matches ──
+      // The model sometimes scores dim2=3 for companies that ARE existing customers
+      // because it doesn't fuzzy-match "Wyndham Hotels" to "Wyndham". Fix it here.
+      const knownCustomers = (sellerICP?.icp?.customerExamples || []).map(c => c.toLowerCase().trim()).filter(Boolean);
+      if (knownCustomers.length) {
+        for (const [co, s] of Object.entries(map)) {
+          const coLower = co.toLowerCase();
+          const isKnown = knownCustomers.some(kc => coLower.includes(kc) || kc.includes(coLower));
+          if (isKnown && s.dim2 < 30) {
+            s.dim2 = 30;
+            s.score = (s.dim1 || 0) + 30 + (s.dim3 || 0);
+            s.label = canonicalLabel(s.score);
+            const sc = s.score; s.color = sc>=75?"var(--green)":sc>=55?"var(--amber)":"var(--red)"; s.bg = sc>=75?"var(--green-bg)":sc>=55?"var(--amber-bg)":"var(--red-bg)";
+            s.customerSimilarity = "Known customer — already in the seller's customer base.";
+            console.log(`[scoreFit] Known customer override: ${co} dim2 forced to 30, total=${s.score}`);
+          }
+        }
+      }
 
       // Progressive state update — merge this batch's results so the table
       // fills in as batches return rather than waiting for all batches.
@@ -8152,6 +8174,7 @@ Return ONLY raw JSON:
       (angle ? "OPENING ANGLE (pre-built): " + angle + "\n" : "") +
       "SOLUTION MAPPING (pre-built):\n" + mappedSolutions + "\n\n" +
       KL_COMPETITIVE +
+      (KL_FISHER_URY ? `\nNEGOTIATION CONTEXT: ${KL_FISHER_URY.slice(0,300)}. Use this to shape the Route stage — anticipate their negotiation posture.\n` : "") +
       "BUILD THE RIVER HYPOTHESIS:\n" +
       "Every field grounded in what " + sellerUrl + " sells. No stray consulting.\n" +
       "CONSISTENCY RULE: The elevator pitch, opening angle, strategic theme, and solution mapping have already been generated for this brief. Your hypothesis MUST align with the same narrative — same pain points, same value proposition, same proof points. Do NOT introduce new claims or angles that contradict the brief.\n" +
@@ -8502,6 +8525,8 @@ Return ONLY raw JSON:
       `Senior sales coach reviewing a RIVER framework discovery call.\n`+
       KL_FISHER_URY + `\n`+
       KL_GRAHAM + `\n`+
+      (KL_FOUR_FORCES ? `\nDECISION FORCES (Moesta): If Anxiety (${KL_FOUR_FORCES.anxiety||"switching fear"}) + Habit (${KL_FOUR_FORCES.habit||"status quo inertia"}) dominated the call → route to NURTURE. If Push (${KL_FOUR_FORCES.push||"pain"}) + Pull (${KL_FOUR_FORCES.pull||"new solution promise"}) dominated → FAST_TRACK candidate.\n` : "") +
+      (KL_QUESTION_BANK ? `\nNEXT DISCOVERY (suggest in nextSteps if discovery was incomplete):\n  Pain: ${KL_QUESTION_BANK.currentStatePain?.[0]||""}\n  Process: ${KL_QUESTION_BANK.buyingProcess?.[0]||""}\n  Competitive: ${KL_QUESTION_BANK.competitiveAlternatives?.[0]||""}\n` : "") +
       `DEAL ROUTING SIGNALS:\n`+
       `- ${KL_BUYING_SIGNALS.positive.join("\n- ")}\n`+
       `- ${KL_BUYING_SIGNALS.negative.join("\n- ")}\n\n`+
@@ -11155,7 +11180,7 @@ Return ONLY raw JSON:
                 )}
                 {!rfpData.loading && !rfpData.error && !hasData && (
                   <div>
-                    <EmptyState icon="📡" title="No broad RFPs matched your ICP" sub="We searched SAM.gov, Ariba, and TED Europa against your ICP profile. No published RFPs matched this time." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="↻ Search again"/>
+                    <EmptyState icon="📡" title="No RFPs found — yet" sub="We searched SAM.gov, state portals, and commercial procurement sites. Nothing matched this time, but procurement cycles move fast. Hit search again in a week — or import target accounts for company-specific RFP hunting." action={()=>fetchRFPIntel({forceRefresh:true})} actionLabel="↻ Search Again"/>
                     {!accountRfpData.searched && (
                       <div style={{background:"var(--navy-bg)",border:"1.5px solid var(--navy)",borderRadius:"var(--r-md)",padding:"14px 18px",marginTop:12,textAlign:"center"}}>
                         <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",marginBottom:4}}>Stage 2: Account-Level Search</div>
@@ -12742,7 +12767,7 @@ Return ONLY raw JSON:
             </div>
 
             {!sa && (
-              <EmptyState icon="👆" title="Select an account to continue" sub="Choose from the strip above to set outcomes and build your brief."/>
+              <EmptyState icon="👆" title="Pick a company" sub="Choose one from above and we'll do the homework for you. That's literally why we exist."/>
             )}
 
             {sa && (<>
@@ -13044,6 +13069,17 @@ Return ONLY raw JSON:
                       const text = sessionSummaryToText(summary);
                       navigator.clipboard?.writeText(text);
                       setEditToast("Full session summary copied — paste into CRM, email, or doc");
+                      // Persist session summary to account_outputs (fire-and-forget)
+                      if (sbToken && sbUser) {
+                        const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+                        const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                        if (SB_URL && SB_KEY) {
+                          fetch(`${SB_URL}/rest/v1/account_outputs`, {
+                            method: "POST", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                            body: JSON.stringify({ org_id: orgCtx?.id || null, user_id: sbUser.id, seller_url: (sellerUrl||"").slice(0,200), output_type: "session_summary", target_company: (selectedAccount?.company||"").slice(0,200), target_domain: (selectedAccount?.company_url||"").slice(0,200), is_latest: true, data: summary }),
+                          }).catch(() => {});
+                        }
+                      }
                     }}
                       style={{padding:"7px 14px",fontSize:12,fontWeight:600,border:"1.5px solid var(--tan-0)",borderRadius:8,background:"var(--tan-bg,#faf6f0)",color:"var(--tan-0)",cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
                       📋 Copy Summary
@@ -14629,7 +14665,7 @@ Return ONLY raw JSON:
             )}
 
             {!riverHypo&&!riverHypoLoading&&(
-              <EmptyState icon="🧪" title="No hypothesis yet" sub="Build your RIVER hypothesis — structured talk tracks, a teaching insight, and an indecision plan. This is where prep becomes unfair advantage." action={()=>buildRiverHypo(brief,selectedAccount)} actionLabel="Build Hypothesis →"/>
+              <EmptyState icon="🧪" title="No hypothesis yet" sub="This is where you stop winging it. A structured conversation plan, talk tracks that sound like you, and an insight that makes them lean in. Build it — then go be the most prepared person on the call." action={()=>buildRiverHypo(brief,selectedAccount)} actionLabel="Build Hypothesis →"/>
             )}
 
             <div className="actions-row">
