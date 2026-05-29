@@ -1032,10 +1032,39 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                           {openMenu === u.id && (
                             <div className="admin-action-menu" onClick={e => e.stopPropagation()}>
                               <button className="admin-action-item" onClick={() => { adminAction("reset_password"); setOpenMenu(null); }}>
-                                Send Password Reset
+                                Reset Password
                               </button>
-                              <button className="admin-action-item" onClick={() => { adminAction("resend_invite"); setOpenMenu(null); }}>
-                                Resend Invite
+                              <button className="admin-action-item" onClick={() => {
+                                const targetEmail = window.prompt(`Clone ${u.name || u.email}'s setup to a new user.\n\nEnter the new user's email:`);
+                                if (!targetEmail || !targetEmail.includes("@")) return;
+                                patchUser({}, ""); // no-op to reuse pattern
+                                // Find the target user
+                                const target = data.users?.find(tu => tu.email?.toLowerCase() === targetEmail.toLowerCase());
+                                if (target) {
+                                  // Clone: set same org + role
+                                  fetch("/api/admin", {
+                                    method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                                    body: JSON.stringify({ action: "update_user", userId: target.id, email: target.email, fields: { org_id: u.org_id, role: u.role } }),
+                                  }).then(r => r.json()).then(d => {
+                                    setPlanSaveMsg(d.ok ? `Cloned ${u.name}'s setup → ${targetEmail}` : `Error: ${d.error}`);
+                                    setTimeout(fetchData, 500);
+                                  }).catch(() => setPlanSaveMsg("Clone failed"));
+                                } else {
+                                  setPlanSaveMsg(`User ${targetEmail} not found — they need to sign up first.`);
+                                }
+                                setTimeout(() => setPlanSaveMsg(""), 4000);
+                                setOpenMenu(null);
+                              }}>
+                                Clone Setup to User
+                              </button>
+                              <button className="admin-action-item" onClick={() => {
+                                const link = `${window.location.origin}?ref=admin`;
+                                navigator.clipboard?.writeText(link);
+                                setPlanSaveMsg("Signup link copied — share directly (no email sent)");
+                                setTimeout(() => setPlanSaveMsg(""), 3000);
+                                setOpenMenu(null);
+                              }}>
+                                Copy Invite Link
                               </button>
                               {u.email !== SUPERUSER_EMAIL && (
                                 <button className="admin-action-item danger" onClick={async () => {
