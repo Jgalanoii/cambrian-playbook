@@ -2222,10 +2222,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
         messages: [{ role: "user", content:
           firmographicsTruth +
-          `Search for CURRENT open job listings at "${co}". This is critical sales intelligence — hiring patterns reveal strategic priorities and budget allocation.\n\n` +
-          `SEARCH STRATEGY (use both searches):\n` +
-          `1. Search: "${co} open jobs" OR "${co} careers hiring"\n` +
-          `2. Search: "site:linkedin.com/jobs ${co}" OR "site:indeed.com ${co}"\n\n` +
+          `Search for CURRENT open job listings at "${co}"${url && url !== co ? ` (${url})` : ""}. This is critical sales intelligence — hiring patterns reveal strategic priorities and budget allocation.\n\n` +
+          `SEARCH STRATEGY (use both searches — one on THEIR site, one on job boards):\n` +
+          `1. Search: site:${url || co + ".com"} careers OR jobs OR "join our team" OR "open positions" OR "we're hiring"\n` +
+          `2. Search: "${co}" open jobs hiring 2025 OR 2026 site:linkedin.com OR site:indeed.com OR site:greenhouse.io OR site:lever.co OR site:workday.com\n` +
+          `IMPORTANT: The company's OWN careers page (Search 1) is the most authoritative source. Many companies list roles on ${url || co + ".com"}/careers or /jobs. Check there FIRST.\n\n` +
           `From the search results, identify 3-5 SPECIFIC open roles. For each role:\n` +
           `- The exact job title\n` +
           `- The department (Engineering, Sales, HR, Finance, Operations, Marketing, etc.)\n` +
