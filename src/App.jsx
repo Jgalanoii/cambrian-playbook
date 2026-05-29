@@ -1791,7 +1791,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     proofPack +
     _klInjectionText +
     crossSessionCtx +
-    `DEAL: ${dealCtx}\n\n`;
+    `DEAL: ${dealCtx}\n`+
+    `ANTI-REPETITION RULE: This brief has 10 sections generated in parallel. Each section MUST contribute UNIQUE information. Do NOT repeat the same fact, insight, or data point across sections. If a revenue figure appears in Company Snapshot, do NOT restate it in Strategy. If a competitor is named in Competitive Positioning, do NOT re-explain them in Solution Mapping. If a pain point is in the Elevator Pitch, the Opening Angle must reference a DIFFERENT angle. Each section should ADD to the story, not echo it.\n\n`;
 
   onStatus("Researching "+co+"...");
 
@@ -1960,7 +1961,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"},`+
-    `"outreachEmail":{"subject":"Something a friend would text you — casual, specific to ${co}, makes you want to open it. Under 50 chars. Examples of GOOD subjects: 'quick question about your Q1 numbers' or 'saw your CFO hire — nice move' or 'this might be dumb but'. Examples of BAD subjects: 'Partnership Opportunity' or 'Scaling AI for ${co}'.","body":"Write this like the best cold email you've ever gotten — the one that actually made you reply. 2-3 sentences. Be a PERSON, not a company. Rules: (1) Open with something genuine — a compliment, an observation, a question. Show you paid attention to ${co} without sounding like a stalker. ONE research detail, worked in naturally. (2) The pivot to what ${sellerUrl} does should feel like a conversation, not a pitch. Think 'we do something that might matter to you' not 'our platform leverages AI to optimize'. (3) End with something disarming and easy to reply to. NOT 'Would a 15-minute call make sense to explore alignment?' YES: 'Am I way off base here?' or 'Worth a quick chat or should I go away?' or 'Curious if this even lands — happy to be told no.' The whole email should feel like it took 90 seconds to write, even though the research behind it took 30. No corporate sign-off. Just a first name."}}`,
+    `"outreachEmail":{"subject":"Something you'd actually open. Lowercase, casual, under 40 chars. Reference something real — not their company name in a template. Bad: 'Partnership Opportunity with ${co}'. Good: 'that q1 fee growth though' or 'dumb question about your risk team' or 're: your CFO hire'.","body":"THIS IS THE MOST IMPORTANT FIELD IN THIS BRIEF. A prospect said our emails read 'like every other email with an angle.' Fix that. 2 SHORT sentences max. RULES: (1) Do NOT pitch. Do NOT mention ${sellerUrl}'s products, features, capabilities, certifications, or how fast you deploy. None of that. Zero. (2) Instead: notice something specific about ${co} from your research — a growth number, a hire, a challenge — and ask a genuine question about it. Like you're curious, not selling. (3) Close with ONE short line that makes replying easy and low-stakes. 'Am I reading this wrong?' or 'Totally fine to tell me to get lost.' (4) NEVER use: 'leverage', 'optimize', 'streamline', 'solution', 'platform', 'excited to', 'I noticed that', 'I wanted to reach out', 'I hope this finds you well', 'explore alignment', 'ROI', 'compliant', 'production-ready'. Those words are email repellent. (5) Sign with just a first name — not 'The ${sellerUrl} Team' or 'Best regards'. The email should make the reader think 'huh, this person actually gets what we're dealing with' — not 'another vendor.' If you can't write something genuinely interesting, write LESS, not MORE."}}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
       const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -6950,9 +6951,9 @@ Return ONLY raw JSON:
   // These must be AFTER all useState declarations to avoid temporal dead zone
   // in production builds (minifier renames variables, TDZ becomes a runtime crash).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(sellerICP?.icp && !sellerICP._error) celebrate("icp_built"); },[sellerICP?.icp?.industries]);
+  useEffect(()=>{ if(sellerICP?.icp && !sellerICP._error && step <= 1) celebrate("icp_built"); },[sellerICP?.icp?.industries]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0) celebrate("prospects_added"); },[cohorts.length]);
+  useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0 && step <= 2) celebrate("prospects_added"); },[cohorts.length]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -9477,6 +9478,20 @@ Return ONLY raw JSON:
   }, []);
   // Refresh orgCtx after billable calls to keep token count accurate
   const refreshOrgCtx = () => { if (sbUser?.id && sbToken) fetchOrgContext(sbUser.id, sbToken).then(org => { if (org) setOrgCtx(org); }); };
+
+  // Auto-populate seller URL from org context on new sessions
+  // so users don't have to re-enter their company every time
+  React.useEffect(() => {
+    if (orgCtx?.seller_url && !sellerUrl && !currentSessionId) {
+      const url = orgCtx.seller_url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      setSellerUrl(url);
+      setSellerInput(url);
+      // Auto-trigger ICP build if we have the URL
+      if (url && !sellerICP && !icpLoading) {
+        console.log("[auto-seller] Populating seller URL from org:", url);
+      }
+    }
+  }, [orgCtx?.seller_url]);
 
   // Detect checkout success/cancel from Stripe redirect
   React.useEffect(() => {
@@ -13346,7 +13361,7 @@ Return ONLY raw JSON:
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
                           <span style={{background:"var(--tan-0)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>EMPLOYEES</span>Employee Count
                         </div>
-                        <EF value={brief.employeeCount||""} onChange={v=>patchBrief(b=>{b.employeeCount=v;})} single placeholder="e.g. ~270,000 globally"/>
+                        <EF value={brief.employeeCount||selectedAccount?.employees||""} onChange={v=>patchBrief(b=>{b.employeeCount=v;})} single placeholder="e.g. ~270,000 globally"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
