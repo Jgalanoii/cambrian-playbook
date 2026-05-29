@@ -1705,7 +1705,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // to prevent cross-company contamination in briefs.
   const identityAnchor = url && url !== co
     ? `IDENTITY ANCHOR: Research ONLY the company at https://${url}. The company name "${co}" may be shared by multiple entities — use the website ${url} as the definitive identifier. Every fact in this brief must be about the company that operates ${url}. If you find conflicting information about different companies with similar names, ONLY use information about the entity at ${url}.\n\n`
-    : `IDENTITY: Research the company "${co}". If multiple companies share this name, focus on the most prominent/well-known entity. Do NOT mix facts from different companies.\n\n`;
+    : `IDENTITY ANCHOR: Research the company "${co}". CONTAMINATION GUARD: Do NOT mix facts from similarly-named companies. "${co}" is ONE specific entity. If your search returns results for multiple companies with similar names (e.g., "TheBancorp" vs "Columbia Bancorp" vs "Banc of California"), use ONLY results about "${co}" specifically. Every fact — revenue, employees, executives, headquarters, strategy — must be about "${co}" and no other entity. If you cannot distinguish which results belong to "${co}", return empty string rather than risk citing the wrong company. A brief with wrong-company data is worse than a brief with missing data.\n\n`;
 
   // Canonical seller name — use consistently across all sections
   const canonicalSellerName = sellerICP?.sellerName || sellerUrl || "the seller";
@@ -2298,7 +2298,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // Identity context for deep intel calls — prevents cross-company contamination (Apollo.io vs Apollo Global)
   const deepIntelIdentity = (url && url !== co
     ? `IDENTITY: Research ONLY the company at https://${url} ("${co}"). Multiple companies share this name — use the website ${url} as the definitive identifier. Do NOT mix facts from different companies.\n\n`
-    : `IDENTITY: Research the company "${co}". Do NOT mix facts from different companies with similar names.\n\n`) +
+    : `IDENTITY: Research "${co}" ONLY. CONTAMINATION GUARD: If search returns results for similarly-named companies, use ONLY results about "${co}" specifically. Return empty string for any field where you cannot verify the data belongs to "${co}" and not a different entity.\n\n`) +
     secFilingCtx;
 
   // MICRO 7: Competitive Positioning — who they compete with and where they win/lose
@@ -6317,8 +6317,10 @@ Return ONLY raw JSON:
 
     try{
       // Single-pass ICP — Opus streaming with web search (research + build in one call)
+      // Hard timeout at 90s — if Opus is slow, fail gracefully instead of hanging
       setIcpStatus("Researching your company...");
-      const raw = await streamAIWithSearch(
+      const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("ICP build timed out after 90 seconds. Click Regenerate to try again.")), 90000));
+      const icpCall = streamAIWithSearch(
         icpPrompt + '\n\nAfter researching, return ONLY raw JSON starting with {. No prose, no markdown, no explanation.',
         (partial) => {
           // Progressive status updates as JSON fields stream in
@@ -6333,6 +6335,7 @@ Return ONLY raw JSON:
         },
         3000, { maxSearches: 1, anchorKey: "sellerName", model: OPUS }
       );
+      const raw = await Promise.race([icpCall, icpTimeout]);
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
         console.warn("ICP phase 2 error:", err);
@@ -6437,7 +6440,10 @@ Return ONLY raw JSON:
       }
     }catch(e){
       console.warn("ICP build phase 2 failed:",e.message);
-      setSellerICP(prev => prev || ({ _error: "ICP build failed — our AI engine may be temporarily busy. Click Regenerate ICP to retry." }));
+      const isTimeout = e.message?.includes("timed out");
+      setSellerICP(prev => prev || ({ _error: isTimeout
+        ? "ICP build timed out — this happens when our AI engine is under heavy load. Click Regenerate ICP to try again."
+        : "ICP build failed — our AI engine may be temporarily busy. Click Regenerate ICP to retry." }));
     }
     setIcpLoading(false);
     setIcpStatus("");
