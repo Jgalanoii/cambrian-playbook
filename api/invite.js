@@ -102,30 +102,37 @@ export default async function handler(req, res) {
   const token = invResult?.[0]?.token;
   if (!token) return res.status(500).json({ error: "Failed to generate invitation token" });
 
-  // Send invite email via Supabase Auth admin API
-  try {
-    const authRes = await fetch(`${SB_URL}/auth/v1/invite`, {
-      method: "POST",
-      headers: {
-        apikey: SB_KEY,
-        Authorization: `Bearer ${SB_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        data: { invitation_token: token },
-      }),
-    });
-    const authData = await authRes.json();
+  // Email sending is DISABLED by default — admin must explicitly opt in
+  // by passing sendEmail: true in the request body. This prevents accidental
+  // spam when managing users in the admin panel.
+  const sendEmail = body.sendEmail === true;
 
-    if (authRes.status >= 400) {
-      console.warn("[invite] Supabase auth invite failed:", authData);
-      // Still return success — the invitation row exists, user can sign up manually
-      return res.json({ ok: true, invitation_id: invResult[0].id, email_sent: false, note: "Invitation created but email may not have sent. Share the signup link directly." });
+  if (sendEmail) {
+    try {
+      const authRes = await fetch(`${SB_URL}/auth/v1/invite`, {
+        method: "POST",
+        headers: {
+          apikey: SB_KEY,
+          Authorization: `Bearer ${SB_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          data: { invitation_token: token },
+        }),
+      });
+      const authData = await authRes.json();
+
+      if (authRes.status >= 400) {
+        console.warn("[invite] Supabase auth invite failed:", authData);
+        return res.json({ ok: true, invitation_id: invResult[0].id, email_sent: false, note: "Invitation created but email failed. Share the invite link directly." });
+      }
+    } catch (e) {
+      console.warn("[invite] Email send error:", e.message);
     }
-  } catch (e) {
-    console.warn("[invite] Email send error:", e.message);
+    res.json({ ok: true, invitation_id: invResult[0].id, email_sent: true });
+  } else {
+    // No email sent — return the invite link for manual sharing
+    res.json({ ok: true, invitation_id: invResult[0].id, email_sent: false, note: "Invitation created — use the invite link to share directly. No email was sent." });
   }
-
-  res.json({ ok: true, invitation_id: invResult[0].id, email_sent: true });
 }

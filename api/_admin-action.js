@@ -72,22 +72,9 @@ export default async function handler(req, res) {
     }
 
     if (action === "resend_invite") {
-      // Re-send invite email via Supabase Auth admin invite API
-      const r = await fetch(`${SB_URL}/auth/v1/invite`, {
-        method: "POST",
-        headers: {
-          apikey: SB_KEY,
-          Authorization: `Bearer ${SB_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-      if (r.ok || r.status === 422) {
-        // 422 = user already exists, which is fine for resend
-        return res.json({ ok: true, message: `Invite resent to ${email}` });
-      }
-      const d = await r.json();
-      return res.status(400).json({ error: d.error_description || d.msg || "Failed to resend invite" });
+      // DISABLED — email sending requires explicit opt-in to prevent spam.
+      // Admin should use the invite link instead.
+      return res.json({ ok: false, error: "Email sending is disabled. Use the invite link to share directly." });
     }
 
     if (action === "delete_user") {

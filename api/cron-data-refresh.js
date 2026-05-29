@@ -56,7 +56,21 @@ export default async function handler(req, res) {
       stats.staleBriefs = staleBriefs.length;
     }
 
-    console.log(`[cron-data-refresh] Complete: ${stats.expiredRfps} expired RFPs dismissed, ${stats.staleBriefs} stale briefs flagged`);
+    // 3. Clean up orphan orgs (no members) — prevents accumulation over time
+    stats.orphanOrgs = 0;
+    try {
+      const orphanRes = await fetch(`${SB_URL}/rest/v1/rpc/cleanup_orphan_orgs`, {
+        method: "POST",
+        headers,
+        body: "{}",
+      });
+      if (orphanRes.ok) {
+        const result = await orphanRes.json();
+        stats.orphanOrgs = result?.deleted || 0;
+      }
+    } catch { /* non-critical — orphan cleanup can fail silently */ }
+
+    console.log(`[cron-data-refresh] Complete: ${stats.expiredRfps} expired RFPs, ${stats.staleBriefs} stale briefs, ${stats.orphanOrgs} orphan orgs cleaned`);
     return res.json({ ok: true, ...stats, timestamp: new Date().toISOString() });
   } catch (e) {
     console.error("[cron-data-refresh] Error:", e.message);
