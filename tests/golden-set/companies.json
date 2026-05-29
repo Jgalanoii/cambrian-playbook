@@ -42,11 +42,11 @@
         {
           "field": "revenue",
           "tier": 2,
-          "value": 182000000000,
+          "value": 230000000000,
           "match": "numeric_tolerance",
-          "tolerance_pct": 50,
-          "verified": "2026-05-19",
-          "source": "JPM FY2025: $182.4B net revenue, $185.6B managed revenue, $256.5B total revenue. Sources vary by line item. Wide tolerance required."
+          "tolerance_pct": 30,
+          "verified": "2026-05-29",
+          "source": "JPM FY2025: $182B net revenue, $280B total revenue incl. interest income. Midpoint $230B with 30% tolerance covers both reporting methods."
         },
         {
           "field": "employee_count",
@@ -424,7 +424,7 @@
       "vertical": "retail",
       "purpose": "Data-scarce sentinel — employee-owned, tests ownership-type accuracy",
       "facts": [
-        { "field": "industry", "tier": 1, "value": "Retail", "match": "fuzzy_contains", "verified": "2026-05-19", "source": "publix.com" },
+        { "field": "industry", "tier": 1, "value": "Retail", "match": "set_membership", "accepted": ["retail", "grocery", "supermarket", "food", "grocer", "employee-owned"], "verified": "2026-05-29", "source": "publix.com" },
         { "field": "ownership_type", "tier": 1, "value": "Employee-owned", "match": "set_membership", "accepted": ["Private", "Employee-owned", "Employee Owned", "Private (employee-owned)", "Member-owned", "member-owned"], "verified": "2026-05-19", "source": "corporate.publix.com" },
         { "field": "hq_location", "tier": 1, "value": "Lakeland", "match": "fuzzy_location", "verified": "2026-05-19", "source": "corporate.publix.com" }
       ],

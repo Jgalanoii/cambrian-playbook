@@ -1,0 +1,1170 @@
+{
+  "mode": "lite",
+  "timestamp": "2026-05-29T18:10:56.526Z",
+  "summary": {
+    "totalFacts": 93,
+    "passedFacts": 91,
+    "failedFacts": 2,
+    "totalInvariants": 38,
+    "passedInvariants": 38,
+    "failedInvariants": 0
+  },
+  "companies": [
+    {
+      "id": "jpmorgan-chase",
+      "name": "JPMorgan Chase",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Banking\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"New York\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": false,
+              "detail": "278,910,000,000 vs 182,000,000,000 (53.2% diff, threshold 50%)"
+            },
+            {
+              "field": "employee_count",
+              "tier": 2,
+              "pass": true,
+              "detail": "317,000 vs 318,000 (0.3% diff, threshold 10%)"
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ticker",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"JPM\""
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "CEO \"Jennifer Piepszak\" consistent across sections"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "revenue_consistency",
+              "pass": true,
+              "detail": "one or both revenue fields empty — skipped"
+            }
+          ],
+          "factsPass": 6,
+          "factsTotal": 7,
+          "invariantsPass": 3,
+          "invariantsTotal": 3
+        }
+      ]
+    },
+    {
+      "id": "walmart",
+      "name": "Walmart",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Bentonville\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "681,000,000,000 vs 681,000,000,000 (0.0% diff, threshold 10%)"
+            },
+            {
+              "field": "employee_count",
+              "tier": 2,
+              "pass": true,
+              "detail": "2,100,000 vs 2,100,000 (0.0% diff, threshold 15%)"
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"1962\""
+            },
+            {
+              "field": "ticker",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"WMT\""
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "CEO \"John Furner\" consistent across sections"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "revenue_consistency",
+              "pass": true,
+              "detail": "one or both revenue fields empty — skipped"
+            }
+          ],
+          "factsPass": 7,
+          "factsTotal": 7,
+          "invariantsPass": 3,
+          "invariantsTotal": 3
+        }
+      ]
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Francisco\""
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"2010\""
+            },
+            {
+              "field": "employee_count",
+              "tier": 2,
+              "pass": true,
+              "detail": "8,150 vs 10,000 (18.5% diff, threshold 60%)"
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 5 forbidden strings found"
+            }
+          ],
+          "factsPass": 6,
+          "factsTotal": 6,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "usaa",
+      "name": "USAA",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Insurance\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Antonio\""
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"1922\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 2 forbidden strings found"
+            }
+          ],
+          "factsPass": 5,
+          "factsTotal": 5,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "apollo-io",
+      "name": "Apollo.io",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Sales\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Francisco\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 8 forbidden strings found"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "microsoft",
+      "name": "Microsoft",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Redmond\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "281,700,000,000 vs 281,700,000,000 (0.0% diff, threshold 75%)"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "no CEO in executives — skipped"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "unitedhealth",
+      "name": "UnitedHealth Group",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Health\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "447,570,000,000 vs 447,000,000,000 (0.1% diff, threshold 12%)"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "CEO \"Stephen J. Hemsley\" consistent across sections"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "marriott",
+      "name": "Marriott International",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "founded",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"1927\""
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "no CEO in executives — skipped"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "caterpillar",
+      "name": "Caterpillar",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "fedex",
+      "name": "FedEx",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Memphis\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "88,000,000,000 vs 88,000,000,000 (0.0% diff, threshold 12%)"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "exec_consistency",
+              "pass": true,
+              "detail": "no CEO in executives — skipped"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "adobe",
+      "name": "Adobe",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Jose\""
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "deloitte",
+      "name": "Deloitte",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Consulting\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 2 forbidden strings found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "cargill",
+      "name": "Cargill",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "publix",
+      "name": "Publix Super Markets",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": false,
+              "detail": "\"Retail\" not found in \"Publix is the largest employee-owned company in the United States and one of the 10 largest-volume s\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Lakeland\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "mercury",
+      "name": "Mercury",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Banking\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Francisco\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 5 forbidden strings found"
+            },
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "verizon",
+      "name": "Verizon",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"New York\""
+            },
+            {
+              "field": "revenue",
+              "tier": 2,
+              "pass": true,
+              "detail": "138,200,000,000 vs 138,200,000,000 (0.0% diff, threshold 15%)"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "nextera-energy",
+      "name": "NextEra Energy",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "state-farm",
+      "name": "State Farm",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Insurance\""
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Bloomington\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "tango-card",
+      "name": "Tango Card",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            },
+            {
+              "name": "no_entity_confusion",
+              "pass": true,
+              "detail": "none of 5 forbidden strings found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 2,
+          "invariantsTotal": 2
+        }
+      ]
+    },
+    {
+      "id": "blackhawk-network",
+      "name": "Blackhawk Network",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 2,
+          "factsTotal": 2,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "mole-street",
+      "name": "Mole Street",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 2,
+          "factsTotal": 2,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "fluz",
+      "name": "Fluz",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 2,
+          "factsTotal": 2,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "allstate",
+      "name": "Allstate",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Public\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 3,
+          "factsTotal": 3,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    },
+    {
+      "id": "gusto",
+      "name": "Gusto",
+      "runs": [
+        {
+          "run": 1,
+          "facts": [
+            {
+              "field": "industry",
+              "tier": 1,
+              "pass": true,
+              "detail": "matched accepted set"
+            },
+            {
+              "field": "ownership_type",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"Private\""
+            },
+            {
+              "field": "hq_location",
+              "tier": 1,
+              "pass": true,
+              "detail": "contains \"San Francisco\""
+            },
+            {
+              "field": "_forbidden_strings",
+              "tier": 1,
+              "pass": true,
+              "detail": "no forbidden strings found"
+            }
+          ],
+          "invariants": [
+            {
+              "name": "no_placeholders",
+              "pass": true,
+              "detail": "no placeholders found"
+            }
+          ],
+          "factsPass": 4,
+          "factsTotal": 4,
+          "invariantsPass": 1,
+          "invariantsTotal": 1
+        }
+      ]
+    }
+  ]
+}
