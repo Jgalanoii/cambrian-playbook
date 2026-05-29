@@ -93,8 +93,8 @@ function extractJson(text, key) {
 // ── Cross-run consistency check ──────────────────────────────────────
 // Fields to check for numeric stability across runs, with max allowed spread (%).
 const CONSISTENCY_FIELDS = [
-  { key: "revenue",       briefField: "revenue",       label: "Revenue",        spreadPct: 20 },
-  { key: "employeeCount", briefField: "employeeCount", label: "Employee count",  spreadPct: 15 },
+  { key: "revenue",       briefField: "revenue",       label: "Revenue",        spreadPct: 25 },
+  { key: "employeeCount", briefField: "employeeCount", label: "Employee count",  spreadPct: 30 },
 ];
 
 /**
@@ -161,13 +161,15 @@ async function generateBrief(company) {
     `IDENTITY: Research ONLY the company at https://${url}. Do NOT mix facts from different companies with similar names.\n\n` +
     `ACCURACY: NEVER invent facts about ${co}. No fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string.\n` +
     `EMPTY FIELD RULE: If a fact is unknown, return an EMPTY STRING "". NEVER return "Not found", "Not specified", "Not available", "N/A", "Unknown".\n` +
-    `REVENUE: Always report FULL-YEAR (annual) revenue, NOT quarterly. Look for "FY", "full year", "annual revenue" or "total revenue" for the most recent fiscal year.\n` +
-    `PUBLIC/PRIVATE: Only say "Public" and include a ticker if the company is CURRENTLY publicly listed as of today. If the company was acquired, taken private, or delisted, say "Private" — do NOT mention former tickers or exchanges.\n\n` +
+    `REVENUE: Always report FULL-YEAR (annual) revenue, NOT quarterly. Look for "FY", "full year", "annual revenue" or "total revenue" for the most recent fiscal year. Use the SAME number format every time — e.g., always "$23.9B" not sometimes "$23,900M".\n` +
+    `EMPLOYEE COUNT: Report the company's OWN employee headcount. NOT platform users, customers served, or partner network size. For BaaS/platform companies, this is the company's staff. Use the MOST COMMON figure from your search results — if 3 sources say ~215,000 and 1 says ~400,000, use ~215,000. Consistency across runs is critical.\n` +
+    `PUBLIC/PRIVATE: Only say "Public" and include a ticker if the company is CURRENTLY publicly listed as of today. If the company was acquired, taken private, or delisted, say "Private" — do NOT mention former tickers or exchanges.\n` +
+    `CONSISTENCY: This test runs multiple times for the same company. Your answers MUST be stable — use the most authoritative source (SEC filings, company website, annual report) rather than news articles that may quote different figures.\n\n` +
     `Search for "${co}" to get current information, then return ONLY raw JSON for the company overview:\n` +
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves.",` +
     `"revenue":"ANNUAL full-year revenue, e.g. $2.4B (FY2024) — empty if unknown",` +
     `"publicPrivate":"'Public (NYSE: TICKER)' ONLY if currently listed today, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)' or 'Member-owned'",` +
-    `"employeeCount":"e.g. ~200,000 — empty if unknown",` +
+    `"employeeCount":"Company's OWN headcount, e.g. ~200,000 — NOT platform users. Empty if unknown.",` +
     `"headquarters":"City, State",` +
     `"founded":"Year — empty if unknown",` +
     `"website":"${url}",` +

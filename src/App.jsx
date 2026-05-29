@@ -5358,6 +5358,50 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     }).catch(() => {});
   };
 
+  // ── Cross-session: query aggregate deal patterns for objection/outcome intelligence ──
+  const fetchDealPatterns = async (industry) => {
+    if (!sbToken || !sbUser || !industry) return "";
+    const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!SB_URL || !SB_KEY) return "";
+    try {
+      const r = await fetch(`${SB_URL}/rest/v1/prospect_events?seller_url=eq.${encodeURIComponent(sellerUrl)}&event_type=in.(called,advanced,disqualified)&select=event_type,metadata&limit=50`, {
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` }
+      });
+      if (!r.ok) return "";
+      const events = await r.json();
+      if (!events?.length) return "";
+      const routes = { FAST_TRACK: 0, NURTURE: 0, DISQUALIFY: 0 };
+      const dqReasons = {};
+      events.forEach(e => {
+        const route = e.metadata?.dealRoute;
+        if (route && routes[route] !== undefined) routes[route]++;
+        if (e.event_type === "disqualified" && e.metadata?.reason) {
+          dqReasons[e.metadata.reason] = (dqReasons[e.metadata.reason] || 0) + 1;
+        }
+      });
+      const total = Object.values(routes).reduce((s, v) => s + v, 0);
+      if (total < 3) return ""; // not enough data
+      const topDq = Object.entries(dqReasons).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([r]) => r);
+      return `\nHISTORICAL DEAL PATTERNS (from ${total} prior deals by this seller):\n` +
+        `Fast Track: ${routes.FAST_TRACK} (${Math.round(routes.FAST_TRACK/total*100)}%) | Nurture: ${routes.NURTURE} (${Math.round(routes.NURTURE/total*100)}%) | Disqualify: ${routes.DISQUALIFY} (${Math.round(routes.DISQUALIFY/total*100)}%)\n` +
+        (topDq.length ? `Top DQ reasons: ${topDq.join(", ")}\n` : "") +
+        `Use this to calibrate your hypothesis — if most deals nurture, the opening angle should address why THIS one is different.\n\n`;
+    } catch { return ""; }
+  };
+
+  // ── Cross-session: log model accuracy (predicted route vs actual) ──
+  const logModelAccuracy = (company, predictedRoute, actualRoute) => {
+    if (!sbToken || !sbUser || !predictedRoute || !actualRoute) return;
+    const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!SB_URL || !SB_KEY) return;
+    fetch(`${SB_URL}/rest/v1/model_accuracy_log`, {
+      method: "POST", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ user_id: sbUser.id, seller_url: sellerUrl || null, company: (company||"").slice(0,200), predicted: predictedRoute, actual: actualRoute, metadata: { timestamp: new Date().toISOString() } }),
+    }).catch(() => {});
+  };
+
   const logRfpIntel = (items, searchStage, searchType) => {
     if (!sbToken || !sbUser || !items?.length) return;
     const SB_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -8038,9 +8082,13 @@ Return ONLY raw JSON:
     const challengerCtx = `${KL_CHALLENGER.mobilizer?.definition || ""}. ${KL_CHALLENGER.mobilizer?.identify || ""}. Teaching: ${KL_CHALLENGER.teachingAngle}`;
     const buyingSignalCtx = [...KL_BUYING_SIGNALS.positive, ...KL_BUYING_SIGNALS.negative].join("; ");
 
+    // Inject historical deal patterns from prior sessions (non-blocking)
+    const dealPatternsCtx = await fetchDealPatterns(member?.ind).catch(() => "");
+
     const prompt =
       proofPack +
       "You are a senior sales strategist. Build a RIVER hypothesis that helps a seller at " + sellerUrl + " win a deal with " + co + ".\n\n" +
+      dealPatternsCtx +
       "CRITICAL CONSTRAINT: Only reference what the SELLER delivers. Zero generic consulting. Cite named customers from the proof pack above whenever you claim 'we've done this before.' Use unique differentiators from the proof pack to justify 'why us.' NEVER suggest use cases in the seller's exclusion list.\n" +
       "ACCURACY: NEVER invent facts about the prospect or the seller. No fabricated revenue, partnerships, acquisitions, Glassdoor scores, funding rounds, product names, or statistics. Every factual claim must be grounded in the proof pack, brief data, or verifiable training knowledge. If uncertain, OMIT — do not mark '[Verify]' or surface uncertainty. A wrong fact in a talk track destroys the entire deal. NEVER attribute direct quotes to executives without a verifiable source — paraphrase instead.\n" +
       "TONE: Write like a seasoned consultant, not a chatbot. Short sentences. No buzzwords — never use 'leverage', 'synergy', 'holistic', 'robust', 'unlock', 'empower'. talkTracks must be 1-2 sentences — Mom Test grounded: past behavior and real problems, never hypothetical future intent.\n" +
@@ -8543,6 +8591,11 @@ Return ONLY raw JSON:
     // Log prospect event for cross-session intelligence
     const route = postCall?.dealRoute || "UNKNOWN";
     logProspectEvent(selectedAccount?.company, route === "FAST_TRACK" ? "advanced" : "called", { dealRoute: route });
+    // Log model accuracy — compare hypothesis route prediction vs actual post-call route
+    if (riverHypo?.route && postCall?.dealRoute) {
+      const predicted = /fast.?track/i.test(riverHypo.route) ? "FAST_TRACK" : /disqualif/i.test(riverHypo.route) ? "DISQUALIFY" : "NURTURE";
+      logModelAccuracy(selectedAccount?.company, predicted, postCall.dealRoute);
+    }
   };
 
   const copyText=(t,k)=>{navigator.clipboard.writeText(t).then(()=>{setCopied(k);setTimeout(()=>setCopied(""),2000);});};

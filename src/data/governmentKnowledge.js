@@ -418,5 +418,20 @@ confidence: high (USAspending.gov; FPDS; GSA; GAO; Deltek/GovWin; BGOV; Federal 
 
 // Required exports for knowledge-lint vertical file schema
 export const GOVERNMENT_INJECTION = GOVERNMENT_PLAYBOOK.layerContent;
-export const GOVERNMENT_SCORING = GOVERNMENT_PLAYBOOK.keywords.join(", ");
+export const GOVERNMENT_SCORING_CONTEXT = {
+  highFitSegments: [
+    { segment: "Civilian federal agencies with active IT modernization mandates (USDA, HHS, VA)", avgFit: "70-80%" },
+    { segment: "State/local agencies (SLED) with published procurement portals and FY budget authority", avgFit: "65-75%" },
+    { segment: "DoD civilian IT (non-classified) — DISA, Army G6, AF/A6", avgFit: "60-70%" },
+    { segment: "Federal systems integrators (Booz Allen, SAIC, Leidos) seeking subcontractors/COTS products", avgFit: "60-70%" },
+    { segment: "FedRAMP-authorized agencies actively migrating to cloud", avgFit: "65-75%" },
+  ],
+  highFrictionSegments: [
+    { segment: "Intelligence community (IC) — TS/SCI clearance required, 18-24mo sales cycles", avgFit: "10-20%" },
+    { segment: "DoD weapons systems / classified programs — ITAR/EAR controlled", avgFit: "5-15%" },
+    { segment: "Agencies under continuing resolution (no new starts) — budget frozen", avgFit: "20-30%" },
+    { segment: "Agencies with incumbent IDIQ/BPA lock (multi-year single-award)", avgFit: "15-25%" },
+  ],
+};
+export const GOVERNMENT_SCORING = GOVERNMENT_SCORING_CONTEXT;
 export const GOVERNMENT_DISCOVERY = GOVERNMENT_PLAYBOOK.discovery.join("\n");
