@@ -7056,11 +7056,51 @@ Return ONLY raw JSON:
     setStep(3);
 
     // Fire enrichment + fit scoring in parallel
-    // 1. Enrich: fills in industry + employees for blank entries
+    // Phase 0: Free enrichment (SEC EDGAR + Wikidata) — verified data, no AI cost
+    const freeEnrichPromise = (async () => {
+      try {
+        const results = await Promise.all(members.map(async m => {
+          try {
+            const r = await fetch(`/api/enrich-free?company=${encodeURIComponent(m.company)}&domain=${encodeURIComponent(m.company_url || "")}`);
+            if (!r.ok) return [m.company, null];
+            const d = await r.json();
+            return [m.company, d.organization || null];
+          } catch { return [m.company, null]; }
+        }));
+        const freeMap = Object.fromEntries(results.filter(([, v]) => v));
+        if (Object.keys(freeMap).length) {
+          console.log(`[enrich-free] Got verified data for ${Object.keys(freeMap).length}/${members.length} companies`);
+          setCohorts(prev => prev.map(co => ({
+            ...co,
+            members: co.members.map(m => {
+              const fe = freeMap[m.company];
+              if (!fe) return m;
+              return {
+                ...m,
+                ind: m.ind || fe.industry || "",
+                employees: m.employees || fe.employeeCount || "",
+                publicPrivate: m.publicPrivate || fe.publiclyTraded || "",
+                _enrichment: { organization: fe },
+              };
+            }),
+          })));
+        }
+        return freeMap;
+      } catch (e) { console.warn("[enrich-free] Failed:", e.message); return {}; }
+    })();
+    const freeMap = await freeEnrichPromise;
+
+    // Phase 1: Haiku enrichment — fills gaps for companies that didn't get free data
     const enrichPromise = (async () => {
-      // Only enrich entries that are still missing data
-      const needsEnrich = members.filter(m => !m.ind || !m.employees);
-      if (!needsEnrich.length) return;
+      // Re-read members to see what free enrichment already filled
+      const currentMembers = members.map(m => {
+        const fe = freeMap[m.company];
+        if (fe) return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "", publicPrivate: m.publicPrivate || fe.publiclyTraded || "" };
+        return m;
+      });
+      const needsEnrich = currentMembers.filter(m => !m.ind || !m.employees);
+      if (!needsEnrich.length) { console.log("[enrich] All companies already enriched via free sources"); return; }
+      console.log(`[enrich] ${needsEnrich.length} companies still need Haiku enrichment`);
       try {
         const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
         const result = await callAI(
@@ -7077,6 +7117,8 @@ Return ONLY raw JSON:
           setCohorts(prev => prev.map(co => ({
             ...co,
             members: co.members.map(m => {
+              // Don't overwrite free enrichment data
+              if (freeMap[m.company]) return m;
               const e = map[m.company];
               if (!e) return m;
               return {
@@ -7087,7 +7129,7 @@ Return ONLY raw JSON:
                 company_url: m.company_url || e.url || "",
               };
             }),
-            topInd: [...new Set(Object.values(map).map(e => e.industry).filter(Boolean))].slice(0, 3),
+            topInd: [...new Set([...co.topInd, ...Object.values(map).map(e => e.industry).filter(Boolean)])].slice(0, 3),
           })));
         }
       } catch (e) { console.warn("Enrichment failed:", e.message); }
