@@ -6,7 +6,7 @@ name: golden-set-full
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # 6 AM UTC daily (1 AM EST)
+    - cron: '0 6 * * 1'  # 6 AM UTC every Monday (1 AM EST)
   workflow_dispatch: {}
 
 jobs:
