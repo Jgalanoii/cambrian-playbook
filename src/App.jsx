@@ -5799,6 +5799,8 @@ ${isOpen
     // ── Buying Signals prompt (separate from published RFPs) ────────
     const buildSignalsPrompt = () => `You are a procurement intelligence analyst identifying PRE-RFP buying signals — NOT published RFPs, but evidence that a company or agency is ABOUT to issue one. Use web_search to find concrete signals.
 ${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━━\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
+${KL_RFP_SIGNAL_SCORING ? `\n━━━ SIGNAL STRENGTH SCORING ━━━\n${typeof KL_RFP_SIGNAL_SCORING === "string" ? KL_RFP_SIGNAL_SCORING : JSON.stringify(KL_RFP_SIGNAL_SCORING).slice(0,500)}\nRate each signal as Strong / Moderate / Early based on this rubric.\n` : ""}
+${KL_PRE_RFP_INTENT_KEYWORDS?.length ? `\n━━━ PRE-RFP INTENT KEYWORDS (search for these) ━━━\n${KL_PRE_RFP_INTENT_KEYWORDS.slice(0,20).join(", ")}\n` : ""}
 ━━━ SELLER PROFILE ━━━
 URL: ${sanitizeForPrompt(sellerUrl)}
 Market category: ${sanitizeForPrompt(category)}
@@ -8420,10 +8422,18 @@ Return ONLY raw JSON:
     // generic SA-school theory.
     const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
 
+    // Inject vertical + approval context for industry-aware SA review
+    const saVertical = getVerticalInjection(sellerICP, selectedAccount?.ind)?.slice(0, 400) || "";
+    const saApprovalGates = KL_APPROVAL_GATES ? KL_APPROVAL_GATES.slice(0, 300) : "";
+    const saExecPerspectives = KL_EXEC_PERSPECTIVES ? KL_EXEC_PERSPECTIVES.slice(0, 300) : "";
+
     const prompt =
       proofPack +
       `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call. Your recommendations MUST cite specific differentiators from the proof pack above and name analogous customers from the seller's customer list when justifying why a solution will succeed.\n\n`+
       KL_GRAHAM + `\n`+
+      (saVertical ? `\nINDUSTRY ARCHITECTURE CONTEXT:\n${saVertical}\nUse this to assess integration complexity and tech maturity for this vertical.\n` : "") +
+      (saApprovalGates ? `\nAPPROVAL GATE INTELLIGENCE:\n${saApprovalGates}\nFactor gate complexity into implementation phasing.\n` : "") +
+      (saExecPerspectives ? `\nEXECUTIVE BUYING CONTEXT:\n${saExecPerspectives}\nAlign PMF assessment with how this company's C-suite evaluates vendors.\n` : "") +
       `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
       `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
       `BRIEFING COMPLETENESS: ${confidence}%\n`+
@@ -8520,11 +8530,18 @@ Return ONLY raw JSON:
     // Inject seller proof pack so deal routing is grounded in real capabilities
     const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
 
+    // Inject vertical context so post-call routing is industry-aware
+    const postCallVertical = getVerticalInjection(sellerICP, selectedAccount?.ind)?.slice(0, 500) || "";
+    const postCallCompliance = getComplianceInjection(sellerICP, selectedAccount?.ind)?.slice(0, 300) || "";
+
     const postCallPrompt =
       postCallProof +
       `Senior sales coach reviewing a RIVER framework discovery call.\n`+
       KL_FISHER_URY + `\n`+
       KL_GRAHAM + `\n`+
+      (postCallVertical ? `\nINDUSTRY CONTEXT (affects deal velocity and routing):\n${postCallVertical}\n` : "") +
+      (postCallCompliance ? `\nCOMPLIANCE CONTEXT (affects timeline and gate complexity):\n${postCallCompliance}\n` : "") +
+      (KL_NEGOTIATIONS ? `\nNEGOTIATION POSTURE: ${KL_NEGOTIATIONS.slice(0, 200)}. Assess where the prospect is in the negotiation arc — are they exploring, comparing, or ready to commit?\n` : "") +
       (KL_FOUR_FORCES ? `\nDECISION FORCES (Moesta): If Anxiety (${KL_FOUR_FORCES.anxiety||"switching fear"}) + Habit (${KL_FOUR_FORCES.habit||"status quo inertia"}) dominated the call → route to NURTURE. If Push (${KL_FOUR_FORCES.push||"pain"}) + Pull (${KL_FOUR_FORCES.pull||"new solution promise"}) dominated → FAST_TRACK candidate.\n` : "") +
       (KL_QUESTION_BANK ? `\nNEXT DISCOVERY (suggest in nextSteps if discovery was incomplete):\n  Pain: ${KL_QUESTION_BANK.currentStatePain?.[0]||""}\n  Process: ${KL_QUESTION_BANK.buyingProcess?.[0]||""}\n  Competitive: ${KL_QUESTION_BANK.competitiveAlternatives?.[0]||""}\n` : "") +
       `DEAL ROUTING SIGNALS:\n`+
