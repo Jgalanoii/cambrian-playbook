@@ -4273,7 +4273,7 @@ export default function App(){
   const[activeGuide,setActiveGuide]=useState("user");
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
-  const[collapsedBB,setCollapsedBB]=useState(new Set(["icpPersonas","icpBuyingInsight","icpCustomers"])); // ICP detail sections start collapsed; brief sections start expanded
+  const[collapsedBB,setCollapsedBB]=useState(new Set(["icpPersonas","icpBuyingInsight","icpCustomers","setupTargeting"])); // ICP detail + setup targeting start collapsed
   const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
   // Helpers for collapsible bb blocks. bbHdr() returns onClick + chevron props;
   // bbWrap() returns the wrapper className for the body.
@@ -10827,7 +10827,17 @@ Return ONLY raw JSON:
                   )}
                 </div>
                 {/* ICP Targeting Preferences — structured click menu */}
+                {/* Target Customer Profile — collapsible, optional feel */}
                 <div style={{marginTop:14}}>
+                  <div onClick={()=>toggleBB("setupTargeting")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                    <span style={{fontSize:13}}>{bbIsOpen("setupTargeting")?"▾":"▸"}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--ink-1)"}}>Customize Targeting <span style={{fontWeight:400,color:"var(--ink-3)"}}>(optional)</span></div>
+                      <div style={{fontSize:10,color:"var(--ink-3)"}}>Segment, company size, revenue, ownership, geography — shapes ICP + target generation</div>
+                    </div>
+                    {(icpTargeting.segment||(icpTargeting.headcount||[]).length||(icpTargeting.revenue||[]).length) ? <span style={{fontSize:10,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",borderRadius:10,padding:"2px 8px"}}>customized</span> : null}
+                  </div>
+                  <div style={{display:bbIsOpen("setupTargeting")?"block":"none",padding:"12px 0 0"}}>
                   <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>
                     Target Customer Profile <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,color:"var(--ink-3)"}}>select what you know — shapes ICP + targets</span>
                   </div>
@@ -10926,7 +10936,7 @@ Return ONLY raw JSON:
                   )}
 
                   </>;})()}
-                </div>
+                </div></div>
 
                 <div style={{fontSize:11,color:"var(--ink-3)",marginTop:6}}>Cambrian will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
                 {/* Manual scan button — fallback when onBlur doesn't fire (mobile, etc.) */}
