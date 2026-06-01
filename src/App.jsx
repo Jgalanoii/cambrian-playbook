@@ -5403,12 +5403,14 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
   // RFP cache: keyed by (user, seller URL, marketCategory, RFP schema
   // version). Cache TTL is implicit — the seller URL and marketCategory
   // pin the scope; a Regenerate ICP will naturally produce a new key.
-  const RFP_CACHE_VERSION = "v4"; // bumped 2026-05-27: quality rules rebalanced, checklist gate, SLED search
+  const RFP_CACHE_VERSION = "v5"; // bumped 2026-06-01: product-fit overhaul, stale CRM results purged
   const rfpCacheKey = () => {
     const userScope = sbUser?.id || "guest";
     const url = (sellerUrl||"").toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
     const cat = (sellerICP?.marketCategory||"").toLowerCase().replace(/\s+/g,"-").slice(0,40);
-    return `rfp:${RFP_CACHE_VERSION}:${userScope}:${url}:${cat}`;
+    // Include seller description hash so cache invalidates when ICP changes
+    const descHash = (sellerICP?.sellerDescription||"").slice(0,20).replace(/\s+/g,"").toLowerCase();
+    return `rfp:${RFP_CACHE_VERSION}:${userScope}:${url}:${cat}:${descHash}`;
   };
 
   // ── RFP data science logging (fire-and-forget to Supabase) ──────────
