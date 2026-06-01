@@ -4807,12 +4807,18 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
   // sample data, generated targets, manual "Run fit check" button).
   // Uses the richest available data: uploaded docs > ICP name + category + product pages > URL.
   const buildSellerCtx = () => {
-    if (sellerDocs.length > 0) {
-      return sellerDocs.map(d => sanitizeForPrompt(d.label) + ": " + sanitizeForPrompt(d.content.slice(0, 400))).join(" | ");
-    }
     let ctx = sanitizeForPrompt(sellerICP?.sellerName || sellerUrl || "the seller");
     if (sellerICP?.marketCategory) ctx += " (" + sanitizeForPrompt(sellerICP.marketCategory) + ")";
-    if (productUrls.filter(u => u.url).length) ctx += " | Pages: " + productUrls.filter(u => u.url).map(u => sanitizeForPrompt(u.url)).join(", ");
+    if (sellerICP?.sellerDescription) ctx += "\nWhat they sell: " + sanitizeForPrompt(sellerICP.sellerDescription);
+    // Product catalog — specific products from the seller's website
+    const catalog = sellerICP?.icp?.productCatalog || [];
+    if (catalog.length) ctx += "\nProducts/Services: " + catalog.slice(0, 5).map(p => sanitizeForPrompt(p.name) + (p.description ? " — " + sanitizeForPrompt(p.description).slice(0, 80) : "")).join("; ");
+    // Verified customers — proven wins from case studies
+    const verified = sellerICP?.icp?.verifiedCustomers || [];
+    if (verified.length) ctx += "\nVerified customers: " + verified.slice(0, 5).map(c => sanitizeForPrompt(c.name) + " (" + sanitizeForPrompt(c.industry || "") + ")").join(", ");
+    // Uploaded sales materials
+    if (sellerDocs.length > 0) ctx += "\nSales materials: " + sellerDocs.map(d => sanitizeForPrompt(d.label) + ": " + sanitizeForPrompt(d.content.slice(0, 200))).join(" | ");
+    if (productUrls.filter(u => u.url).length) ctx += "\nProduct pages: " + productUrls.filter(u => u.url).map(u => sanitizeForPrompt(u.url)).join(", ");
     return ctx;
   };
 
