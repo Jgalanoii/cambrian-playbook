@@ -13453,6 +13453,21 @@ Return ONLY raw JSON:
                   })()
                 )}
 
+                {/* ═══ GROUP: YOUR ANGLE — how to approach this prospect ═══ */}
+                {sellerUrl && sellerUrl !== "research-only" && (
+                <div style={{marginBottom:14}}>
+                  <div onClick={()=>toggleBB("briefAngle")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--ink-0)",borderRadius:bbIsOpen("briefAngle")?"10px 10px 0 0":"10px",color:"var(--surface)"}}>
+                    <span style={{fontSize:16}}>🎯</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:700}}>Your Angle</div>
+                      <div style={{fontSize:11,opacity:0.7}}>Elevator pitch, opening angle, outreach emails, solution mapping</div>
+                    </div>
+                    <span style={{fontSize:12,opacity:0.6,transition:"transform 0.2s",transform:bbIsOpen("briefAngle")?"rotate(0)":"rotate(-90deg)"}}>{bbIsOpen("briefAngle")?"▾":"▸"}</span>
+                  </div>
+                </div>
+                )}
+                <div style={{display:bbIsOpen("briefAngle")?"block":"none"}}>
+
                 {/* Elevator Pitch — 45-second spoken pitch (hidden for Quick Brief / research-only) */}
                 {sellerUrl && sellerUrl !== "research-only" && (brief.elevatorPitch || brief._loadingSections?.strategy) && (
                   <div style={{
@@ -14257,7 +14272,21 @@ Return ONLY raw JSON:
                 </div>
                 ) : null}
 
-                {/* ═══ DEEP INTELLIGENCE LAYERS ═══ */}
+                {/* Close "Your Angle" group */}
+                </div>
+
+                {/* ═══ GROUP: COMPANY INTELLIGENCE — deep research ═══ */}
+                <div style={{marginBottom:14}}>
+                  <div onClick={()=>toggleBB("briefIntel")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--navy)",borderRadius:bbIsOpen("briefIntel")?"10px 10px 0 0":"10px",color:"var(--surface)"}}>
+                    <span style={{fontSize:16}}>🔍</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:700}}>Company Intelligence</div>
+                      <div style={{fontSize:11,opacity:0.7}}>Financials, competitors, board, tech stack, sentiment, hiring</div>
+                    </div>
+                    <span style={{fontSize:12,opacity:0.6,transition:"transform 0.2s",transform:bbIsOpen("briefIntel")?"rotate(0)":"rotate(-90deg)"}}>{bbIsOpen("briefIntel")?"▾":"▸"}</span>
+                  </div>
+                </div>
+                <div style={{display:bbIsOpen("briefIntel")?"block":"none"}}>
 
                 {/* Financial Deep Dive */}
                 {(brief.financialDeepDive || brief._loadingSections?.deepIntel) && (
@@ -14535,6 +14564,22 @@ Return ONLY raw JSON:
                 )}
 
 
+                {/* Close "Company Intelligence" group */}
+                </div>
+
+                {/* ═══ GROUP: DEAL READINESS — action items ═══ */}
+                <div style={{marginBottom:14}}>
+                  <div onClick={()=>toggleBB("briefDeal")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--tan-0)",borderRadius:bbIsOpen("briefDeal")?"10px 10px 0 0":"10px",color:"var(--surface)"}}>
+                    <span style={{fontSize:16}}>🏁</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:700}}>Deal Readiness</div>
+                      <div style={{fontSize:11,opacity:0.7}}>Watch-outs, approval gates, and questions to ask</div>
+                    </div>
+                    <span style={{fontSize:12,opacity:0.6,transition:"transform 0.2s",transform:bbIsOpen("briefDeal")?"rotate(0)":"rotate(-90deg)"}}>{bbIsOpen("briefDeal")?"▾":"▸"}</span>
+                  </div>
+                </div>
+                <div style={{display:bbIsOpen("briefDeal")?"block":"none"}}>
+
                 {/* Watch-outs */}
                 <div style={{marginBottom:14}}>
                   <div className="bb">
@@ -14563,6 +14608,9 @@ Return ONLY raw JSON:
                       )}
                     </div>
                   </div>
+                </div>
+
+                {/* Close "Deal Readiness" group */}
                 </div>
 
                 <div className="actions-row">
