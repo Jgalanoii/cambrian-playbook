@@ -7058,7 +7058,7 @@ Return ONLY raw JSON:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0 && step <= 2) celebrate("prospects_added"); },[cohorts.length]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(step===3 && cohorts.flatMap(c=>c.members).length > 0) celebrate("first_fit"); },[step]);
+  useEffect(()=>{ if(step===3 && Object.keys(fitScores).length > 0 && !fitScoring) celebrate("first_fit"); },[fitScoring]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(brief?.companySnapshot && !Object.values(brief._loadingSections || {}).some(Boolean)) celebrate("brief_built"); },[brief?.companySnapshot, brief?._loadingSections]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
