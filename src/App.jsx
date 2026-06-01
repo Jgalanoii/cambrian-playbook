@@ -11481,7 +11481,7 @@ Return ONLY raw JSON:
                     {(rfpData.closed.length>0 || (rfpData.loading && rfpData.open.length>0)) && (
                       <div style={{borderTop:"3px solid var(--navy)",borderRadius:8,background:"var(--surface)",padding:"14px 0 0"}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"0 14px"}}>
-                          <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Competitor Wins — Who's Using What (Displacement Targets)</div>
+                          <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Competitive & Market Intelligence</div>
                           {rfpData.closed.length>0 && <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.closed.length} awards)</div>}
                           {rfpData.loading && rfpData.closed.length===0 && (
                             <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ still loading…</span>
@@ -11499,7 +11499,7 @@ Return ONLY raw JSON:
                               <tr>
                                 <th>Contract</th>
                                 <th>Buyer</th>
-                                <th>Awarded To</th>
+                                <th>Incumbent / Vendor</th>
                                 <th>Value</th>
                                 <th>Date</th>
                                 <th>Cohort</th>
@@ -11651,7 +11651,7 @@ Return ONLY raw JSON:
                         <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>🔵 Recent Awards from Your Accounts ({accountRfpData.closed.length})</div>
                         <div style={{overflowX:"auto",border:"1px solid var(--line-0)",borderRadius:8}}>
                           <table className="tbl"><thead><tr>
-                            <th>Contract</th><th>Buyer</th><th>Awarded To</th><th>Value</th><th>Date</th><th>Fit</th>
+                            <th>Intel</th><th>Company</th><th>Incumbent / Vendor</th><th>Value</th><th>Date</th><th>Fit</th>
                           </tr></thead><tbody>
                             {accountRfpData.closed.sort((a,b)=>b.relevanceScore-a.relevanceScore).map((r,i)=>(
                               <tr key={i} style={{verticalAlign:"top"}}>
