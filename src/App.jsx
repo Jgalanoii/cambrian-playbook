@@ -6323,6 +6323,9 @@ Return ONLY raw JSON:
     setIcpLoading(true);
     setIcpStatus("Researching your company...");
     setIcpEdits([]); // Clear edits on regeneration — fresh start
+    // Clear RFP cache — ICP change means product context changed, old RFPs may be irrelevant
+    try { const keys = Object.keys(localStorage).filter(k => k.startsWith("rfp:")); keys.forEach(k => localStorage.removeItem(k)); if (keys.length) console.log(`[ICP rebuild] Cleared ${keys.length} RFP cache entries`); } catch {}
+    setRfpData({ open: [], closed: [], signals: [], loading: false, error: null }); // Reset RFP UI
 
     // Single-pass ICP build — Opus with web search does research + ICP in one call.
     // Previously this was 2 sequential calls (Sonnet research → Opus build, ~45-60s).
