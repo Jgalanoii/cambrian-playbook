@@ -4273,7 +4273,7 @@ export default function App(){
   const[activeGuide,setActiveGuide]=useState("user");
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
-  const[collapsedBB,setCollapsedBB]=useState(new Set(["icpPersonas","icpBuyingInsight","icpCustomers","setupTargeting"])); // ICP detail + setup targeting start collapsed
+  const[collapsedBB,setCollapsedBB]=useState(new Set(["icpPersonas","icpBuyingInsight","icpCustomers","setupTargeting","setupDetails"])); // ICP detail + setup sections start collapsed
   const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
   // Helpers for collapsible bb blocks. bbHdr() returns onClick + chevron props;
   // bbWrap() returns the wrapper className for the body.
@@ -10799,9 +10799,9 @@ Return ONLY raw JSON:
                   );
                 })()}
 
-                {/* Seller Stage */}
-                <div style={{marginTop:12}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
+                {/* Seller Stage + Targeting — moved to collapsible section below products */}
+                <div style={{display:"none"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage (hidden — moved below)</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {["Bootstrapped","Angel","Seed","Series A","Series B","Series C","Series D+","PE-Backed","Private","Public"].map(stage=>(
                       <button key={stage} onClick={()=>setSellerStage(stage)}
@@ -10936,7 +10936,7 @@ Return ONLY raw JSON:
                   )}
 
                   </>;})()}
-                </div></div>
+                </div></div>{/* end hidden stage+targeting section */}
 
                 <div style={{fontSize:11,color:"var(--ink-3)",marginTop:6}}>Cambrian will research your products and services to map them to each prospect's needs. Stored for the entire session.</div>
                 {/* Manual scan button — fallback when onBlur doesn't fire (mobile, etc.) */}
@@ -11239,6 +11239,33 @@ Return ONLY raw JSON:
                     <span style={{color:"var(--ink-2)"}}>— Cambrian will match these to each prospect</span>
                   </div>
                 )}
+              </div>
+
+              {/* Funding Stage + Targeting — optional, after the scan/products/docs */}
+              <div style={{marginTop:16}}>
+                <div onClick={()=>toggleBB("setupDetails")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                  <span style={{fontSize:13}}>{bbIsOpen("setupDetails")?"▾":"▸"}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--ink-1)"}}>Additional Details <span style={{fontWeight:400,color:"var(--ink-3)"}}>(optional — improves targeting)</span></div>
+                    <div style={{fontSize:10,color:"var(--ink-3)"}}>Funding stage, market segment, company size, revenue, ownership, geography</div>
+                  </div>
+                  {sellerStage && <span style={{fontSize:10,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",borderRadius:10,padding:"2px 8px"}}>{sellerStage}</span>}
+                </div>
+                <div style={{display:bbIsOpen("setupDetails")?"block":"none",padding:"12px 0 0"}}>
+                  <div style={{marginBottom:10}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Your Funding Stage</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {["Bootstrapped","Angel","Seed","Series A","Series B","Series C","Series D+","PE-Backed","Private","Public"].map(stage=>(
+                        <button key={stage} onClick={()=>setSellerStage(stage)}
+                          style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid "+(sellerStage===stage?"var(--ink-0)":"var(--line-0)"),
+                            background:sellerStage===stage?"var(--ink-0)":"var(--surface)",color:sellerStage===stage?"#fff":"var(--ink-1)",
+                            fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.13s"}}>
+                          {stage}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* ICP builds in background — reviewed on next step */}
