@@ -6292,7 +6292,7 @@ Return ONLY raw JSON:
         `{"name":"Build in-house (if applicable)","theirCustomers":[]}`+
       `],`+
       `"uniqueDifferentiators":["Differentiator 1 — specific to THIS seller, not the category","Differentiator 2 — something a competitor cannot easily replicate"],`+
-      `"disqualifiers":["Return ONLY 1-2 TRUE structural impossibilities — the product literally CANNOT work there. Example: 'Company must operate in the US (no international support)' or 'Must have an existing CRM (product is a CRM integration)'. Do NOT list preferences like company size, industry, or revenue — those are handled by scoring. Most sellers have 0-1 real disqualifiers. An empty array is perfectly valid."],`+
+      `"disqualifiers":["Return 2-4 structural disqualifiers — real reasons a prospect CANNOT buy this product. Every seller has them. Think: geography limits ('US-only — no international'), technical prerequisites ('requires existing ERP system'), regulatory barriers ('only serves FDIC-insured institutions'), size floors ('minimum 50 employees — product doesn't work for solopreneurs'), or integration dependencies ('requires Salesforce or HubSpot'). These are NOT preferences — they are hard gates. If you genuinely cannot identify any, return ['No structural barriers identified'] but try harder first."],`+
       `"techSignals":["Tech signal 1 that indicates readiness (e.g. 'Uses Workday = likely buyer')","Signal 2"],`+
       `"tractionChannels":["Primary GTM channel","Secondary","Tertiary"],`+
       `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
