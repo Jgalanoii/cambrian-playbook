@@ -2412,7 +2412,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         messages:[{role:"user",content:
           firmographicsTruth+
           `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n\n`+
-          `SELLER CONTEXT: ${sellerICP?.sellerDescription || sellerUrl}. Deal size: ${dealSize}. Stage: ${sellerICP?.icp?.salesCycle || "unknown"}.\n`+
+          `SELLER CONTEXT: ${buildSellerCtx()}. Deal size: ${dealSize}. Stage: ${sellerICP?.icp?.salesCycle || "unknown"}.\n`+
+          ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `Seller's competitors: ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. Factor competitor displacement complexity into gate analysis.\n` : "") +
           `TARGET CONTEXT: ${co} — Industry: ${_fg.industry || "unknown"}. Size: ${_fg.employees || "unknown"} employees. Ownership: ${_fg.ownership || "unknown"}.\n\n`+
           (KL_APPROVAL_GATES ? `APPROVAL GATES KNOWLEDGE:\n${KL_APPROVAL_GATES.slice(0, 3000)}\n\n` : "") +
           `Return raw JSON with TWO sections:\n`+
@@ -5913,7 +5914,8 @@ Return ONLY raw JSON:
 
 Seller: ${sanitizeForPrompt(sellerICP?.sellerName || sellerUrl)} — ${sanitizeForPrompt(category)}
 What they sell: ${sanitizeForPrompt(sellerICP?.sellerDescription || category || "")}
-${(sellerICP?.icp?.productCatalog||[]).length ? `Products/Services (search for government RFPs matching THESE):\n${sellerICP.icp.productCatalog.slice(0,3).map(p=>`  • ${sanitizeForPrompt(p.name)}: ${sanitizeForPrompt(p.description||"").slice(0,80)}`).join("\n")}\n` : ""}Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+${(sellerICP?.icp?.productCatalog||[]).length ? `Products/Services (search for government RFPs matching THESE):\n${sellerICP.icp.productCatalog.slice(0,3).map(p=>`  • ${sanitizeForPrompt(p.name)}: ${sanitizeForPrompt(p.description||"").slice(0,80)}`).join("\n")}\n` : ""}${(sellerICP?.icp?.verifiedCustomers||[]).filter(c=>c?.name).length ? `Proven government/public-sector customers: ${sellerICP.icp.verifiedCustomers.filter(c=>c?.name).slice(0,3).map(c=>sanitizeForPrompt(c.name)).join(", ")}\n` : ""}They commonly displace: ${competitors.slice(0,2).map(c=>sanitizeForPrompt(c)).join(" · ") || "—"}
+Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
 CRITICAL: Search for RFPs matching the seller's ACTUAL products — "${sanitizeForPrompt(sellerICP?.sellerDescription || category)}". Do NOT search for unrelated categories.
 ${naicsCodes.length ? `NAICS: ${naicsCodes.join(", ")}` : ""}
 ${KL_RFP_SEARCH_GUIDANCE ? `\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
@@ -8451,7 +8453,10 @@ Return ONLY raw JSON:
       `Adjacent-system risk: what existing tools would need to coexist, replace, or hand off to/from this?\n\n`+
 
       `═══ INPUTS ═══\n`+
-      `SELLER: ${seller} | PRODUCTS: ${products_ctx}\n`+
+      `SELLER: ${buildSellerCtx()}\n`+
+      `PRODUCTS: ${products_ctx}\n`+
+      ((sellerICP?.icp?.verifiedCustomers||[]).length ? `VERIFIED CUSTOMER WINS (ask questions that validate these patterns):\n${sellerICP.icp.verifiedCustomers.slice(0,5).map(c=>`  • ${c.name} (${c.industry}) — ${c.useCase}`).join("\n")}\n` : "") +
+      ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `COMPETITORS TO PROBE: ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).slice(0,5).join(", ")}. Include questions that surface if the prospect uses any of these.\n` : "") +
       (sellerICP?.icp ? `ICP CONTEXT: Industries: ${(sellerICP.icp.industries||[]).join(", ")} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Pains: ${(sellerICP.icp.topPains||[]).join("; ")}\n` : "")+
       buildUserEditContext(icpEdits, userEdits)+
       `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n`+
@@ -8582,6 +8587,7 @@ Return ONLY raw JSON:
       (saVertical ? `\nINDUSTRY ARCHITECTURE CONTEXT:\n${saVertical}\nUse this to assess integration complexity and tech maturity for this vertical.\n` : "") +
       (saApprovalGates ? `\nAPPROVAL GATE INTELLIGENCE:\n${saApprovalGates}\nFactor gate complexity into implementation phasing.\n` : "") +
       (saExecPerspectives ? `\nEXECUTIVE BUYING CONTEXT:\n${saExecPerspectives}\nAlign PMF assessment with how this company's C-suite evaluates vendors.\n` : "") +
+      ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `\nCOMPETITIVE POSITIONING: Seller competes against ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. If discovery revealed the prospect uses any of these, assess displacement feasibility and switching costs in your SA recommendation.\n` : "") +
       `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
       `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
       `BRIEFING COMPLETENESS: ${confidence}%\n`+
@@ -8692,6 +8698,7 @@ Return ONLY raw JSON:
       (KL_NEGOTIATIONS ? `\nNEGOTIATION POSTURE: ${KL_NEGOTIATIONS.slice(0, 200)}. Assess where the prospect is in the negotiation arc — are they exploring, comparing, or ready to commit?\n` : "") +
       (KL_FOUR_FORCES ? `\nDECISION FORCES (Moesta): If Anxiety (${KL_FOUR_FORCES.anxiety||"switching fear"}) + Habit (${KL_FOUR_FORCES.habit||"status quo inertia"}) dominated the call → route to NURTURE. If Push (${KL_FOUR_FORCES.push||"pain"}) + Pull (${KL_FOUR_FORCES.pull||"new solution promise"}) dominated → FAST_TRACK candidate.\n` : "") +
       (KL_QUESTION_BANK ? `\nNEXT DISCOVERY (suggest in nextSteps if discovery was incomplete):\n  Pain: ${KL_QUESTION_BANK.currentStatePain?.[0]||""}\n  Process: ${KL_QUESTION_BANK.buyingProcess?.[0]||""}\n  Competitive: ${KL_QUESTION_BANK.competitiveAlternatives?.[0]||""}\n` : "") +
+      ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `\nSELLER'S COMPETITORS: ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. If the prospect mentioned using any of these, factor incumbent displacement risk into the deal route.\n` : "") +
       `DEAL ROUTING SIGNALS:\n`+
       `- ${KL_BUYING_SIGNALS.positive.join("\n- ")}\n`+
       `- ${KL_BUYING_SIGNALS.negative.join("\n- ")}\n\n`+
