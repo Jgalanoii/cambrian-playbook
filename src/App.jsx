@@ -7419,7 +7419,7 @@ Return ONLY raw JSON:
     verifyAndLaunch(co, "research-only");
   };
 
-  const pickAccount = async (member, overrideSellerUrl) => {
+  const pickAccount = async (member, overrideSellerUrl, forceRebuild = false) => {
     // Check usage limit before starting a billable brief generation
     if (orgCtx && orgCtx.run_count >= orgCtx.run_limit) {
       setUpgradeOpen(true);
@@ -7441,6 +7441,52 @@ Return ONLY raw JSON:
     setStep(5);
 
     const co = member.company;
+
+    // ── Brief caching: check account_outputs for a recent brief (< 7 days) ──
+    if (!forceRebuild && sbToken && sbUser) {
+      try {
+        const SB_URL_BC = import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY_BC = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (SB_URL_BC && SB_KEY_BC) {
+          const cachedRes = await fetch(`${SB_URL_BC}/rest/v1/account_outputs?output_type=eq.brief&target_company=eq.${encodeURIComponent(co)}&seller_url=eq.${encodeURIComponent(sellerUrl)}&is_latest=eq.true&select=data,created_at&limit=1`, {
+            headers: { apikey: SB_KEY_BC, Authorization: `Bearer ${sbToken}` }
+          });
+          if (cachedRes.ok) {
+            const cached = await cachedRes.json();
+            if (cached.length > 0 && cached[0].data) {
+              const age = Date.now() - new Date(cached[0].created_at).getTime();
+              const ageDays = Math.floor(age / 86400000);
+              if (ageDays < 7) {
+                console.log(`[brief-cache] Found cached brief for ${co} (${ageDays}d old) — loading instantly`);
+                const cachedBriefData = { ...cached[0].data, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { live: true, roles: true } };
+                setBrief(cachedBriefData);
+                setBriefLoading(false);
+                setBriefStatus("");
+                // Refresh ONLY live sections (P5 headlines + P6 roles) in background
+                // These change frequently — everything else is stable
+                (async () => {
+                  try {
+                    const p5 = streamAIWithSearch(
+                      `Search for recent information about "${co}". Use at least one search for press releases.\n` +
+                      `Search 1: "${co}" news OR press release 2025 OR 2026\nSearch 2: "${co}" Glassdoor rating reviews\n` +
+                      `Return ONLY raw JSON: {"recentHeadlines":[{"headline":"","relevance":"","type":""}],"recentSignals":[],"growthSignals":[]}`,
+                      null, 1800, { maxSearches: 2 }
+                    );
+                    const p5Result = await p5;
+                    if (p5Result) setBrief(prev => prev ? { ...prev, ...(p5Result.recentHeadlines ? { recentHeadlines: p5Result.recentHeadlines } : {}), ...(p5Result.growthSignals ? { growthSignals: p5Result.growthSignals } : {}), ...(p5Result.recentSignals ? { recentSignals: p5Result.recentSignals } : {}), _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev);
+                  } catch { setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev); }
+                  try {
+                    const p6Result = await (async()=>{ /* roles refresh will use existing p6 logic */ return null; })();
+                    setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
+                  } catch { setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev); }
+                })();
+                return;
+              }
+            }
+          }
+        }
+      } catch { /* non-critical — fall through to fresh build */ }
+    }
     const cachedExecs = execCacheRef.current[co] || null;
     const cachedBrief = briefPreCacheRef.current[co] || {};
 
@@ -13053,17 +13099,20 @@ Return ONLY raw JSON:
               {briefLoading?"Hang tight — live research in progress.":"Discovery doesn't have to suck. Built from live research and proprietary intelligence. All fields are editable. When you walk in this prepared, the conversation is better for everyone in the room."}
             </div>
 
-            {/* Brief age indicator */}
+            {/* Brief age + cache indicator */}
             {!briefLoading && brief?._generatedAt && (()=>{
               const ageMs = Date.now() - brief._generatedAt;
               const ageDays = Math.floor(ageMs / 86400000);
               const isStale = ageDays >= 7;
-              return ageDays >= 1 ? (
-                <div style={{fontSize:11,color:isStale?"var(--amber)":"var(--ink-3)",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                  {isStale ? "⚠" : "🕐"} Researched {ageDays === 1 ? "yesterday" : `${ageDays} days ago`}
-                  {isStale && <span style={{fontWeight:600}}> — data may be stale</span>}
+              const isCached = brief._cached;
+              return (
+                <div style={{fontSize:11,color:isCached?"var(--green)":isStale?"var(--amber)":"var(--ink-3)",marginBottom:8,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  {isCached ? "⚡" : isStale ? "⚠" : ageDays >= 1 ? "🕐" : ""}
+                  {isCached ? `Loaded from cache (${ageDays === 0 ? "today" : ageDays === 1 ? "yesterday" : ageDays + " days ago"}) — live data refreshing` : ageDays >= 1 ? `Researched ${ageDays === 1 ? "yesterday" : ageDays + " days ago"}` : ""}
+                  {isStale && !isCached && <span style={{fontWeight:600}}> — data may be stale</span>}
+                  {isCached && <button onClick={()=>pickAccount(selectedAccount,null,true)} style={{fontSize:10,fontWeight:600,color:"var(--ink-2)",background:"none",border:"1px solid var(--line-0)",borderRadius:6,padding:"2px 8px",cursor:"pointer",marginLeft:4}}>Full Rebuild</button>}
                 </div>
-              ) : null;
+              );
             })()}
 
             {/* ICP changed since brief was built */}
