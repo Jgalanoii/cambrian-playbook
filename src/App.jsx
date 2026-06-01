@@ -5766,22 +5766,29 @@ ${isOpen ? `
   Every URL must point to a procurement portal, solicitation page, or government contract listing — NOT an article ABOUT procurement.
   Do NOT return LinkedIn, YouTube, Wikipedia, Medium, Reddit, or social media links.
 ` : `
-  INCLUDE (these ARE Closed Awards / Incumbent Intel):
-  ✓ A named buyer's website/member page showing which vendor administers their program
-     Example: "Anthem member page shows OTC cards administered by NationsBenefits" — VALID
-  ✓ FPDS-NG or USASpending.gov award records
-  ✓ Press releases from the BUYER announcing "selected [vendor] for [scope]"
-  ✓ Government contract award notices
-  ✓ Vendor relationship visible on the buyer's own site (e.g. "powered by", "provided by")
+  This section is COMPETITIVE & MARKET INTELLIGENCE — verified vendor-buyer relationships the seller can use for displacement targeting.
 
-  EXCLUDE (these are NOT Closed Awards):
-  ✗ CMS rules, proposed regulations, or policy documents
-  ✗ Market research, consulting analyses, or advisory reports
-  ✗ Vendor's OWN blog posts or marketing content (the vendor talking about themselves)
-  ✗ Industry trend reports or funding announcements
+  INCLUDE:
+  ✓ Verified case studies showing "[Company] uses [Vendor]" with a SPECIFIC case study URL
+  ✓ FPDS-NG or USASpending.gov award records (link to the specific award, not the search page)
+  ✓ Press releases announcing "[Buyer] selects [Vendor]" — link to the SPECIFIC press release
+  ✓ Buyer's partner/vendor page showing the relationship (e.g. "powered by [Vendor]")
 
-  Return {"rows":[]} if no verified awards found. But look hard — buyer websites, member portals,
-  and benefit program pages often reveal vendor relationships that are gold for competitive intel.
+  URL ACCURACY (CRITICAL — a wrong link destroys credibility):
+  ✓ GOOD: https://www.octanner.com/case-studies/capital-one-recognition (specific case study page)
+  ✗ BAD: https://www.octanner.com/ (homepage — user can't find the intel)
+  ✗ BAD: https://www.octanner.com/articles/employee-recognition-programs (generic article, not the specific case study cited)
+  Every URL MUST link to the SPECIFIC page where the cited relationship is documented.
+  If you found the intel in a case study, link to THAT case study — not the vendor homepage.
+  If you cannot find a specific URL for the relationship, use the most specific page you found in your search results.
+
+  EXCLUDE:
+  ✗ Vendor homepages (unless the homepage IS the evidence — e.g., a customer logo wall)
+  ✗ Generic "best of" articles that list vendors without specific buyer relationships
+  ✗ Market research reports or industry trend articles
+  ✗ The seller's OWN content
+
+  Return {"rows":[]} if no verified intel found.
 `}
 DATA INTEGRITY:
   - URL must link to the solicitation, award notice, or buyer page — not research articles.
