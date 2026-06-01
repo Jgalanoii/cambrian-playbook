@@ -1961,7 +1961,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"},`+
-    `"outreachEmail":{"subject":"Something you'd actually open. Lowercase, casual, under 40 chars. Reference something real — not their company name in a template. Bad: 'Partnership Opportunity with ${co}'. Good: 'that q1 fee growth though' or 'dumb question about your risk team' or 're: your CFO hire'.","body":"THIS IS THE MOST IMPORTANT FIELD IN THIS BRIEF. A prospect said our emails read 'like every other email with an angle.' Fix that. 2 SHORT sentences max. RULES: (1) Do NOT pitch. Do NOT mention ${sellerUrl}'s products, features, capabilities, certifications, or how fast you deploy. None of that. Zero. (2) Instead: notice something specific about ${co} from your research — a growth number, a hire, a challenge — and ask a genuine question about it. Like you're curious, not selling. (3) Close with ONE short line that makes replying easy and low-stakes. 'Am I reading this wrong?' or 'Totally fine to tell me to get lost.' (4) NEVER use: 'leverage', 'optimize', 'streamline', 'solution', 'platform', 'excited to', 'I noticed that', 'I wanted to reach out', 'I hope this finds you well', 'explore alignment', 'ROI', 'compliant', 'production-ready'. Those words are email repellent. (5) Sign with just a first name — not 'The ${sellerUrl} Team' or 'Best regards'. The email should make the reader think 'huh, this person actually gets what we're dealing with' — not 'another vendor.' If you can't write something genuinely interesting, write LESS, not MORE."}}`,
+    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. No product mention. No pitch. Close with 'Am I way off base?' or similar. First name sign-off."},{"style":"insight","subject":"Reference a specific finding about ${co} — lowercase, specific, under 40 chars. 'that q1 fee growth though' or 're: your CFO hire'","body":"2 sentences. Lead with ONE specific observation about ${co} from your research — connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' First name sign-off."}]`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
       const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -2142,7 +2142,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
     if (r3?.openingAngle) next.openingAngle = r3.openingAngle;
-    if (r3?.outreachEmail) next.outreachEmail = r3.outreachEmail;
+    if (r3?.outreachEmails?.length) next.outreachEmails = r3.outreachEmails;
+    else if (r3?.outreachEmail) next.outreachEmails = [r3.outreachEmail]; // backwards compat
     // Only fill publicSentiment fields that aren't already set by p5 (mergeLive).
     // p5 has richer sentiment from web_search; p3 should backfill, not overwrite.
     if (r3?.publicSentiment) {
@@ -14183,22 +14184,32 @@ Return ONLY raw JSON:
                 </div>
                 ) : null}
 
-                {/* Outreach Email */}
-                {brief.outreachEmail ? (
+                {/* Outreach Emails — A/B variants */}
+                {(brief.outreachEmails?.length > 0 || brief.outreachEmail) ? (()=>{
+                  const emails = brief.outreachEmails || (brief.outreachEmail ? [brief.outreachEmail] : []);
+                  return (
                 <div className="bb bb-arrive">
                   <div className="bb-hdr">
                     <div className="bb-icon" style={{fontSize:12}}>✉</div>
-                    <div style={{flex:1}}><div className="bb-title">Outreach Email</div><div className="bb-sub">Research-grounded cold outreach — ready to send</div></div>
-                    <button className="copy-btn" onClick={()=>copyText("Subject: "+(brief.outreachEmail.subject||"")+"\n\n"+(brief.outreachEmail.body||""),"outreach")}>{copied==="outreach"?"Copied ✓":"Copy Email"}</button>
+                    <div style={{flex:1}}><div className="bb-title">Outreach Emails</div><div className="bb-sub">{emails.length > 1 ? "Two angles — pick the one that sounds like you" : "Research-grounded cold outreach — ready to send"}</div></div>
                   </div>
                   <div className="bb-body">
-                    <div style={{fontWeight:600,marginBottom:8,color:"var(--ink-0)",fontSize:13}}>Subject: {brief.outreachEmail.subject}</div>
-                    <EF value={brief.outreachEmail.body||""} onChange={v=>patchBrief(b=>{if(!b.outreachEmail)b.outreachEmail={};b.outreachEmail.body=v;},"outreachEmail")}/>
+                    {emails.map((email, ei) => (
+                      <div key={ei} style={{padding:"12px 14px",background:ei%2===0?"var(--bg-0)":"var(--surface)",borderRadius:8,marginBottom:ei<emails.length-1?10:0,border:"1px solid var(--line-0)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <div style={{fontSize:10,fontWeight:700,color:ei===0?"var(--green)":"var(--navy)",textTransform:"uppercase",letterSpacing:"0.5px"}}>{email.style || (ei===0?"Option A":"Option B")}</div>
+                          <button className="copy-btn" onClick={()=>copyText("Subject: "+(email.subject||"")+"\n\n"+(email.body||""),`outreach${ei}`)}>{copied===`outreach${ei}`?"Copied ✓":"Copy"}</button>
+                        </div>
+                        <div style={{fontWeight:600,marginBottom:6,color:"var(--ink-0)",fontSize:13}}>Subject: {email.subject}</div>
+                        <EF value={email.body||""} onChange={v=>patchBrief(b=>{if(!b.outreachEmails)b.outreachEmails=emails;b.outreachEmails[ei]={...b.outreachEmails[ei],body:v};},"outreachEmail")}/>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                ) : brief._loadingSections?.strategy ? (
+                  );
+                })() : brief._loadingSections?.strategy ? (
                 <div className="bb bb-skeleton">
-                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>✉</div><div><div className="bb-title">Outreach Email</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>✉</div><div><div className="bb-title">Outreach Emails</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
                   <div className="bb-body"><div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"60%",height:14,marginTop:6}}/></div>
                 </div>
                 ) : null}

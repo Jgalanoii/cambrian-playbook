@@ -430,6 +430,65 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                 ))}
               </div>
 
+              {/* Cost breakdown — daily spend visibility */}
+              {(()=>{
+                const logs = data.usageLogs || [];
+                const now = new Date();
+                const todayStr = now.toISOString().slice(0,10);
+                const weekAgo = new Date(now - 7*86400000).toISOString();
+                const monthAgo = new Date(now - 30*86400000).toISOString();
+                const costPerToken = (model, input, output) => {
+                  const rates = { "claude-opus-4-6": [15,75], "claude-sonnet-4-5-20250929": [3,15], "claude-sonnet-4-5": [3,15], "claude-haiku-4-5-20251001": [0.8,4] };
+                  const [iRate, oRate] = rates[model] || [1,5];
+                  return (input/1e6)*iRate + (output/1e6)*oRate;
+                };
+                const calcCost = (logs) => logs.reduce((sum, l) => sum + costPerToken(l.model, l.input_tokens||0, l.output_tokens||0) + (l.web_searches||0)*0.01, 0);
+                const todayLogs = logs.filter(l => l.created_at?.slice(0,10) === todayStr);
+                const weekLogs = logs.filter(l => l.created_at >= weekAgo);
+                const monthLogs = logs.filter(l => l.created_at >= monthAgo);
+                const todayCost = calcCost(todayLogs);
+                const weekCost = calcCost(weekLogs);
+                const monthCost = calcCost(monthLogs);
+                // Model breakdown for this week
+                const byModel = {};
+                weekLogs.forEach(l => { const m = (l.model||"unknown").split("-").slice(-2).join("-"); byModel[m] = (byModel[m]||0) + costPerToken(l.model, l.input_tokens||0, l.output_tokens||0); });
+                const modelEntries = Object.entries(byModel).sort((a,b) => b[1]-a[1]);
+                const maxModelCost = modelEntries.length ? modelEntries[0][1] : 1;
+                return (
+                <div style={{ background: "var(--surface)", border: "1px solid var(--line-0)", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>API Cost Breakdown</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 12 }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: todayCost > 10 ? "var(--red)" : todayCost > 5 ? "var(--amber)" : "var(--green)", fontFamily: "Lora,serif" }}>${todayCost.toFixed(2)}</div>
+                      <div style={{ fontSize: 10, color: "var(--ink-3)", fontWeight: 600, textTransform: "uppercase" }}>Today</div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "var(--ink-0)", fontFamily: "Lora,serif" }}>${weekCost.toFixed(2)}</div>
+                      <div style={{ fontSize: 10, color: "var(--ink-3)", fontWeight: 600, textTransform: "uppercase" }}>This Week</div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "var(--ink-0)", fontFamily: "Lora,serif" }}>${monthCost.toFixed(2)}</div>
+                      <div style={{ fontSize: 10, color: "var(--ink-3)", fontWeight: 600, textTransform: "uppercase" }}>This Month</div>
+                    </div>
+                  </div>
+                  {modelEntries.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-3)", marginBottom: 6 }}>By Model (this week)</div>
+                      {modelEntries.map(([model, cost]) => (
+                        <div key={model} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-2)", width: 60, textAlign: "right" }}>{model}</div>
+                          <div style={{ flex: 1, height: 8, background: "var(--bg-2)", borderRadius: 4, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${(cost/maxModelCost)*100}%`, background: model.includes("opus") ? "var(--tan-0)" : model.includes("sonnet") ? "var(--navy)" : "var(--green)", borderRadius: 4 }} />
+                          </div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-1)", width: 50 }}>${cost.toFixed(2)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                );
+              })()}
+
               {/* Quick insights */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                 {/* Attention items */}
