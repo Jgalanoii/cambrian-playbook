@@ -1,9 +1,8 @@
 // src/data/sampleAccounts.js
 //
-// 100 sample accounts spanning ~18 industries — enough distribution to
-// test the v106 cohort cap (top 9 + "Other"). No `acv` field: Annual
-// Contract Value is a salesperson input captured in Account Review, not
-// an attribute of the account itself.
+// 150 sample accounts spanning 35 industries — covers every vertical in
+// our knowledge layer inventory. Mix of enterprise, mid-market, and SMB
+// across public, private, PE-backed, government, and nonprofit.
 //
 // Fields:
 //   company, industry, lead_source, outcome, company_url, employees, publicPrivate
@@ -146,4 +145,90 @@ export const SAMPLE_ROWS = [
 
   // ── Aerospace & Defense (1) ─────────────────────────────────────────────
   {company:"Boeing",                    industry:"Aerospace & Defense", lead_source:"Conference", outcome:"Manufacturing quality",  company_url:"boeing.com",  employees:"~170,000", publicPrivate:"Public (NYSE: BA)"},
+
+  // ── Government / SLED (4) ──────────────────────────────────────────────
+  {company:"General Services Administration", industry:"Government", lead_source:"RFP",      outcome:"IT modernization",        company_url:"gsa.gov",             employees:"~12,000",  publicPrivate:"Government"},
+  {company:"Department of Veterans Affairs",  industry:"Government", lead_source:"RFP",      outcome:"Healthcare IT",           company_url:"va.gov",              employees:"~400,000", publicPrivate:"Government"},
+  {company:"City of Austin",                  industry:"Government", lead_source:"RFP",      outcome:"Digital services",        company_url:"austintexas.gov",     employees:"~14,000",  publicPrivate:"Government (Municipal)"},
+  {company:"State of Ohio",                   industry:"Government", lead_source:"RFP",      outcome:"Benefits modernization",  company_url:"ohio.gov",            employees:"~50,000",  publicPrivate:"Government (State)"},
+
+  // ── Cybersecurity (3) ──────────────────────────────────────────────────
+  {company:"CrowdStrike",              industry:"Cybersecurity", lead_source:"Outbound",   outcome:"Endpoint detection",       company_url:"crowdstrike.com",    employees:"~8,500",   publicPrivate:"Public (NASDAQ: CRWD)"},
+  {company:"Palo Alto Networks",       industry:"Cybersecurity", lead_source:"Partner",    outcome:"SASE adoption",            company_url:"paloaltonetworks.com", employees:"~15,000", publicPrivate:"Public (NASDAQ: PANW)"},
+  {company:"Fortinet",                 industry:"Cybersecurity", lead_source:"Conference", outcome:"SD-WAN expansion",         company_url:"fortinet.com",       employees:"~13,000",  publicPrivate:"Public (NASDAQ: FTNT)"},
+
+  // ── AI / ML (3) ────────────────────────────────────────────────────────
+  {company:"Palantir Technologies",    industry:"AI / ML", lead_source:"Outbound",   outcome:"Data platform expansion",  company_url:"palantir.com",       employees:"~3,800",   publicPrivate:"Public (NYSE: PLTR)"},
+  {company:"C3.ai",                    industry:"AI / ML", lead_source:"Conference", outcome:"Enterprise AI adoption",   company_url:"c3.ai",              employees:"~900",     publicPrivate:"Public (NYSE: AI)"},
+  {company:"DataRobot",               industry:"AI / ML", lead_source:"Referral",   outcome:"ML operationalization",    company_url:"datarobot.com",      employees:"~1,200",   publicPrivate:"Private (VC-backed)"},
+
+  // ── Cannabis (3) ───────────────────────────────────────────────────────
+  {company:"Curaleaf Holdings",        industry:"Cannabis", lead_source:"Outbound",   outcome:"Multi-state compliance",   company_url:"curaleaf.com",       employees:"~5,500",   publicPrivate:"Public (CSE: CURA)"},
+  {company:"Trulieve Cannabis",        industry:"Cannabis", lead_source:"Referral",   outcome:"Retail operations",        company_url:"trulieve.com",       employees:"~10,000",  publicPrivate:"Public (CSE: TRUL)"},
+  {company:"Dutchie",                  industry:"Cannabis", lead_source:"Partner",    outcome:"Point-of-sale modernization", company_url:"dutchie.com",     employees:"~500",     publicPrivate:"Private (VC-backed)"},
+
+  // ── Crypto / Stablecoin (3) ────────────────────────────────────────────
+  {company:"Coinbase",                 industry:"Crypto", lead_source:"Outbound",   outcome:"Compliance automation",    company_url:"coinbase.com",       employees:"~3,400",   publicPrivate:"Public (NASDAQ: COIN)"},
+  {company:"Circle",                   industry:"Crypto", lead_source:"Conference", outcome:"USDC infrastructure",      company_url:"circle.com",         employees:"~1,000",   publicPrivate:"Private (VC-backed)"},
+  {company:"Fireblocks",              industry:"Crypto", lead_source:"Partner",    outcome:"Digital asset custody",    company_url:"fireblocks.com",     employees:"~800",     publicPrivate:"Private (VC-backed)"},
+
+  // ── Gaming / Sports Betting (3) ────────────────────────────────────────
+  {company:"DraftKings",              industry:"Gaming", lead_source:"Outbound",   outcome:"Multi-state licensing",    company_url:"draftkings.com",     employees:"~5,000",   publicPrivate:"Public (NASDAQ: DKNG)"},
+  {company:"FanDuel",                 industry:"Gaming", lead_source:"Partner",    outcome:"Responsible gaming",       company_url:"fanduel.com",        employees:"~4,500",   publicPrivate:"Private (Flutter subsidiary)"},
+  {company:"Penn Entertainment",      industry:"Gaming", lead_source:"Conference", outcome:"Digital transformation",   company_url:"pennentertainment.com", employees:"~24,000", publicPrivate:"Public (NASDAQ: PENN)"},
+
+  // ── Prediction Markets (2) ─────────────────────────────────────────────
+  {company:"Kalshi",                  industry:"Prediction Markets", lead_source:"Outbound",   outcome:"Regulatory compliance",  company_url:"kalshi.com",   employees:"~100", publicPrivate:"Private (VC-backed)"},
+  {company:"Polymarket",              industry:"Prediction Markets", lead_source:"Conference", outcome:"Market integrity",       company_url:"polymarket.com", employees:"~50",  publicPrivate:"Private (VC-backed)"},
+
+  // ── QSR / Restaurants (3) ──────────────────────────────────────────────
+  {company:"McDonald's Corporation",   industry:"QSR / Restaurants", lead_source:"Outbound",   outcome:"Digital ordering",       company_url:"mcdonalds.com",      employees:"~150,000", publicPrivate:"Public (NYSE: MCD)"},
+  {company:"Chipotle Mexican Grill",   industry:"QSR / Restaurants", lead_source:"Conference", outcome:"Loyalty program",        company_url:"chipotle.com",       employees:"~115,000", publicPrivate:"Public (NYSE: CMG)"},
+  {company:"Sweetgreen",              industry:"QSR / Restaurants", lead_source:"Referral",   outcome:"Tech-enabled operations", company_url:"sweetgreen.com",     employees:"~5,000",   publicPrivate:"Public (NYSE: SG)"},
+
+  // ── BaaS / Sponsor Banking (3) ─────────────────────────────────────────
+  {company:"The Bancorp",             industry:"BaaS / Sponsor Banking", lead_source:"Outbound",   outcome:"Partner risk management",  company_url:"thebancorp.com",   employees:"~500",   publicPrivate:"Public (NASDAQ: TBBK)"},
+  {company:"Cross River Bank",        industry:"BaaS / Sponsor Banking", lead_source:"Referral",   outcome:"Fintech partnerships",     company_url:"crossriver.com",   employees:"~800",   publicPrivate:"Private"},
+  {company:"Synapse Financial",       industry:"BaaS / Sponsor Banking", lead_source:"Partner",    outcome:"Embedded banking",         company_url:"synapsefi.com",    employees:"~200",   publicPrivate:"Private (VC-backed)"},
+
+  // ── HR Tech (3) ────────────────────────────────────────────────────────
+  {company:"Workday",                 industry:"HR Tech", lead_source:"Partner",    outcome:"HCM consolidation",        company_url:"workday.com",        employees:"~18,800",  publicPrivate:"Public (NASDAQ: WDAY)"},
+  {company:"Gusto",                   industry:"HR Tech", lead_source:"Outbound",   outcome:"SMB payroll growth",       company_url:"gusto.com",          employees:"~2,500",   publicPrivate:"Private (VC-backed)"},
+  {company:"Rippling",                industry:"HR Tech", lead_source:"Conference", outcome:"Workforce platform",       company_url:"rippling.com",       employees:"~3,000",   publicPrivate:"Private (VC-backed)"},
+
+  // ── Charitable / Nonprofit (3) ─────────────────────────────────────────
+  {company:"United Way Worldwide",     industry:"Nonprofit", lead_source:"Outbound",   outcome:"Donor engagement",       company_url:"unitedway.org",      employees:"~1,200",   publicPrivate:"Nonprofit"},
+  {company:"Feeding America",          industry:"Nonprofit", lead_source:"Referral",   outcome:"Operations efficiency",  company_url:"feedingamerica.com", employees:"~500",     publicPrivate:"Nonprofit"},
+  {company:"American Red Cross",       industry:"Nonprofit", lead_source:"Conference", outcome:"Disaster response tech", company_url:"redcross.org",       employees:"~18,000",  publicPrivate:"Nonprofit"},
+
+  // ── Digital Incentives (3) ─────────────────────────────────────────────
+  {company:"Blackhawk Network",        industry:"Digital Incentives", lead_source:"Outbound",   outcome:"B2B rewards platform",   company_url:"blackhawknetwork.com", employees:"~3,500",  publicPrivate:"Private (Silver Lake)"},
+  {company:"Tango Card",              industry:"Digital Incentives", lead_source:"Partner",    outcome:"Employee recognition",   company_url:"tangocard.com",        employees:"~200",    publicPrivate:"Private"},
+  {company:"Tremendous",              industry:"Digital Incentives", lead_source:"Referral",   outcome:"Payout automation",      company_url:"tremendous.com",       employees:"~150",    publicPrivate:"Private (VC-backed)"},
+
+  // ── Medical Payments (2) ───────────────────────────────────────────────
+  {company:"NationsBenefits",          industry:"Medical Payments", lead_source:"Outbound",   outcome:"Supplemental benefits",  company_url:"nationsbenefits.com",  employees:"~2,000",  publicPrivate:"Private (PE-backed)"},
+  {company:"Soda Health",             industry:"Medical Payments", lead_source:"Referral",   outcome:"Flex card platform",     company_url:"sodahealth.com",       employees:"~300",    publicPrivate:"Private (VC-backed)"},
+
+  // ── Rewards / Incentives (2) ───────────────────────────────────────────
+  {company:"Wyndham Hotels & Resorts", industry:"Rewards / Incentives", lead_source:"Outbound",  outcome:"Loyalty modernization", company_url:"wyndhamhotels.com",   employees:"~2,000",  publicPrivate:"Public (NYSE: WH)"},
+  {company:"IHG Hotels & Resorts",     industry:"Rewards / Incentives", lead_source:"Partner",   outcome:"Points program",        company_url:"ihg.com",             employees:"~11,000", publicPrivate:"Public (NYSE: IHG)"},
+
+  // ── Investor / PE (3) ──────────────────────────────────────────────────
+  {company:"Blackstone",              industry:"Private Equity", lead_source:"Referral",   outcome:"Portfolio intelligence",  company_url:"blackstone.com",     employees:"~4,700",   publicPrivate:"Public (NYSE: BX)"},
+  {company:"KKR & Co.",               industry:"Private Equity", lead_source:"Conference", outcome:"Deal sourcing",          company_url:"kkr.com",            employees:"~2,400",   publicPrivate:"Public (NYSE: KKR)"},
+  {company:"Vista Equity Partners",   industry:"Private Equity", lead_source:"Outbound",   outcome:"Value creation",         company_url:"vistaequitypartners.com", employees:"~600", publicPrivate:"Private"},
+
+  // ── SMB / Mid-Market (3) ───────────────────────────────────────────────
+  {company:"Acme Widgets LLC",         industry:"SMB Manufacturing", lead_source:"Outbound",   outcome:"Operational efficiency",  company_url:"acmewidgets.com",  employees:"~75",     publicPrivate:"Private (Bootstrapped)"},
+  {company:"Brightpath Consulting",    industry:"SMB Professional Services", lead_source:"Referral", outcome:"Growth strategy",   company_url:"brightpathconsulting.com", employees:"~30", publicPrivate:"Private (Bootstrapped)"},
+  {company:"GreenLeaf Solar",          industry:"SMB Energy", lead_source:"Partner",    outcome:"Installation scaling",    company_url:"greenleafsolar.com", employees:"~120",    publicPrivate:"Private"},
+
+  // ── Payments (2) ───────────────────────────────────────────────────────
+  {company:"Stripe",                   industry:"Payments", lead_source:"Outbound",   outcome:"Platform payments",       company_url:"stripe.com",         employees:"~8,000",   publicPrivate:"Private (VC-backed)"},
+  {company:"Block (Square)",           industry:"Payments", lead_source:"Partner",    outcome:"SMB payments growth",     company_url:"block.xyz",          employees:"~12,000",  publicPrivate:"Public (NYSE: XYZ)"},
+
+  // ── Compliance / RegTech (2) ───────────────────────────────────────────
+  {company:"Chainalysis",             industry:"Compliance / RegTech", lead_source:"Conference", outcome:"AML compliance",    company_url:"chainalysis.com",    employees:"~900",    publicPrivate:"Private (VC-backed)"},
+  {company:"Alloy",                   industry:"Compliance / RegTech", lead_source:"Referral",   outcome:"Identity verification", company_url:"alloy.com",       employees:"~500",    publicPrivate:"Private (VC-backed)"},
 ];
