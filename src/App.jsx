@@ -5671,6 +5671,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     // Post-fetch quality filter — reject junk URLs, self-references, low relevance
     const BLOCKED_DOMAINS = ["linkedin.com","youtube.com","wikipedia.org","twitter.com","facebook.com","medium.com","reddit.com","instagram.com","tiktok.com"];
     const BLOG_PATHS = ["/blog/","/news/","/article/","/press-release/","/insights/","/resources/"];
+    // Reject search/listing/category pages — these are aggregator indexes, not specific RFPs
+    const LISTING_PATTERNS = ["/q/","/search?","/search/","/category/","/categories/","/open-bids","/solicitations?","query=","keyword=","/results?","/browse/"];
     const sellerDomain = (sellerUrl||"").replace(/^https?:\/\//,"").replace(/\/.*/,"").toLowerCase();
     const validateRfpResult = (r) => {
       const url = (r.url||"").toLowerCase();
@@ -5681,6 +5683,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       if (BLOCKED_DOMAINS.some(d => url.includes(d))) return false;
       // Reject blog/news paths (unless .gov)
       if (!url.includes(".gov") && BLOG_PATHS.some(p => url.includes(p))) return false;
+      // Reject search/listing/category pages — not specific RFPs
+      if (LISTING_PATTERNS.some(p => url.includes(p))) return false;
       // Reject self-contradiction: buyer = seller
       const buyer = (r.buyer||"").toLowerCase();
       const sellerName = (sellerICP?.sellerName||sellerUrl||"").toLowerCase().replace(/\.com|\.ai|\.io/g,"").trim();
@@ -11477,7 +11481,7 @@ Return ONLY raw JSON:
                     {(rfpData.closed.length>0 || (rfpData.loading && rfpData.open.length>0)) && (
                       <div style={{borderTop:"3px solid var(--navy)",borderRadius:8,background:"var(--surface)",padding:"14px 0 0"}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"0 14px"}}>
-                          <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Closed RFPs — Last 18 Months (Incumbent Intel)</div>
+                          <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)"}}>🔵 Competitor Wins — Who's Using What (Displacement Targets)</div>
                           {rfpData.closed.length>0 && <div style={{fontSize:11,color:"var(--ink-3)"}}>({rfpData.closed.length} awards)</div>}
                           {rfpData.loading && rfpData.closed.length===0 && (
                             <span style={{fontSize:11,color:"var(--amber)",fontStyle:"italic"}}>⏳ still loading…</span>
