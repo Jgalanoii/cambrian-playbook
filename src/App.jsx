@@ -4878,7 +4878,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
         `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n`+
       `CRITICAL: The ONLY way to compute a score is dim1 + dim2 + dim3 using the FIXED VALUES in the tables below. Vertical calibration context (percentages like "70-80%") is background knowledge only — it does NOT override the point tables. Never adjust a dimension score to match a calibration percentage.\n`+
-        `CRITICAL: You MUST return a score for EVERY company listed below. If industry says "Unknown", use your training knowledge to identify the company's real industry. Every company in the list MUST appear in your output — never skip a company.\n\n`+
+        `CRITICAL: You MUST return a score for EVERY company listed below. If industry says "Unknown", use your training knowledge to identify the company's real industry. Every company in the list MUST appear in your output — never skip a company.\n`+
+        `COMPETITOR CHECK: The seller's competitive alternatives are: [${(sellerICP?.icp?.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}]. If a prospect IS one of these competitors (or a subsidiary/brand of one), score dim1=0, dim2=0, dim3=0. They sell the same thing — they are NOT a prospect.\n\n`+
         `━━━ DIMENSION 1: PRODUCT/SERVICE FIT (45 points max) ━━━\n`+
         `THE QUESTION: "Does what the seller SELLS solve a real problem for this prospect?"\n`+
         `This is NOT just industry matching. The seller has SPECIFIC products/services. Does the prospect's industry NEED those specific things?\n\n`+
@@ -5230,6 +5231,29 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
             const sc = s.score; s.color = sc>=75?"var(--green)":sc>=55?"var(--amber)":"var(--red)"; s.bg = sc>=75?"var(--green-bg)":sc>=55?"var(--amber-bg)":"var(--red-bg)";
             s.customerSimilarity = "Known customer — already in the seller's customer base.";
             console.log(`[scoreFit] Known customer override: ${co} dim2 forced to 30, total=${s.score}`);
+          }
+        }
+      }
+
+      // ── Competitor override — if prospect IS a named competitor, score near zero ──
+      const competitorNames = (sellerICP?.icp?.competitiveAlternatives || [])
+        .map(c => (typeof c === "object" ? c.name : c) || "")
+        .filter(Boolean)
+        .map(n => n.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim());
+      if (competitorNames.length) {
+        for (const [co, s] of Object.entries(map)) {
+          const coNorm = co.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+          const isCompetitor = competitorNames.some(cn => coNorm.includes(cn) || cn.includes(coNorm));
+          if (isCompetitor) {
+            s.dim1 = 0; s.dim2 = 0; s.dim3 = 0;
+            s.score = 5;
+            s.label = "Competitor";
+            s.color = "var(--red)"; s.bg = "var(--red-bg)";
+            s.reason = `${co} is a direct competitor of ${sellerICP?.sellerName || sellerUrl}. Not a prospect — they sell the same thing you do.`;
+            s.customerSimilarity = "N/A — this is a competitor, not a prospect.";
+            s.incumbentRisk = "N/A — this is a competitor.";
+            s._isCompetitor = true;
+            console.log(`[scoreFit] Competitor override: ${co} → score=5, label=Competitor`);
           }
         }
       }
