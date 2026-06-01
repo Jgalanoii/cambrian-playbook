@@ -7068,10 +7068,11 @@ Return ONLY raw JSON:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
 
-  // Build ICP whenever sellerUrl is set but ICP not yet loaded
+  // Build ICP whenever sellerUrl is set but ICP not yet loaded,
+  // or when user navigates to step 1 with a URL but no ICP
   useEffect(()=>{
     if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl);
-  },[sellerUrl]);
+  },[sellerUrl, step]);
 
   // Pre-fetch: kick off ICP build 900ms after the user stops typing a
   // URL on the setup page — so by the time they reach the ICP step the
@@ -9662,9 +9663,10 @@ Return ONLY raw JSON:
       const url = orgCtx.seller_url.replace(/^https?:\/\//, "").replace(/\/$/, "");
       setSellerUrl(url);
       setSellerInput(url);
-      // Auto-trigger ICP build if we have the URL
+      // Auto-trigger ICP build — don't wait for user to click
       if (url && !sellerICP && !icpLoading) {
-        console.log("[auto-seller] Populating seller URL from org:", url);
+        console.log("[auto-seller] Populating seller URL from org:", url, "— triggering ICP build");
+        buildSellerICP(url);
       }
     }
   }, [orgCtx?.seller_url]);
