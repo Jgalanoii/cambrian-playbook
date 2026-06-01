@@ -10611,35 +10611,60 @@ Return ONLY raw JSON:
               <div style={{textAlign:"center",marginBottom:10}}>
                 <span style={{display:"inline-block",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
-              {/* Welcome card for authenticated users — Quick Brief is now the hero */}
+              {/* Welcome line + runs — compact, above the two cards */}
               {sbUser && (
-                <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:"var(--r-md)",padding:"20px 22px",marginBottom:20,textAlign:"left"}}>
-                  <div style={{fontSize:15,fontWeight:700,color:"var(--green)",marginBottom:4}}>
-                    Welcome back{sbUser.user_metadata?.first_name ? `, ${sbUser.user_metadata.first_name}` : ""}. Let's make someone's day.
+                <div style={{textAlign:"center",marginBottom:16}}>
+                  <div style={{fontSize:14,color:"var(--ink-1)"}}>
+                    Welcome back{sbUser.user_metadata?.first_name ? `, ${sbUser.user_metadata.first_name}` : ""}. <span style={{color:"var(--ink-3)",fontSize:12}}>{Math.max(0,((orgCtx?.run_limit||3)+(orgCtx?.rollover_runs||0))-(orgCtx?.run_count||0))} runs available</span>
                   </div>
-                  <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6,marginBottom:12}}>
-                    You have <strong>{Math.max(0,((orgCtx?.run_limit||3)+(orgCtx?.rollover_runs||0))-(orgCtx?.run_count||0))}</strong> of <strong>{(orgCtx?.run_limit||3)+(orgCtx?.rollover_runs||0)}</strong> runs available{orgCtx?.rollover_runs > 0 ? ` (${orgCtx.rollover_runs} rolled over)` : ""}.
-                    {orgCtx?.plan==="trial" && " Upgrade anytime for more."}
-                  </div>
-                  {/* Quick Brief input — always visible for authenticated users */}
-                  <div style={{marginBottom:8}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>Research any company — deep intel in under 30 seconds</div>
+                </div>
+              )}
+
+              {/* Two equal-weight options: Quick Brief + Full Session */}
+              {sbUser && (
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+                  {/* Quick Brief card */}
+                  <div style={{background:"var(--surface)",border:"2px solid var(--green)",borderRadius:14,padding:"22px",borderTop:"4px solid var(--green)"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <span style={{fontSize:22}}>🔍</span>
+                      <div>
+                        <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)"}}>Quick Brief</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)"}}>Research any company in 30 seconds</div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:12}}>
+                      Deep intel on any company — executives, strategy, sentiment, financials, and competitive positioning. No setup needed.
+                    </div>
                     <div style={{display:"flex",gap:8}}>
-                      <input type="text" placeholder="Company name or website (e.g. Acme Corp, rocketfuel.io)"
+                      <input type="text" placeholder="Company name or URL"
                         autoFocus
                         value={quickBriefInput} onChange={e=>setQuickBriefInput(e.target.value)}
                         onKeyDown={e=>{if(e.key==="Enter"&&quickBriefInput.trim()&&!disambigLoading){setSessionMode("quick");launchQuickBrief();}e.stopPropagation();}}
-                        style={{flex:1,fontSize:14,padding:"10px 14px",border:"1.5px solid var(--green)",borderRadius:8,background:"var(--surface)"}}/>
-                      <button className="btn" onClick={()=>{setSessionMode("quick");launchQuickBrief();}}
+                        style={{flex:1,fontSize:13,padding:"9px 12px",border:"1.5px solid var(--green)",borderRadius:8,background:"var(--surface)"}}/>
+                      <button onClick={()=>{setSessionMode("quick");launchQuickBrief();}}
                         disabled={!quickBriefInput.trim()||disambigLoading}
-                        style={{whiteSpace:"nowrap",padding:"10px 20px",background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:13,cursor:"pointer",opacity:quickBriefInput.trim()&&!disambigLoading?1:0.5}}>
-                        {disambigLoading ? "Verifying..." : "Build Brief →"}
+                        style={{whiteSpace:"nowrap",padding:"9px 16px",background:"var(--green)",color:"var(--surface)",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",opacity:quickBriefInput.trim()&&!disambigLoading?1:0.5}}>
+                        {disambigLoading ? "Verifying..." : "Go →"}
                       </button>
                     </div>
-                    <div style={{fontSize:10,color:"var(--ink-3)",marginTop:6}}>Uses 1 run · Paste a URL for best accuracy, or type a name and we'll verify the company</div>
                   </div>
-                  <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.6,borderTop:"1px solid var(--green)",paddingTop:8,marginTop:4,opacity:0.8}}>
-                    Want tailored solution mapping, elevator pitches, and coaching? Use <strong>Full Sales Session</strong> below — enter your website to build an ICP and import targets.
+
+                  {/* Full Sales Session card */}
+                  <div onClick={()=>{setSessionMode("full");}} style={{background:"var(--surface)",border:"2px solid var(--navy)",borderRadius:14,padding:"22px",borderTop:"4px solid var(--navy)",cursor:"pointer",transition:"box-shadow 0.2s"}}
+                    onMouseOver={e=>e.currentTarget.style.boxShadow="0 6px 24px rgba(0,0,0,0.08)"} onMouseOut={e=>e.currentTarget.style.boxShadow="none"}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <span style={{fontSize:22}}>🎯</span>
+                      <div>
+                        <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)"}}>Full Sales Session</div>
+                        <div style={{fontSize:11,color:"var(--ink-2)"}}>The complete 9-step playbook</div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:12}}>
+                      Build your ICP, score prospects, generate tailored briefs with solution mapping, conversation strategy, AI coaching, and CRM integration.
+                    </div>
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",display:"flex",alignItems:"center",gap:6}}>
+                      Start Full Session →
+                    </div>
                   </div>
                 </div>
               )}
@@ -10704,16 +10729,7 @@ Return ONLY raw JSON:
                 </div>
               )}
 
-              {/* Capability strip — shown for all users */}
-              {sbUser && (
-              <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:24,flexWrap:"wrap"}}>
-                {[["⚡","Deep brief in 30 seconds"],["🎯","Know their pain before the call"],["🔍","Live research, not stale data"],["📋","Walk in with a plan"],["🎙","AI coaching with Milton"]].map(([icon,label])=>(
-                  <div key={label} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"var(--ink-3)"}}>
-                    <span style={{fontSize:14}}>{icon}</span><span>{label}</span>
-                  </div>
-                ))}
-              </div>
-              )}
+              {/* Capability strip removed — replaced by card descriptions */}
               {/* Mode toggle: Full Session vs Quick Brief (guests get Quick Brief only) */}
               {!sbUser ? (
                 <div style={{background:"var(--navy-bg)",border:"2px solid var(--navy)",borderRadius:"var(--r-md)",padding:"16px",marginBottom:20}}>
@@ -10738,22 +10754,7 @@ Return ONLY raw JSON:
                   </div>
                   <div style={{fontSize:10,color:"var(--ink-3)",marginTop:8}}>Uses 1 of 2 guest previews · Paste a URL for best accuracy, or type a name</div>
                 </div>
-              ) : (
-                /* For authenticated users: Full Session toggle (Quick Brief is already in the welcome card above) */
-                <div onClick={()=>setSessionMode(sessionMode==="full"?"quick":"full")}
-                  style={{padding:"14px 18px",borderRadius:"var(--r-md)",cursor:"pointer",transition:"all 0.2s",marginBottom:20,
-                    border:sessionMode==="full"?"2px solid var(--green)":"2px solid var(--line-0)",
-                    background:sessionMode==="full"?"var(--green-bg)":"var(--surface)"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{fontSize:18}}>🎯</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:700,color:sessionMode==="full"?"var(--green)":"var(--ink-2)"}}>Full Sales Session</div>
-                      <div style={{fontSize:11,color:"var(--ink-2)",lineHeight:1.5}}>Enter your website to build an ICP, score targets, generate briefs with solution mapping and coaching. {sessionMode!=="full"&&"Click to expand."}</div>
-                    </div>
-                    <span style={{fontSize:12,color:"var(--ink-3)",transform:sessionMode==="full"?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>▼</span>
-                  </div>
-                </div>
-              )}
+              ) : null /* Full Session toggle replaced by card grid above */}
 
               {/* Full Session mode */}
               {sessionMode==="full"&&(
