@@ -5689,9 +5689,13 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 
 ━━━ SELLER PROFILE ━━━
 URL: ${sanitizeForPrompt(sellerUrl)}
+Seller name: ${sanitizeForPrompt(sellerICP?.sellerName || sellerUrl)}
+What they sell: ${sanitizeForPrompt(sellerICP?.sellerDescription || category || "Unknown — use the URL to research")}
 Market category: ${sanitizeForPrompt(category)}
-What makes them different: ${differ.slice(0,2).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
+${(sellerICP?.icp?.productCatalog||[]).length ? `Products/Services (search for RFPs matching THESE specific offerings):\n${sellerICP.icp.productCatalog.slice(0,4).map(p=>`  • ${sanitizeForPrompt(p.name)}: ${sanitizeForPrompt(p.description||"").slice(0,100)}`).join("\n")}\n` : ""}What makes them different: ${differ.slice(0,2).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
 They commonly displace: ${competitors.slice(0,2).map(c=>sanitizeForPrompt(c)).join(" · ") || "—"}
+
+CRITICAL: Search for RFPs that match what THIS seller (${sanitizeForPrompt(sellerICP?.sellerName || sellerUrl)}) actually sells. Do NOT search for generic industry RFPs. If the seller sells employee rewards, search for "employee rewards" and "recognition program" RFPs — NOT "CRM" or unrelated categories.
 
 ━━━ THEIR IDEAL BUYER (this is who's posting relevant RFPs) ━━━
 Industries:       ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
@@ -5840,9 +5844,10 @@ ${KL_RFP_SIGNAL_SCORING ? `\n━━━ SIGNAL STRENGTH SCORING ━━━\n${type
 ${KL_PRE_RFP_INTENT_KEYWORDS?.length ? `\n━━━ PRE-RFP INTENT KEYWORDS (search for these) ━━━\n${KL_PRE_RFP_INTENT_KEYWORDS.slice(0,20).join(", ")}\n` : ""}
 ━━━ SELLER PROFILE ━━━
 URL: ${sanitizeForPrompt(sellerUrl)}
-Market category: ${sanitizeForPrompt(category)}
+Seller name: ${sanitizeForPrompt(sellerICP?.sellerName || sellerUrl)}
 What they sell: ${sanitizeForPrompt(sellerICP?.sellerDescription || "")}
-Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+Market category: ${sanitizeForPrompt(category)}
+${(sellerICP?.icp?.productCatalog||[]).length ? `Products/Services:\n${sellerICP.icp.productCatalog.slice(0,4).map(p=>`  • ${sanitizeForPrompt(p.name)}: ${sanitizeForPrompt(p.description||"").slice(0,80)}`).join("\n")}\n` : ""}Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
 Key differentiators: ${differ.slice(0,2).map(d=>sanitizeForPrompt(d)).join(" · ") || "—"}
 They commonly displace: ${competitors.slice(0,2).map(c=>sanitizeForPrompt(c)).join(" · ") || "—"}
 Buyer personas: ${buyers.slice(0,3).join(", ") || "—"}
@@ -5900,8 +5905,10 @@ Return ONLY raw JSON:
     // Build a dedicated government/SLED open RFP prompt — separate call to ensure SLED coverage
     const buildGovOpenPrompt = () => `You are a government procurement analyst. Find ACTIVE solicitations (RFPs, RFQs, RFIs, sources sought) from government and public-sector entities that this seller could respond to. Focus ONLY on government/SLED — no commercial.
 
-Seller: ${sanitizeForPrompt(sellerUrl)} — ${sanitizeForPrompt(category)}
-Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+Seller: ${sanitizeForPrompt(sellerICP?.sellerName || sellerUrl)} — ${sanitizeForPrompt(category)}
+What they sell: ${sanitizeForPrompt(sellerICP?.sellerDescription || category || "")}
+${(sellerICP?.icp?.productCatalog||[]).length ? `Products/Services (search for government RFPs matching THESE):\n${sellerICP.icp.productCatalog.slice(0,3).map(p=>`  • ${sanitizeForPrompt(p.name)}: ${sanitizeForPrompt(p.description||"").slice(0,80)}`).join("\n")}\n` : ""}Industries: ${industries.map(i=>sanitizeForPrompt(i)).join(", ") || "—"}
+CRITICAL: Search for RFPs matching the seller's ACTUAL products — "${sanitizeForPrompt(sellerICP?.sellerDescription || category)}". Do NOT search for unrelated categories.
 ${naicsCodes.length ? `NAICS: ${naicsCodes.join(", ")}` : ""}
 ${KL_RFP_SEARCH_GUIDANCE ? `\n${KL_RFP_SEARCH_GUIDANCE}\n` : ""}
 Use ALL 4 searches on government sources:
