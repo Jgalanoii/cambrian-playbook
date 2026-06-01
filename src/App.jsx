@@ -4272,7 +4272,7 @@ export default function App(){
   const[activeGuide,setActiveGuide]=useState("user");
   const[resourceTab,setResourceTab]=useState("uploads"); // uploads | outputs | tools
   const[stageKey,setStageKey]=useState(0); // Phase 3c stage transition key
-  const[collapsedBB,setCollapsedBB]=useState(new Set()); // Phase 2b: collapsed brief sections. Summary now starts expanded at top of brief.
+  const[collapsedBB,setCollapsedBB]=useState(new Set(["icpPersonas","icpBuyingInsight","icpCustomers"])); // ICP detail sections start collapsed; brief sections start expanded
   const toggleBB = (key) => setCollapsedBB(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
   // Helpers for collapsible bb blocks. bbHdr() returns onClick + chevron props;
   // bbWrap() returns the wrapper className for the body.
@@ -11832,15 +11832,9 @@ Return ONLY raw JSON:
                       <div className="field-label" style={{marginBottom:4}}>Seller Description</div>
                       <EF value={sellerICP.sellerDescription||""} onChange={v=>setSellerICP(p=>({...p,sellerDescription:v}))} placeholder="What this seller does and their core value prop"/>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                      <div>
-                        <div className="field-label" style={{marginBottom:4}}>Market Category</div>
-                        <EF value={sellerICP.marketCategory||""} onChange={v=>setSellerICP(p=>({...p,marketCategory:v}))} placeholder="e.g. Employee Rewards Platform" single/>
-                      </div>
-                      <div>
-                        <div className="field-label" style={{marginBottom:4}}>Adoption Profile<InfoTip text="Where your typical buyer sits on the technology adoption curve: Innovator (risk-seeking, tries unproven tech), Early Adopter (visionary, wants competitive edge), Early Majority (pragmatic, needs proof + references), Late Majority (conservative, buys only when standard). This shapes how the brief frames urgency and proof points."/></div>
-                        <EF value={sellerICP.icp.adoptionProfile||""} onChange={v=>setSellerICP(p=>({...p,icp:{...p.icp,adoptionProfile:v}}))} placeholder="e.g. Early Majority" single/>
-                      </div>
+                    <div>
+                      <div className="field-label" style={{marginBottom:4}}>Market Category</div>
+                      <EF value={sellerICP.marketCategory||""} onChange={v=>setSellerICP(p=>({...p,marketCategory:v}))} placeholder="e.g. Employee Rewards Platform" single/>
                     </div>
                     <div>
                       <div className="field-label" style={{marginBottom:4}}>Why We Win — Unique Differentiators</div>
