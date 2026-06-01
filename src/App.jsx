@@ -12009,12 +12009,13 @@ Return ONLY raw JSON:
 
                 {/* Buyer Personas — collapsible */}
                 <div className="bb">
-                  <div className="bb-hdr" onClick={()=>toggleBB("icpPersonas")} style={{cursor:"pointer"}}>
+                  <div className="bb-hdr" onClick={()=>toggleBB("icpPersonas")} style={{cursor:"pointer",background:bbIsOpen("icpPersonas")?"var(--bg-0)":"var(--bg-1)",borderLeft:bbIsOpen("icpPersonas")?"none":"3px solid var(--green)"}}>
                     <div className="bb-icon">👤</div>
                     <div style={{flex:1}}>
                       <div className="bb-title">The People You're Selling To</div>
                       <div className="bb-sub">{(sellerICP.icp.buyerPersonas||[]).filter(Boolean).map(p=>typeof p==="object"?p.title:p).join(" · ") || "Economic buyer · Champion · Technical evaluator"}</div>
                     </div>
+                    {!bbIsOpen("icpPersonas") && <span style={{fontSize:10,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",borderRadius:10,padding:"2px 8px",whiteSpace:"nowrap"}}>{(sellerICP.icp.buyerPersonas||[]).filter(Boolean).length} personas</span>}
                     {bbChevron("icpPersonas")}
                   </div>
                   <div className={`bb-body-wrap ${bbIsOpen("icpPersonas")?"":"collapsed"}`}><div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -12050,12 +12051,13 @@ Return ONLY raw JSON:
 
                 {/* 5 Rings of Buying Insight — collapsible */}
                 <div className="bb">
-                  <div className="bb-hdr" onClick={()=>toggleBB("icpBuyingInsight")} style={{cursor:"pointer"}}>
+                  <div className="bb-hdr" onClick={()=>toggleBB("icpBuyingInsight")} style={{cursor:"pointer",background:bbIsOpen("icpBuyingInsight")?"var(--bg-0)":"var(--bg-1)",borderLeft:bbIsOpen("icpBuyingInsight")?"none":"3px solid var(--amber)"}}>
                     <div className="bb-icon">💡</div>
                     <div style={{flex:1}}>
                       <div className="bb-title">Why They Buy (and Why They Don't)</div>
                       <div className="bb-sub">{sellerICP.icp.priorityInitiative ? sellerICP.icp.priorityInitiative.slice(0,80)+"..." : "Priority triggers, success factors, barriers, decision criteria"}</div>
                     </div>
+                    {!bbIsOpen("icpBuyingInsight") && <span style={{fontSize:10,fontWeight:700,background:"var(--amber-bg)",color:"var(--amber)",borderRadius:10,padding:"2px 8px",whiteSpace:"nowrap"}}>5 insights</span>}
                     {bbChevron("icpBuyingInsight")}
                   </div>
                   <div className={`bb-body-wrap ${bbIsOpen("icpBuyingInsight")?"":"collapsed"}`}><div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -12077,12 +12079,13 @@ Return ONLY raw JSON:
 
                 {/* Customer Jobs + Pains + Gains — collapsible */}
                 <div className="bb">
-                  <div className="bb-hdr" onClick={()=>toggleBB("icpCustomers")} style={{cursor:"pointer"}}>
+                  <div className="bb-hdr" onClick={()=>toggleBB("icpCustomers")} style={{cursor:"pointer",background:bbIsOpen("icpCustomers")?"var(--bg-0)":"var(--bg-1)",borderLeft:bbIsOpen("icpCustomers")?"none":"3px solid var(--navy)"}}>
                     <div className="bb-icon">🎯</div>
                     <div style={{flex:1}}>
                       <div className="bb-title">Who's Already Buying</div>
                       <div className="bb-sub">{(sellerICP.icp.customerExamples||[]).filter(Boolean).slice(0,4).join(", ") || "Named customers, pains, gains"}</div>
                     </div>
+                    {!bbIsOpen("icpCustomers") && (()=>{const count=(sellerICP.icp.customerExamples||[]).filter(Boolean).length;return count>0?<span style={{fontSize:10,fontWeight:700,background:"var(--navy-bg)",color:"var(--navy)",borderRadius:10,padding:"2px 8px",whiteSpace:"nowrap"}}>{count} customers</span>:null;})()}
                     {bbChevron("icpCustomers")}
                   </div>
                   <div className={`bb-body-wrap ${bbIsOpen("icpCustomers")?"":"collapsed"}`}><div className="bb-body" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
