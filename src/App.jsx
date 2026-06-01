@@ -6316,26 +6316,53 @@ Return ONLY raw JSON:
       `\n\nIMPORTANT: linesOfBusiness should have 1-4 entries based on how many distinct buyer profiles the seller serves. A company selling one product to one type of buyer has 1 LOB. A company like Blackhawk Network has 3+ (B2B incentives, B2C gift cards, payments infrastructure). namedCustomerProfiles should have 3-8 entries — one per named customer found in the research, with their industry and use case mapped. If research found no customers, return empty arrays. Leave relevantEvents empty — populated by a separate call.`;
 
     try{
-      // Single-pass ICP — Opus streaming with web search (research + build in one call)
-      // Hard timeout at 90s — if Opus is slow, fail gracefully instead of hanging
+      // Single-pass ICP — Opus streaming with web search, Sonnet fallback on timeout
       setIcpStatus("Researching your company...");
-      const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("ICP build timed out after 90 seconds. Click Regenerate to try again.")), 90000));
-      const icpCall = streamAIWithSearch(
-        icpPrompt + '\n\nAfter researching, return ONLY raw JSON starting with {. No prose, no markdown, no explanation.',
-        (partial) => {
-          // Progressive status updates as JSON fields stream in
-          if (partial.length < 50) setIcpStatus("Researching your company...");
-          else if (partial.length > 100 && partial.includes('"sellerName"')) setIcpStatus("Found your company...");
-          if (partial.includes('"industries"')) setIcpStatus("Mapping target industries...");
-          if (partial.includes('"buyerPersonas"')) setIcpStatus("Profiling buyer personas...");
-          if (partial.includes('"competitiveAlternatives"')) setIcpStatus("Analyzing competitive landscape...");
-          if (partial.includes('"linesOfBusiness"')) setIcpStatus("Mapping lines of business...");
-          if (partial.includes('"namedCustomerProfiles"')) setIcpStatus("Building customer profiles...");
-          if (partial.includes('"winPatterns"')) setIcpStatus("Identifying win patterns...");
-        },
-        3000, { maxSearches: 1, anchorKey: "sellerName", model: OPUS }
-      );
-      const raw = await Promise.race([icpCall, icpTimeout]);
+
+      // Progressive rendering callback — render ICP fields as they stream in
+      const onIcpPartial = (partial) => {
+        // Status text updates
+        if (partial.length < 50) setIcpStatus("Researching your company...");
+        else if (partial.length > 100 && partial.includes('"sellerName"')) setIcpStatus("Found your company...");
+        if (partial.includes('"industries"')) setIcpStatus("Mapping target industries...");
+        if (partial.includes('"buyerPersonas"')) setIcpStatus("Profiling buyer personas...");
+        if (partial.includes('"competitiveAlternatives"')) setIcpStatus("Analyzing competitive landscape...");
+        if (partial.includes('"linesOfBusiness"')) setIcpStatus("Mapping lines of business...");
+        if (partial.includes('"namedCustomerProfiles"')) setIcpStatus("Building customer profiles...");
+        if (partial.includes('"winPatterns"')) setIcpStatus("Identifying win patterns...");
+
+        // Progressive data rendering — parse partial JSON and show what we have
+        try {
+          const last = partial.lastIndexOf('}');
+          if (last > 0) {
+            const candidate = partial.slice(0, last + 1);
+            const parsed = JSON.parse(candidate);
+            if (parsed.sellerName || parsed.icp?.industries) {
+              setSellerICP(prev => {
+                const merged = { ...(prev || {}), ...parsed, _loading: true };
+                if (parsed.icp) merged.icp = { ...(prev?.icp || {}), ...parsed.icp };
+                return merged;
+              });
+            }
+          }
+        } catch { /* partial JSON not parseable yet — wait for more */ }
+      };
+
+      const icpFullPrompt = icpPrompt + '\n\nAfter researching, return ONLY raw JSON starting with {. No prose, no markdown, no explanation.';
+
+      // Opus attempt with 60s timeout — if it fails, Sonnet fallback
+      const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 60000));
+      let raw;
+      try {
+        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 3000, { maxSearches: 1, anchorKey: "sellerName", model: OPUS });
+        raw = await Promise.race([icpCall, icpTimeout]);
+      } catch (e) {
+        if (e.message === "timeout" || e.message?.includes("overloaded")) {
+          console.warn("[ICP] Opus timed out/overloaded — falling back to Sonnet");
+          setIcpStatus("Retrying with faster model...");
+          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 3000, { maxSearches: 1, anchorKey: "sellerName", model: SONNET });
+        } else throw e;
+      }
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
         console.warn("ICP phase 2 error:", err);
@@ -10600,20 +10627,44 @@ Return ONLY raw JSON:
               <>
               <div className="field-row">
                 <div className="field-label">Your Organization's Website <span className="req">*</span></div>
-                <div className="setup-url-bar" style={{borderColor: sellerICP && sellerInput.trim() ? "var(--green)" : undefined, transition:"border-color 0.2s"}}>
-                  <div className="setup-url-label" style={{color: sellerICP && sellerInput.trim() ? "var(--green)" : undefined}}>
-                    {sellerICP && sellerInput.trim() ? "✓" : "Seller URL"}
+                {(()=>{
+                  // Green checkmark ONLY when ICP is loaded AND matches the current input
+                  const inputNorm = sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"").toLowerCase();
+                  const sellerNorm = (sellerUrl||"").toLowerCase();
+                  const icpVerified = sellerICP && !sellerICP._error && !sellerICP._loading && inputNorm && inputNorm === sellerNorm;
+                  const isLoading = icpLoading && inputNorm;
+                  return (
+                <div className="setup-url-bar" style={{borderColor: icpVerified ? "var(--green)" : isLoading ? "var(--amber)" : undefined, transition:"border-color 0.2s"}}>
+                  <div className="setup-url-label" style={{color: icpVerified ? "var(--green)" : isLoading ? "var(--amber)" : undefined}}>
+                    {icpVerified ? "✓" : isLoading ? "⏳" : "Seller URL"}
                   </div>
                   <input className="setup-url-input" type="text" placeholder="e.g. yourcompany.com"
                     value={sellerInput} onChange={e=>{setSellerInput(e.target.value);setUrlScanStatus("");setUrlScanConfirmed(false);}}
-                    onKeyDown={e=>{if(e.key==="Enter"&&sellerInput.trim()&&!sellerDocs.length){setSellerUrl(sellerInput.trim());setStep(1);}}}
+                    onKeyDown={e=>{if(e.key==="Enter"&&sellerInput.trim()&&!sellerDocs.length){
+                      const norm=sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+                      setSellerUrl(norm);
+                      if(!sellerICP||norm!==sellerUrl) buildSellerICP(norm);
+                      setStep(1);
+                    }}}
                     onBlur={()=>{
-                    if(sellerInput.trim()&&!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(sellerInput.trim());
-                    if(sellerInput.trim()&&!sellerICP&&!icpLoading) buildSellerICP(sellerInput.trim());
-                  }}
-                  style={{color: sellerICP && sellerInput.trim() ? "var(--green)" : undefined, fontWeight: sellerICP && sellerInput.trim() ? 600 : undefined}}
+                      const input = sellerInput.trim();
+                      if(!input) return;
+                      const normalized = input.replace(/^https?:\/\//,"").replace(/\/$/,"");
+                      if(!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(input);
+                      // If URL changed from what we have, rebuild ICP
+                      if(normalized !== sellerUrl) {
+                        setSellerUrl(normalized);
+                        setSellerICP(null);
+                        buildSellerICP(normalized);
+                      } else if(!sellerICP&&!icpLoading) {
+                        buildSellerICP(normalized);
+                      }
+                    }}
+                  style={{color: icpVerified ? "var(--green)" : undefined, fontWeight: icpVerified ? 600 : undefined}}
                 />
                 </div>
+                  );
+                })()}
 
                 {/* Seller Stage */}
                 <div style={{marginTop:12}}>
