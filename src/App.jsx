@@ -4157,7 +4157,7 @@ export default function App(){
   const exportLocked = !sbUser || orgCtx?.plan === "trial"; // guests + trial users can't export
 
   // Fit scoring weights (user-adjustable, default 40/30/30)
-  const[fitWeights,setFitWeights]=useState({dim1:40,dim2:30,dim3:30});
+  const[fitWeights,setFitWeights]=useState({dim1:45,dim2:30,dim3:25});
   // Per-company intel adjustments: {companyName: {modifier: +/-N, reason: "..."}}
   const[intelAdjustments,setIntelAdjustments]=useState({});
   const[intelModalTarget,setIntelModalTarget]=useState(null); // company name for open modal
@@ -4879,44 +4879,53 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n`+
       `CRITICAL: The ONLY way to compute a score is dim1 + dim2 + dim3 using the FIXED VALUES in the tables below. Vertical calibration context (percentages like "70-80%") is background knowledge only — it does NOT override the point tables. Never adjust a dimension score to match a calibration percentage.\n`+
         `CRITICAL: You MUST return a score for EVERY company listed below. If industry says "Unknown", use your training knowledge to identify the company's real industry. Every company in the list MUST appear in your output — never skip a company.\n\n`+
-        `━━━ DIMENSION 1: ICP ALIGNMENT (40 points max) ━━━\n`+
-        `Pick dim1 using this 3-step lookup. Do NOT do arithmetic — just pick the value from each row.\n\n`+
-        `STEP A — INDUSTRY: Seller's target industries: [${(sellerICP?.icp?.industries||[]).join(", ")}]\n`+
-        `  Pick ONE (IN PRIORITY ORDER — stop at the FIRST that matches):\n`+
-        `  32 = target's industry IS one of the seller's target industries, or a direct sub-segment (e.g. "Fintech" matches "Finance", "Banking" matches "Financial Services"). THIS ALWAYS WINS — even if the industry also appears in the high-friction list below.\n`+
-        `  26 = target is in a DIFFERENT industry but shares the same buyer persona or problem domain\n`+
-        `  20 = no meaningful industry connection\n`+
-        `  10 = HIGH-FRICTION INDUSTRY AND target is NOT in the seller's target industries. High-friction industries: (${(KL_FIT_RULES.highFriction?.industries||[]).map(i=>i.name).join(", ")}). ONLY apply 10 if the target industry has NO match to any seller target industry.\n`+
-        `  RULE: sub-sectors always match their parent. Fintech=Finance=Banking=Financial Services. HealthIT=Healthcare. AdTech=Media. BaaS=Banking=Financial Services.\n\n`+
-        `STEP B — SIZE: Seller's target: ${sellerICP?.icp?.companySize || "any"} | Brackets: 1-49 | 50-499 | 500-4,999 | 5,000-49,999 | 50,000+\n`+
-        `  Add to your Step A value:\n`+
-        `  +5 = target is in the SAME bracket as seller's ICP\n`+
-        `  +2 = target is ONE bracket away (adjacent)\n`+
-        `  +0 = target is 2+ brackets away\n\n`+
+        `━━━ DIMENSION 1: PRODUCT/SERVICE FIT (45 points max) ━━━\n`+
+        `THE QUESTION: "Does what the seller SELLS solve a real problem for this prospect?"\n`+
+        `This is NOT just industry matching. The seller has SPECIFIC products/services. Does the prospect's industry NEED those specific things?\n\n`+
+        // Inject productCatalog if available
+        ((sellerICP?.icp?.productCatalog?.length)
+          ? `SELLER'S ACTUAL PRODUCTS/SERVICES (match these to prospect needs):\n${sellerICP.icp.productCatalog.map(p=>`  • ${p.name}: ${p.description} → for ${(p.industries||[]).join(", ")}`).join("\n")}\n\n`
+          : `Seller's target industries: [${(sellerICP?.icp?.industries||[]).join(", ")}]\nSeller's market category: ${sellerICP?.marketCategory||"unknown"}\n\n`) +
+        `STEP A — PRODUCT-INDUSTRY FIT (core of the score):\n`+
+        `  Pick ONE:\n`+
+        `  40 = Seller's product/service DIRECTLY addresses a stated need in this prospect's industry. The prospect's industry is in the seller's target list AND the seller has products that map to real use cases in this vertical. (Sysco→restaurant, Savvi AI→bank, CrowdStrike→any company with IT infrastructure)\n`+
+        `  32 = Prospect's industry matches seller's targets, but the product-to-need mapping is indirect or requires explanation. The seller COULD serve them but it's not the obvious fit.\n`+
+        `  22 = Adjacent industry — different vertical but same buyer persona or problem domain. The seller's product COULD work here but it's not the core market.\n`+
+        `  12 = No meaningful product-industry connection. The seller's products don't solve problems in this prospect's world.\n\n`+
+        `STEP B — SIZE (tiebreaker only — size is NOT a gate):\n`+
+        `  Seller's target: ${sellerICP?.icp?.companySize || "any"} | Brackets: 1-49 | 50-499 | 500-4,999 | 5,000-49,999 | 50,000+\n`+
+        `  +3 = same bracket as seller's ICP target\n`+
+        `  +2 = one bracket away\n`+
+        `  +0 = two or more brackets away\n`+
+        `  NOTE: Large organizations buy in silos. A small seller CAN sell to a Fortune 100 if the product fit is strong. Size is a tiebreaker, not a disqualifier.\n\n`+
         `STEP C — OWNERSHIP:\n`+
-        `  Add to your Step A+B value:\n`+
-        `  +3 = VC-backed or PE-backed\n`+
-        `  +1 = private\n`+
-        `  +0 = public\n\n`+
-        `dim1 = Step A + Step B + Step C (clamp to 0-40)\n`+
-        `IMPORTANT: Step A dominates. Most dim1 scores should be one of: 35-40 (industry match + size match), 28-33 (industry match + size mismatch), 23-27 (adjacent industry), or 20-22 (no match).\n\n`+
-        `━━━ DIMENSION 2: CUSTOMER SIMILARITY (30 points max) ━━━\n`+
+        `  +2 = VC-backed or PE-backed (signals investment mandate + budget)\n`+
+        `  +0 = all others\n\n`+
+        `dim1 = Step A + Step B + Step C (clamp to 0-45)\n\n`+
+        `━━━ DIMENSION 2: CUSTOMER LOOKALIKE (30 points max) ━━━\n`+
+        `THE QUESTION: "Does this prospect look like companies the seller has already WON?"\n`+
+        // Inject verifiedCustomers if available
+        ((sellerICP?.icp?.verifiedCustomers?.length)
+          ? `VERIFIED CUSTOMER WINS (from case studies, press releases, partner pages):\n${sellerICP.icp.verifiedCustomers.map(c=>`  • ${c.name} (${c.industry}) — ${c.useCase} [${c.source}]`).join("\n")}\n\n`
+          : "") +
         (customerList.length
           ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
             `Score using EXACTLY these fixed values (pick the HIGHEST that applies):\n`+
-            `  30 = target IS one of the seller's named customers (from customerExamples or namedCustomerProfiles). The maximum score — they already buy from the seller. CRITICAL: Use FUZZY matching — "Wyndham Hotels" matches "Wyndham", "JP Morgan" matches "JPMorgan Chase". If ANY part of the company name matches a customer name, score 30.\n`+
-            `  27 = same industry AND similar size (within one bracket) as a named customer\n`+
-            `  17 = same industry, different size (2+ brackets apart)\n`+
-            `  10 = different industry but similar buyer persona or use case\n`+
-            `   3 = no meaningful similarity to any named customer\n`+
-            `In "customerSimilarity": name the most similar existing customer and WHY (1 sentence). If no close match, say "No close analogue in current customer base."\n\n`
+            `  30 = target IS one of the seller's named customers (fuzzy match: "Wyndham Hotels" matches "Wyndham"). Maximum score.\n`+
+            `  27 = target matches the PROFILE of a verified customer: same industry, same use case, similar buyer persona. NAME the specific customer they're most similar to.\n`+
+            `  18 = same industry as a named customer but different use case or buyer persona. Adjacency, not a direct analogue.\n`+
+            `  10 = different industry but the seller's value proposition could transfer. Weak signal.\n`+
+            `   3 = no meaningful similarity. The seller has never won anything like this prospect.\n`+
+            `In "customerSimilarity": name the MOST similar existing customer and explain the parallel. If no match: "No close analogue in current customer base."\n\n`
           : `No named customers available — score this dimension at 15 (fixed neutral) for ALL targets.\n\n`)+
-        `━━━ DIMENSION 3: COMPETITIVE LANDSCAPE (30 points max) ━━━\n`+
-        `Score using EXACTLY these fixed values based on VERIFIABLE knowledge only:\n`+
-        `  26 = target is a KNOWN CUSTOMER of a named competitor (from the competitor customer list below) — this is the highest-confidence signal. They have budget, use case, and switching potential.\n`+
-        `  26 = you can name the SPECIFIC competitor product the target uses AND that competitor is in the seller's competitive alternatives list\n`+
-        `  20 = DEFAULT — use this for ALL other cases, including: no known incumbent, uncertain, probable but unverified\n`+
-        `  10 = target has a PUBLICLY DOCUMENTED enterprise-wide deployment of a deep platform incumbent with multi-year contract — only score 10 if you can cite the specific deployment\n`+
+        `━━━ DIMENSION 3: COMPETITIVE DISPLACEMENT OPPORTUNITY (25 points max) ━━━\n`+
+        `THE QUESTION: "Is there verified evidence this prospect already buys what the seller offers — from a competitor?"\n`+
+        `A competitor's customer is the HIGHEST-VALUE target: they have budget, use case, and a procurement path. The seller's job is displacement, not education.\n`+
+        `Score using EXACTLY these fixed values:\n`+
+        `  25 = VERIFIED competitor customer — CITE the evidence. "Wendy's uses US Foods (source: US Foods 10-K)" or "Prospect listed on competitor's customer page." This is gold.\n`+
+        `  18 = strong indirect signal — prospect is in an industry where the seller's competitors dominate, but no SPECIFIC verified relationship.\n`+
+        `  12 = DEFAULT — no verified competitive intelligence. Unknown incumbent. This is neutral, not negative.\n`+
+        `   5 = VERIFIED deep platform lock-in with multi-year contract. Enterprise-wide deployment documented publicly. Switching cost is very high.\n`+
         // Inject competitor customer lists with evidence for automatic 26 scoring
         ((() => {
           const comps = (sellerICP?.icp?.competitiveAlternatives||[]).filter(c => typeof c === "object" && c.theirCustomers?.length);
@@ -4932,6 +4941,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `CONSISTENCY RULE: Score 26 ONLY if you can name "Company X uses [specific product from competitive list above]." If you cannot complete that sentence with certainty, score 20. This is the #1 rule for reducing score variance.\n`+
         `In "incumbentRisk": name the incumbent vendor ONLY if you scored 26 or 10, otherwise say "No verified incumbent in this category."\n\n`+
         `━━━ TOTAL SCORE = dim1 + dim2 + dim3 (max 100) ━━━\n`+
+        `dim1 max: 45, dim2 max: 30, dim3 max: 25. Total max: 100.\n`+
         `Band mapping — score MUST match label:\n`+
         `  75-100 → "Strong Fit"\n`+
         `  55-74  → "Potential Fit"\n`+
@@ -5139,9 +5149,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       const memberUpdates = {};
       // Snap a dimension score to the nearest allowed fixed value.
       // This prevents the model from interpolating between fixed points.
-      const DIM1_VALID = [10, 12, 13, 15, 20, 22, 23, 25, 26, 28, 29, 31, 32, 34, 35, 37, 38, 40]; // stepA(10/20/26/32) + stepB(0/2/5) + stepC(0/1/3)
-      const DIM2_VALID = [3, 10, 15, 17, 27, 30]; // fixed lookup values (30 = known customer)
-      const DIM3_VALID = [10, 20, 26]; // fixed lookup values
+      const DIM1_VALID = [12, 14, 22, 24, 25, 27, 32, 34, 35, 37, 40, 42, 43, 45]; // stepA(12/22/32/40) + stepB(0/2/3) + stepC(0/2)
+      const DIM2_VALID = [3, 10, 15, 18, 27, 30]; // fixed lookup values (30 = known customer)
+      const DIM3_VALID = [5, 12, 18, 25]; // fixed lookup values (25 = verified competitor customer)
       const snap = (val, allowed) => allowed.reduce((best, v) => Math.abs(v - val) < Math.abs(best - val) ? v : best, allowed[0]);
 
       // Detect known customers — client-side override for dim2
@@ -5159,9 +5169,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       result.scores.forEach(s => {
         // Compute total from per-dimension scores with user-adjustable weights
         // Snap to nearest fixed value to prevent interpolation variance
-        const rawD1 = snap(Math.max(0, Math.min(40, Number(s.dim1) || 0)), DIM1_VALID);
+        const rawD1 = snap(Math.max(0, Math.min(45, Number(s.dim1) || 0)), DIM1_VALID);
         let rawD2 = snap(Math.max(0, Math.min(30, Number(s.dim2) || 0)), DIM2_VALID);
-        const rawD3 = snap(Math.max(0, Math.min(30, Number(s.dim3) || 0)), DIM3_VALID);
+        const rawD3 = snap(Math.max(0, Math.min(25, Number(s.dim3) || 0)), DIM3_VALID);
         // Override dim2 for known customers
         if (isKnownCustomer(s.company)) {
           rawD2 = 30;
@@ -5169,9 +5179,10 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           s._isKnownCustomer = true;
         }
         // Apply weights: normalize raw scores to 0-1, then scale by weight
-        const d1 = (rawD1 / 40) * fitWeights.dim1;
+        // Dim1 max=45 (product fit), Dim2 max=30 (customer lookalike), Dim3 max=25 (competitive)
+        const d1 = (rawD1 / 45) * fitWeights.dim1;
         const d2 = (rawD2 / 30) * fitWeights.dim2;
-        const d3 = (rawD3 / 30) * fitWeights.dim3;
+        const d3 = (rawD3 / 25) * fitWeights.dim3;
         const baseScore = Math.round(d1 + d2 + d3);
         const computedScore = Math.max(0, Math.min(100, baseScore));
         // Fallback: if model returned old-style "score" field, use it
@@ -6247,9 +6258,16 @@ Return ONLY raw JSON:
     // Now one streaming Opus call with web search (~20-30s total).
     const icpPrompt =
       `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n`+
-      `FIRST: Use web_search to research "${url}" — find what they sell, who they sell to, named customers, competitors, and industry positioning. Try these queries:\n`+
-      `1. "${url}" products OR solutions\n`+
-      `2. "${url}" customers OR case studies OR "powered by"\n`+
+      `FIRST: Use ALL your web searches to DEEPLY research this seller. The quality of every downstream output depends on how well you understand their products, customers, and market position.\n\n`+
+      `SEARCH STRATEGY (use ALL 3 searches — each serves a different purpose):\n`+
+      `1. site:${url} products OR solutions OR services OR platform OR "what we do" OR pricing\n`+
+      `   → Find their SPECIFIC products/services from their OWN website. Not training knowledge — their actual product pages.\n`+
+      `2. site:${url} "case study" OR "customer story" OR "white paper" OR "success story" OR "powered by" OR "trusted by"\n`+
+      `   → Find NAMED CUSTOMERS with verified use cases. Case studies are the gold standard for customer intelligence.\n`+
+      `3. "${url.split('.')[0]}" customers OR partners OR "selected by" OR "works with" press release OR announcement\n`+
+      `   → Find press releases, LinkedIn posts, and news citing customer wins and partnerships.\n\n`+
+      `PRODUCT RESEARCH IS CRITICAL: The fit score for every prospect depends on whether the seller's SPECIFIC products solve SPECIFIC problems. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable. Read their product pages carefully.\n\n`+
+      `CUSTOMER RESEARCH IS CRITICAL: Named customers from case studies and press releases are HIGH-CONFIDENCE data. These become the anchor for scoring — "does this prospect look like companies we've already won?" A seller with 3 verified customer wins produces better scores than one with 20 guesses.\n\n`+
       `Then use your research to build the ICP below. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n\n`+
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
       getVerticalInjection({ marketCategory: sellerICP?.marketCategory || "", sellerDescription: url }) +
@@ -6313,8 +6331,19 @@ Return ONLY raw JSON:
         `"companySizeSweet":"The size range where they close most deals and why",`+
         `"typicalEntryPoint":"How they typically land — which LOB, which buyer, which use case",`+
         `"expansionPath":"How they grow within an account after landing"`+
-      `}}`+
-      `\n\nIMPORTANT: linesOfBusiness should have 1-4 entries based on how many distinct buyer profiles the seller serves. A company selling one product to one type of buyer has 1 LOB. A company like Blackhawk Network has 3+ (B2B incentives, B2C gift cards, payments infrastructure). namedCustomerProfiles should have 3-8 entries — one per named customer found in the research, with their industry and use case mapped. If research found no customers, return empty arrays. Leave relevantEvents empty — populated by a separate call.`;
+      `},`+
+      `"productCatalog":[`+
+        `{"name":"Exact product/service name from website","description":"What it does — specific, not generic. 'AI for fraud detection in banking' not 'AI platform'.","targetBuyer":"Who buys this (title + function)","painSolved":"What specific pain this addresses","industries":["Industries where this product is deployed"],"evidence":"URL or page where you found this product"}`+
+      `],`+
+      `"verifiedCustomers":[`+
+        `{"name":"Customer name found in case study, press release, or partner page","industry":"Their industry","useCase":"What they bought and why — be specific","source":"case_study | press_release | partner_page | white_paper | linkedin | website_logo","sourceUrl":"URL where you found this customer relationship"}`+
+      `]}`+
+      `\n\nIMPORTANT:\n`+
+      `- linesOfBusiness: 1-4 entries based on distinct buyer profiles.\n`+
+      `- namedCustomerProfiles: 3-8 entries — one per named customer from research.\n`+
+      `- productCatalog: 2-6 entries — the seller's ACTUAL products/services from their website. Read their product pages. Do NOT guess product names from training knowledge — use what you found in Search 1. If you found no product pages, describe their offering based on their homepage and about page.\n`+
+      `- verifiedCustomers: 3-10 entries — customers found in Search 2 and Search 3. Case study customers are highest confidence. Logo-wall customers are lower confidence but still include them with source: "website_logo". If research found no customers, return empty array — do NOT invent names.\n`+
+      `- Leave relevantEvents empty — populated by a separate call.`;
 
     try{
       // Single-pass ICP — Opus streaming with web search, Sonnet fallback on timeout
@@ -6355,13 +6384,13 @@ Return ONLY raw JSON:
       const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 60000));
       let raw;
       try {
-        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 3000, { maxSearches: 1, anchorKey: "sellerName", model: OPUS });
+        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 4000, { maxSearches: 3, anchorKey: "sellerName", model: OPUS });
         raw = await Promise.race([icpCall, icpTimeout]);
       } catch (e) {
         if (e.message === "timeout" || e.message?.includes("overloaded")) {
           console.warn("[ICP] Opus timed out/overloaded — falling back to Sonnet");
           setIcpStatus("Retrying with faster model...");
-          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 3000, { maxSearches: 1, anchorKey: "sellerName", model: SONNET });
+          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 4000, { maxSearches: 3, anchorKey: "sellerName", model: SONNET });
         } else throw e;
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
@@ -11955,7 +11984,7 @@ Return ONLY raw JSON:
 
                     <div style={{fontSize:10,color:"var(--ink-3)",textAlign:"center",marginTop:8}}>
                       Changes apply when fit scores are next calculated. Total: {fitWeights.dim1+fitWeights.dim2+fitWeights.dim3}%
-                      {fitWeights.dim1===40&&fitWeights.dim2===30&&fitWeights.dim3===30?" (default)":""}
+                      {fitWeights.dim1===45&&fitWeights.dim2===30&&fitWeights.dim3===25?" (default)":""}
                     </div>
                   </div>
                 </div>
