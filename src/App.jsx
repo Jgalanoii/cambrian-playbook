@@ -5532,20 +5532,39 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       if (!r.ok) { const errText = await r.text().catch(()=>""); console.warn("[rfp-persist] DB load failed:", r.status, errText.slice(0,200)); return { open: [], closed: [], signals: [] }; }
       const rows = await r.json();
       console.log(`[rfp-persist] Loaded ${rows?.length || 0} previous results from DB for "${sellerShort}"`, rows?.length ? `(first: ${rows[0]?.title?.slice(0,50)})` : "(empty)");
-      if (!Array.isArray(rows) || !rows.length) return { open: [], closed: [], signals: [] };
-      const open = rows.filter(r => r.search_type === "open_rfp").map(r => ({
+      // Filter out stale results that don't match the current seller's products/category
+      // This catches CRM RFPs persisted for a previous seller that got tagged to this seller_url
+      const currentCategory = (sellerICP?.marketCategory || "").toLowerCase();
+      const currentDesc = (sellerICP?.sellerDescription || "").toLowerCase();
+      const productNames = (sellerICP?.icp?.productCatalog || []).map(p => (p.name || "").toLowerCase()).filter(Boolean);
+      const hasProductContext = currentCategory || currentDesc || productNames.length;
+      const filteredRows = hasProductContext ? (rows || []).filter(row => {
+        const title = (row.title || "").toLowerCase();
+        const reason = (row.relevance_reason || "").toLowerCase();
+        const combined = title + " " + reason;
+        // If we have product context, check if the result is relevant
+        // A CRM RFP is not relevant to a rewards company
+        if (currentCategory && combined.includes(currentCategory.split(" ")[0])) return true;
+        if (productNames.some(pn => combined.includes(pn.split(" ")[0]))) return true;
+        if (currentDesc && currentDesc.split(" ").filter(w => w.length > 4).slice(0, 3).some(w => combined.includes(w))) return true;
+        // If none of the seller's product keywords appear in the result, it's likely stale/wrong
+        console.log(`[rfp-persist] Filtering out irrelevant DB result: "${row.title?.slice(0,60)}"`);
+        return false;
+      }) : rows || [];
+      if (!Array.isArray(filteredRows) || !filteredRows.length) return { open: [], closed: [], signals: [] };
+      const open = filteredRows.filter(r => r.search_type === "open_rfp").map(r => ({
         title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
         isGovernment: r.is_government, value: r.value_estimate, deadline: r.deadline,
         relevanceScore: r.relevance_score, relevanceReason: r.relevance_reason,
         cohort: r.cohort, naicsOrCpv: r.naics_code, _fromDb: true, _dbId: r.id,
       }));
-      const closed = rows.filter(r => r.search_type === "closed_rfp").map(r => ({
+      const closed = filteredRows.filter(r => r.search_type === "closed_rfp").map(r => ({
         title: r.title, buyer: r.buyer, source: r.source, url: r.source_url,
         isGovernment: r.is_government, value: r.value_estimate, awardDate: r.award_date,
         awardedTo: r.awarded_to, relevanceScore: r.relevance_score,
         relevanceReason: r.relevance_reason, cohort: r.cohort, _fromDb: true, _dbId: r.id,
       }));
-      const signals = rows.filter(r => r.search_type === "buying_signal").map(r => ({
+      const signals = filteredRows.filter(r => r.search_type === "buying_signal").map(r => ({
         signalType: r.signal_type, headline: r.title, company: r.buyer,
         detail: r.signal_detail, source: r.source, url: r.source_url,
         strength: r.signal_strength, relevance: r.relevance_reason, _fromDb: true, _dbId: r.id,
@@ -11495,7 +11514,7 @@ Return ONLY raw JSON:
                                     {r.url ? (
                                       <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                     ) : r.title}
-                                    {r._fromDb && <span style={{fontSize:9,color:"var(--ink-3)",marginLeft:4,fontWeight:400}}>(cached)</span>}
+                                    {/* _fromDb badge removed — backend detail not shown to users */}
                                   </div>
                                   <div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div>
                                 </td>
@@ -11559,7 +11578,7 @@ Return ONLY raw JSON:
                                       {r.url ? (
                                         <a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--ink-0)",textDecoration:"none"}}>{r.title} ↗</a>
                                       ) : r.title}
-                                      {r._fromDb && <span style={{fontSize:9,color:"var(--ink-3)",marginLeft:4,fontWeight:400}}>(cached)</span>}
+                                      {/* _fromDb badge removed — backend detail not shown to users */}
                                     </div>
                                     <div style={{fontSize:10,color:"var(--ink-3)",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}} title={r.relevanceReason}>{r.relevanceReason}</div>
                                   </td>
