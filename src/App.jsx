@@ -575,11 +575,12 @@ function authHeaders() {
 // Invest in quality at the top of the funnel (ICP, research brief),
 // then let rich context cascade to cheaper models downstream.
 //
-// Opus:   ICP Pass 1 (seller research), Build Target Accounts — ONLY for deep web research
-// Sonnet: P1 overview, P2 executives, P3 strategy/angle, P4 solutions, P7 competitive, RFP pipeline
-// Haiku:  P5-P6, P8-P10, hypothesis, discovery, coaching, post-call, ICP Pass 2
+// Opus:   ICP Pass 1 (seller research), P3 strategy/angle, Build Target Accounts
+// Sonnet: P1 overview, P2 executives, P4 solutions, P7 competitive, P8 board, P9 financial, P10 gates, RFP pipeline, ICP Pass 2
+// Haiku:  P5 live, P6 roles, hypothesis, discovery, coaching, post-call, scoring
 //
-// Cost: ~$0.50-0.70/brief (down from $1.15). RFP pipeline ~$0.60 (down from $3-4).
+// Principle: accuracy first. Opus for high-judgment calls (seller research, sales angle).
+// Sonnet for structured reasoning (solutions, financials, competitive). Haiku for extraction only.
 const HAIKU  = "claude-haiku-4-5-20251001";
 const SONNET = "claude-sonnet-4-5-20250929";
 const OPUS   = "claude-opus-4-6";
@@ -1981,7 +1982,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 5500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: SONNET }
+    }, 5500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
   );
   // relationshipSignals feature tabled
 
@@ -2340,7 +2341,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p8 = (async()=>{
     try {
       const d = await claudeFetch({
-        model:activeModel(), max_tokens:2000,
+        model:SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
           deepIntelIdentity+
@@ -2371,7 +2372,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p9 = (async()=>{
     try {
       const d = await claudeFetch({
-        model:activeModel(), max_tokens:2000,
+        model:SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
           deepIntelIdentity+
