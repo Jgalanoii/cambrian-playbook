@@ -10804,11 +10804,13 @@ Return ONLY raw JSON:
                   const inputNorm = sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"").toLowerCase();
                   const sellerNorm = (sellerUrl||"").toLowerCase();
                   const icpVerified = sellerICP && !sellerICP._error && !sellerICP._loading && inputNorm && inputNorm === sellerNorm;
-                  const isLoading = icpLoading && inputNorm;
+                  const scanDone = urlScanConfirmed || urlScanStatus === "found";
+                  const urlReady = icpVerified || scanDone;
+                  const isLoading = (icpLoading || urlScanStatus === "scanning") && inputNorm && !urlReady;
                   return (
-                <div className="setup-url-bar" style={{borderColor: icpVerified ? "var(--green)" : isLoading ? "var(--amber)" : undefined, transition:"border-color 0.2s"}}>
-                  <div className="setup-url-label" style={{color: icpVerified ? "var(--green)" : isLoading ? "var(--amber)" : undefined}}>
-                    {icpVerified ? "✓" : isLoading ? "⏳" : "Seller URL"}
+                <div className="setup-url-bar" style={{borderColor: urlReady ? "var(--green)" : isLoading ? "var(--amber)" : undefined, transition:"border-color 0.2s"}}>
+                  <div className="setup-url-label" style={{color: urlReady ? "var(--green)" : isLoading ? "var(--amber)" : undefined}}>
+                    {urlReady ? "✓" : isLoading ? "⏳" : "Seller URL"}
                   </div>
                   <input className="setup-url-input" type="text" placeholder="e.g. yourcompany.com"
                     value={sellerInput} onChange={e=>{setSellerInput(e.target.value);setUrlScanStatus("");setUrlScanConfirmed(false);}}
@@ -10837,6 +10839,25 @@ Return ONLY raw JSON:
                 </div>
                   );
                 })()}
+
+                {/* Scan status + confirmed product pages — directly below URL */}
+                {urlScanStatus==="scanning"&&(
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--amber)",marginTop:8}}>
+                    <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Scanning for products, solutions, and case studies...
+                  </div>
+                )}
+                {(urlScanConfirmed || urlScanStatus==="found") && productUrls.some(u=>u.url?.trim()) && (
+                  <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:10,padding:"10px 14px",marginTop:8}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--green)",marginBottom:6}}>🔍 Found {productUrls.filter(u=>u.url?.trim()).length} product pages</div>
+                    {productUrls.filter(u=>u.url?.trim()).map((u,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                        <span style={{fontSize:10}}>🔗</span>
+                        <span style={{fontSize:12,fontWeight:600,color:"var(--green)"}}>{ u.label || "Page"}</span>
+                        <span style={{fontSize:11,color:"var(--ink-3)"}}>{ u.url}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Seller Stage + Targeting — moved to collapsible section below products */}
                 <div style={{display:"none"}}>
