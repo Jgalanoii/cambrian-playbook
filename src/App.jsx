@@ -1964,7 +1964,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found in search results",`+
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
-    `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"},`+
+    `"salesAngle":"1 sentence: how to USE this sentiment in a discovery call — a specific talk-track pivot, not just 'mention their pain'"},`+
     `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. No product mention. No pitch. Close with 'Am I way off base?' or similar. First name sign-off."},{"style":"insight","subject":"Reference a specific finding about ${co} — lowercase, specific, under 40 chars. 'that q1 fee growth though' or 're: your CFO hire'","body":"2 sentences. Lead with ONE specific observation about ${co} from your research — connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' First name sign-off."}]}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
@@ -2063,7 +2063,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `"workforceProfile":{"knowledgeWorkerPct":"estimated % of salaried/knowledge workers vs hourly","unionizedPct":"estimated % unionized if known","remotePolicy":"remote/hybrid/in-office","avgTenure":"if findable"},`+
         `"cultureProfile":{"coreValues":"2-3 stated company values","communicationStyle":"formal/informal","decisionMaking":"top-down/consensus/distributed","sellerLanguageHint":"the vocabulary and tone this company responds to"},`+
         `"incumbentVendors":{"hrSystem":"e.g. Workday/SAP/Oracle","financeSystem":"e.g. SAP/NetSuite","crmSystem":"e.g. Salesforce/Dynamics","cardProvider":"e.g. Amex/Citi"},`+
-        `"sentimentScores":{"glassdoorRating":"Glassdoor rating as a NUMBER only e.g. '3.8' — empty string if not found. NEVER 'Not found' or 'N/A'.","g2Rating":"G2 rating as NUMBER only — empty string if not software or not found","trustpilotRating":"Trustpilot score as NUMBER only — empty string if not found","npsSignal":"NPS/CSAT data or brand perception — empty string if not found. NEVER placeholder text.","standoutReview":{"text":"most revealing quote from employee review, press, or consumer — empty string if none found","source":"source platform — empty string if none","sentiment":"positive or negative — empty string if none"}},`+
+        `"sentimentScores":{"glassdoorRating":"Glassdoor rating as a NUMBER only e.g. '3.8' — empty string if not found. NEVER 'Not found' or 'N/A'.","g2Rating":"G2 rating as NUMBER only — empty string if not software or not found","trustpilotRating":"Trustpilot score as NUMBER only — empty string if not found","npsSignal":"NPS/CSAT data or brand perception — empty string if not found. NEVER placeholder text.","standoutReview":{"text":"most revealing quote from employee review, press, or consumer — empty string if none found","source":"source platform — empty string if none","sentiment":"positive or negative — empty string if none"},"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"},`+
         `"companySnapshot":"Updated 2-3 sentence snapshot with any new facts"}`;
       const d = await claudeFetch({
         model:activeModel(),
@@ -2173,7 +2173,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeLive = (r5raw) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), live:false}};
-    if (!r5raw) return next;
+    if (!r5raw) { next._failedSections = [...(prev._failedSections||[]), "live"]; return next; }
     const r5 = sanitizeWebResult(r5raw); // Sanitize web search results
     const errorWords = ["unable","cannot","search failed","not available","web search"];
     const cleanHL = (r5.recentHeadlines||[]).filter(h => {
@@ -2198,6 +2198,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         npsSignal: ss.npsSignal || "",
         employeeScore: ss.employeeScore || "",
         standoutReview: ss.standoutReview?.text ? ss.standoutReview : next.publicSentiment?.standoutReview || {},
+        salesAngle: ss.salesAngle || next.publicSentiment?.salesAngle || "",
       };
     }
     return next;
@@ -2290,7 +2291,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeRoles = (r6) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), roles:false}};
-    if (!r6) return next;
+    if (!r6) { next._failedSections = [...(prev._failedSections||[]), "roles"]; return next; }
     if (rolesHaveData(r6) || rolesSummaryOk(r6)) next.openRoles = r6.openRoles;
     return next;
   };
@@ -5194,12 +5195,17 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         const d3 = (rawD3 / 25) * fitWeights.dim3;
         const baseScore = Math.round(d1 + d2 + d3);
         const computedScore = Math.max(0, Math.min(100, baseScore));
-        // Fallback: if model returned old-style "score" field, use it
-        s.score = computedScore > 0 ? computedScore : (Number(s.score) || 50);
+        // If all dimensions are null/0, don't fake a score — flag for review
+        if (!Number(s.dim1) && !Number(s.dim2) && !Number(s.dim3)) {
+          console.warn(`[scoring] All dimensions null for ${s.company} — marking as Needs Review`);
+          s.score = 0; s.label = "Needs Review"; s._needsReview = true;
+        } else {
+          s.score = computedScore;
+        }
         // Store raw dimensions for display
         s.rawDim1 = rawD1; s.rawDim2 = rawD2; s.rawDim3 = rawD3;
-        const color       = s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
-        const bg          = s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
+        const color       = s._needsReview?"var(--ink-3)":s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
+        const bg          = s._needsReview?"var(--bg-1)":s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
         const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
         const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"var(--ink-1)":"var(--ink-1)";
         // Match against original member names — API may return slightly different casing/suffix
@@ -5214,7 +5220,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         const matchedName = exactMatch?.company || fuzzyMatch?.company || s.company;
         map[matchedName]             = {
           ...s,
-          label: canonicalLabel(s.score),
+          label: s._needsReview ? "Needs Review" : canonicalLabel(s.score),
           reason: cleanReason(s.reason),
           customerSimilarity: cleanReason(s.customerSimilarity),
           incumbentRisk: cleanReason(s.incumbentRisk),
@@ -7742,10 +7748,10 @@ Return ONLY raw JSON:
         if (!prev) return prev;
         const pending = Object.values(prev._loadingSections || {}).filter(Boolean).length;
         if (pending === 0) return prev;
-        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 25s — clearing loading state`);
+        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 45s — clearing loading state`);
         return {
           ...prev,
-          _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false },
+          _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false },
           _error: pending >= 4
             ? "Brief timed out — some sections may be incomplete. Check your connection and try Regenerate."
             : (prev._error || ""),
