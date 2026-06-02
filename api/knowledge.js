@@ -54,6 +54,7 @@ import { HR_TECH_INJECTION, HR_TECH_SCORING, HR_TECH_DISCOVERY } from "../src/da
 import { GOVERNMENT_INJECTION, GOVERNMENT_SCORING, GOVERNMENT_DISCOVERY } from "../src/data/governmentKnowledge.js";
 import { RFP_PROCUREMENT_INJECTION, RFP_SIGNAL_SCORING, RFP_SOURCE_TIERS, RFP_SEARCH_GUIDANCE } from "../src/data/rfpProcurementKnowledge.js";
 import { PRE_RFP_SIGNAL_INJECTION, PRE_RFP_INTENT_KEYWORDS, PRE_RFP_SCORING_RUBRIC } from "../src/data/preRfpSignalKnowledge.js";
+import { DISPLACEMENT_INJECTION, DISPLACEMENT_DISCOVERY } from "../src/data/displacementKnowledge.js";
 
 import { checkRateLimit, isAllowedOrigin, checkGuestLimit, incrementGuestUsage, verifyJwt } from "./_guard.js";
 
@@ -337,6 +338,9 @@ export default async function handler(req, res) {
       preRfpIntentKeywords: PRE_RFP_INTENT_KEYWORDS,
       preRfpScoringRubric: PRE_RFP_SCORING_RUBRIC,
     } : {}),
+    // Displacement playbook
+    displacementInjection: DISPLACEMENT_INJECTION,
+    displacementDiscovery: DISPLACEMENT_DISCOVERY,
     // Frameworks available to all tiers (trial + paid)
     b2bSales: B2B_SALES_INJECTION,
     b2bSalesDiscovery: B2B_SALES_DISCOVERY,

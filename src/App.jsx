@@ -154,6 +154,8 @@ let KL_RFP_SEARCH_GUIDANCE = ""; // RFP search strategy guidance (injected into 
 let KL_RFP_SIGNAL_SCORING = null; // Signal strength scoring rubric
 let KL_RFP_SOURCE_TIERS = null; // 5-tier source hierarchy
 let KL_PRE_RFP_INTENT_KEYWORDS = []; // Pre-RFP intent keyword list
+let KL_DISPLACEMENT = ""; // Incumbent displacement playbook
+let KL_DISPLACEMENT_DISCOVERY = ""; // Displacement discovery questions
 
 async function fetchKnowledgeLayer() {
   try {
@@ -277,6 +279,8 @@ async function fetchKnowledgeLayer() {
     KL_RFP_SIGNAL_SCORING = d.rfpSignalScoring || null;
     KL_RFP_SOURCE_TIERS = d.rfpSourceTiers || null;
     KL_PRE_RFP_INTENT_KEYWORDS = d.preRfpIntentKeywords || [];
+    KL_DISPLACEMENT = d.displacementInjection || "";
+    KL_DISPLACEMENT_DISCOVERY = d.displacementDiscovery || "";
     // NOTE: Knowledge tier is plan-dependent (trial gets core only, paid gets
     // all verticals). This function must be re-called after plan upgrades
     // (e.g. Stripe checkout success) so the user gets paid-tier layers
@@ -8362,6 +8366,7 @@ Return ONLY raw JSON:
       "SOLUTION MAPPING (pre-built):\n" + mappedSolutions + "\n\n" +
       KL_COMPETITIVE +
       (KL_FISHER_URY ? `\nNEGOTIATION CONTEXT: ${KL_FISHER_URY.slice(0,300)}. Use this to shape the Route stage — anticipate their negotiation posture.\n` : "") +
+      (KL_DISPLACEMENT ? `\n${KL_DISPLACEMENT}\n` : "") +
       "BUILD THE RIVER HYPOTHESIS:\n" +
       "Every field grounded in what " + sellerUrl + " sells. No stray consulting.\n" +
       "CONSISTENCY RULE: The elevator pitch, opening angle, strategic theme, and solution mapping have already been generated for this brief. Your hypothesis MUST align with the same narrative — same pain points, same value proposition, same proof points. Do NOT introduce new claims or angles that contradict the brief.\n" +
@@ -8492,6 +8497,7 @@ Return ONLY raw JSON:
       `PRODUCTS: ${products_ctx}\n`+
       ((sellerICP?.icp?.verifiedCustomers||[]).length ? `VERIFIED CUSTOMER WINS (ask questions that validate these patterns):\n${sellerICP.icp.verifiedCustomers.slice(0,5).map(c=>`  • ${c.name} (${c.industry}) — ${c.useCase}`).join("\n")}\n` : "") +
       ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `COMPETITORS TO PROBE: ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).slice(0,5).join(", ")}. Include questions that surface if the prospect uses any of these.\n` : "") +
+      (KL_DISPLACEMENT_DISCOVERY ? `${KL_DISPLACEMENT_DISCOVERY}\n` : "") +
       (sellerICP?.icp ? `ICP CONTEXT: Industries: ${(sellerICP.icp.industries||[]).join(", ")} | Buyer: ${(sellerICP.icp.buyerPersonas||[]).map(p=>typeof p==="object"?p.title:p).join(", ")} | Pains: ${(sellerICP.icp.topPains||[]).join("; ")}\n` : "")+
       buildUserEditContext(icpEdits, userEdits)+
       `PROSPECT: ${co} | SNAPSHOT: ${snapshot} | STRATEGIC THEME: ${theme}\n`+
@@ -8734,6 +8740,7 @@ Return ONLY raw JSON:
       (KL_FOUR_FORCES ? `\nDECISION FORCES (Moesta): If Anxiety (${KL_FOUR_FORCES.anxiety||"switching fear"}) + Habit (${KL_FOUR_FORCES.habit||"status quo inertia"}) dominated the call → route to NURTURE. If Push (${KL_FOUR_FORCES.push||"pain"}) + Pull (${KL_FOUR_FORCES.pull||"new solution promise"}) dominated → FAST_TRACK candidate.\n` : "") +
       (KL_QUESTION_BANK ? `\nNEXT DISCOVERY (suggest in nextSteps if discovery was incomplete):\n  Pain: ${KL_QUESTION_BANK.currentStatePain?.[0]||""}\n  Process: ${KL_QUESTION_BANK.buyingProcess?.[0]||""}\n  Competitive: ${KL_QUESTION_BANK.competitiveAlternatives?.[0]||""}\n` : "") +
       ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `\nSELLER'S COMPETITORS: ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. If the prospect mentioned using any of these, factor incumbent displacement risk into the deal route.\n` : "") +
+      (KL_DISPLACEMENT ? `\n${KL_DISPLACEMENT}\n` : "") +
       `DEAL ROUTING SIGNALS:\n`+
       `- ${KL_BUYING_SIGNALS.positive.join("\n- ")}\n`+
       `- ${KL_BUYING_SIGNALS.negative.join("\n- ")}\n\n`+
@@ -10684,7 +10691,7 @@ Return ONLY raw JSON:
                       </div>
                     </div>
                     <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:12}}>
-                      Build your ICP, score prospects, generate tailored briefs with solution mapping, conversation strategy, AI coaching, and CRM integration.
+                      We deeply research your products, services, and proven wins — then find the companies most likely to buy from you and arm you with the exact intel to close them.
                     </div>
                     <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",display:"flex",alignItems:"center",gap:6}}>
                       Start Full Session →
@@ -11345,7 +11352,7 @@ Return ONLY raw JSON:
                 </div>
                 <div className="page-sub" style={{marginBottom:0}}>
                   {icpTab==="icp"
-                    ? <>Built from <strong>{sellerUrl}</strong> — your playbook for who to call and why.
+                    ? <>Built from deep research into <strong>{sellerUrl}</strong> — what you sell, who you've won, and who your competitors serve.
                         {sellerICP?._confidence && (
                           <span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,
                             background:sellerICP._confidence==="high"?"var(--green-bg)":sellerICP._confidence==="medium"?"var(--amber-bg)":"var(--red-bg)",
@@ -12720,7 +12727,7 @@ Return ONLY raw JSON:
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div>
                 <div className="page-title">Fit Check — Your Best Matches</div>
-                <div className="page-sub">{rows.length} companies scored and ranked. Click any row to start a brief.</div>
+                <div className="page-sub">{rows.length} companies scored by how well your specific products solve their problems — not just industry matching. Click any row to start a brief.</div>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 {hubspotStatus?.connected&&(
@@ -13254,7 +13261,7 @@ Return ONLY raw JSON:
               </div>
             </div>
             <div className="page-sub">
-              {briefLoading?"Hang tight — live research in progress.":"Discovery doesn't have to suck. Built from live research and proprietary intelligence. All fields are editable. When you walk in this prepared, the conversation is better for everyone in the room."}
+              {briefLoading?"Hang tight — live research in progress.":`This brief maps ${sellerICP?.sellerName||sellerUrl}'s products to ${selectedAccount?.company}'s needs${(sellerICP?.icp?.verifiedCustomers||[]).length?` — grounded in ${sellerICP.icp.verifiedCustomers.length} verified customer win${sellerICP.icp.verifiedCustomers.length===1?"":"s"}`:""}.${(sellerICP?.icp?.productCatalog||[]).length?` ${sellerICP.icp.productCatalog.length} product${sellerICP.icp.productCatalog.length===1?"":"s"} mapped.`:""} All fields are editable.`}
             </div>
 
             {/* Brief age + cache indicator */}
