@@ -7584,10 +7584,11 @@ Return ONLY raw JSON:
 
     const co = member.company;
 
-    // ── Brief caching: check account_outputs for a recent brief (< 7 days) ──
-    // SKIP cache for research-only (Quick Brief) — cached briefs may have seller contamination
+    // ── Brief caching: DISABLED until brief pipeline is stable ──
+    // Too many incomplete cached briefs served during rapid development.
+    // Re-enable once all 10 sections are confirmed working end-to-end.
     const _isQuickBrief = (overrideSellerUrl === "research-only") || (sellerUrl === "research-only");
-    if (!forceRebuild && !_isQuickBrief && sbToken && sbUser) {
+    if (false && !forceRebuild && !_isQuickBrief && sbToken && sbUser) {
       try {
         const SB_URL_BC = import.meta.env.VITE_SUPABASE_URL;
         const SB_KEY_BC = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -14589,6 +14590,56 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
+                {/* 5 Questions to Ask — account-specific discovery questions from brief findings */}
+                {(brief?.fiveQuestions?.length > 0 || brief?._loadingSections?.strategy) && (
+                  <div className="bb">
+                    <div className="bb-hdr" onClick={()=>toggleBB("fiveq")}>
+                      <div className="bb-icon" style={{fontSize:10}}>❓</div>
+                      <div style={{flex:1}}>
+                        <div className="bb-title">5 Questions to Ask</div>
+                        <div className="bb-sub">Account-specific questions grounded in the research above — take these into your first conversation</div>
+                      </div>
+                      <button onClick={e=>{
+                        e.stopPropagation();
+                        if (brief?.fiveQuestions?.length) {
+                          const text = brief.fiveQuestions.map((q,i) => `${i+1}. ${q.question}\n   Why: ${q.rationale}\n   Source: ${q.source}`).join("\n\n");
+                          navigator.clipboard?.writeText(text);
+                        }
+                      }} style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--tan-2)",background:"var(--bg-1)",color:"var(--ink-1)",cursor:"pointer",whiteSpace:"nowrap",marginRight:8}}>
+                        Copy All
+                      </button>
+                      {bbChevron("fiveq")}
+                    </div>
+                    <div className={`bb-body-wrap ${bbIsOpen("fiveq")?"":"collapsed"}`}><div className="bb-body">
+                      {brief?.fiveQuestions?.length > 0 ? (
+                        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                          {brief.fiveQuestions.map((q,i) => (
+                            <div key={i} style={{padding:"12px 14px",background:i===0?"var(--green-bg)":"var(--bg-0)",border:`1px solid ${i===0?"var(--green)":"var(--line-0)"}`,borderRadius:8}}>
+                              <div style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:6}}>
+                                <span style={{background:i===0?"var(--green)":"var(--ink-0)",color:"var(--surface)",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</span>
+                                <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>"{q.question}"</div>
+                              </div>
+                              <div style={{marginLeft:30,fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>
+                                <strong>Why:</strong> {q.rationale}
+                              </div>
+                              {q.source && (
+                                <div style={{marginLeft:30,marginTop:2,fontSize:11,color:"var(--ink-3)"}}>
+                                  Source: {q.source}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{display:"flex",flexDirection:"column",gap:8,padding:12}}>
+                          <div style={{fontSize:13,color:"var(--ink-3)"}}>Building your questions from brief findings...</div>
+                          {[1,2,3].map(i => <div key={i} className="skeleton" style={{width:`${90-i*5}%`,height:14,borderRadius:4}}/>)}
+                        </div>
+                      )}
+                    </div></div>
+                  </div>
+                )}
+
                 {/* Close "Deal Readiness" group */}
                 </div>
 
@@ -14601,56 +14652,6 @@ Return ONLY raw JSON:
                   <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>
                 </div>
               </>
-            )}
-
-            {/* 5 Questions to Ask — account-specific discovery questions from brief findings */}
-            {(brief?.fiveQuestions?.length > 0 || brief?._loadingSections?.strategy) && (
-              <div className="bb">
-                <div className="bb-hdr" onClick={()=>toggleBB("fiveq")}>
-                  <div className="bb-icon" style={{fontSize:10}}>❓</div>
-                  <div style={{flex:1}}>
-                    <div className="bb-title">5 Questions to Ask</div>
-                    <div className="bb-sub">Account-specific questions grounded in the research above — take these into your first conversation</div>
-                  </div>
-                  <button onClick={e=>{
-                    e.stopPropagation();
-                    if (brief?.fiveQuestions?.length) {
-                      const text = brief.fiveQuestions.map((q,i) => `${i+1}. ${q.question}\n   Why: ${q.rationale}\n   Source: ${q.source}`).join("\n\n");
-                      navigator.clipboard?.writeText(text);
-                    }
-                  }} style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,border:"1px solid var(--tan-2)",background:"var(--bg-1)",color:"var(--ink-1)",cursor:"pointer",whiteSpace:"nowrap",marginRight:8}}>
-                    Copy All
-                  </button>
-                  {bbChevron("fiveq")}
-                </div>
-                <div className={`bb-body-wrap ${bbIsOpen("fiveq")?"":"collapsed"}`}><div className="bb-body">
-                  {brief?.fiveQuestions?.length > 0 ? (
-                    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-                      {brief.fiveQuestions.map((q,i) => (
-                        <div key={i} style={{padding:"12px 14px",background:i===0?"var(--green-bg)":"var(--bg-0)",border:`1px solid ${i===0?"var(--green)":"var(--line-0)"}`,borderRadius:8}}>
-                          <div style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:6}}>
-                            <span style={{background:i===0?"var(--green)":"var(--ink-0)",color:"var(--surface)",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</span>
-                            <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>"{q.question}"</div>
-                          </div>
-                          <div style={{marginLeft:30,fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>
-                            <strong>Why:</strong> {q.rationale}
-                          </div>
-                          {q.source && (
-                            <div style={{marginLeft:30,marginTop:2,fontSize:11,color:"var(--ink-3)"}}>
-                              Source: {q.source}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{display:"flex",flexDirection:"column",gap:8,padding:12}}>
-                      <div style={{fontSize:13,color:"var(--ink-3)"}}>Building your questions from brief findings...</div>
-                      {[1,2,3].map(i => <div key={i} className="skeleton" style={{width:`${90-i*5}%`,height:14,borderRadius:4}}/>)}
-                    </div>
-                  )}
-                </div></div>
-              </div>
             )}
 
             {/* Post-brief actions — next steps for all brief types */}
