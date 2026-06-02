@@ -13832,76 +13832,18 @@ Return ONLY raw JSON:
                 </div>
                 <div style={{display:bbIsOpen("briefIntel")?"block":"none"}}>
 
-                {/* ── SESSION SUMMARY — executive report (TOP of brief) ── */}
-                {brief && !brief._loadingSections?.overview && !brief._loadingSections?.deepIntel && (()=>{
-                  const summary = buildSessionSummary();
-                  if (!summary) return null;
-                  const isOpen = bbIsOpen("sessionSummary");
-                  return <div id="session-summary-section" className="bb" style={{borderColor:"var(--tan-0)",borderWidth:2}}>
-                    <div className="bb-hdr" onClick={()=>toggleBB("sessionSummary")}>
-                      <div className="bb-icon" style={{fontSize:10}}>📋</div>
-                      <div style={{flex:1}}>
-                        <div className="bb-title">Executive Summary<InfoTip text="Pulls the most important data from every section into one executive report. Copy to clipboard, export as JSON, or push to HubSpot. Updates as you progress through the session."/></div>
-                        <div className="bb-sub">The brief at a glance — all sections, one view</div>
-                      </div>
-                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                        <button className="copy-btn" onClick={e=>{
-                          e.stopPropagation();
-                          const text = sessionSummaryToText(summary);
-                          navigator.clipboard?.writeText(text);
-                          setEditToast("Summary copied to clipboard");
-                        }}>Copy Summary</button>
-                        <button className="copy-btn" onClick={e=>{
-                          e.stopPropagation();
-                          downloadStageData("Session-Summary", summary);
-                        }}>Export JSON</button>
-                        <span className="bb-arrow">{isOpen?"▾":"▸"}</span>
-                      </div>
-                    </div>
-                    {isOpen && <div className="bb-body" style={{padding:"16px 20px",fontSize:12,lineHeight:1.7}}>
-                      {(summary.topFinding || summary.topOpportunity || summary.topRisk) && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Quick Take</div>
-                        {summary.topFinding && <div style={{marginBottom:4}}><span style={{background:"var(--navy)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>FINDING</span>{summary.topFinding}</div>}
-                        {summary.topOpportunity && <div style={{marginBottom:4}}><span style={{background:"var(--green)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>OPP</span>{summary.topOpportunity}</div>}
-                        {summary.topRisk && <div><span style={{background:"var(--red)",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700,marginRight:6}}>RISK</span>{summary.topRisk}</div>}
-                      </div>}
-                      {summary.companySnapshot && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Company Profile</div>
-                        <div style={{marginBottom:6,color:"var(--ink-1)"}}>{summary.companySnapshot}</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"4px 16px",fontSize:11,color:"var(--ink-2)"}}>
-                          {summary.revenue && <div><strong>Revenue:</strong> {summary.revenue}</div>}
-                          {summary.employeeCount && <div><strong>Employees:</strong> {summary.employeeCount}</div>}
-                          {summary.headquarters && <div><strong>HQ:</strong> {summary.headquarters}</div>}
-                          {summary.ownership && <div><strong>Ownership:</strong> {summary.ownership}</div>}
-                          {summary.fundingProfile && <div><strong>Funding:</strong> {summary.fundingProfile}</div>}
-                          {summary.founded && <div><strong>Founded:</strong> {summary.founded}</div>}
-                        </div>
-                      </div>}
-                      {summary.executives.length > 0 && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Key Executives</div>
-                        {summary.executives.map((e,i) => <div key={i} style={{marginBottom:3}}><strong>{e.name}</strong> — {e.title}{e.angle ? <span style={{color:"var(--ink-3)"}}> | {e.angle.slice(0,120)}</span> : ""}</div>)}
-                      </div>}
-                      {summary.strategicTheme && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Strategy & Positioning</div>
-                        {summary.strategicTheme && <div style={{marginBottom:4}}><strong>Theme:</strong> {summary.strategicTheme}</div>}
-                        {summary.openingAngle && <div style={{marginBottom:4}}><strong>Opening:</strong> {summary.openingAngle}</div>}
-                        {summary.sellerOpportunity && <div><strong>Seller Opportunity:</strong> {summary.sellerOpportunity}</div>}
-                      </div>}
-                      {summary.fitScore !== null && <div style={{marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Fit Score</div>
-                        <div><strong>{summary.fitScore}/100 — {summary.fitLabel}</strong></div>
-                        {summary.fitReason && <div style={{fontSize:11,color:"var(--ink-2)"}}>{summary.fitReason}</div>}
-                      </div>}
-                      <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid var(--line-0)",fontSize:10,color:"var(--ink-3)",textAlign:"center"}}>
-                        Scroll down for full detail on each section · Generated by Cambrian Catalyst | {new Date().toLocaleDateString()}
-                      </div>
-                    </div>}
-                  </div>;
-                })()}
-
-                {/* ── FULL DETAIL — section-by-section research ── */}
+                {/* Brief actions — Copy Summary / Export (replaces old Executive Summary section) */}
                 {brief && !brief._loadingSections?.overview && brief.companySnapshot && (
-                  <div style={{fontSize:11,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.5px",marginTop:16,marginBottom:8,paddingBottom:6,borderBottom:"1px solid var(--line-0)"}}>Full Detail</div>
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginBottom:8}}>
+                    <button className="copy-btn" onClick={()=>{
+                      const summary = buildSessionSummary();
+                      if(summary){navigator.clipboard?.writeText(sessionSummaryToText(summary));setEditToast("Summary copied to clipboard");}
+                    }}>Copy Summary</button>
+                    <button className="copy-btn" onClick={()=>{
+                      const summary = buildSessionSummary();
+                      if(summary) downloadStageData("Session-Summary", summary);
+                    }}>Export JSON</button>
+                  </div>
                 )}
 
                 {/* Company Snapshot */}
@@ -14249,28 +14191,6 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
-                {/* Leadership Team — separate block */}
-                {(brief.leadershipTeam||[]).filter(l=>l?.name).length>0&&(
-                  <div className="bb bb-arrive">
-                    <div className="bb-hdr">
-                      <div className="bb-icon">👤</div>
-                      <div><div className="bb-title">Leadership Team</div><div className="bb-sub">Real names, real titles — your way into the org chart</div></div>
-                    </div>
-                    <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
-                      {(brief.leadershipTeam||[]).filter(l=>l?.name).map((l,i)=>(
-                        <div key={i} className="contact-row" style={{margin:0}}>
-                          <div className="contact-av" style={{background:"#2C4A7A",color:"var(--surface)",fontSize:11,fontWeight:700}}>{l.initials||l.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:12,fontWeight:600,color:"var(--ink-0)"}}>{l.name}</div>
-                            <div style={{fontSize:10,color:"var(--ink-2)",marginBottom:3}}>{l.title}</div>
-                            {l.background&&<div style={{fontSize:10,color:"var(--ink-3)",fontStyle:"italic",marginBottom:3,lineHeight:1.4}}>{l.background}</div>}
-                            <EF value={l.angle||""} onChange={v=>patchBrief(b=>{if(!b.leadershipTeam)b.leadershipTeam=[];b.leadershipTeam[i]={...b.leadershipTeam[i],angle:v};})} single placeholder="Engagement angle..."/>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Tech Stack & Integrations */}
                 {brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(
