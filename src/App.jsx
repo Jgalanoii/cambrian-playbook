@@ -1951,11 +1951,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Do NOT suggest use cases that require capabilities in the seller's exclusion list.\n`+
     `- Do NOT attribute direct quotes to executives unless you found the quote in web search results. Paraphrase instead.\n`+
     `- Every claim must be grounded in either (a) your web search results, or (b) the seller proof pack. If neither provides data for a field, return an empty string — do NOT guess from training knowledge. A brief with 5 verified facts is worth more than one with 15 guesses.\n\n`+
+    `ZERO REPETITION RULE (CRITICAL): Your search will surface several facts about ${co}. You MUST distribute them across sections — each section gets its OWN unique angle. If the elevator pitch mentions a revenue stat, the opening angle must use a DIFFERENT fact (hiring pattern, competitive move, leadership change, product launch). If the strategic theme covers their growth strategy, the outreach emails must reference something ELSE (a job posting, a partnership, a regulatory shift). A brief that repeats the same stat 5 times feels like a wall of filler. A brief where every section reveals something NEW feels like deep research.\n\n`+
     `Return ONLY raw JSON (start with {) for strategy and seller angle:\n`+
     `{"elevatorPitch":"A 45-second spoken pitch (~90-100 words) that a seller would deliver when they bump into a ${co} executive in an elevator, at a conference, or on a cold call. Requirements: (1) Open with something SPECIFIC about ${co} that proves you did your homework — a recent move, initiative, or challenge FROM YOUR SEARCH RESULTS. (2) Bridge to WHY the seller's expertise matters for THAT specific situation. (3) End with a soft ask — a question or next step that's easy to say yes to. Tone: confident but not salesy, knowledgeable but not lecturing, human and conversational. Write it as actual spoken words — contractions, natural rhythm, no buzzwords. Should feel like the smartest person at the party, not a brochure.",`+
-    `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements FROM YOUR SEARCH RESULTS. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed. If search returned nothing, say so briefly rather than fabricating.",`+
-    `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses.",`+
-    `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. Reference something REAL and RECENT about ${co} FROM YOUR SEARCH RESULTS — a hiring pattern, earnings call quote, competitive move, or industry shift. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
+    `"strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements FROM YOUR SEARCH RESULTS. What are they building toward in the next 12-18 months? What's driving urgency? Name a recent move (acquisition, hire, product launch, earnings statement) that reveals where they're headed. Do NOT repeat the same facts used in the elevator pitch — find different evidence. If search returned nothing, say so briefly rather than fabricating.",`+
+    `"sellerOpportunity":"2-3 sentences: why ${sellerUrl} is well-positioned RIGHT NOW for ${co}. Connect a specific seller capability to a specific ${co} pain point or initiative. Name the gap the seller fills that no incumbent currently addresses. Use a DIFFERENT angle than the elevator pitch and strategic theme.",`+
+    `"openingAngle":"1-2 sharp sentences that would make a ${co} executive stop scrolling. MUST reference a DIFFERENT fact than the elevator pitch — use a hiring pattern, earnings call quote, competitive move, partnership announcement, or industry shift that hasn't been mentioned yet. Reframe an assumption they hold. Sound human, not scripted. This should be the kind of thing that gets a reply.",`+
     `"publicSentiment":{`+
     `"onlineSentiment":"2-3 sentences synthesizing what employees, press, and the market say about ${co} as a COMPANY TO SELL INTO. Focus on: employee morale (Glassdoor themes), leadership reputation, workplace culture signals, press narrative, and brand health. This is NOT about their product quality vs competitors — it's about what a seller needs to know before calling.",`+
     `"glassdoorRating":"Glassdoor employer rating as a number e.g. '3.8'. Use ONLY a rating found in your web search results. If search did not return a Glassdoor rating, return empty string. Do NOT guess or estimate from training knowledge. NEVER 'Not found'.",`+
@@ -1965,7 +1966,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how to USE this sentiment in a discovery call — a specific talk-track pivot, not just 'mention their pain'"},`+
-    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. No product mention. No pitch. Close with 'Am I way off base?' or similar. First name sign-off."},{"style":"insight","subject":"Reference a specific finding about ${co} — lowercase, specific, under 40 chars. 'that q1 fee growth though' or 're: your CFO hire'","body":"2 sentences. Lead with ONE specific observation about ${co} from your research — connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' First name sign-off."}]}`,
+    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. MUST use a fact NOT already mentioned in the elevator pitch or opening angle. No product mention. No pitch. Close with 'Am I way off base?' or similar. First name sign-off."},{"style":"insight","subject":"Reference a DIFFERENT specific finding about ${co} than email 1 — lowercase, specific, under 40 chars.","body":"2 sentences. Lead with ONE specific observation about ${co} NOT used anywhere else in this brief — a different data point, a different initiative, a different signal. Connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' First name sign-off."}]}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
       const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -2002,6 +2003,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `CRITICAL: Do NOT return empty objects. Every field except solutionMapping must have substantive content.\n`
       : `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`)+
     `CAPABILITY GUARD: ONLY suggest use cases that the seller's products ACTUALLY do. If the seller's exclusion list says they don't do something (e.g. payroll, benefits admin, hiring bonuses), do NOT suggest it as a use case — even if it would logically fit the target. OMIT the use case entirely. A rep who pitches something their company doesn't do loses credibility and the deal.\n`+
+    `ZERO REPETITION ACROSS SOLUTIONS: Each solution mapping entry MUST have a unique challengerInsight and joltRiskRemover. Do NOT use the same framing pattern (e.g. "Most banks assume...") across multiple entries. Each teaching insight should challenge a DIFFERENT assumption. Each risk remover should propose a DIFFERENT pilot scope or proof mechanism. If you only have one proof customer, vary the framing — don't copy-paste the same reference verbatim.\n`+
     `For each solution: (1) which seller PRODUCT (use exact name from catalog above), (2) what job-to-be-done it performs for ${co}, (3) what differentiator from the proof pack justifies "why us", (4) what NAMED CUSTOMER from the proof pack is similar evidence (or "[no analogue customer in our list — verify with seller]" if none fit), (5) what measurable outcome we'd target.\n`+
     `{"solutionMapping":[`+
     `{"product":"EXACT product name from seller catalog",`+
@@ -2439,6 +2441,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeDeepIntel = (r7, r8, r9, r10) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), deepIntel:false}};
+    const failed = [...(prev._failedSections||[])];
     if (r7?.competitivePositioning) {
       const cp = { ...r7.competitivePositioning };
       // Post-process: strip review-platform metrics that masquerade as market share.
@@ -2452,10 +2455,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           .replace(/\s{2,}/g, " ").trim();
       }
       next.competitivePositioning = cp;
-    }
+    } else { failed.push("competitive"); }
     if (r8?.boardAndInvestors) next.boardAndInvestors = r8.boardAndInvestors;
     if (r9?.financialDeepDive) next.financialDeepDive = r9.financialDeepDive;
+    else { failed.push("financial"); }
     if (r10?.gateMap) next.gateMap = r10.gateMap;
+    else { failed.push("gateMap"); console.warn("[brief] Gate map (P10) returned null — section will be missing"); }
+    if (failed.length > (prev._failedSections||[]).length) next._failedSections = failed;
     return next;
   };
 
@@ -8110,6 +8116,7 @@ Return ONLY raw JSON:
                 `RULES:\n`+
                 `- Each question must reference a SPECIFIC finding from the RESEARCH FINDINGS section above. If a finding doesn't exist in the text above, do NOT cite it.\n`+
                 `- The "source" field must quote or paraphrase an actual sentence from the research. If you cannot point to a real finding, use a structural question about their industry instead.\n`+
+                `- Each question MUST reference a DIFFERENT finding — do NOT ask multiple questions about the same data point or initiative. Spread across: strategy, hiring, financials, competitive moves, culture, technology.\n`+
                 `- Questions must be open-ended (no yes/no)\n`+
                 `- Sequence from rapport-building (Q1) to insight-revealing (Q5)\n`+
                 `- Design to surface unspoken priorities, budget signals, or competitive dynamics\n`+
