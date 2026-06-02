@@ -15,6 +15,10 @@
     {
       "path": "/api/cron-data-refresh",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron-seller-profiles",
+      "schedule": "0 9 * * 1"
     }
   ],
   "headers": [
