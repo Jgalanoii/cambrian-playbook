@@ -10685,11 +10685,11 @@ Return ONLY raw JSON:
               {sbUser && (
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
                   {/* Quick Brief card */}
-                  <div style={{background:"var(--surface)",border:"2px solid var(--green)",borderRadius:14,padding:"22px",borderTop:"4px solid var(--green)"}}>
+                  <div onClick={()=>setSessionMode("quick")} style={{background:sessionMode==="quick"?"var(--green-bg)":"var(--surface)",border:sessionMode==="quick"?"2px solid var(--green)":"2px solid var(--line-0)",borderRadius:14,padding:"22px",borderTop:sessionMode==="quick"?"4px solid var(--green)":"4px solid var(--line-0)",cursor:"pointer",transition:"all 0.15s",opacity:sessionMode==="quick"?1:0.7}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                       <span style={{fontSize:22}}>🔍</span>
                       <div>
-                        <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)"}}>Quick Brief</div>
+                        <div style={{fontSize:16,fontWeight:700,color:sessionMode==="quick"?"var(--green)":"var(--ink-1)"}}>Quick Brief</div>
                         <div style={{fontSize:11,color:"var(--ink-2)"}}>Research any company in 30 seconds</div>
                       </div>
                     </div>
@@ -10711,12 +10711,11 @@ Return ONLY raw JSON:
                   </div>
 
                   {/* Full Sales Session card */}
-                  <div onClick={()=>{setSessionMode("full");}} style={{background:"var(--surface)",border:"2px solid var(--navy)",borderRadius:14,padding:"22px",borderTop:"4px solid var(--navy)",cursor:"pointer",transition:"box-shadow 0.2s"}}
-                    onMouseOver={e=>e.currentTarget.style.boxShadow="0 6px 24px rgba(0,0,0,0.08)"} onMouseOut={e=>e.currentTarget.style.boxShadow="none"}>
+                  <div onClick={()=>{setSessionMode("full");}} style={{background:sessionMode==="full"?"var(--navy-bg)":"var(--surface)",border:sessionMode==="full"?"2px solid var(--navy)":"2px solid var(--line-0)",borderRadius:14,padding:"22px",borderTop:sessionMode==="full"?"4px solid var(--navy)":"4px solid var(--line-0)",cursor:"pointer",transition:"all 0.15s",opacity:sessionMode==="full"?1:0.7}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                       <span style={{fontSize:22}}>🎯</span>
                       <div>
-                        <div style={{fontSize:16,fontWeight:700,color:"var(--ink-0)"}}>Full Sales Session</div>
+                        <div style={{fontSize:16,fontWeight:700,color:sessionMode==="full"?"var(--navy)":"var(--ink-1)"}}>Full Sales Session</div>
                         <div style={{fontSize:11,color:"var(--ink-2)"}}>The complete 9-step playbook</div>
                       </div>
                     </div>
