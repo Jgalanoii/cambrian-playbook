@@ -6337,13 +6337,11 @@ Return ONLY raw JSON:
     const icpPrompt =
       `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n`+
       `FIRST: Use ALL your web searches to DEEPLY research this seller. The quality of every downstream output depends on how well you understand their products, customers, and market position.\n\n`+
-      `SEARCH STRATEGY (use ALL 3 searches — each serves a different purpose):\n`+
-      `1. site:${url} products OR solutions OR services OR platform OR "what we do" OR pricing\n`+
-      `   → Find their SPECIFIC products/services from their OWN website. Not training knowledge — their actual product pages.\n`+
-      `2. site:${url} "case study" OR "customer story" OR "white paper" OR "success story" OR "powered by" OR "trusted by"\n`+
-      `   → Find NAMED CUSTOMERS with verified use cases. Case studies are the gold standard for customer intelligence.\n`+
-      `3. "${url.split('.')[0]}" customers OR partners OR "selected by" OR "works with" press release OR announcement\n`+
-      `   → Find press releases, LinkedIn posts, and news citing customer wins and partnerships.\n\n`+
+      `SEARCH STRATEGY (use BOTH searches — each serves a different purpose):\n`+
+      `1. site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n`+
+      `   → Find their SPECIFIC products/services AND named customers from their OWN website. Product pages + case studies.\n`+
+      `2. "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n`+
+      `   → Find external sources: press releases, news, LinkedIn posts citing customer wins and partnerships.\n\n`+
       `PRODUCT RESEARCH IS CRITICAL: The fit score for every prospect depends on whether the seller's SPECIFIC products solve SPECIFIC problems. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable. Read their product pages carefully.\n\n`+
       `CUSTOMER RESEARCH IS CRITICAL: Named customers from case studies and press releases are HIGH-CONFIDENCE data. These become the anchor for scoring — "does this prospect look like companies we've already won?" A seller with 3 verified customer wins produces better scores than one with 20 guesses.\n\n`+
       `Then use your research to build the ICP below. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n\n`+
@@ -6462,13 +6460,13 @@ Return ONLY raw JSON:
       const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 60000));
       let raw;
       try {
-        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 4000, { maxSearches: 3, anchorKey: "sellerName", model: OPUS });
+        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 6000, { maxSearches: 2, anchorKey: "sellerName", model: OPUS });
         raw = await Promise.race([icpCall, icpTimeout]);
       } catch (e) {
         if (e.message === "timeout" || e.message?.includes("overloaded")) {
           console.warn("[ICP] Opus timed out/overloaded — falling back to Sonnet");
           setIcpStatus("Retrying with faster model...");
-          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 4000, { maxSearches: 3, anchorKey: "sellerName", model: SONNET });
+          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 6000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET });
         } else throw e;
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
@@ -7651,12 +7649,14 @@ Return ONLY raw JSON:
           }
         }
       } catch { /* non-critical */ }
+      // Quick Brief (research-only) should NOT inject seller ICP — it's pure target research
+      const isResearchOnly = effectiveSellerUrl === "research-only";
       const result = generateBrief(
-        member, effectiveSellerUrl, sellerDocs, products,
+        member, effectiveSellerUrl, isResearchOnly ? [] : sellerDocs, isResearchOnly ? [] : products,
         selectedCohort, selectedOutcomes, "",
         (msg) => setBriefStatus(msg),
-        productUrls,
-        sellerICP,
+        isResearchOnly ? [] : productUrls,
+        isResearchOnly ? null : sellerICP,
         { execs: cachedExecs, brief: cachedBrief },
         onStream,
         icpEdits,
