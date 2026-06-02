@@ -575,11 +575,11 @@ function authHeaders() {
 // Invest in quality at the top of the funnel (ICP, research brief),
 // then let rich context cascade to cheaper models downstream.
 //
-// Opus:   ICP Phase 2 (build), P3 strategy/opening angle, RFP search
-// Sonnet: ICP Phase 1 (research), P1 overview, P2 executives, P4 solutions, P7 competitive
-// Haiku:  P5-P6, P8-P10, hypothesis, discovery, coaching, post-call
+// Opus:   ICP Pass 1 (seller research), Build Target Accounts — ONLY for deep web research
+// Sonnet: P1 overview, P2 executives, P3 strategy/angle, P4 solutions, P7 competitive, RFP pipeline
+// Haiku:  P5-P6, P8-P10, hypothesis, discovery, coaching, post-call, ICP Pass 2
 //
-// Cost: ~$1.15/run (was $0.38 all-Haiku). Margins: 54-71% by tier.
+// Cost: ~$0.50-0.70/brief (down from $1.15). RFP pipeline ~$0.60 (down from $3-4).
 const HAIKU  = "claude-haiku-4-5-20251001";
 const SONNET = "claude-sonnet-4-5-20250929";
 const OPUS   = "claude-opus-4-6";
@@ -1981,7 +1981,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 5500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
+    }, 5500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: SONNET }
   );
   // relationshipSignals feature tabled
 
@@ -5857,9 +5857,9 @@ ${isOpen
         const seedCtx = prevResults?.length ? `\n\nPREVIOUSLY DISCOVERED (verify these are still active/valid, then find NEW ones beyond this list):\n${prevResults.slice(0,4).map(r => `- "${r.title}" from ${r.buyer} (${r.source}) ${r.url || ""}`).join("\n")}\n` : "";
 
         const d = await claudeFetch({
-          model: OPUS,
+          model: SONNET,
           max_tokens: 4000,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: kind === "open" ? 6 : 4 }],
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: kind === "open" ? 4 : 3 }],
           messages: [{ role: "user", content: buildPrompt(kind) + seedCtx }],
         });
         if (d.error) return { kind, error: d.error.message || "The AI engine stumbled. Give it another shot." };
@@ -5948,9 +5948,9 @@ Return ONLY raw JSON:
     const fetchSignals = async () => {
       try {
         const d = await claudeFetch({
-          model: OPUS,
+          model: SONNET,
           max_tokens: 3000,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
           messages: [{ role: "user", content: buildSignalsPrompt() }],
         });
         if (d.error) return { signals: [], error: d.error.message };
@@ -5994,7 +5994,7 @@ Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","count
       try {
         const prevGov = (prevIntel.open || []).filter(r => r.isGovernment);
         const seed = prevGov.length ? `\n\nPREVIOUSLY FOUND (verify + find NEW):\n${prevGov.slice(0,3).map(r=>`- "${r.title}" ${r.buyer} ${r.url||""}`).join("\n")}` : "";
-        const d = await claudeFetch({ model: OPUS, max_tokens: 3000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }], messages: [{ role: "user", content: buildGovOpenPrompt() + seed }] });
+        const d = await claudeFetch({ model: SONNET, max_tokens: 3000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }], messages: [{ role: "user", content: buildGovOpenPrompt() + seed }] });
         if (d.error) return { rows: [] };
         const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
         const fullText = textBlocks.join(" ").toLowerCase();
@@ -6185,8 +6185,8 @@ Return ONLY raw JSON:
     const fetchAcctClass = async (kind) => {
       try {
         const d = await claudeFetch({
-          model: OPUS, max_tokens: 4000,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+          model: SONNET, max_tokens: 4000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
           messages: [{ role: "user", content: buildAccountPrompt(kind) }],
         });
         if (d.error) return { kind, error: d.error.message };
@@ -6204,8 +6204,8 @@ Return ONLY raw JSON:
     const fetchAcctSignals = async () => {
       try {
         const d = await claudeFetch({
-          model: OPUS, max_tokens: 3000,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
+          model: SONNET, max_tokens: 3000,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
           messages: [{ role: "user", content: buildAccountSignalsPrompt() }],
         });
         if (d.error) return { signals: [] };
