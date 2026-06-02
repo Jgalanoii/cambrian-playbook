@@ -6331,18 +6331,45 @@ Return ONLY raw JSON:
     try { const keys = Object.keys(localStorage).filter(k => k.startsWith("rfp:")); keys.forEach(k => localStorage.removeItem(k)); if (keys.length) console.log(`[ICP rebuild] Cleared ${keys.length} RFP cache entries`); } catch {}
     setRfpData({ open: [], closed: [], signals: [], loading: false, error: null }); // Reset RFP UI
 
-    // Single-pass ICP build — Opus with web search does research + ICP in one call.
-    // Previously this was 2 sequential calls (Sonnet research → Opus build, ~45-60s).
-    // Now one streaming Opus call with web search (~20-30s total).
+    // TWO-PASS ICP BUILD:
+    // Pass 1 (Opus + web search): Deep research — products, case studies, customers, competitors
+    // Pass 2 (Sonnet, no search): Format research into ICP schema
+    // Opus does the expensive critical work, Sonnet does the cheap formatting.
+
+    // ── PASS 1: Opus Research ──
+    setIcpStatus("Researching your products and customers...");
+    let sellerResearch = "";
+    try {
+      const researchPrompt =
+        `Research the company at https://${url}. Use BOTH web searches.\n\n`+
+        `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n`+
+        `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`+
+        `Return a structured research summary:\n`+
+        `1. COMPANY: What they do (2 sentences, specific)\n`+
+        `2. PRODUCTS/SERVICES: List each product/service found on their website with a 1-sentence description and the URL where you found it\n`+
+        `3. NAMED CUSTOMERS: Every customer name found in case studies, press releases, partner pages, or logo walls — with the source URL for each\n`+
+        `4. COMPETITORS: Named competitors found in the research, with any evidence of their customers\n`+
+        `5. DIFFERENTIATORS: What makes this company different from competitors (specific, not generic)\n\n`+
+        `Be thorough. This research determines the quality of everything downstream. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable.`;
+      const researchTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 45000));
+      const researchCall = streamAIWithSearch(researchPrompt, (partial) => {
+        if (partial.length > 50 && partial.length < 200) setIcpStatus("Found the company...");
+        if (partial.includes("PRODUCTS") || partial.includes("products")) setIcpStatus("Analyzing products and services...");
+        if (partial.includes("CUSTOMERS") || partial.includes("customers")) setIcpStatus("Identifying customers and case studies...");
+        if (partial.includes("COMPETITORS") || partial.includes("competitors")) setIcpStatus("Mapping competitive landscape...");
+      }, 2000, { maxSearches: 2, anchorKey: null, model: OPUS });
+      const research = await Promise.race([researchCall, researchTimeout]);
+      sellerResearch = typeof research === "string" ? research : JSON.stringify(research);
+      console.log(`[ICP] Opus research complete: ${sellerResearch.length} chars`);
+    } catch (e) {
+      console.warn("[ICP] Opus research failed/timed out:", e.message, "— proceeding with Sonnet-only");
+    }
+
+    // ── PASS 2: Sonnet ICP Build (uses research from Pass 1) ──
+    setIcpStatus("Building your ICP...");
     const icpPrompt =
-      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n`+
-      `FIRST: Use ALL your web searches to DEEPLY research this seller. The quality of every downstream output depends on how well you understand their products, customers, and market position.\n\n`+
-      `SEARCH STRATEGY (use BOTH searches — each serves a different purpose):\n`+
-      `1. site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n`+
-      `   → Find their SPECIFIC products/services AND named customers from their OWN website. Product pages + case studies.\n`+
-      `2. "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n`+
-      `   → Find external sources: press releases, news, LinkedIn posts citing customer wins and partnerships.\n\n`+
-      `PRODUCT RESEARCH IS CRITICAL: The fit score for every prospect depends on whether the seller's SPECIFIC products solve SPECIFIC problems. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable. Read their product pages carefully.\n\n`+
+      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n\n`+
+      (sellerResearch ? `═══ RESEARCH RESULTS (from deep web search — use these facts) ═══\n${sellerResearch.slice(0, 6000)}\n═══ END RESEARCH ═══\n\n` : `No pre-research available. Use your training knowledge about ${url} to build the ICP.\n\n`)+
       `CUSTOMER RESEARCH IS CRITICAL: Named customers from case studies and press releases are HIGH-CONFIDENCE data. These become the anchor for scoring — "does this prospect look like companies we've already won?" A seller with 3 verified customer wins produces better scores than one with 20 guesses.\n\n`+
       `Then use your research to build the ICP below. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n\n`+
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
@@ -6432,19 +6459,21 @@ Return ONLY raw JSON:
         } catch { /* partial JSON not parseable yet — wait for more */ }
       };
 
-      const icpFullPrompt = icpPrompt + '\n\nAfter researching, return ONLY raw JSON starting with {. No prose, no markdown, no explanation.';
+      const icpFullPrompt = icpPrompt + '\n\nReturn ONLY raw JSON starting with {. No prose, no markdown, no explanation.';
 
-      // Opus attempt with 60s timeout — if it fails, Sonnet fallback
-      const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 60000));
+      // Sonnet ICP build (no web search needed — research already done by Opus)
+      const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 45000));
       let raw;
       try {
-        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET });
+        const icpCall = sellerResearch
+          ? streamAI(icpFullPrompt, onIcpPartial, 5000)  // No search — research already done
+          : streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET }); // Fallback: search if Opus research failed
         raw = await Promise.race([icpCall, icpTimeout]);
       } catch (e) {
         if (e.message === "timeout" || e.message?.includes("overloaded")) {
-          console.warn("[ICP] Sonnet timed out/overloaded — falling back to Haiku");
+          console.warn("[ICP] Sonnet timed out — falling back to Haiku");
           setIcpStatus("Retrying with faster model...");
-          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: HAIKU });
+          raw = await streamAI(icpFullPrompt, onIcpPartial, 5000);
         } else throw e;
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
