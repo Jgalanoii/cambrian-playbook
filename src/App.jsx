@@ -2404,8 +2404,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         const parsed=extractJsonWithKey(textBlocks[i],"financialDeepDive");
         if(parsed?.financialDeepDive) return parsed;
       }
+      // Fallback: try safeParseJSON on concatenated text
+      const raw = textBlocks.join("").trim();
+      const fb = safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+      if(fb?.financialDeepDive) return fb;
+      console.warn("[p9] Financial deep dive parse failed. Raw length:", raw.length);
       return null;
-    }catch{return null;}
+    }catch(e){console.warn("[p9] Financial deep dive error:", e?.message); return null;}
   })();
 
   // MICRO 10: Gate Map — approval paths for both seller and buyer side
@@ -2434,8 +2439,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         const parsed=extractJsonWithKey(textBlocks[i],"gateMap");
         if(parsed?.gateMap) return parsed;
       }
+      // Fallback: try safeParseJSON on concatenated text
+      const raw = textBlocks.join("").trim();
+      const fb = safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+      if(fb?.gateMap) return fb;
+      console.warn("[p10] Gate map parse failed. Raw length:", raw.length, "Preview:", raw.slice(0,200));
       return null;
-    }catch{return null;}
+    }catch(e){console.warn("[p10] Gate map error:", e?.message); return null;}
   })();
 
   // Merge deep intelligence layers
@@ -5319,11 +5329,10 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
             const chunk = outputRows.slice(i, i + 10);
             fetch(`${SB_URL}/rest/v1/account_outputs`, {
               method: "POST",
-              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal,resolution=merge-duplicates" },
+              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
               body: JSON.stringify(chunk),
             }).then(r => {
-              if (r.ok) console.log(`[output-persist] Logged ${chunk.length} fit_score rows to account_outputs`);
-              else console.warn(`[output-persist] fit_score write failed:`, r.status);
+              if (r.ok) console.log(`[output-persist] Logged ${chunk.length} fit_score rows`);
             }).catch(() => {});
           }
         }
@@ -8180,7 +8189,7 @@ Return ONLY raw JSON:
               sections_attempted: 10,
               sections_completed: completed,
               sections_failed: failed,
-              models_used: { p1: "sonnet", p2: "sonnet", p3: "opus", p4: "sonnet", p5: "sonnet", p6: "sonnet", p7: "sonnet", p8: "sonnet", p9: "sonnet", p10: "haiku" },
+              models_used: { p1: "sonnet", p2: "sonnet", p3: "opus", p4: "sonnet", p5: "haiku", p6: "haiku", p7: "sonnet", p8: "sonnet", p9: "sonnet", p10: "sonnet" },
               kl_versions: current._klVersions || [],
               data_confidence: current._dataConfidence || null,
               apollo_enrichment_used: !!(member._enrichment?.organization),
@@ -8230,7 +8239,7 @@ Return ONLY raw JSON:
           };
           fetch(`${SB_URL}/rest/v1/account_outputs`, {
             method: "POST",
-            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal,resolution=merge-duplicates" },
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
             body: JSON.stringify({
               org_id: orgCtx?.id || null,
               user_id: sbUser.id,
