@@ -7600,14 +7600,16 @@ Return ONLY raw JSON:
             if (cached.length > 0 && cached[0].data) {
               const age = Date.now() - new Date(cached[0].created_at).getTime();
               const ageDays = Math.floor(age / 86400000);
-              if (ageDays < 7) {
-                console.log(`[brief-cache] Found cached brief for ${co} (${ageDays}d old) — loading instantly`);
-                const cachedBriefData = { ...cached[0].data, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { live: true, roles: true } };
+              const cd = cached[0].data;
+              // Validate cache has critical sections — skip stale/incomplete briefs
+              const hasCritical = cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts;
+              if (ageDays < 7 && hasCritical) {
+                console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
+                const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { live: true } };
                 setBrief(cachedBriefData);
                 setBriefLoading(false);
                 setBriefStatus("");
-                // Refresh ONLY live sections (P5 headlines + P6 roles) in background
-                // These change frequently — everything else is stable
+                // Refresh ONLY live sections (P5 headlines) in background
                 (async () => {
                   try {
                     const p5 = streamAIWithSearch(
@@ -7619,12 +7621,10 @@ Return ONLY raw JSON:
                     const p5Result = await p5;
                     if (p5Result) setBrief(prev => prev ? { ...prev, ...(p5Result.recentHeadlines ? { recentHeadlines: p5Result.recentHeadlines } : {}), ...(p5Result.growthSignals ? { growthSignals: p5Result.growthSignals } : {}), ...(p5Result.recentSignals ? { recentSignals: p5Result.recentSignals } : {}), _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev);
                   } catch { setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev); }
-                  try {
-                    const p6Result = await (async()=>{ /* roles refresh will use existing p6 logic */ return null; })();
-                    setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
-                  } catch { setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev); }
                 })();
                 return;
+              } else if (ageDays < 7 && !hasCritical) {
+                console.warn(`[brief-cache] Cached brief for ${co} is incomplete (missing critical sections) — rebuilding fresh`);
               }
             }
           }
@@ -8191,16 +8191,41 @@ Return ONLY raw JSON:
           const trimStr = (v, max = 2000) => typeof v === "string" ? v.slice(0, max) : v;
           const trimmedBrief = {
             companySnapshot: trimStr(current.companySnapshot),
+            revenue: current.revenue,
+            publicPrivate: current.publicPrivate,
+            employeeCount: current.employeeCount,
+            headquarters: current.headquarters,
+            founded: current.founded,
+            website: current.website,
+            linkedIn: current.linkedIn,
+            fundingProfile: trimStr(current.fundingProfile),
             keyExecutives: current.keyExecutives,
             strategicTheme: trimStr(current.strategicTheme),
             sellerOpportunity: trimStr(current.sellerOpportunity),
             openingAngle: trimStr(current.openingAngle),
             elevatorPitch: trimStr(current.elevatorPitch),
+            outreachEmails: current.outreachEmails,
             solutionMapping: current.solutionMapping,
+            caseStudies: current.caseStudies,
+            keyContacts: current.keyContacts,
+            mobilizer: current.mobilizer,
+            techStack: current.techStack,
+            publicSentiment: current.publicSentiment,
+            recentHeadlines: current.recentHeadlines,
+            recentSignals: current.recentSignals,
+            growthSignals: current.growthSignals,
+            openRoles: current.openRoles,
+            workforceProfile: current.workforceProfile,
+            cultureProfile: current.cultureProfile,
+            incumbentVendors: current.incumbentVendors,
+            watchOuts: current.watchOuts,
+            competitors: current.competitors,
             competitivePositioning: current.competitivePositioning,
             financialDeepDive: current.financialDeepDive,
             boardAndInvestors: current.boardAndInvestors,
-            tldr: trimStr(current.tldr),
+            gateMap: current.gateMap,
+            tldr: current.tldr,
+            fiveQuestions: current.fiveQuestions,
           };
           fetch(`${SB_URL}/rest/v1/account_outputs`, {
             method: "POST",
@@ -14044,7 +14069,7 @@ Return ONLY raw JSON:
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Growth Signals</div>
                           {(brief.growthSignals||[]).filter(Boolean).map((s,i)=>(
-                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>📈 {typeof s==="string"?s:s?.headline||s?.title||JSON.stringify(s)}</div>
+                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>📈 {typeof s==="string"?s:s?.metric?`${s.metric}: ${s.value}`:s?.headline||s?.title||s?.signal||JSON.stringify(s)}</div>
                           ))}
                         </div>
                       )}
@@ -14052,7 +14077,7 @@ Return ONLY raw JSON:
                         <div>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Recent Triggers</div>
                           {(brief.recentSignals||[]).filter(Boolean).map((s,i)=>(
-                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>⚡ {typeof s==="string"?s:s?.headline||s?.title||JSON.stringify(s)}</div>
+                            <div key={i} style={{fontSize:12,color:"var(--ink-0)",padding:"4px 0",borderBottom:"1px solid var(--line-0)"}}>⚡ {typeof s==="string"?s:s?.signal?`${s.signal}${s.detail?" — "+s.detail:""}`:s?.headline||s?.title||s?.metric?`${s.metric}: ${s.value}`:JSON.stringify(s)}</div>
                           ))}
                         </div>
                       )}
