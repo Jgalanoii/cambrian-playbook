@@ -3156,7 +3156,7 @@ function PasswordGate({ onAuth }) {
 
   // ── Auth form (reused in hero and standalone) ──
   const authForm = (
-    <div className="card" style={{padding:22,minHeight:mode==="signup"?280:220,transition:"min-height 0.2s ease"}}>
+    <form className="card" style={{padding:22,minHeight:mode==="signup"?280:220,transition:"min-height 0.2s ease"}} onSubmit={e=>{e.preventDefault();submit();}}>
       <div className="pw-tabs" role="tablist" style={{marginBottom:18}}>
         {[["signup","Create Account"],["signin","Sign In"]].map(([m,label])=>(
           <button key={m} role="tab" aria-selected={mode===m}
@@ -3200,7 +3200,7 @@ function PasswordGate({ onAuth }) {
             onClick={()=>{setMode("reset");setErr("");}}>Forgot password?</button>}
         </>
       )}
-    </div>
+    </form>
   );
 
   return (
@@ -6361,65 +6361,37 @@ Return ONLY raw JSON:
       `- SELLER ADVOCACY (CRITICAL): You are building this ICP FOR the seller, not ABOUT them as a product to evaluate. NEVER disparage, undermine, or editorialize about the seller's product, pricing, market position, or viability. Do NOT say "there are simpler/cheaper alternatives", "limited market share", "niche player", or any language that positions the seller negatively. The ICP is a SALES TOOL — every word should help the seller WIN deals, not question whether they should exist. perceivedBarriers should describe BUYER objections (e.g. "integration complexity", "budget timing"), not your assessment of the seller's product quality.\n\n`+
       `Return ONLY raw JSON starting with {:\n`+
       `{"sellerName":"",`+
-      `"sellerDescription":"2 sentences: what they sell and who they sell it to",`+
-      `"marketCategory":"specific category in 2-5 words (e.g. 'Employee Rewards & Recognition' not 'SaaS')",`+
-      `"icp":{`+
-      `"industries":["PICK 2-4 FROM: Banking | Insurance | Healthcare | Retail & E-commerce | Technology / SaaS | Fintech | Consumer Goods | Hospitality & Travel | Manufacturing | Professional Services | Education | Energy & Utilities | Transportation & Logistics | Media & Entertainment | Real Estate | Telecom | Government | Pharmaceuticals | Automotive | Agriculture | Nonprofit | Construction"],`+
-      `"companySize":"PICK ONE: 1-49 employees | 50-499 employees | 500-4,999 employees | 5,000-49,999 employees | 50,000+ employees",`+
-      `"revenueRange":"PICK ONE: <$10M | $10M-$100M | $100M-$1B | $1B-$10B | $10B+",`+
-      `"ownershipTypes":["PICK 1-2 FROM: VC-backed private | PE-backed private | Public | Privately-held (family/founder) | Bootstrapped"],`+
-      `"geographies":["PICK 1-2 FROM: North America | EMEA | APAC | LATAM | Global"],`+
-      `"adoptionProfile":"PICK ONE: Innovator | Early Adopter | Early Majority | Late Majority",`+
-      `"buyerPersonas":[{"title":"PICK FROM: CEO | CFO | CTO | CIO | CISO | CHRO | CMO | COO | VP Sales | VP Marketing | VP Operations | VP HR | VP Finance | VP Engineering | VP Product | Director of IT | Director of Procurement | Director of Customer Success | Head of Digital | Head of Innovation","role":"economic buyer | champion | technical evaluator | blocker/gatekeeper","whyThisBuyer":"1 sentence: why this person cares about what the seller does — what's their mandate?","keepUpAtNight":"1 sentence: the specific fear or pressure this person faces that the seller's product alleviates","howToReach":"1 sentence: best channel or approach to get this person's attention"}],`+
-      `"priorityInitiative":"the specific business trigger that makes a company buy THIS product NOW — not generic pain. 1-2 sentences.",`+
-      `"successFactors":"what a successful deployment looks like for their buyer — measurable outcomes. 1-2 sentences.",`+
-      `"perceivedBarriers":"the top 2-3 objections a seller hears in the first meeting. Be specific to this product category.",`+
-      `"decisionCriteria":"the top 2-3 factors buyers evaluate (e.g. 'integration with existing HRIS', 'time to first value under 30 days')",`+
-      `"buyerJourney":"awareness → consideration → decision flow in 1 sentence specific to this category",`+
-      `"customerJobs":["Functional job: the task they hire this product to do","Emotional job: how they want to feel","Social job: how they want to be perceived"],`+
-      `"topPains":["Specific pain 1 — cite what triggers it","Specific pain 2","Specific pain 3"],`+
-      `"topGains":["Measurable gain 1 — quantify if possible","Gain 2","Gain 3"],`+
-      `"competitiveAlternatives":[`+
-        `{"name":"Status quo / do nothing","theirCustomers":[]},`+
-        `{"name":"Named competitor 1 — verified from research","theirCustomers":[{"name":"Customer A","evidence":"Source: case study URL, press release, or specific reference proving this relationship"},{"name":"Customer B","evidence":"Source URL or specific citation"}],"theirWeakness":"Where they lose deals — 1 sentence"},`+
-        `{"name":"Named competitor 2 — verified","theirCustomers":[{"name":"Customer C","evidence":"Source"},{"name":"Customer D","evidence":"Source"}],"theirWeakness":""},`+
-        `{"name":"Build in-house (if applicable)","theirCustomers":[]}`+
-      `],`+
-      `"uniqueDifferentiators":["Differentiator 1 — specific to THIS seller, not the category","Differentiator 2 — something a competitor cannot easily replicate"],`+
-      `"disqualifiers":["Return 2-4 structural disqualifiers — real reasons a prospect CANNOT buy this product. Every seller has them. Think: geography limits ('US-only — no international'), technical prerequisites ('requires existing ERP system'), regulatory barriers ('only serves FDIC-insured institutions'), size floors ('minimum 50 employees — product doesn't work for solopreneurs'), or integration dependencies ('requires Salesforce or HubSpot'). These are NOT preferences — they are hard gates. If you genuinely cannot identify any, return ['No structural barriers identified'] but try harder first."],`+
-      `"techSignals":["Tech signal 1 that indicates readiness (e.g. 'Uses Workday = likely buyer')","Signal 2"],`+
-      `"tractionChannels":["Primary GTM channel","Secondary","Tertiary"],`+
-      `"dealSize":"PICK ONE: <$10K ACV | $10K-$50K ACV | $50K-$250K ACV | $250K-$1M ACV | $1M+ ACV",`+
-      `"salesCycle":"PICK ONE: <30 days | 30-60 days | 60-90 days | 90-180 days | 180+ days",`+
-      `"customerExamples":["Customer names from the Phase 1 research above ONLY — do NOT add names from training knowledge. If research found no customers, return empty array."],`+
+      `"sellerName":"","sellerDescription":"2 sentences",`+
+      `"marketCategory":"2-5 words (e.g. 'Employee Rewards & Recognition')",`+
+      `"icp":{"industries":["2-4 from: Banking|Insurance|Healthcare|Retail|Technology/SaaS|Fintech|Consumer Goods|Hospitality|Manufacturing|Professional Services|Education|Energy|Transportation|Media|Real Estate|Telecom|Government|Pharma|Automotive|Nonprofit"],`+
+      `"companySize":"1-49|50-499|500-4999|5000-49999|50000+",`+
+      `"revenueRange":"<$10M|$10M-$100M|$100M-$1B|$1B-$10B|$10B+",`+
+      `"ownershipTypes":["1-2: VC-backed|PE-backed|Public|Private|Bootstrapped"],`+
+      `"geographies":["1-2: North America|EMEA|APAC|LATAM|Global"],`+
+      `"buyerPersonas":[{"title":"C-suite or VP title","role":"economic buyer|champion|technical evaluator|blocker","whyThisBuyer":"1 sentence","keepUpAtNight":"1 sentence","howToReach":"1 sentence"}],`+
+      `"priorityInitiative":"specific trigger, 1-2 sentences",`+
+      `"successFactors":"measurable outcomes, 1-2 sentences",`+
+      `"perceivedBarriers":"top 2-3 objections",`+
+      `"decisionCriteria":"top 2-3 evaluation factors",`+
+      `"buyerJourney":"1 sentence",`+
+      `"customerJobs":["functional","emotional","social"],`+
+      `"topPains":["3 specific pains"],`+
+      `"topGains":["3 measurable gains"],`+
+      `"competitiveAlternatives":[{"name":"competitor","theirCustomers":[{"name":"","evidence":"source URL"}],"theirWeakness":""}],`+
+      `"uniqueDifferentiators":["specific to THIS seller"],`+
+      `"disqualifiers":["2-4 structural hard gates"],`+
+      `"techSignals":["readiness signals"],`+
+      `"tractionChannels":["GTM channels"],`+
+      `"dealSize":"<$10K|$10K-$50K|$50K-$250K|$250K-$1M|$1M+",`+
+      `"salesCycle":"<30d|30-60d|60-90d|90-180d|180+d",`+
+      `"customerExamples":["from research ONLY"],`+
       `"relevantEvents":[],`+
-
-      // ── MULTI-LOB + NAMED CUSTOMER PROFILES (v2 scoring architecture) ──
-      `"linesOfBusiness":[`+
-        `{"name":"Primary LOB name (e.g. 'B2B Rewards & Incentives')","description":"1 sentence: what this LOB sells and to whom","revenueWeight":"estimated % of total revenue (e.g. 60%)","buyerProfile":"Who buys this LOB (title + industry)","namedCustomers":["Customer 1 from research","Customer 2"]},`+
-        `{"name":"Secondary LOB (if exists — many companies have only 1)","description":"","revenueWeight":"","buyerProfile":"","namedCustomers":[]}`+
-      `],`+
-      `"namedCustomerProfiles":[`+
-        `{"name":"Customer name from research","industry":"Their industry","estimatedSize":"Employee count or revenue band","useCase":"What they buy from the seller — be specific","lob":"Which seller LOB they map to","whyTheyBuy":"1 sentence: the business outcome this customer gets"}`+
-      `],`+
-      `"winPatterns":{`+
-        `"industriesWhereTheyWin":["Industry 1 — with WHY they win there","Industry 2"],`+
-        `"companySizeSweet":"The size range where they close most deals and why",`+
-        `"typicalEntryPoint":"How they typically land — which LOB, which buyer, which use case",`+
-        `"expansionPath":"How they grow within an account after landing"`+
-      `},`+
-      `"productCatalog":[`+
-        `{"name":"Exact product/service name from website","description":"What it does — specific, not generic. 'AI for fraud detection in banking' not 'AI platform'.","targetBuyer":"Who buys this (title + function)","painSolved":"What specific pain this addresses","industries":["Industries where this product is deployed"],"evidence":"URL or page where you found this product"}`+
-      `],`+
-      `"verifiedCustomers":[`+
-        `{"name":"Customer name found in case study, press release, or partner page","industry":"Their industry","useCase":"What they bought and why — be specific","source":"case_study | press_release | partner_page | white_paper | linkedin | website_logo","sourceUrl":"URL where you found this customer relationship"}`+
-      `]}`+
-      `\n\nIMPORTANT:\n`+
-      `- linesOfBusiness: 1-4 entries based on distinct buyer profiles.\n`+
-      `- namedCustomerProfiles: 3-8 entries — one per named customer from research.\n`+
-      `- productCatalog: 2-6 entries — the seller's ACTUAL products/services from their website. Read their product pages. Do NOT guess product names from training knowledge — use what you found in Search 1. If you found no product pages, describe their offering based on their homepage and about page.\n`+
-      `- verifiedCustomers: 3-10 entries — customers found in Search 2 and Search 3. Case study customers are highest confidence. Logo-wall customers are lower confidence but still include them with source: "website_logo". If research found no customers, return empty array — do NOT invent names.\n`+
-      `- Leave relevantEvents empty — populated by a separate call.`;
+      `"linesOfBusiness":[{"name":"LOB name","description":"","revenueWeight":"","buyerProfile":"","namedCustomers":[]}],`+
+      `"namedCustomerProfiles":[{"name":"","industry":"","estimatedSize":"","useCase":"","lob":"","whyTheyBuy":""}],`+
+      `"winPatterns":{"industriesWhereTheyWin":[],"companySizeSweet":"","typicalEntryPoint":"","expansionPath":""},`+
+      `"productCatalog":[{"name":"from website","description":"specific","targetBuyer":"","painSolved":"","industries":[],"evidence":"URL"}],`+
+      `"verifiedCustomers":[{"name":"from case study/press","industry":"","useCase":"","source":"case_study|press_release|partner_page|website_logo","sourceUrl":""}]}`+
+      `\n\nRULES: productCatalog 2-6 from website (NOT training knowledge). verifiedCustomers 3-10 from research. competitiveAlternatives with evidence URLs. customerExamples from research only. Empty array if not found. relevantEvents leave empty.`;
 
     try{
       // Single-pass ICP — Opus streaming with web search, Sonnet fallback on timeout
@@ -6466,13 +6438,13 @@ Return ONLY raw JSON:
       const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 60000));
       let raw;
       try {
-        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 6000, { maxSearches: 2, anchorKey: "sellerName", model: OPUS });
+        const icpCall = streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET });
         raw = await Promise.race([icpCall, icpTimeout]);
       } catch (e) {
         if (e.message === "timeout" || e.message?.includes("overloaded")) {
-          console.warn("[ICP] Opus timed out/overloaded — falling back to Sonnet");
+          console.warn("[ICP] Sonnet timed out/overloaded — falling back to Haiku");
           setIcpStatus("Retrying with faster model...");
-          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 6000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET });
+          raw = await streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: HAIKU });
         } else throw e;
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
