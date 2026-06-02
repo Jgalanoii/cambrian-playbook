@@ -7428,7 +7428,8 @@ Return ONLY raw JSON:
           };
         }
       } catch {}
-      if (!sellerUrl) setSellerUrl("research-only");
+      if (overrideSellerUrl === "research-only") { setSellerUrl("research-only"); setSellerICP(null); }
+      else if (!sellerUrl) setSellerUrl("research-only");
       pickAccount(member, overrideSellerUrl || "research-only");
       return;
     }
@@ -7501,7 +7502,8 @@ Return ONLY raw JSON:
     } catch (e) {
       console.warn("[verify] Company verification failed, launching with name only:", e.message);
       const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
-      if (!sellerUrl) setSellerUrl("research-only");
+      if (overrideSellerUrl === "research-only") { setSellerUrl("research-only"); setSellerICP(null); }
+      else if (!sellerUrl) setSellerUrl("research-only");
       pickAccount(member, overrideSellerUrl || "research-only");
     } finally {
       setDisambigLoading(false);
@@ -7523,6 +7525,9 @@ Return ONLY raw JSON:
   const launchQuickBrief = () => {
     const co = quickBriefInput.trim();
     if (!co) return;
+    // FORCE research-only mode — no seller context, period
+    setSellerUrl("research-only");
+    setSellerICP(null);
     verifyAndLaunch(co, "research-only");
   };
 
@@ -7550,7 +7555,9 @@ Return ONLY raw JSON:
     const co = member.company;
 
     // ── Brief caching: check account_outputs for a recent brief (< 7 days) ──
-    if (!forceRebuild && sbToken && sbUser) {
+    // SKIP cache for research-only (Quick Brief) — cached briefs may have seller contamination
+    const _isQuickBrief = (overrideSellerUrl === "research-only") || (sellerUrl === "research-only");
+    if (!forceRebuild && !_isQuickBrief && sbToken && sbUser) {
       try {
         const SB_URL_BC = import.meta.env.VITE_SUPABASE_URL;
         const SB_KEY_BC = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -13250,18 +13257,24 @@ Return ONLY raw JSON:
           <div className="page">
             {/* Brief header with logos */}
             <div className="page-hero" style={{display:"flex",alignItems:"center",gap:16,marginBottom:6}}>
-              <CompanyLogo domain={sellerUrl} name={sellerICP?.sellerName} size={44}/>
-              <div style={{fontSize:18,color:"var(--ink-3)",fontWeight:300}}>→</div>
+              {sellerUrl !== "research-only" && <>
+                <CompanyLogo domain={sellerUrl} name={sellerICP?.sellerName} size={44}/>
+                <div style={{fontSize:18,color:"var(--ink-3)",fontWeight:300}}>→</div>
+              </>}
               <CompanyLogo domain={selectedAccount?.company_url} name={selectedAccount?.company} size={44}/>
               <div style={{flex:1}}>
-                <div className="page-title" style={{margin:0}}>Sales Brief — {selectedAccount?.company}</div>
+                <div className="page-title" style={{margin:0}}>{sellerUrl === "research-only" ? "Company Brief" : "Sales Brief"} — {selectedAccount?.company}</div>
                 <div style={{fontSize:13,color:"var(--ink-1)",marginTop:2}}>
-                  <strong>{sellerICP?.sellerName||sellerUrl}</strong> selling to <strong>{selectedAccount?.company}</strong>
+                  {sellerUrl === "research-only"
+                    ? <>Deep intelligence on <strong>{selectedAccount?.company}</strong></>
+                    : <><strong>{sellerICP?.sellerName||sellerUrl}</strong> selling to <strong>{selectedAccount?.company}</strong></>}
                 </div>
               </div>
             </div>
             <div className="page-sub">
-              {briefLoading?"Hang tight — live research in progress.":`This brief maps ${sellerICP?.sellerName||sellerUrl}'s products to ${selectedAccount?.company}'s needs${(sellerICP?.icp?.verifiedCustomers||[]).length?` — grounded in ${sellerICP.icp.verifiedCustomers.length} verified customer win${sellerICP.icp.verifiedCustomers.length===1?"":"s"}`:""}.${(sellerICP?.icp?.productCatalog||[]).length?` ${sellerICP.icp.productCatalog.length} product${sellerICP.icp.productCatalog.length===1?"":"s"} mapped.`:""} All fields are editable.`}
+              {briefLoading?"Hang tight — live research in progress.":(sellerUrl === "research-only"
+                ? `Deep intelligence on ${selectedAccount?.company} — executives, strategy, sentiment, financials, and competitive positioning. All fields are editable.`
+                : `This brief maps ${sellerICP?.sellerName||sellerUrl}'s products to ${selectedAccount?.company}'s needs${(sellerICP?.icp?.verifiedCustomers||[]).length?` — grounded in ${sellerICP.icp.verifiedCustomers.length} verified customer win${sellerICP.icp.verifiedCustomers.length===1?"":"s"}`:""}.${(sellerICP?.icp?.productCatalog||[]).length?` ${sellerICP.icp.productCatalog.length} product${sellerICP.icp.productCatalog.length===1?"":"s"} mapped.`:""} All fields are editable.`)}
             </div>
 
             {/* Brief age + cache indicator */}
