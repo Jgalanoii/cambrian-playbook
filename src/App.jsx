@@ -2412,7 +2412,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     try {
       const dealSize = sellerICP?.icp?.dealSize || "";
       const d = await claudeFetch({
-        model:activeModel(), max_tokens:2000,
+        model:SONNET, max_tokens:2000,
         messages:[{role:"user",content:
           firmographicsTruth+
           `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n\n`+
