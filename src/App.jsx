@@ -1965,7 +1965,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how the seller should USE this sentiment context in the discovery conversation — a specific talk-track pivot, not just 'mention their pain'"},`+
-    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. No product mention. No pitch. Close with 'Am I way off base?' or similar. First name sign-off."},{"style":"insight","subject":"Reference a specific finding about ${co} — lowercase, specific, under 40 chars. 'that q1 fee growth though' or 're: your CFO hire'","body":"2 sentences. Lead with ONE specific observation about ${co} from your research — connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' First name sign-off."}]`,
+    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. No product mention. No pitch. Close with 'Am I way off base?' or similar. First name sign-off."},{"style":"insight","subject":"Reference a specific finding about ${co} — lowercase, specific, under 40 chars. 'that q1 fee growth though' or 're: your CFO hire'","body":"2 sentences. Lead with ONE specific observation about ${co} from your research — connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' First name sign-off."}]}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
       const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -1980,7 +1980,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 4500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
+    }, 5500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
   );
   // relationshipSignals feature tabled
 
@@ -1999,7 +1999,6 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         `- keyContacts: identify 2-3 key decision-makers at ${co} by likely title and function — VP level or above. Use ONLY names found in your web search results or the Apollo-verified contacts above. If search returned no names for a role, leave name as empty string but still fill in the title and angle.\n`+
         `- techStack: use your web search results to identify ${co}'s technology stack. If not found in search, return empty string for that field — do NOT guess.\n`+
         `- mobilizer: describe who at ${co} would champion a new technology purchase — what title, what motivates them, how to identify them.\n`+
-        `- processMaturity: assess ${co}'s operational maturity (Define/Measure/Analyze/Improve/Control) based on their industry and size.\n`+
         `CRITICAL: Do NOT return empty objects. Every field except solutionMapping must have substantive content.\n`
       : `Map seller solutions to ${co} using positioning analysis and job-to-be-done mapping.\n`)+
     `CAPABILITY GUARD: ONLY suggest use cases that the seller's products ACTUALLY do. If the seller's exclusion list says they don't do something (e.g. payroll, benefits admin, hiring bonuses), do NOT suggest it as a use case — even if it would logically fit the target. OMIT the use case entirely. A rep who pitches something their company doesn't do loses credibility and the deal.\n`+
@@ -2020,8 +2019,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
     `"keyContacts":[{"name":"Use ONLY names found in your web search results or the Apollo-verified contacts above. If search returned no name for this role, leave as EMPTY STRING — do NOT guess or fabricate names","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this even if name is unknown","initials":"First+last initials if name is known, empty string if not","angle":"Use role-specific language: CFO cares about margins and ROI, CIO cares about architecture and integration, CHRO cares about talent and engagement, VP Ops cares about efficiency and process. Match the angle to THEIR mandate, not a generic 'they would benefit from...' Write how to REACH them — what language resonates, what their first-90-day priority likely is."},{"name":"","title":"","initials":"","angle":""}],`+
     `"techStack":{"crm":"Use ONLY tech found in web search results (job postings, case studies, press). Empty string if not found — do NOT guess.","erp":"empty string if not found","hris":"empty string if not found","marketing":"empty string if not found","payments":"empty string if not found","analytics":"empty string if not found","infrastructure":"empty string if not found","other":[]},`+
-    `"mobilizer":{"description":"Who is the likely Mobilizer at ${co}? The person who asks 'how do we make this happen?' — specific title, function, and what motivates them to champion this deal internally.","identifyingBehavior":"How will the seller know they've found this person in a meeting? What do they say or ask that a Talker or Blocker wouldn't?","teachingAngle":"The specific insight to teach THROUGH this Mobilizer to the broader buying group — one surprising fact or case study that reframes their assumptions."},`+
-    `"processMaturity":{"dmiacStage":"Define|Measure|Analyze|Improve|Control","maturityNote":"1 sentence: where they are and what it means for seller entry","processGaps":["Gap 1","Gap 2"]}}`,
+    `"mobilizer":{"description":"Who is the likely Mobilizer at ${co}? The person who asks 'how do we make this happen?' — specific title, function, and what motivates them to champion this deal internally.","identifyingBehavior":"How will the seller know they've found this person in a meeting? What do they say or ask that a Talker or Blocker wouldn't?","teachingAngle":"The specific insight to teach THROUGH this Mobilizer to the broader buying group — one surprising fact or case study that reframes their assumptions."}}`,
     (partial) => {
       if (!onStream || partial.length < 100) return;
       // For p4, try JSON parse since solutionMapping is complex
@@ -2170,7 +2168,6 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts = r4.keyContacts;
     if (r4?.techStack) next.techStack = r4.techStack;
     if (r4?.mobilizer?.description) next.mobilizer = r4.mobilizer;
-    if (r4?.processMaturity?.dmiacStage) next.processMaturity = r4.processMaturity;
     return next;
   };
   const mergeLive = (r5raw) => (prev) => {
@@ -3100,9 +3097,9 @@ function PasswordGate({ onAuth }) {
               Joining as <strong style={{color:"var(--ink-0)"}}>{inviteEmail}</strong>
             </div>
           )}
-          <input type="password" placeholder="Choose a password (8+ characters)" value={newPw} onChange={e=>setNewPw(e.target.value)}
+          <input type="password" autoComplete="new-password" placeholder="Choose a password (8+ characters)" value={newPw} onChange={e=>setNewPw(e.target.value)}
             autoFocus style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&newPwConfirm&&submit()} />
-          <input type="password" placeholder="Confirm password" value={newPwConfirm} onChange={e=>setNewPwConfirm(e.target.value)}
+          <input type="password" autoComplete="new-password" placeholder="Confirm password" value={newPwConfirm} onChange={e=>setNewPwConfirm(e.target.value)}
             style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&submit()} />
           {err && <div className="pw-error">{err}</div>}
           <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1}}
@@ -3138,9 +3135,9 @@ function PasswordGate({ onAuth }) {
             </>
           ) : (
             <>
-              <input type="password" placeholder="New password (8+ characters)" value={newPw} onChange={e=>setNewPw(e.target.value)}
+              <input type="password" autoComplete="new-password" placeholder="New password (8+ characters)" value={newPw} onChange={e=>setNewPw(e.target.value)}
                 autoFocus style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&newPwConfirm&&submit()} />
-              <input type="password" placeholder="Confirm new password" value={newPwConfirm} onChange={e=>setNewPwConfirm(e.target.value)}
+              <input type="password" autoComplete="new-password" placeholder="Confirm new password" value={newPwConfirm} onChange={e=>setNewPwConfirm(e.target.value)}
                 style={{marginBottom:10}} onKeyDown={e=>e.key==="Enter"&&submit()} />
               {err && <div className="pw-error">{err}</div>}
               <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1}}
@@ -3179,7 +3176,7 @@ function PasswordGate({ onAuth }) {
         </div>
       )}
       <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}} readOnly={!!inviteEmail && mode==="signup"}/>
-      {mode!=="reset"&&<input type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>}
+      {mode!=="reset"&&<input type="password" autoComplete={mode==="signup"?"new-password":"current-password"} placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>}
       {err && <div className="pw-error">{err}</div>}
       {resetSent && <div style={{fontSize:12,color:"var(--green)",fontWeight:600,marginBottom:8}}>Password reset link sent to {email}. Check your inbox.</div>}
       {mode==="reset"?(
@@ -5419,14 +5416,27 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 
   // ── RFP data science logging (fire-and-forget to Supabase) ──────────
   // ── Cross-session: log prospect events for data science ──
-  const logProspectEvent = (company, eventType, metadata = {}) => {
+  const logProspectEvent = (company, eventType, extra = {}) => {
     if (!sbToken || !sbUser) return;
     const SB_URL = import.meta.env.VITE_SUPABASE_URL;
     const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
     if (!SB_URL || !SB_KEY) return;
+    const row = {
+      user_id: sbUser.id,
+      org_id: orgCtx?.id || null,
+      seller_url: sellerUrl === "research-only" ? null : (sellerUrl || null),
+      prospect_name: (company || "").slice(0, 200),
+      event_type: eventType,
+    };
+    // Map known structured fields from extra
+    if (extra.score != null) row.fit_score = extra.score;
+    if (extra.label) row.fit_label = extra.label;
+    if (extra.dealRoute) row.deal_route = extra.dealRoute;
+    if (extra.sections != null) row.brief_sections_complete = extra.sections;
+    if (extra.reason) row.deal_route = "DISQUALIFY";
     fetch(`${SB_URL}/rest/v1/prospect_events`, {
       method: "POST", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ user_id: sbUser.id, org_id: orgCtx?.id || null, seller_url: sellerUrl || null, company: (company||"").slice(0,200), event_type: eventType, metadata }),
+      body: JSON.stringify(row),
     }).catch(() => {});
   };
 
@@ -10613,7 +10623,7 @@ Return ONLY raw JSON:
             ) : (
               <span style={{fontSize:10,color:"var(--navy)",fontWeight:600}}>Quick Research Mode</span>
             )}
-            {sellerICP?.icp?.industries?.length>0&&(
+            {sellerUrl!=="research-only"&&sellerICP?.icp?.industries?.length>0&&(
               <span style={{fontSize:10,color:"var(--purple)",fontWeight:600,background:"var(--purple-bg)",border:"1px solid #6B3A7A44",borderRadius:10,padding:"2px 8px"}}>
                 Target: {sellerICP.icp.industries.slice(0,2).join(", ")}
               </span>
@@ -14683,47 +14693,6 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
-                {/* DMAIC Process Maturity */}
-                {brief.processMaturity?.dmiacStage&&(
-                  <div className="bb bb-arrive">
-                    <div className="bb-hdr">
-                      <div className="bb-icon" style={{fontSize:14}}>⚙️</div>
-                      <div><div className="bb-title">Process Maturity</div><div className="bb-sub">Where are they in their improvement cycle?</div></div>
-                    </div>
-                    <div className="bb-body">
-                      <div style={{display:"flex",gap:4,marginBottom:14,flexWrap:"wrap"}}>
-                        {(()=>{
-                          const stages=["Define","Measure","Analyze","Improve","Control"];
-                          const colors=["#9B2C2C","#BA7517","#1B3A6B","#2E6B2E","#6B3A7A"];
-                          const activeIdx=stages.indexOf(brief.processMaturity.dmiacStage);
-                          return stages.map((stage,i)=>(
-                            <div key={stage} style={{display:"flex",alignItems:"center",gap:4}}>
-                              {i>0&&<div style={{width:14,height:2,background:i<=activeIdx?colors[i]+"66":"var(--line-0)",borderRadius:1}}/>}
-                              <div style={{padding:"4px 11px",borderRadius:20,fontSize:12,fontWeight:700,
-                                background:i===activeIdx?colors[i]:i<activeIdx?colors[i]+"22":"var(--tan-3)",
-                                color:i===activeIdx?"#fff":i<activeIdx?colors[i]:"var(--ink-3)",
-                                border:"1.5px solid "+(i<=activeIdx?colors[i]:"var(--line-0)")}}>
-                                {stage}
-                              </div>
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                      <EF value={brief.processMaturity.maturityNote||""} onChange={v=>patchBrief(b=>{if(!b.processMaturity)b.processMaturity={};b.processMaturity.maturityNote=v;})}/>
-                      {(brief.processMaturity.processGaps||[]).filter(Boolean).length>0&&(
-                        <div style={{marginTop:12}}>
-                          <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Process Gaps</div>
-                          {brief.processMaturity.processGaps.filter(Boolean).map((g,i)=>(
-                            <div key={i} style={{display:"flex",gap:7,marginBottom:5}}>
-                              <div style={{width:5,height:5,borderRadius:"50%",background:"var(--amber)",flexShrink:0,marginTop:6}}/>
-                              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5}}>{g}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
 
                 {/* Close "Company Intelligence" group */}
@@ -15325,27 +15294,6 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
-                {brief?.processMaturity?.dmiacStage&&(
-                  <div className="incall-sidebar" style={{marginTop:14}}>
-                    <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:8}}>⚙️ Process Maturity Stage</div>
-                    <div style={{display:"flex",gap:3,marginBottom:8,flexWrap:"wrap"}}>
-                      {(()=>{
-                        const stages=["Define","Measure","Analyze","Improve","Control"];
-                        const colors=["#9B2C2C","#BA7517","#1B3A6B","#2E6B2E","#6B3A7A"];
-                        const ai=stages.indexOf(brief.processMaturity.dmiacStage);
-                        return stages.map((s,i)=>(
-                          <span key={s} style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10,
-                            background:i===ai?colors[i]:i<ai?colors[i]+"22":"var(--tan-3)",
-                            color:i===ai?"#fff":i<ai?colors[i]:"var(--ink-3)",
-                            border:"1px solid "+(i<=ai?colors[i]:"var(--line-0)")}}>
-                            {s}
-                          </span>
-                        ));
-                      })()}
-                    </div>
-                    <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5}}>{(brief.processMaturity.maturityNote||"").slice(0,120)}{(brief.processMaturity.maturityNote||"").length>120?"...":""}</div>
-                  </div>
-                )}
               </div>
             </div>
             {/* Bottom action bar */}
