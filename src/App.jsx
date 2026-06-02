@@ -6426,16 +6426,22 @@ Return ONLY raw JSON:
       setIcpStatus("Researching your company...");
 
       // Progressive rendering callback — render ICP fields as they stream in
+      let lastStatusChange = 0;
       const onIcpPartial = (partial) => {
-        // Status text updates
-        if (partial.length < 50) setIcpStatus("Researching your company...");
-        else if (partial.length > 100 && partial.includes('"sellerName"')) setIcpStatus("Found your company...");
-        if (partial.includes('"industries"')) setIcpStatus("Mapping target industries...");
-        if (partial.includes('"buyerPersonas"')) setIcpStatus("Profiling buyer personas...");
-        if (partial.includes('"competitiveAlternatives"')) setIcpStatus("Analyzing competitive landscape...");
-        if (partial.includes('"linesOfBusiness"')) setIcpStatus("Mapping lines of business...");
-        if (partial.includes('"namedCustomerProfiles"')) setIcpStatus("Building customer profiles...");
-        if (partial.includes('"winPatterns"')) setIcpStatus("Identifying win patterns...");
+        // Status text updates — debounced to prevent rapid flashing
+        const now = Date.now();
+        if (now - lastStatusChange > 2000) {
+          let newStatus = "";
+          if (partial.includes('"winPatterns"')) newStatus = "Identifying win patterns...";
+          else if (partial.includes('"namedCustomerProfiles"')) newStatus = "Building customer profiles...";
+          else if (partial.includes('"linesOfBusiness"')) newStatus = "Mapping lines of business...";
+          else if (partial.includes('"competitiveAlternatives"')) newStatus = "Analyzing competitive landscape...";
+          else if (partial.includes('"buyerPersonas"')) newStatus = "Profiling buyer personas...";
+          else if (partial.includes('"industries"')) newStatus = "Mapping target industries...";
+          else if (partial.length > 100 && partial.includes('"sellerName"')) newStatus = "Found your company...";
+          else if (partial.length < 50) newStatus = "Researching your company...";
+          if (newStatus) { setIcpStatus(newStatus); lastStatusChange = now; }
+        }
 
         // Progressive data rendering — parse partial JSON and show what we have
         try {
