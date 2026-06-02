@@ -192,7 +192,7 @@ export const SAMPLE_ROWS = [
   {company:"Synapse Financial",       industry:"BaaS / Sponsor Banking", lead_source:"Partner",    outcome:"Embedded banking",         company_url:"synapsefi.com",    employees:"~200",   publicPrivate:"Private (VC-backed)"},
 
   // ── HR Tech (3) ────────────────────────────────────────────────────────
-  {company:"Workday",                 industry:"HR Tech", lead_source:"Partner",    outcome:"HCM consolidation",        company_url:"workday.com",        employees:"~18,800",  publicPrivate:"Public (NASDAQ: WDAY)"},
+  {company:"ADP",                     industry:"HR Tech", lead_source:"Partner",    outcome:"HCM consolidation",        company_url:"adp.com",            employees:"~63,000",  publicPrivate:"Public (NASDAQ: ADP)"},
   {company:"Gusto",                   industry:"HR Tech", lead_source:"Outbound",   outcome:"SMB payroll growth",       company_url:"gusto.com",          employees:"~2,500",   publicPrivate:"Private (VC-backed)"},
   {company:"Rippling",                industry:"HR Tech", lead_source:"Conference", outcome:"Workforce platform",       company_url:"rippling.com",       employees:"~3,000",   publicPrivate:"Private (VC-backed)"},
 
@@ -225,8 +225,8 @@ export const SAMPLE_ROWS = [
   {company:"GreenLeaf Solar",          industry:"SMB Energy", lead_source:"Partner",    outcome:"Installation scaling",    company_url:"greenleafsolar.com", employees:"~120",    publicPrivate:"Private"},
 
   // ── Payments (2) ───────────────────────────────────────────────────────
-  {company:"Stripe",                   industry:"Payments", lead_source:"Outbound",   outcome:"Platform payments",       company_url:"stripe.com",         employees:"~8,000",   publicPrivate:"Private (VC-backed)"},
-  {company:"Block (Square)",           industry:"Payments", lead_source:"Partner",    outcome:"SMB payments growth",     company_url:"block.xyz",          employees:"~12,000",  publicPrivate:"Public (NYSE: XYZ)"},
+  {company:"Marqeta",                  industry:"Payments", lead_source:"Outbound",   outcome:"Card issuing platform",   company_url:"marqeta.com",        employees:"~700",     publicPrivate:"Public (NASDAQ: MQ)"},
+  {company:"Toast",                    industry:"Payments", lead_source:"Partner",    outcome:"Restaurant payments",     company_url:"toasttab.com",       employees:"~5,000",   publicPrivate:"Public (NYSE: TOST)"},
 
   // ── Compliance / RegTech (2) ───────────────────────────────────────────
   {company:"Chainalysis",             industry:"Compliance / RegTech", lead_source:"Conference", outcome:"AML compliance",    company_url:"chainalysis.com",    employees:"~900",    publicPrivate:"Private (VC-backed)"},

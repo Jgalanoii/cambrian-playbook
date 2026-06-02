@@ -10869,18 +10869,6 @@ Return ONLY raw JSON:
                     <div className="load-spin" style={{width:12,height:12,borderWidth:2}}/> Scanning for products, solutions, and case studies...
                   </div>
                 )}
-                {(urlScanConfirmed || urlScanStatus==="found") && productUrls.some(u=>u.url?.trim()) && (
-                  <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:10,padding:"10px 14px",marginTop:8}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"var(--green)",marginBottom:6}}>🔍 Found {productUrls.filter(u=>u.url?.trim()).length} product pages</div>
-                    {productUrls.filter(u=>u.url?.trim()).map((u,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                        <span style={{fontSize:10}}>🔗</span>
-                        <span style={{fontSize:12,fontWeight:600,color:"var(--green)"}}>{ u.label || "Page"}</span>
-                        <span style={{fontSize:11,color:"var(--ink-3)"}}>{ u.url}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 {/* Seller Stage + Targeting — moved to collapsible section below products */}
                 <div style={{display:"none"}}>
@@ -12213,11 +12201,11 @@ Return ONLY raw JSON:
                   </div>
                   <div className={`bb-body-wrap ${bbIsOpen("icpBuyingInsight")?"":"collapsed"}`}><div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
                     {[
-                      {key:"priorityInitiative",label:"⚡ Ring 1 — Priority Initiative",sub:"What triggers them to act NOW",color:"var(--amber)",bg:"var(--amber-bg)"},
-                      {key:"successFactors",label:"✓ Ring 2 — Success Factors",sub:"What winning looks like for them",color:"var(--green)",bg:"var(--green-bg)"},
-                      {key:"perceivedBarriers",label:"🚧 Ring 3 — Perceived Barriers",sub:"What makes them hesitate or walk away",color:"var(--red)",bg:"var(--red-bg)"},
-                      {key:"decisionCriteria",label:"⚖️ Ring 4 — Decision Criteria",sub:"How they evaluate and compare options",color:"var(--navy)",bg:"var(--navy-bg)"},
-                      {key:"buyerJourney",label:"🗺 Ring 5 — Buyer Journey",sub:"How they move from awareness to decision",color:"var(--purple)",bg:"var(--purple-bg)"},
+                      {key:"priorityInitiative",label:"⚡ Priority Initiative",sub:"What triggers them to act NOW",color:"var(--amber)",bg:"var(--amber-bg)"},
+                      {key:"successFactors",label:"✓ Success Factors",sub:"What winning looks like for them",color:"var(--green)",bg:"var(--green-bg)"},
+                      {key:"perceivedBarriers",label:"🚧 Perceived Barriers",sub:"What makes them hesitate or walk away",color:"var(--red)",bg:"var(--red-bg)"},
+                      {key:"decisionCriteria",label:"⚖️ Decision Criteria",sub:"How they evaluate and compare options",color:"var(--navy)",bg:"var(--navy-bg)"},
+                      {key:"buyerJourney",label:"🗺 Buyer Journey",sub:"How they move from awareness to decision",color:"var(--purple)",bg:"var(--purple-bg)"},
                     ].map(({key,label,sub,color,bg})=>(
                       <div key={key} style={{background:bg,border:"1px solid "+color+"33",borderRadius:10,padding:"12px 14px"}}>
                         <div style={{fontSize:11,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>{label}</div>
@@ -13638,7 +13626,7 @@ Return ONLY raw JSON:
                     <span style={{fontSize:16}}>🎯</span>
                     <div style={{flex:1}}>
                       <div style={{fontSize:14,fontWeight:700}}>Your Angle</div>
-                      <div style={{fontSize:11,opacity:0.7}}>Elevator pitch, opening angle, outreach emails, solution mapping</div>
+                      <div style={{fontSize:11,opacity:0.7}}>Strategy, pitch, solution mapping, outreach emails</div>
                     </div>
                     <span style={{fontSize:12,opacity:0.6,transition:"transform 0.2s",transform:bbIsOpen("briefAngle")?"rotate(0)":"rotate(-90deg)"}}>{bbIsOpen("briefAngle")?"▾":"▸"}</span>
                   </div>
@@ -13690,6 +13678,182 @@ Return ONLY raw JSON:
                     </div>
                   </div>
                 )}
+
+                {/* Strategic Theme + Why You Why Now */}
+                {brief._loadingSections?.strategy && !brief.strategicTheme && !brief.sellerOpportunity ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div style={{flex:1}}><div className="bb-title">Strategic Analysis</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
+                      <div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"70%",height:14}}/><div className="skeleton" style={{width:"90%",height:14}}/>
+                    </div>
+                  </div>
+                ) : (brief.strategicTheme||brief.sellerOpportunity) ? (
+                  <div className="bb bb-arrive">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div style={{flex:1}}><div className="bb-title">Strategic Analysis</div><div className="bb-sub">{sellerUrl==="research-only"?"What's driving this company right now":"What's driving this account and why you're positioned to win"}</div></div>
+                    <StarButton id={`strategy-${selectedAccount?.company}`} type="Brief" label="Strategic Analysis" content={brief?.strategicTheme} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
+                      {brief.strategicTheme&&(
+                        <div>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Strategic Theme</div>
+                          <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;},"strategicTheme")} placeholder="What's driving this company's priorities right now..."/>
+                        </div>
+                      )}
+                      {sellerUrl!=="research-only"&&brief.sellerOpportunity&&(
+                        <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"10px 14px"}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Why You · Why Now</div>
+                          <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;},"sellerOpportunity")} placeholder="Why the seller is positioned to win this account right now..."/>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Opening Angle */}
+                {brief._loadingSections?.strategy && !brief.openingAngle ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body"><div className="skeleton" style={{width:"85%",height:14}}/></div>
+                  </div>
+                ) : brief.openingAngle ? (
+                <div className="bb bb-arrive">
+                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div></div>
+                  <div className="bb-body">
+                    <div className="talk-box">
+                      <div className="talk-lbl">Recommended Opening</div>
+                      <EF value={brief.openingAngle||""} onChange={v=>patchBrief(b=>{b.openingAngle=v;},"openingAngle")}/>
+                    </div>
+                  </div>
+                </div>
+                ) : null}
+
+                {/* Outreach Emails — A/B variants */}
+                {(brief.outreachEmails?.length > 0 || brief.outreachEmail) ? (()=>{
+                  const emails = brief.outreachEmails || (brief.outreachEmail ? [brief.outreachEmail] : []);
+                  return (
+                <div className="bb bb-arrive">
+                  <div className="bb-hdr">
+                    <div className="bb-icon" style={{fontSize:12}}>✉</div>
+                    <div style={{flex:1}}><div className="bb-title">Outreach Emails</div><div className="bb-sub">{emails.length > 1 ? "Two angles — pick the one that sounds like you" : "Research-grounded cold outreach — ready to send"}</div></div>
+                  </div>
+                  <div className="bb-body">
+                    {emails.map((email, ei) => (
+                      <div key={ei} style={{padding:"12px 14px",background:ei%2===0?"var(--bg-0)":"var(--surface)",borderRadius:8,marginBottom:ei<emails.length-1?10:0,border:"1px solid var(--line-0)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <div style={{fontSize:10,fontWeight:700,color:ei===0?"var(--green)":"var(--navy)",textTransform:"uppercase",letterSpacing:"0.5px"}}>{email.style || (ei===0?"Option A":"Option B")}</div>
+                          <button className="copy-btn" onClick={()=>copyText("Subject: "+(email.subject||"")+"\n\n"+(email.body||""),`outreach${ei}`)}>{copied===`outreach${ei}`?"Copied ✓":"Copy"}</button>
+                        </div>
+                        <div style={{fontWeight:600,marginBottom:6,color:"var(--ink-0)",fontSize:13}}>Subject: {email.subject}</div>
+                        <EF value={email.body||""} onChange={v=>patchBrief(b=>{if(!b.outreachEmails)b.outreachEmails=emails;b.outreachEmails[ei]={...b.outreachEmails[ei],body:v};},"outreachEmail")}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                  );
+                })() : brief._loadingSections?.strategy ? (
+                <div className="bb bb-skeleton">
+                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>✉</div><div><div className="bb-title">Outreach Emails</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                  <div className="bb-body"><div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"60%",height:14,marginTop:6}}/></div>
+                </div>
+                ) : null}
+
+                {/* Solution Mapping — hidden for research-only Quick Briefs */}
+                {sellerUrl!=="research-only" && brief._loadingSections?.solutions && !(brief.solutionMapping||[]).some(item=>item?.product) ? (
+                  <div className="bb bb-skeleton">
+                    <div className="bb-hdr"><div className="bb-icon">↑</div><div><div className="bb-title">How You Help</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
+                      {[1,2].map(i=><div key={i} style={{padding:"12px 14px",borderRadius:10,border:"1px solid var(--line-0)"}}><div className="skeleton" style={{width:"50%",height:16,marginBottom:8}}/><div className="skeleton" style={{width:"90%",height:14}}/><div className="skeleton" style={{width:"75%",height:14,marginTop:6}}/></div>)}
+                    </div>
+                  </div>
+                ) : sellerUrl!=="research-only"&&<div className={`bb${!brief._loadingSections?.solutions ? " bb-arrive" : ""}`}>
+                  <div className="bb-hdr" onClick={()=>toggleBB("solutions")}>
+                    <div className="bb-icon">↑</div>
+                    <div>
+                      <div className="bb-title">How You Help</div>
+                      <div className="bb-sub">{brief.sellerSnapshot||`Your products mapped to ${selectedAccount?.company}`}</div>
+                    </div>
+                    {bbChevron("solutions")}
+                  </div>
+                  <div className={`bb-body-wrap ${bbIsOpen("solutions")?"":"collapsed"}`}><div className="bb-body">
+                    {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
+                      <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid var(--tan-3)":"none"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                          <div style={{background:"var(--tan-3)",color:"var(--tan-ink)",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
+                            {item.product}
+                          </div>
+                          {item.imperativeServed&&(
+                            <div style={{fontSize:11,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",border:"1px solid #2E6B2E44",borderRadius:20,padding:"2px 10px"}}>
+                              {item.imperativeServed}
+                            </div>
+                          )}
+                          {item.buyerRole&&(
+                            <div style={{fontSize:11,fontWeight:600,background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
+                              👤 {item.buyerRole}
+                            </div>
+                          )}
+                        </div>
+                        <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})} placeholder="Why this fits..."/>
+                        {(item.jobToBeDone||item.painRelieved||item.gainCreated)&&(
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10}}>
+                            {item.jobToBeDone&&(<div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Job-to-be-Done</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.jobToBeDone}</div></div>)}
+                            {item.painRelieved&&(<div style={{background:"#FDE8E844",borderRadius:8,padding:"8px 10px",border:"1px solid #9B2C2C22"}}><div style={{fontSize:9,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Pain Relieved</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.painRelieved}</div></div>)}
+                            {item.gainCreated&&(<div style={{background:"var(--green-bg)",borderRadius:8,padding:"8px 10px",border:"1px solid #2E6B2E22"}}><div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Gain Created</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.gainCreated}</div></div>)}
+                          </div>
+                        )}
+                        {item.challengerInsight&&(<div style={{marginTop:8,background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}><span style={{fontSize:11,color:"var(--green)",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span><div><div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Teaching Insight</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>{item.challengerInsight}</div></div></div>)}
+                        {item.joltRiskRemover&&(<div style={{marginTop:6,background:"var(--green-bg)",borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"flex-start",gap:6}}><span style={{fontSize:11,flexShrink:0}}>🛡</span><div><div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Risk Remover</div><div style={{fontSize:12,color:"var(--green)",lineHeight:1.5}}>{item.joltRiskRemover}</div></div></div>)}
+                        {(item.measurableOutcome||item.provenWith)&&(
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
+                            {item.measurableOutcome&&(<div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Target Outcome</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.measurableOutcome}</div></div>)}
+                            {item.provenWith&&(<div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Proven With</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.provenWith}</div></div>)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {brief.mobilizer?.description&&(
+                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
+                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:10}}>🎯 Champion Intelligence</div>
+                        <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
+                          <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Who Moves Deals — Not Talkers or Blockers</div>
+                          <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6,marginBottom:8}}>{brief.mobilizer.description}</div>
+                          {brief.mobilizer.identifyingBehavior&&(<div style={{marginBottom:8}}><div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>How to Spot Them in a Meeting</div><div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.identifyingBehavior}</div></div>)}
+                          {brief.mobilizer.teachingAngle&&(<div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:7,padding:"8px 12px"}}><div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Teaching Angle</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.teachingAngle}</div></div>)}
+                        </div>
+                      </div>
+                    )}
+                    {(brief.caseStudies||[]).filter(c=>c?.title).length>0&&(
+                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
+                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--tan-0)",marginBottom:10}}>Relevant Case Studies & Customers</div>
+                        {(brief.caseStudies||[]).filter(c=>c?.title).map((cs,i)=>(
+                          <div key={i} style={{display:"flex",gap:10,marginBottom:10,padding:"9px 12px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
+                            <div style={{fontSize:18,lineHeight:1,flexShrink:0}}>📄</div>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",marginBottom:2}}>{cs.title}</div>
+                              {cs.customer&&<div style={{fontSize:12,color:"var(--tan-0)",fontWeight:600,marginBottom:3}}>{cs.customer}</div>}
+                              {(cs.quantifiedOutcome||cs.result)&&(<div style={{fontSize:12,fontWeight:700,color:"var(--green)",background:"var(--green-bg)",borderRadius:10,padding:"2px 8px",display:"inline-block",marginBottom:4}}>📊 {(cs.quantifiedOutcome||cs.result)}</div>)}
+                              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5}}>{cs.relevance}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div></div>{/* /bb-body-wrap solutions */}
+                </div>}
+
+                {/* Close "Your Angle" group */}
+                </div>
+
+                {/* ═══ GROUP: COMPANY INTELLIGENCE — deep research ═══ */}
+                <div style={{marginBottom:14}}>
+                  <div onClick={()=>toggleBB("briefIntel")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--navy)",borderRadius:bbIsOpen("briefIntel")?"10px 10px 0 0":"10px",color:"var(--surface)"}}>
+                    <span style={{fontSize:16}}>🔍</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:700}}>Company Intelligence</div>
+                      <div style={{fontSize:11,opacity:0.7}}>Overview, executives, headlines, sentiment, hiring, solution mapping, financials, competitors</div>
+                    </div>
+                    <span style={{fontSize:12,opacity:0.6,transition:"transform 0.2s",transform:bbIsOpen("briefIntel")?"rotate(0)":"rotate(-90deg)"}}>{bbIsOpen("briefIntel")?"▾":"▸"}</span>
+                  </div>
+                </div>
+                <div style={{display:bbIsOpen("briefIntel")?"block":"none"}}>
 
                 {/* ── SESSION SUMMARY — executive report (TOP of brief) ── */}
                 {brief && !brief._loadingSections?.overview && !brief._loadingSections?.deepIntel && (()=>{
@@ -14131,154 +14295,6 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
-                {/* Solution Mapping — hidden for research-only Quick Briefs */}
-                {sellerUrl!=="research-only" && brief._loadingSections?.solutions && !(brief.solutionMapping||[]).some(item=>item?.product) ? (
-                  <div className="bb bb-skeleton">
-                    <div className="bb-hdr"><div className="bb-icon">↑</div><div><div className="bb-title">How You Help</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
-                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
-                      {[1,2].map(i=><div key={i} style={{padding:"12px 14px",borderRadius:10,border:"1px solid var(--line-0)"}}><div className="skeleton" style={{width:"50%",height:16,marginBottom:8}}/><div className="skeleton" style={{width:"90%",height:14}}/><div className="skeleton" style={{width:"75%",height:14,marginTop:6}}/></div>)}
-                    </div>
-                  </div>
-                ) : sellerUrl!=="research-only"&&<div className={`bb${!brief._loadingSections?.solutions ? " bb-arrive" : ""}`}>
-                  <div className="bb-hdr" onClick={()=>toggleBB("solutions")}>
-                    <div className="bb-icon">↑</div>
-                    <div>
-                      <div className="bb-title">How You Help</div>
-                      <div className="bb-sub">{brief.sellerSnapshot||`Your products mapped to ${selectedAccount?.company}`}</div>
-                    </div>
-                    {bbChevron("solutions")}
-                  </div>
-                  <div className={`bb-body-wrap ${bbIsOpen("solutions")?"":"collapsed"}`}><div className="bb-body">
-                    {(brief.solutionMapping||[]).filter(item=>item?.product).map((item,i)=>(
-                      <div key={i} style={{marginBottom:16,paddingBottom:16,borderBottom:i<((brief.solutionMapping||[]).filter(x=>x?.product).length-1)?"1px solid var(--tan-3)":"none"}}>
-                        {/* Product header + imperative badge */}
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                          <div style={{background:"var(--tan-3)",color:"var(--tan-ink)",border:"1px solid #D4C4A8",fontFamily:"Lora,serif",fontSize:12,fontWeight:700,padding:"4px 12px",borderRadius:6,whiteSpace:"nowrap"}}>
-                            {item.product}
-                          </div>
-                          {item.imperativeServed&&(
-                            <div style={{fontSize:11,fontWeight:700,background:"var(--green-bg)",color:"var(--green)",border:"1px solid #2E6B2E44",borderRadius:20,padding:"2px 10px"}}>
-                              {item.imperativeServed}
-                            </div>
-                          )}
-                          {item.buyerRole&&(
-                            <div style={{fontSize:11,fontWeight:600,background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid #1B3A6B33",borderRadius:20,padding:"2px 10px"}}>
-                              👤 {item.buyerRole}
-                            </div>
-                          )}
-                        </div>
-                        {/* Fit summary */}
-                        <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})} placeholder="Why this fits..."/>
-                        {/* Jobs, Pain, Gain grid */}
-                        {(item.jobToBeDone||item.painRelieved||item.gainCreated)&&(
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10}}>
-                            {item.jobToBeDone&&(
-                              <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Job-to-be-Done</div>
-                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.jobToBeDone}</div>
-                              </div>
-                            )}
-                            {item.painRelieved&&(
-                              <div style={{background:"#FDE8E844",borderRadius:8,padding:"8px 10px",border:"1px solid #9B2C2C22"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Pain Relieved</div>
-                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.painRelieved}</div>
-                              </div>
-                            )}
-                            {item.gainCreated&&(
-                              <div style={{background:"var(--green-bg)",borderRadius:8,padding:"8px 10px",border:"1px solid #2E6B2E22"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Gain Created</div>
-                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.gainCreated}</div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {/* Challenger insight */}
-                        {item.challengerInsight&&(
-                          <div style={{marginTop:8,background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"flex-start",gap:8}}>
-                            <span style={{fontSize:11,color:"var(--green)",fontWeight:700,flexShrink:0,marginTop:1}}>⚡</span>
-                            <div>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Teaching Insight</div>
-                              <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>{item.challengerInsight}</div>
-                            </div>
-                          </div>
-                        )}
-                        {/* JOLT risk remover */}
-                        {item.joltRiskRemover&&(
-                          <div style={{marginTop:6,background:"var(--green-bg)",borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"flex-start",gap:6}}>
-                            <span style={{fontSize:11,flexShrink:0}}>🛡</span>
-                            <div>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:2}}>Risk Remover</div>
-                              <div style={{fontSize:12,color:"var(--green)",lineHeight:1.5}}>{item.joltRiskRemover}</div>
-                            </div>
-                          </div>
-                        )}
-                        {/* Measurable outcome + proven with */}
-                        {(item.measurableOutcome||item.provenWith)&&(
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
-                            {item.measurableOutcome&&(
-                              <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Target Outcome</div>
-                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.measurableOutcome}</div>
-                              </div>
-                            )}
-                            {item.provenWith&&(
-                              <div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}>
-                                <div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Proven With</div>
-                                <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.provenWith}</div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {/* Mobilizer Intelligence */}
-                    {brief.mobilizer?.description&&(
-                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
-                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--navy)",marginBottom:10}}>🎯 Champion Intelligence</div>
-                        <div style={{background:"var(--navy-bg)",border:"1px solid #1B3A6B33",borderRadius:10,padding:"12px 14px",marginBottom:8}}>
-                          <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Who Moves Deals — Not Talkers or Blockers</div>
-                          <div style={{fontSize:13,color:"var(--ink-0)",lineHeight:1.6,marginBottom:8}}>{brief.mobilizer.description}</div>
-                          {brief.mobilizer.identifyingBehavior&&(
-                            <div style={{marginBottom:8}}>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>How to Spot Them in a Meeting</div>
-                              <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.identifyingBehavior}</div>
-                            </div>
-                          )}
-                          {brief.mobilizer.teachingAngle&&(
-                            <div style={{background:"var(--green-bg)",border:"1.5px solid var(--green)",borderRadius:7,padding:"8px 12px"}}>
-                              <div style={{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>⚡ Teaching Angle</div>
-                              <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5,fontStyle:"italic"}}>{brief.mobilizer.teachingAngle}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Relevant Case Studies */}
-                    {(brief.caseStudies||[]).filter(c=>c?.title).length>0&&(
-                      <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--line-0)"}}>
-                        <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",color:"var(--tan-0)",marginBottom:10}}>Relevant Case Studies & Customers</div>
-                        {(brief.caseStudies||[]).filter(c=>c?.title).map((cs,i)=>(
-                          <div key={i} style={{display:"flex",gap:10,marginBottom:10,padding:"9px 12px",background:"var(--bg-1)",borderRadius:8,border:"1px solid var(--line-0)"}}>
-                            <div style={{fontSize:18,lineHeight:1,flexShrink:0}}>📄</div>
-                            <div style={{flex:1}}>
-                              <div style={{fontSize:14,fontWeight:600,color:"var(--ink-0)",marginBottom:2}}>{cs.title}</div>
-                              {cs.customer&&<div style={{fontSize:12,color:"var(--tan-0)",fontWeight:600,marginBottom:3}}>{cs.customer}</div>}
-                              {(cs.quantifiedOutcome||cs.result)&&(
-                                <div style={{fontSize:12,fontWeight:700,color:"var(--green)",background:"var(--green-bg)",borderRadius:10,padding:"2px 8px",display:"inline-block",marginBottom:4}}>
-                                  📊 {(cs.quantifiedOutcome||cs.result)}
-                                </div>
-                              )}
-                              <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.5}}>{cs.relevance}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div></div>{/* /bb-body-wrap solutions */}
-                </div>}
-
                 {/* Tech Stack & Integrations */}
                 {brief.techStack&&Object.values(brief.techStack).some(v=>v&&v.toString().trim())&&(
                   <div className="bb bb-arrive">
@@ -14372,99 +14388,6 @@ Return ONLY raw JSON:
                     </div>
                   </div></div>
                 )}
-
-                {/* Strategic Theme + Why You Why Now */}
-                {brief._loadingSections?.strategy && !brief.strategicTheme && !brief.sellerOpportunity ? (
-                  <div className="bb bb-skeleton">
-                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div style={{flex:1}}><div className="bb-title">Strategic Analysis</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
-                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:8}}>
-                      <div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"70%",height:14}}/><div className="skeleton" style={{width:"90%",height:14}}/>
-                    </div>
-                  </div>
-                ) : (brief.strategicTheme||brief.sellerOpportunity) ? (
-                  <div className="bb bb-arrive">
-                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🧭</div><div style={{flex:1}}><div className="bb-title">Strategic Analysis</div><div className="bb-sub">{sellerUrl==="research-only"?"What's driving this company right now":"What's driving this account and why you're positioned to win"}</div></div>
-                    <StarButton id={`strategy-${selectedAccount?.company}`} type="Brief" label="Strategic Analysis" content={brief?.strategicTheme} company={selectedAccount?.company} step={5} favorites={favorites} setFavorites={setFavorites}/></div>
-                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:12}}>
-                      {brief.strategicTheme&&(
-                        <div>
-                          <div style={{fontSize:11,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Strategic Theme</div>
-                          <EF value={brief.strategicTheme||""} onChange={v=>patchBrief(b=>{b.strategicTheme=v;},"strategicTheme")} placeholder="What's driving this company's priorities right now..."/>
-                        </div>
-                      )}
-                      {sellerUrl!=="research-only"&&brief.sellerOpportunity&&(
-                        <div style={{background:"var(--green-bg)",border:"1px solid #2E6B2E22",borderRadius:8,padding:"10px 14px"}}>
-                          <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:4}}>Why You · Why Now</div>
-                          <EF value={brief.sellerOpportunity||""} onChange={v=>patchBrief(b=>{b.sellerOpportunity=v;},"sellerOpportunity")} placeholder="Why the seller is positioned to win this account right now..."/>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* Opening Angle */}
-                {brief._loadingSections?.strategy && !brief.openingAngle ? (
-                  <div className="bb bb-skeleton">
-                    <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
-                    <div className="bb-body"><div className="skeleton" style={{width:"85%",height:14}}/></div>
-                  </div>
-                ) : brief.openingAngle ? (
-                <div className="bb bb-arrive">
-                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>🎯</div><div><div className="bb-title">Opening Angle</div></div></div>
-                  <div className="bb-body">
-                    <div className="talk-box">
-                      <div className="talk-lbl">Recommended Opening</div>
-                      <EF value={brief.openingAngle||""} onChange={v=>patchBrief(b=>{b.openingAngle=v;},"openingAngle")}/>
-                    </div>
-                  </div>
-                </div>
-                ) : null}
-
-                {/* Outreach Emails — A/B variants */}
-                {(brief.outreachEmails?.length > 0 || brief.outreachEmail) ? (()=>{
-                  const emails = brief.outreachEmails || (brief.outreachEmail ? [brief.outreachEmail] : []);
-                  return (
-                <div className="bb bb-arrive">
-                  <div className="bb-hdr">
-                    <div className="bb-icon" style={{fontSize:12}}>✉</div>
-                    <div style={{flex:1}}><div className="bb-title">Outreach Emails</div><div className="bb-sub">{emails.length > 1 ? "Two angles — pick the one that sounds like you" : "Research-grounded cold outreach — ready to send"}</div></div>
-                  </div>
-                  <div className="bb-body">
-                    {emails.map((email, ei) => (
-                      <div key={ei} style={{padding:"12px 14px",background:ei%2===0?"var(--bg-0)":"var(--surface)",borderRadius:8,marginBottom:ei<emails.length-1?10:0,border:"1px solid var(--line-0)"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                          <div style={{fontSize:10,fontWeight:700,color:ei===0?"var(--green)":"var(--navy)",textTransform:"uppercase",letterSpacing:"0.5px"}}>{email.style || (ei===0?"Option A":"Option B")}</div>
-                          <button className="copy-btn" onClick={()=>copyText("Subject: "+(email.subject||"")+"\n\n"+(email.body||""),`outreach${ei}`)}>{copied===`outreach${ei}`?"Copied ✓":"Copy"}</button>
-                        </div>
-                        <div style={{fontWeight:600,marginBottom:6,color:"var(--ink-0)",fontSize:13}}>Subject: {email.subject}</div>
-                        <EF value={email.body||""} onChange={v=>patchBrief(b=>{if(!b.outreachEmails)b.outreachEmails=emails;b.outreachEmails[ei]={...b.outreachEmails[ei],body:v};},"outreachEmail")}/>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                  );
-                })() : brief._loadingSections?.strategy ? (
-                <div className="bb bb-skeleton">
-                  <div className="bb-hdr"><div className="bb-icon" style={{fontSize:12}}>✉</div><div><div className="bb-title">Outreach Emails</div></div><div className="load-spin" style={{width:14,height:14,borderWidth:2}}/></div>
-                  <div className="bb-body"><div className="skeleton" style={{width:"85%",height:14}}/><div className="skeleton" style={{width:"60%",height:14,marginTop:6}}/></div>
-                </div>
-                ) : null}
-
-                {/* Close "Your Angle" group */}
-                </div>
-
-                {/* ═══ GROUP: COMPANY INTELLIGENCE — deep research ═══ */}
-                <div style={{marginBottom:14}}>
-                  <div onClick={()=>toggleBB("briefIntel")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--navy)",borderRadius:bbIsOpen("briefIntel")?"10px 10px 0 0":"10px",color:"var(--surface)"}}>
-                    <span style={{fontSize:16}}>🔍</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:700}}>Company Intelligence</div>
-                      <div style={{fontSize:11,opacity:0.7}}>Financials, competitors, board, tech stack, sentiment, hiring</div>
-                    </div>
-                    <span style={{fontSize:12,opacity:0.6,transition:"transform 0.2s",transform:bbIsOpen("briefIntel")?"rotate(0)":"rotate(-90deg)"}}>{bbIsOpen("briefIntel")?"▾":"▸"}</span>
-                  </div>
-                </div>
-                <div style={{display:bbIsOpen("briefIntel")?"block":"none"}}>
 
                 {/* Financial Deep Dive */}
                 {(brief.financialDeepDive || brief._loadingSections?.deepIntel) && (
@@ -14630,74 +14553,6 @@ Return ONLY raw JSON:
                   </div>
                 )}
 
-                {/* Gate Map — approval paths for seller + buyer */}
-                {brief.gateMap && (
-                  <div className={`bb${!brief._loadingSections?.deepIntel ? " bb-arrive" : ""}`} style={{borderColor:"var(--navy)",borderWidth:2}}>
-                    <div className="bb-hdr" onClick={()=>toggleBB("gateMap")}>
-                      <div className="bb-icon" style={{fontSize:14}}>🚦</div>
-                      <div style={{flex:1}}>
-                        <div className="bb-title">Approval Gate Map<InfoTip text="Inferred approval bodies on both sides — what your org needs to approve this deal, and what the target company needs internally to say yes. Includes artifacts, timelines, and the critical path risk."/></div>
-                        <div className="bb-sub">What both sides need to get this deal done</div>
-                      </div>
-                      <span className="bb-arrow">{bbIsOpen("gateMap")?"▾":"▸"}</span>
-                    </div>
-                    {bbIsOpen("gateMap") && (
-                      <div className="bb-body" style={{padding:"16px 20px"}}>
-                        {/* Seller-side gates */}
-                        {brief.gateMap.sellerGates && (
-                          <div style={{marginBottom:20}}>
-                            <div style={{fontSize:12,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Your Internal Gates (Seller Side)</div>
-                            {brief.gateMap.sellerGates.summary && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>{brief.gateMap.sellerGates.summary}</div>}
-                            {(brief.gateMap.sellerGates.gates||[]).filter(g=>g?.gate).map((g,i)=>(
-                              <div key={i} style={{padding:"8px 12px",background:"var(--bg-0)",borderRadius:8,marginBottom:6,fontSize:12}}>
-                                <div style={{fontWeight:700,color:"var(--ink-0)",marginBottom:3}}>{g.gate}</div>
-                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 16px",fontSize:11,color:"var(--ink-2)"}}>
-                                  {g.owner && <div><strong>Owner:</strong> {g.owner}</div>}
-                                  {g.timeline && <div><strong>Timeline:</strong> {g.timeline}</div>}
-                                  {g.trigger && <div><strong>Trigger:</strong> {g.trigger}</div>}
-                                  {g.artifact && <div><strong>Prepare:</strong> {g.artifact}</div>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Buyer-side gates */}
-                        {brief.gateMap.buyerGates && (
-                          <div style={{marginBottom:16}}>
-                            <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Their Approval Path (Buyer Side)</div>
-                            {brief.gateMap.buyerGates.summary && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>{brief.gateMap.buyerGates.summary}</div>}
-                            {(brief.gateMap.buyerGates.gates||[]).filter(g=>g?.gate).map((g,i)=>(
-                              <div key={i} style={{padding:"8px 12px",background:"var(--bg-0)",borderRadius:8,marginBottom:6,fontSize:12}}>
-                                <div style={{fontWeight:700,color:"var(--ink-0)",marginBottom:3}}>{g.gate}</div>
-                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 16px",fontSize:11,color:"var(--ink-2)"}}>
-                                  {g.owner && <div><strong>Owner:</strong> {g.owner}</div>}
-                                  {g.timeline && <div><strong>Timeline:</strong> {g.timeline}</div>}
-                                  {g.trigger && <div><strong>Trigger:</strong> {g.trigger}</div>}
-                                  {g.artifact && <div><strong>Prepare:</strong> {g.artifact}</div>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Critical path + advice */}
-                        {brief.gateMap.criticalPath && (
-                          <div style={{padding:"10px 14px",background:"var(--red-bg)",borderRadius:8,marginBottom:8}}>
-                            <div style={{fontSize:11,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Critical Path Risk</div>
-                            <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.6}}>{brief.gateMap.criticalPath}</div>
-                          </div>
-                        )}
-                        {brief.gateMap.mapAdvice && (
-                          <div style={{padding:"10px 14px",background:"var(--green-bg)",borderRadius:8}}>
-                            <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>This Week's Priority</div>
-                            <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.6}}>{brief.gateMap.mapAdvice}</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
 
 
 
@@ -14746,6 +14601,70 @@ Return ONLY raw JSON:
                     </div>
                   </div>
                 </div>
+
+                {/* Gate Map — approval paths for seller + buyer */}
+                {brief.gateMap && (
+                  <div className={`bb${!brief._loadingSections?.deepIntel ? " bb-arrive" : ""}`} style={{borderColor:"var(--navy)",borderWidth:2}}>
+                    <div className="bb-hdr" onClick={()=>toggleBB("gateMap")}>
+                      <div className="bb-icon" style={{fontSize:14}}>🚦</div>
+                      <div style={{flex:1}}>
+                        <div className="bb-title">Approval Gate Map<InfoTip text="Inferred approval bodies on both sides — what your org needs to approve this deal, and what the target company needs internally to say yes. Includes artifacts, timelines, and the critical path risk."/></div>
+                        <div className="bb-sub">What both sides need to get this deal done</div>
+                      </div>
+                      <span className="bb-arrow">{bbIsOpen("gateMap")?"▾":"▸"}</span>
+                    </div>
+                    {bbIsOpen("gateMap") && (
+                      <div className="bb-body" style={{padding:"16px 20px"}}>
+                        {brief.gateMap.sellerGates && (
+                          <div style={{marginBottom:20}}>
+                            <div style={{fontSize:12,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Your Internal Gates (Seller Side)</div>
+                            {brief.gateMap.sellerGates.summary && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>{brief.gateMap.sellerGates.summary}</div>}
+                            {(brief.gateMap.sellerGates.gates||[]).filter(g=>g?.gate).map((g,i)=>(
+                              <div key={i} style={{padding:"8px 12px",background:"var(--bg-0)",borderRadius:8,marginBottom:6,fontSize:12}}>
+                                <div style={{fontWeight:700,color:"var(--ink-0)",marginBottom:3}}>{g.gate}</div>
+                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 16px",fontSize:11,color:"var(--ink-2)"}}>
+                                  {g.owner && <div><strong>Owner:</strong> {g.owner}</div>}
+                                  {g.timeline && <div><strong>Timeline:</strong> {g.timeline}</div>}
+                                  {g.trigger && <div><strong>Trigger:</strong> {g.trigger}</div>}
+                                  {g.artifact && <div><strong>Prepare:</strong> {g.artifact}</div>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {brief.gateMap.buyerGates && (
+                          <div style={{marginBottom:16}}>
+                            <div style={{fontSize:12,fontWeight:700,color:"var(--navy)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:8}}>Their Approval Path (Buyer Side)</div>
+                            {brief.gateMap.buyerGates.summary && <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>{brief.gateMap.buyerGates.summary}</div>}
+                            {(brief.gateMap.buyerGates.gates||[]).filter(g=>g?.gate).map((g,i)=>(
+                              <div key={i} style={{padding:"8px 12px",background:"var(--bg-0)",borderRadius:8,marginBottom:6,fontSize:12}}>
+                                <div style={{fontWeight:700,color:"var(--ink-0)",marginBottom:3}}>{g.gate}</div>
+                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"2px 16px",fontSize:11,color:"var(--ink-2)"}}>
+                                  {g.owner && <div><strong>Owner:</strong> {g.owner}</div>}
+                                  {g.timeline && <div><strong>Timeline:</strong> {g.timeline}</div>}
+                                  {g.trigger && <div><strong>Trigger:</strong> {g.trigger}</div>}
+                                  {g.artifact && <div><strong>Prepare:</strong> {g.artifact}</div>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {brief.gateMap.criticalPath && (
+                          <div style={{padding:"10px 14px",background:"var(--red-bg)",borderRadius:8,marginBottom:8}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>Critical Path Risk</div>
+                            <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.6}}>{brief.gateMap.criticalPath}</div>
+                          </div>
+                        )}
+                        {brief.gateMap.mapAdvice && (
+                          <div style={{padding:"10px 14px",background:"var(--green-bg)",borderRadius:8}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.3px",marginBottom:4}}>This Week's Priority</div>
+                            <div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.6}}>{brief.gateMap.mapAdvice}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Close "Deal Readiness" group */}
                 </div>
