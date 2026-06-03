@@ -13924,7 +13924,7 @@ Return ONLY raw JSON:
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
                           <span style={{background:"var(--green)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>REVENUE</span>Annual Revenue / ARR
                         </div>
-                        <EF value={brief.revenue||""} onChange={v=>patchBrief(b=>{b.revenue=v;})} single placeholder="e.g. $18.8B annual revenue (FY2025)"/>
+                        <EF value={brief.revenue||""} onChange={v=>patchBrief(b=>{b.revenue=v;})} single placeholder="Not found — add if known"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
@@ -13936,13 +13936,13 @@ Return ONLY raw JSON:
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
                           <span style={{background:"var(--tan-0)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>EMPLOYEES</span>Employee Count
                         </div>
-                        <EF value={brief.employeeCount||selectedAccount?.employees||""} onChange={v=>patchBrief(b=>{b.employeeCount=v;})} single placeholder="e.g. ~270,000 globally"/>
+                        <EF value={brief.employeeCount||selectedAccount?.employees||""} onChange={v=>patchBrief(b=>{b.employeeCount=v;})} single placeholder="Not found — add if known"/>
                       </div>
                       <div>
                         <div className="field-label" style={{marginBottom:5,display:"flex",alignItems:"center",gap:5}}>
                           <span style={{background:"var(--purple)",color:"var(--surface)",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>HQ</span>HQ · Founded
                         </div>
-                        <EF value={(brief.headquarters||(brief.founded?" · Founded "+brief.founded:""))||""} onChange={v=>patchBrief(b=>{b.headquarters=v;})} single placeholder="e.g. Philadelphia, PA · Founded 1959"/>
+                        <EF value={(brief.headquarters||(brief.founded?" · Founded "+brief.founded:""))||""} onChange={v=>patchBrief(b=>{b.headquarters=v;})} single placeholder="Not found — add if known"/>
                       </div>
                     </div>
 
@@ -14498,7 +14498,8 @@ Return ONLY raw JSON:
                 {/* Close "Company Intelligence" group */}
                 </div>
 
-                {/* ═══ GROUP: DEAL READINESS — action items ═══ */}
+                {/* ═══ GROUP: DEAL READINESS — action items (hidden for Quick Brief) ═══ */}
+                {sellerUrl !== "research-only" && <>
                 <div style={{marginBottom:14}}>
                   <div onClick={()=>toggleBB("briefDeal")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--tan-0)",borderRadius:bbIsOpen("briefDeal")?"10px 10px 0 0":"10px",color:"var(--surface)"}}>
                     <span style={{fontSize:16}}>🏁</span>
@@ -14657,6 +14658,7 @@ Return ONLY raw JSON:
 
                 {/* Close "Deal Readiness" group */}
                 </div>
+                </>}
 
                 <div className="actions-row">
                   <button className="btn btn-secondary" onClick={()=>setStep(4)}>← Accounts</button>
