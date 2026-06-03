@@ -1844,8 +1844,15 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p2 = execCache
     ? (execCache instanceof Promise ? execCache : Promise.resolve(execCache))
     : (async()=>{
+    // Wait for P1 overview — use its company snapshot as ground truth for exec identity.
+    // P1 finds executives from the company's OWN website. P2 should start from that reality.
+    let p1Snapshot = "";
+    try { const r1 = await p1; p1Snapshot = r1?.companySnapshot || ""; } catch {}
+    const p1ExecHint = p1Snapshot ? `\nGROUND TRUTH FROM COMPANY WEBSITE: "${p1Snapshot.slice(0, 500)}"\nIf this snapshot names a CEO, founder, or other executive, THAT is the correct person. Do NOT contradict it with a different name from a blog or article.\n\n` : "";
+
     // No pre-cache — fire inline. Mark as billable run (1 per brief).
     const execPrompt = baseLight+
+    p1ExecHint+
       (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
       `Search for the CURRENT leadership team of ${co}${url && url !== co ? ` (website: ${url})` : ""}. Return 4-6 people.\n\n`+
       `SEARCH STRATEGY — use BOTH searches:\n`+
