@@ -5719,6 +5719,11 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     const deal         = icp.dealSize || "";
     const competitors  = (icp.competitiveAlternatives || []).filter(Boolean);
     const differ       = (icp.uniqueDifferentiators || []).filter(Boolean);
+    // Product-specific search terms — use actual product names, not generic industry labels
+    // "gift cards" and "employee rewards" are better than "Digital Incentives" for RFP search
+    const productNames = (icp.productCatalog || []).filter(p=>p?.name).map(p=>p.name).slice(0,3);
+    const productTerms = productNames.length ? productNames[0] : (sellerICP?.sellerDescription || category || "").split(/[,.]/).filter(s=>s.trim().length>3&&s.trim().length<50)[0]?.trim() || category;
+    const productTerms2 = productNames.length > 1 ? productNames[1] : category;
 
     // Look up NAICS/CPV codes from knowledge layer for more precise searches
     const naicsCodes = Object.entries(KL_NAICS)
@@ -5753,6 +5758,13 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       if (sellerName && buyer.includes(sellerName)) return false;
       // Relevance floor
       if (typeof r.relevanceScore === "number" && r.relevanceScore < 30) return false;
+      // Product mismatch — reject if title contains terms clearly outside the seller's scope
+      const sellerDesc = (sellerICP?.sellerDescription || "").toLowerCase();
+      const title = (r.title || "").toLowerCase();
+      const mismatchTerms = ["crm","customer relationship management","erp","enterprise resource planning","hris","payroll","benefits administration"];
+      const hasMismatch = mismatchTerms.some(t => title.includes(t));
+      const sellerMatchesTerm = mismatchTerms.some(t => sellerDesc.includes(t));
+      if (hasMismatch && !sellerMatchesTerm) return false;
       // Recency filter — reject stale RFPs/awards
       const dateStr = r.deadline || r.awardDate || "";
       if (dateStr) {
@@ -5794,12 +5806,12 @@ ${KL_RFP_SEARCH_GUIDANCE ? `\n━━━ PROCUREMENT INTELLIGENCE PROTOCOL ━━
 ${isOpen ? `
   You have 6 web searches. Use EVERY one. Do NOT stop early. Each search MUST be different — vary the terms and target sites.
 
-  Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(category || industries[0] || "")}" 2025 2026${naicsCodes.length ? ` NAICS ${naicsCodes[0]}` : ""}
-  Search 2 (SLED — state/local): "${sanitizeForPrompt(category || industries[0])}" RFP OR solicitation OR procurement site:.gov 2025 2026
-  Search 3 (Aggregator sites): "${sanitizeForPrompt(category || industries[0])}" RFP 2025 2026 site:bidnet.com OR site:demandstar.com OR site:findrfp.com OR site:govwin.com
-  Search 4 (Private/commercial): "${sanitizeForPrompt(industries[0] || category)}" "request for proposal" OR RFP OR "vendor selection" 2025 2026
-  Search 5 (Competitor + category): "${sanitizeForPrompt(competitors[0] || industries[0] || category)}" RFP OR solicitation OR procurement 2025 2026
-  Search 6 (SLED niche — use the seller's SPECIFIC product/service terms, not generic industry labels): "${sanitizeForPrompt(trigger || category)}" RFP OR solicitation site:.gov 2025 OR 2026
+  Search 1 (Federal): site:sam.gov "${sanitizeForPrompt(productTerms)}" 2025 2026${naicsCodes.length ? ` NAICS ${naicsCodes[0]}` : ""}
+  Search 2 (SLED — state/local): "${sanitizeForPrompt(productTerms)}" RFP OR solicitation OR procurement site:.gov 2025 2026
+  Search 3 (Aggregator sites): "${sanitizeForPrompt(productTerms2 || productTerms)}" RFP 2025 2026 site:bidnet.com OR site:demandstar.com OR site:findrfp.com OR site:govwin.com
+  Search 4 (Private/commercial): "${sanitizeForPrompt(productTerms)}" "request for proposal" OR RFP OR "vendor selection" 2025 2026
+  Search 5 (Competitor + product): "${sanitizeForPrompt(competitors[0] || productTerms)}" RFP OR solicitation OR procurement 2025 2026
+  Search 6 (SLED niche — seller's SPECIFIC product/service terms): "${sanitizeForPrompt(productNames[2] || trigger || productTerms)}" RFP OR solicitation site:.gov 2025 OR 2026
 
   SEARCH QUALITY GUIDANCE:
   - Do NOT use broad terms like "insurance RFP site:.gov" — too many results, state agencies get buried.
@@ -5807,10 +5819,10 @@ ${isOpen ? `
   - State agencies, school districts, municipalities, and special districts post on their OWN .gov portals — not SAM.gov. These are high-value SLED opportunities.
   - Procurement aggregators (BidNet, DemandStar, GovWin) index thousands of SLED solicitations that individual .gov searches miss.
 ` : `
-  Search 1 (Buyer websites): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" OR "vendor" site:.com
-  Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2025 OR 2026
-  Search 3 (Competitor displacement): "${sanitizeForPrompt(competitors[0] || category)}" "selected" OR "awarded" OR "contract" 2025 OR 2026
-  Search 4 (Press + SLED): "${sanitizeForPrompt(industries[0] || "SaaS")}" "contract awarded" OR "selects vendor" OR "vendor selected" 2025 OR 2026
+  Search 1 (Buyer websites): "${sanitizeForPrompt(productTerms)}" "administered by" OR "powered by" OR "provided by" OR "vendor" site:.com
+  Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(productTerms)} contract 2025 OR 2026
+  Search 3 (Competitor displacement): "${sanitizeForPrompt(competitors[0] || productTerms)}" "selected" OR "awarded" OR "contract" 2025 OR 2026
+  Search 4 (Press + SLED): "${sanitizeForPrompt(productTerms2 || productTerms)}" "contract awarded" OR "selects vendor" OR "vendor selected" 2025 OR 2026
 
   CRITICAL: For incumbent intel, buyer websites are the gold standard. Health plan member portals, state agency vendor pages, and benefit program descriptions reveal exactly who administers what. A buyer's page showing "OTC benefits administered by [vendor]" is verified competitive intelligence.
 `}
