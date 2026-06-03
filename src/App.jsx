@@ -5668,9 +5668,19 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         if (cached) {
           const parsed = JSON.parse(cached);
           if ((parsed?.open?.length > 0) || (parsed?.closed?.length > 0) || (parsed?.signals?.length > 0)) {
-            // Filter cached results through current validation rules (recency, product mismatch, etc.)
-            const vOpen = (parsed.open || []).filter(r => validateRfpResult(r));
-            const vClosed = (parsed.closed || []).filter(r => validateRfpResult(r));
+            // Inline filter for cached results — validateRfpResult is defined later in this function
+            const sd = (sellerICP?.sellerDescription || "").toLowerCase();
+            const mismatch = ["crm","customer relationship management","erp","enterprise resource planning","hris","payroll","benefits administration"];
+            const sellerHasTerm = mismatch.some(t => sd.includes(t));
+            const cacheFilter = (r) => {
+              const title = (r.title || "").toLowerCase();
+              if (!sellerHasTerm && mismatch.some(t => title.includes(t))) return false;
+              const dateStr = r.deadline || r.awardDate || "";
+              if (dateStr) { const d = new Date(dateStr); if (!isNaN(d.getTime()) && d < new Date("2025-01-01")) return false; }
+              return true;
+            };
+            const vOpen = (parsed.open || []).filter(cacheFilter);
+            const vClosed = (parsed.closed || []).filter(cacheFilter);
             setRfpData({ open: vOpen, closed: vClosed, signals: parsed.signals || [], loading: false, error: null });
             // If cache is >48 hours old, trigger a background refresh
             const cacheAge = parsed._cachedAt ? Date.now() - parsed._cachedAt : Infinity;
