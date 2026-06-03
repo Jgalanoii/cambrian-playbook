@@ -513,7 +513,7 @@ function safeParseJSON(text){
       out+=ch;
     }else{if(ch==='"'){inStr=true;out+=ch;}else out+=ch;}
   }
-  try{return JSON.parse(out);}catch(e){console.error("JSON repair failed:",e.message);return null;}
+  try{return JSON.parse(out);}catch{return null;}
 }
 
 
@@ -1381,9 +1381,7 @@ async function callAI(prompt, { maxTokens = 5500, skipJsonSuffix = false } = {})
     .replace(/,\s*([}\]])/g,"$1");
   try{return JSON.parse(sanitized);}catch{ /* non-critical */ }
   // Try 3: character-by-character JSON repair
-  try{return JSON.parse(repairJSON(sanitized));}catch(e){
-    console.warn("JSON repair failed:",e.message,"Input preview:",candidate?.slice(0,150));
-  }
+  try{return JSON.parse(repairJSON(sanitized));}catch{ /* parse failed — caller handles null */ }
   return null;
 }
 
@@ -1943,15 +1941,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 3: Strategy + opening angle
-  // Quick Brief: lightweight strategic theme only (no seller = no pitch/angle/emails)
+  // Quick Brief: SKIP entirely — no seller means no pitch/angle/emails. Zero API cost, zero failure risk.
+  // Strategic theme for Quick Brief comes from P1's companySnapshot + P5's search results.
   // Full Session: full Opus call with pitch, strategy, angle, emails
-  const p3 = sellerUrl === "research-only" ? streamAIWithSearch(
-    `Search for "${co}" recent strategy, news, earnings, and market position.\n\n`+
-    firmographicsTruth+
-    `Return ONLY raw JSON (start with {):\n`+
-    `{"elevatorPitch":"","strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements FROM YOUR SEARCH RESULTS. What are they building toward in the next 12-18 months?","sellerOpportunity":"","openingAngle":"","outreachEmails":[]}`,
-    null, 2000, { maxSearches: 1, anchorKey: "strategicTheme", onStatus, model: SONNET }
-  ) : streamAIWithSearch(baseFull+
+  const p3 = sellerUrl === "research-only"
+    ? Promise.resolve({ strategicTheme: "", elevatorPitch: "", sellerOpportunity: "", openingAngle: "", outreachEmails: [] })
+    : streamAIWithSearch(baseFull+
     `SEARCH INSTRUCTION: Search for "${co}" recent strategy, news, earnings, and market position. Use the search results to ground every claim in your analysis.\n\n`+
     `TEACHING ANGLE: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption about their industry"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
     `SOCIAL PROOF: Name a SPECIFIC similar company as proof. Lead with a precise stat or insight.\n`+
