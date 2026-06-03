@@ -1847,10 +1847,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     // No pre-cache — fire inline. Mark as billable run (1 per brief).
     const execPrompt = baseLight+
       (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
-      `Search for the CURRENT leadership team of ${co}. Return 4-6 people.\n\n`+
+      `Search for the CURRENT leadership team of ${co}${url && url !== co ? ` (website: ${url})` : ""}. Return 4-6 people.\n\n`+
       `SEARCH STRATEGY — use BOTH searches:\n`+
-      `1. Search "${co} leadership team" OR "${co} founders" OR "${co} about us team"\n`+
-      `2. Search "site:linkedin.com ${co}" to find executives on LinkedIn\n`+
+      `1. Search: site:${url || co.toLowerCase().replace(/\s+/g,"")+ ".com"} "team" OR "about" OR "leadership" OR "founders"\n`+
+      `2. Search: "${co}" CEO OR founder OR "chief" site:linkedin.com\n`+
+      `The company's OWN website is the #1 source of truth for who works there. LinkedIn is #2. Random blog posts, industry articles, or consultant profiles are NOT evidence that someone works at ${co}.\n`+
       `For smaller companies, startups, and nonprofits: the "About", "Our Team", or "Leadership" page on their website is the BEST source. Founders and co-founders count as executives.\n\n`+
       `ACCURACY RULES (CRITICAL — executive errors destroy deals):\n`+
       `- EXECUTIVES CHANGE JOBS. Your training data may be stale. A name you "know" may have LEFT the company months or years ago. ALWAYS verify via web search that the person is CURRENTLY at ${co} before including them.\n`+
@@ -1858,8 +1859,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       `- 3 verified CURRENT executives is better than 6 that include departed ones. Accuracy over completeness.\n`+
       `- For smaller companies / startups / nonprofits: the founding team IS the leadership team. Return founders, co-founders, board members, and any named team leads.\n`+
       `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit entirely.\n`+
+      `- NEVER confuse people who WRITE ABOUT ${co} (authors, consultants, bloggers, industry analysts) with people who WORK AT ${co}. A consultant who mentioned ${co} in an article is NOT an executive there. Only include people whose LinkedIn or company bio explicitly says they work at ${co}.\n`+
       `- Include: CEO/Founder, COO/Co-Founder, CTO, CFO, and any named leaders. For small orgs, board members and advisors count.\n`+
-      `- When in doubt about whether someone is still at ${co}, OMIT them. A shorter list of verified current executives is always better than a longer list with stale names.\n\n`+
+      `- When in doubt about whether someone works at or is still at ${co}, OMIT them. A shorter list of verified current executives is always better than a longer list with wrong names. A rep who names the wrong CEO in a meeting loses the deal instantly.\n\n`+
       `For each executive provide:\n`+
       `- name: their full real name (NEVER a placeholder)\n`+
       `- title: their exact current title\n`+
