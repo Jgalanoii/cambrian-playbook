@@ -6404,7 +6404,9 @@ Return ONLY raw JSON:
 
     setIcpLoading(true);
     setIcpStatus("Researching your company...");
-    setIcpEdits([]); // Clear edits on regeneration — fresh start
+    // Capture current edits BEFORE clearing — inject into rebuild prompt so AI respects user changes
+    const priorEdits = [...icpEdits];
+    setIcpEdits([]); // Clear edit history for fresh tracking
     // Clear RFP cache — ICP change means product context changed, old RFPs may be irrelevant
     try { const keys = Object.keys(localStorage).filter(k => k.startsWith("rfp:")); keys.forEach(k => localStorage.removeItem(k)); if (keys.length) console.log(`[ICP rebuild] Cleared ${keys.length} RFP cache entries`); } catch {}
     setRfpData({ open: [], closed: [], signals: [], loading: false, error: null }); // Reset RFP UI
@@ -6454,6 +6456,7 @@ Return ONLY raw JSON:
       getVerticalInjection({ marketCategory: sellerICP?.marketCategory || "", sellerDescription: url }) +
       `Seller stage: ${sellerStage||"unknown"}.\n`+
       (buildTargetingText() ? `\nSELLER TARGETING PREFERENCES (MUST RESPECT — these override any conflicting inference from the website):\n${buildTargetingText()}\n\n` : "\n")+
+      (priorEdits.length ? `\nUSER CORRECTIONS (the user manually edited these fields — RESPECT these changes in the rebuild):\n${priorEdits.map(e=>`  • ${e.field}: changed to "${e.newValue}"`).join("\n")}\nThese are intentional overrides. Do NOT revert them to what the website says.\n\n` : "")+
       `CRITICAL — CONSISTENCY & ACCURACY RULES:\n`+
       `- For "PICK ONE" fields: return ONLY the exact value from the list. No extra words, no custom ranges, no parentheticals.\n`+
       `- For "PICK FROM" fields: choose from the canonical list provided. Do NOT invent your own labels.\n`+
