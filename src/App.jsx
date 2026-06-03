@@ -7257,7 +7257,7 @@ Return ONLY raw JSON:
   // These must be AFTER all useState declarations to avoid temporal dead zone
   // in production builds (minifier renames variables, TDZ becomes a runtime crash).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(sellerICP?.icp && !sellerICP._error && step <= 1) celebrate("icp_built"); },[sellerICP?.icp?.industries]);
+  // ICP celebration removed — was firing on session restore before user did anything
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0 && step <= 2) celebrate("prospects_added"); },[cohorts.length]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
