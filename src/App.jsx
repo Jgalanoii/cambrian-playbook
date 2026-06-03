@@ -5431,7 +5431,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
   // RFP cache: keyed by (user, seller URL, marketCategory, RFP schema
   // version). Cache TTL is implicit — the seller URL and marketCategory
   // pin the scope; a Regenerate ICP will naturally produce a new key.
-  const RFP_CACHE_VERSION = "v5"; // bumped 2026-06-01: product-fit overhaul, stale CRM results purged
+  const RFP_CACHE_VERSION = "v6"; // bumped 2026-06-03: product-specific search terms, CRM mismatch filter
   const rfpCacheKey = () => {
     const userScope = sbUser?.id || "guest";
     const url = (sellerUrl||"").toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
@@ -5668,7 +5668,10 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         if (cached) {
           const parsed = JSON.parse(cached);
           if ((parsed?.open?.length > 0) || (parsed?.closed?.length > 0) || (parsed?.signals?.length > 0)) {
-            setRfpData({ open: parsed.open || [], closed: parsed.closed || [], signals: parsed.signals || [], loading: false, error: null });
+            // Filter cached results through current validation rules (recency, product mismatch, etc.)
+            const vOpen = (parsed.open || []).filter(r => validateRfpResult(r));
+            const vClosed = (parsed.closed || []).filter(r => validateRfpResult(r));
+            setRfpData({ open: vOpen, closed: vClosed, signals: parsed.signals || [], loading: false, error: null });
             // If cache is >48 hours old, trigger a background refresh
             const cacheAge = parsed._cachedAt ? Date.now() - parsed._cachedAt : Infinity;
             if (cacheAge > 48 * 3600000) {
