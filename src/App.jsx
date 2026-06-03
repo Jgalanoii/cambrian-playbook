@@ -2154,33 +2154,39 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r2?.keyExecutives?.length) next.keyExecutives = sanitizeWebResult(r2.keyExecutives);
     else { next._failedSections = [...(prev._failedSections||[]), "executives"]; }
     if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
-    // Post-merge: if execs are role stubs but P1 snapshot has real names, extract them
+    // Post-merge: if execs are role stubs but P1 snapshot has real names, fire a fast
+    // Haiku call to extract them properly. Regex was too fragile (failed on McGuire, etc.)
     const hasStubs = (next.keyExecutives||[]).some(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name));
     const snap = next.companySnapshot || "";
     if (hasStubs && snap.length > 50) {
-      // Try to extract "founded by [Name]", "[Name], CEO", "CTO [Name]" patterns
-      const namePatterns = [
-        /(?:founded|led|co-founded)\s+by\s+(?:[\w.]+ )?([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/g,
-        /(?:CEO|CTO|CFO|COO|founder|co-founder)\s+([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/g,
-        /([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s*[\(,]\s*(?:CEO|CTO|CFO|COO|founder|ex-)/g,
-      ];
-      const found = [];
-      for (const pat of namePatterns) {
-        let m; while ((m = pat.exec(snap)) !== null) {
-          const name = m[1]?.trim();
-          if (name && name.length > 3 && name.length < 40 && !found.some(f => f.name === name)) found.push({ name });
-        }
-      }
-      if (found.length > 0) {
-        // Upgrade stubs with real names from P1 snapshot
-        const upgraded = [...(next.keyExecutives||[])];
-        found.forEach((f, i) => {
-          if (i < upgraded.length && /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(upgraded[i].name)) {
-            upgraded[i] = { ...upgraded[i], name: f.name, initials: f.name.split(" ").map(w=>w[0]).join("").slice(0,2) };
-          }
+      // Fire-and-forget: fast Haiku extraction, merge when it resolves
+      callAI(
+        `Extract the names and titles of executives mentioned in this company description. Return ONLY people who WORK AT this company (not consultants, authors, or partners).\n\n"${snap.slice(0,800)}"\n\nReturn ONLY raw JSON: {"executives":[{"name":"Full Name","title":"Exact Title"}]}`,
+        { maxTokens: 300 }
+      ).then(r => {
+        if (!r?.executives?.length) return;
+        setBrief(prev => {
+          if (!prev) return prev;
+          const execs = [...(prev.keyExecutives || [])];
+          const extracted = r.executives.filter(e => e.name && e.title && e.name.length > 3);
+          // Match extracted names to stub roles by title
+          extracted.forEach(ext => {
+            const titleNorm = ext.title.toLowerCase();
+            const stubIdx = execs.findIndex(e =>
+              /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name) &&
+              (titleNorm.includes(e.name.toLowerCase()) || titleNorm.includes(e.title.toLowerCase().replace("chief ","").split(" ")[0]))
+            );
+            if (stubIdx >= 0) {
+              execs[stubIdx] = { ...execs[stubIdx], name: ext.name, title: ext.title, initials: ext.name.split(" ").map(w=>w[0]).join("").slice(0,2) };
+            } else {
+              // No matching stub — find first remaining stub and replace it
+              const anyStub = execs.findIndex(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name));
+              if (anyStub >= 0) execs[anyStub] = { ...execs[anyStub], name: ext.name, title: ext.title, initials: ext.name.split(" ").map(w=>w[0]).join("").slice(0,2) };
+            }
+          });
+          return { ...prev, keyExecutives: execs };
         });
-        next.keyExecutives = upgraded;
-      }
+      }).catch(() => {});
     }
     return next;
   };
