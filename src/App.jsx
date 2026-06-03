@@ -1196,8 +1196,8 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
         ],
       }),
     });
-    if (response.status !== 529 && response.status !== 429) break;
-    const wait = response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
+    if (response.status !== 529 && response.status !== 429 && response.status !== 500 && response.status !== 502 && response.status !== 503) break;
+    const wait = response.status >= 500 ? [3000, 6000, 12000][attempt] : response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
     console.warn(`[claude-stream] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
     await sleep(wait);
   }
@@ -1272,8 +1272,8 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
         ],
       }),
     });
-    if (response.status !== 529 && response.status !== 429) break;
-    const wait = response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
+    if (response.status !== 529 && response.status !== 429 && response.status !== 500 && response.status !== 502 && response.status !== 503) break;
+    const wait = response.status >= 500 ? [3000, 6000, 12000][attempt] : response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
     console.warn(`[claude-stream-search] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
     await sleep(wait);
   }
@@ -1328,10 +1328,11 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
   }
   // Parse: use extractJsonWithKey if anchor provided, else try direct parse
   try {
-    const cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").trim();
+    const cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").replace(/<\/?thinking>/g, "").trim();
     if (anchorKey) {
       const result = extractJsonWithKey(cleaned, anchorKey);
       if (result) return stripCitations(result);
+      console.warn(`[streamAIWithSearch] anchorKey "${anchorKey}" not found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 300));
     }
     // Fallback: try to find JSON object in the text
     const firstBrace = cleaned.indexOf('{');
@@ -1339,8 +1340,12 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
     if (firstBrace >= 0 && lastBrace > firstBrace) {
       return stripCitations(JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)));
     }
+    console.warn(`[streamAIWithSearch] No JSON found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 200));
     return null;
-  } catch { return null; }
+  } catch(e) {
+    console.warn(`[streamAIWithSearch] Parse failed for anchorKey="${anchorKey}":`, e.message);
+    return null;
+  }
 }
 
 // callAI: JSON-specific wrapper around claudeFetch. Delegates all HTTP/retry
