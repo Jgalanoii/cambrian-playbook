@@ -1942,11 +1942,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     }
   })();
 
-  // MICRO 3: Strategy + opening angle — needs seller context for "why you"
-  // NOW WEB-GROUNDED: uses streamAIWithSearch so elevator pitch, strategic
-  // theme, opening angle, and sentiment are grounded in live search results
-  // rather than fabricated from training data.
-  const p3 = streamAIWithSearch(baseFull+
+  // MICRO 3: Strategy + opening angle
+  // Quick Brief: lightweight strategic theme only (no seller = no pitch/angle/emails)
+  // Full Session: full Opus call with pitch, strategy, angle, emails
+  const p3 = sellerUrl === "research-only" ? streamAIWithSearch(
+    `Search for "${co}" recent strategy, news, earnings, and market position.\n\n`+
+    firmographicsTruth+
+    `Return ONLY raw JSON (start with {):\n`+
+    `{"elevatorPitch":"","strategicTheme":"3-4 sentences on ${co}'s CURRENT strategic direction. Cite specific initiatives, investments, or leadership statements FROM YOUR SEARCH RESULTS. What are they building toward in the next 12-18 months?","sellerOpportunity":"","openingAngle":"","outreachEmails":[]}`,
+    null, 2000, { maxSearches: 1, anchorKey: "strategicTheme", onStatus, model: SONNET }
+  ) : streamAIWithSearch(baseFull+
     `SEARCH INSTRUCTION: Search for "${co}" recent strategy, news, earnings, and market position. Use the search results to ground every claim in your analysis.\n\n`+
     `TEACHING ANGLE: ${KL_CHALLENGER.teachingAngle || "Challenge a widely-held assumption about their industry"}. ${KL_CHALLENGER.mobilizer?.identify || "Look for the person who asks how to make it happen"}\n`+
     `SOCIAL PROOF: Name a SPECIFIC similar company as proof. Lead with a precise stat or insight.\n`+
@@ -2148,7 +2153,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeStrategy = (r3) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), strategy:false}};
-    if (!r3) { next._failedSections = [...(prev._failedSections||[]), "strategy"]; }
+    if (!r3 && sellerUrl !== "research-only") { next._failedSections = [...(prev._failedSections||[]), "strategy"]; }
     if (r3?.elevatorPitch) next.elevatorPitch = r3.elevatorPitch;
     if (r3?.strategicTheme) next.strategicTheme = r3.strategicTheme;
     if (r3?.sellerOpportunity) next.sellerOpportunity = r3.sellerOpportunity;
