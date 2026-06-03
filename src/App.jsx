@@ -2420,7 +2420,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 10: Gate Map — approval paths for both seller and buyer side
+  // Skip for Quick Brief (research-only) — no seller means no deal to map gates for
   const p10 = (async()=>{
+    if (sellerUrl === "research-only") return null;
     try {
       const dealSize = sellerICP?.icp?.dealSize || "";
       const d = await claudeFetch({
@@ -2477,7 +2479,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r9?.financialDeepDive) next.financialDeepDive = r9.financialDeepDive;
     else { failed.push("financial"); }
     if (r10?.gateMap) next.gateMap = r10.gateMap;
-    else { failed.push("gateMap"); console.warn("[brief] Gate map (P10) returned null — section will be missing"); }
+    else if (sellerUrl !== "research-only") { failed.push("gateMap"); console.warn("[brief] Gate map (P10) returned null — section will be missing"); }
     if (failed.length > (prev._failedSections||[]).length) next._failedSections = failed;
     return next;
   };
