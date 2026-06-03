@@ -3222,13 +3222,13 @@ function PasswordGate({ onAuth }) {
           <div style={{flex:"1 1 400px",minWidth:280}}>
             <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}}>Smart People Go Further.</div>
             <div style={{fontFamily:"Lora,serif",fontSize:32,fontWeight:700,color:"var(--ink-0)",lineHeight:1.25,marginBottom:16}}>
-              Sales discovery<br/>doesn't have to <span style={{color:"var(--tan-0)"}}>suck.</span>
+              You only get one shot at a<br/>first <span style={{color:"var(--tan-0)"}}>impression.</span>
             </div>
             <div style={{fontSize:16,color:"var(--ink-1)",lineHeight:1.7,marginBottom:8,maxWidth:480}}>
-              30 seconds and a company name. We'll hand you a full intelligence brief, a conversation strategy, and an AI coach who's actually been paying attention.
+              Walk into every conversation as the most prepared person in the room. 30 seconds, a company name, and you'll know more about your prospect than most reps learn in a week.
             </div>
             <div style={{fontSize:14,color:"var(--ink-2)",lineHeight:1.6,marginBottom:24,maxWidth:480,fontStyle:"italic"}}>
-              Named for the Cambrian Explosion — when life evolved more in 20 million years than in the previous 3 billion. Your sales prep is due for the same leap.
+              Whether you're a seasoned closer or brand new to sales — Cambrian levels you up. Think of it as the mentor who did the homework for you, every single time.
             </div>
             <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:24}}>
               {[
@@ -3271,9 +3271,9 @@ function PasswordGate({ onAuth }) {
       {/* ── WHAT YOU GET ── */}
       <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:6}}>Discovery doesn't have to suck.</div>
+          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:6}}>Your unfair advantage.</div>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-            More intel in 15 minutes than your team gets in 4 hours
+            Show up knowing things they didn't expect you to know
           </div>
           <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:600,margin:"0 auto",lineHeight:1.6}}>
             Nine steps of live research, AI-powered analysis, and proven frameworks. Not a ChatGPT summary with a logo on it.
@@ -3282,12 +3282,12 @@ function PasswordGate({ onAuth }) {
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(250px, 1fr))",gap:16,marginBottom:40}}>
           {[
-            {icon:"🔍",title:"Company Intelligence",desc:"Real-time research across company overview, financials, competitive positioning, M&A signals, and hiring trends. Not a Wikipedia summary — live, actionable intel."},
-            {icon:"👥",title:"Executive Profiles",desc:"Leadership backgrounds, career trajectories, compensation context, and communication angles. Know who you're talking to before you dial."},
-            {icon:"🎯",title:"How You Help",desc:"Your products mapped to their specific pain points — with teaching insights that reframe how they think, proof from named customers, and measurable outcomes."},
-            {icon:"📊",title:"Best-Match Scoring",desc:"Every company scored across 15+ industry verticals so you know which accounts deserve your time — and which don't. No more guessing."},
-            {icon:"🧪",title:"Call Prep & Hypothesis",desc:"Walk into every call with a structured plan — what you know, what to ask, how to open, and when to push. Dual tracks for sales qualification and solution discovery."},
-            {icon:"🎙",title:"AI Coaching with Milton",desc:"Live confidence scoring, structured qualification, and Milton — your AI sales coach with full session context and zero patience for mediocrity."},
+            {icon:"🔍",title:"Know Their World",desc:"Financials, competitors, hiring patterns, executive backgrounds, market sentiment — all researched live. You'll reference things in conversation that make them think 'how did they know that?'"},
+            {icon:"👥",title:"Know Who You're Talking To",desc:"Real names, real titles, what they care about, and how to reach them. No more walking in blind and hoping to find the right person."},
+            {icon:"🎯",title:"Know Exactly What to Say",desc:"Your products mapped to their problems. Teaching insights that make them rethink assumptions. Proof from your actual wins — not generic claims."},
+            {icon:"📊",title:"Know Who to Call First",desc:"Every prospect scored on how well YOUR products fit THEIR needs. Stop wasting time on bad-fit accounts. Focus where you'll win."},
+            {icon:"🧪",title:"Walk In With a Plan",desc:"A structured game plan for every call — what to open with, what to ask, what to listen for, and when to push. Even your first call feels like your fifth."},
+            {icon:"🎙",title:"Get Better Every Call",desc:"Milton is your AI coach — he knows your full session and helps you think on your feet. From 'I'm nervous' to 'I own this room' in a few sessions."},
           ].map(f=>(
             <div key={f.title} style={{background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"20px 18px"}}>
               <div style={{fontSize:24,marginBottom:8}}>{f.icon}</div>
@@ -3331,15 +3331,18 @@ function PasswordGate({ onAuth }) {
       <div style={{padding:"40px 20px",maxWidth:960,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--ink-0)",marginBottom:8}}>
-            For teams who think "winging it" is a fireable offense
+            From "I'm not sure what to say" to "I own this conversation"
+          </div>
+          <div style={{fontSize:14,color:"var(--ink-2)",maxWidth:560,margin:"0 auto 4px",lineHeight:1.6}}>
+            Cambrian doesn't just give you intel — it teaches you how to use it. Every brief, every call prep, every coaching session makes you sharper. The reps who use this don't just sell better — they learn faster.
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14}}>
           {[
-            {role:"Account Executives",desc:"Walk into every call with the confidence of someone who's been studying the account for weeks. Because you kind of have."},
-            {role:"Sales Leaders",desc:"Give your whole team evolved instincts — consistent prep, pipeline intelligence, and deal routing that actually routes."},
-            {role:"Solutions Architects",desc:"Dual-track discovery with architecture qualification baked in. No more finding out about the integration nightmare on day 45."},
-            {role:"Revenue Operations",desc:"ICP scoring across 15 verticals, fit analytics, and usage data. Finally, a tool that makes your CRM data look honest."},
+            {role:"New to Sales?",desc:"No more panic before calls. Cambrian gives you exactly what to say, who to say it to, and why it matters. You'll sound like a 10-year vet on day one."},
+            {role:"Experienced AEs",desc:"Stop spending 60 minutes on research you can get in 30 seconds. Walk in knowing things about their company that even their team doesn't know."},
+            {role:"Sales Leaders",desc:"Give every rep on your team the preparation habits of your best closer. Consistent prep, consistent results, no more 'I didn't have time to research.'"},
+            {role:"Solutions Architects",desc:"Dual-track discovery with architecture qualification baked in. Show up to the first technical call already knowing their stack, their gaps, and their timeline."},
           ].map(p=>(
             <div key={p.role} style={{background:"var(--surface)",border:"1.5px solid var(--line-0)",borderRadius:10,padding:"16px 14px",textAlign:"center"}}>
               <div style={{fontFamily:"Lora,serif",fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:6}}>{p.role}</div>
@@ -3398,12 +3401,12 @@ function PasswordGate({ onAuth }) {
       {/* ── BOTTOM CTA ── */}
       <div style={{background:"var(--ink-0)",padding:"40px 20px",textAlign:"center"}}>
         <div style={{maxWidth:500,margin:"0 auto"}}>
-          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}}>Smart People Go Further.</div>
+          <div style={{fontSize:11,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:8}}>Make every first impression count.</div>
           <div style={{fontFamily:"Lora,serif",fontSize:22,fontWeight:700,color:"var(--surface)",marginBottom:8}}>
-            Your competitors are still Googling.<br/>You could be closing.
+            The rep who shows up prepared<br/>wins the conversation. Every time.
           </div>
           <div style={{fontSize:14,color:"var(--ink-3)",lineHeight:1.6,marginBottom:20}}>
-            3 full runs free. No credit card. No "let me schedule a demo." Just sign up and go.
+            3 full runs free. No credit card. No demo required. Just sign up and see what walking in prepared actually feels like.
           </div>
           <button className="btn btn-lg"
             onClick={()=>{window.scrollTo({top:0,behavior:"smooth"});setMode("signup");}}
@@ -10677,7 +10680,7 @@ Return ONLY raw JSON:
           <div className="page" style={{maxWidth:1200,paddingTop:40}}>
             <div className="setup-card" style={{maxWidth:800,margin:"0 auto"}}>
               <div className="setup-logo" style={{fontSize:26}}>Cambrian <span>Catalyst</span></div>
-              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>Smart People Go Further. Evolve How You Sell.</div>
+              <div style={{fontFamily:"Lora,serif",fontSize:13,color:"var(--tan-0)",textAlign:"center",marginBottom:8,fontStyle:"italic",letterSpacing:"0.3px"}}>You only get one first impression. Make it count.</div>
               <div style={{textAlign:"center",marginBottom:10}}>
                 <span style={{display:"inline-block",background:"var(--green)",color:"var(--surface)",fontSize:11,fontWeight:700,padding:"3px 12px",borderRadius:20,letterSpacing:"0.4px",textTransform:"uppercase"}}>Private Beta</span>
               </div>
@@ -10778,9 +10781,9 @@ Return ONLY raw JSON:
               {/* Landing hero for guests */}
               {!sbUser && (
                 <div style={{textAlign:"center",marginBottom:32,padding:"20px 8px 0"}}>
-                  <div style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",lineHeight:1.3,marginBottom:6,fontFamily:"Lora,serif",letterSpacing:"-0.5px"}}>Sales discovery doesn't have to suck.</div>
-                  <div style={{fontSize:13,fontWeight:600,color:"var(--tan-0)",letterSpacing:"0.3px",marginBottom:10,fontStyle:"italic"}}>Smart People Go Further. Evolve How You Sell.</div>
-                  <div style={{fontSize:16,color:"var(--ink-2)",lineHeight:1.7,maxWidth:560,margin:"0 auto 20px"}}>Deep company intelligence, tailored talk tracks, and AI coaching — in 30 seconds. When you walk in prepared, every conversation is better for everyone in the room.</div>
+                  <div style={{fontSize:28,fontWeight:700,color:"var(--ink-0)",lineHeight:1.3,marginBottom:6,fontFamily:"Lora,serif",letterSpacing:"-0.5px"}}>You only get one shot at a first impression.</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--tan-0)",letterSpacing:"0.3px",marginBottom:10,fontStyle:"italic"}}>Make it count. Every time.</div>
+                  <div style={{fontSize:16,color:"var(--ink-2)",lineHeight:1.7,maxWidth:560,margin:"0 auto 20px"}}>Whether you're new to sales or a 20-year vet — Cambrian makes you the most prepared person in every room. Real research, real strategy, real coaching. Not templates. Not guesswork.</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,maxWidth:600,margin:"0 auto 24px",textAlign:"left"}}>
                     {[
                       {icon:"🔍",title:"Research",desc:"Executives, strategy, sentiment, financials — live web research, not stale data"},
@@ -13590,7 +13593,7 @@ Return ONLY raw JSON:
                           Your brief on {selectedAccount?.company || "this company"} is ready.
                         </div>
                         <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.7}}>
-                          Every field below is editable — <strong>click anything to correct or add detail</strong>. Your edits are tracked and fed into call prep, discovery questions, and coaching. The more you refine, the smarter every downstream output gets.
+                          Everything below is editable — <strong>click anything to correct or add your own intel</strong>. The more you put in, the better your call prep, discovery questions, and coaching get. Think of this as your cheat sheet — make it yours.
                           {sellerUrl === "research-only" && " This is a Quick Brief — set up your company below to unlock elevator pitches, solution mapping, and call coaching."}
                         </div>
                       </div>
