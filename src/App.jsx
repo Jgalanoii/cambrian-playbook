@@ -1382,7 +1382,7 @@ async function callAI(prompt, { maxTokens = 5500, skipJsonSuffix = false } = {})
   try{return JSON.parse(sanitized);}catch{ /* non-critical */ }
   // Try 3: character-by-character JSON repair
   try{return JSON.parse(repairJSON(sanitized));}catch(e){
-    console.error("JSON repair failed:",e.message);
+    console.warn("JSON repair failed:",e.message,"Input preview:",candidate?.slice(0,150));
   }
   return null;
 }
@@ -2630,14 +2630,13 @@ function ChatPanel({ messages, onSend, onClose, loading, contextLabel }) {
 }
 
 // ── COMPANY LOGO ────────────────────────────────────────────────────────────
-// Fetches logo via Clearbit's free API (no key needed). Falls back to a
-// colored initials circle if the domain has no logo or the request fails.
+// Initials-based logo. Clearbit API removed — blocked by ad blockers,
+// spammed console with ERR_BLOCKED_BY_CLIENT on every render.
 function CompanyLogo({ domain, name, size = 40, style = {} }) {
-  const [failed, setFailed] = React.useState(false);
   const cleanDomain = (domain || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
   const initials = (name || cleanDomain || "").split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "··";
 
-  if (!cleanDomain || failed) {
+  {
     return (
       <div style={{
         width: size, height: size, borderRadius: "50%", background: "var(--ink-0)",
@@ -2649,20 +2648,6 @@ function CompanyLogo({ domain, name, size = 40, style = {} }) {
       </div>
     );
   }
-
-  return (
-    <img
-      src={`https://logo.clearbit.com/${cleanDomain}`}
-      alt={`${name || cleanDomain} logo`}
-      width={size} height={size}
-      onError={() => setFailed(true)}
-      style={{
-        borderRadius: size > 32 ? "var(--r-md)" : "var(--r-sm)",
-        objectFit: "contain", background: "var(--surface)",
-        border: "1px solid var(--line-1)", flexShrink: 0, ...style,
-      }}
-    />
-  );
 }
 
 // ── EMPTY STATE ─────────────────────────────────────────────────────────────
