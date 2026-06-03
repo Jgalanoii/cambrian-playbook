@@ -2154,6 +2154,34 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r2?.keyExecutives?.length) next.keyExecutives = sanitizeWebResult(r2.keyExecutives);
     else { next._failedSections = [...(prev._failedSections||[]), "executives"]; }
     if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
+    // Post-merge: if execs are role stubs but P1 snapshot has real names, extract them
+    const hasStubs = (next.keyExecutives||[]).some(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name));
+    const snap = next.companySnapshot || "";
+    if (hasStubs && snap.length > 50) {
+      // Try to extract "founded by [Name]", "[Name], CEO", "CTO [Name]" patterns
+      const namePatterns = [
+        /(?:founded|led|co-founded)\s+by\s+(?:[\w.]+ )?([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/g,
+        /(?:CEO|CTO|CFO|COO|founder|co-founder)\s+([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/g,
+        /([A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s*[\(,]\s*(?:CEO|CTO|CFO|COO|founder|ex-)/g,
+      ];
+      const found = [];
+      for (const pat of namePatterns) {
+        let m; while ((m = pat.exec(snap)) !== null) {
+          const name = m[1]?.trim();
+          if (name && name.length > 3 && name.length < 40 && !found.some(f => f.name === name)) found.push({ name });
+        }
+      }
+      if (found.length > 0) {
+        // Upgrade stubs with real names from P1 snapshot
+        const upgraded = [...(next.keyExecutives||[])];
+        found.forEach((f, i) => {
+          if (i < upgraded.length && /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(upgraded[i].name)) {
+            upgraded[i] = { ...upgraded[i], name: f.name, initials: f.name.split(" ").map(w=>w[0]).join("").slice(0,2) };
+          }
+        });
+        next.keyExecutives = upgraded;
+      }
+    }
     return next;
   };
   const mergeStrategy = (r3) => (prev) => {
