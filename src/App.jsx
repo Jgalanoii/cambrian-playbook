@@ -624,7 +624,12 @@ function _rankAndCapKls(klPairs, targetIndustry, sellerICPCtx) {
 
   // Tier 1 (full, max 2) + Tier 2 (truncated, max 3 more)
   const verticalText = scored.slice(0, 5).map((v, i) => {
-    if (i < 2) return v.content; // Tier 1: full depth
+    if (i < 2) { // Tier 1: deep but capped at 6K chars to prevent 50KB KL files from dominating
+      if (v.content.length <= 6000) return v.content;
+      const t1 = v.content.slice(0, 6000);
+      const nl1 = t1.lastIndexOf("\n");
+      return (nl1 > 3000 ? t1.slice(0, nl1) : t1) + "\n[...depth-limited]\n";
+    }
     const t = v.content.slice(0, KL_SUMMARY_LIMIT);
     const nl = t.lastIndexOf("\n");
     return (nl > 200 ? t.slice(0, nl) : t) + "\n[...context-limited]\n";
@@ -1641,7 +1646,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // catalog, and proof points. generateBrief doesn't have sellerProofPoints
   // in scope (it's component state, not a param) — those are injected by the
   // component-level calls (hypothesis, post-call, solution fit).
-  const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, icpEdits });
+  const proofPack = getProofPack();
 
   // TWO context levels. baseLight is for target-research-only calls (p1, p5)
   // that don't need the seller proof pack, scoring heuristics, or deal context.
@@ -1780,11 +1785,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ["government", getGovernmentInjection(sellerICP, member.ind)],
     ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
     ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
-    ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
-    // Cross-cutting layers (always injected when present, not keyword-gated)
-    ["accounting", KL_ACCOUNTING ? "\n" + KL_ACCOUNTING : ""],
+    // Cross-cutting: gate on relevance instead of always injecting
+    ["peHoldco", (KL_PE_HOLDCO && /pe[- ]backed|private equity|buyout|portfolio/i.test((member.publicPrivate||"")+" "+(member.ind||""))) ? "\n" + KL_PE_HOLDCO : ""],
+    ["accounting", (KL_ACCOUNTING && /financ|account|banking|audit|tax/i.test((member.ind||"")+" "+(sellerICP?.marketCategory||""))) ? "\n" + KL_ACCOUNTING : ""],
     ["b2bSales", KL_B2B_SALES ? "\n" + KL_B2B_SALES : ""],
-    ["okrKpi", KL_OKR_KPI ? "\n" + KL_OKR_KPI : ""],
   ];
   const _klActiveVersions = _klInjections.filter(([, v]) => v).map(([name]) => name);
   // Smart 2-tier KL injection: prioritize by RELEVANCE to target industry, not file size
@@ -4082,6 +4086,15 @@ export default function App(){
   // ── DATA SCIENCE: session tracking refs ───────────────────────────────────
   const dsSessionRef = useRef(crypto.randomUUID());
   const dsSessionStart = useRef(Date.now());
+  // Memoized proof pack — built once per ICP/product change, reused everywhere
+  const proofPackCache = useRef({ key: "", value: "" });
+  const getProofPack = () => {
+    const key = JSON.stringify([sellerICP?.icp?.sellerDescription?.slice(0,50), products.length, sellerProofPoints.length, sellerDocs.length]);
+    if (proofPackCache.current.key === key) return proofPackCache.current.value;
+    const pp = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
+    proofPackCache.current = { key, value: pp };
+    return pp;
+  };
   const logJourney = (action, detail, stepFrom, stepTo) => {
     if (!sbToken || !sbUser) return;
     const SB_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -8360,7 +8373,7 @@ Return ONLY raw JSON:
     // "why buy from us" thread through hypothesis talk tracks, JOLT plan,
     // challenger insight, and route recommendation. Talk tracks should
     // cite NAMED customers from the proof pack, not invent generic claims.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
+    const proofPack = getProofPack();
 
     // Customer list for grounded talk track references
     const customerList = (sellerICP?.icp?.customerExamples || []).filter(Boolean);
@@ -8386,46 +8399,8 @@ Return ONLY raw JSON:
       "CHALLENGER CUSTOMER: " + challengerCtx + "\n" +
       (KL_SALES_FRAMEWORKS.length ? "SALES METHODOLOGY: " + KL_SALES_FRAMEWORKS.slice(0, 5).map(f => `${f.name} (${f.author}): ${f.principle.split(".")[0]}`).join(". ") + ".\n" : "") +
       "QUALIFICATION SIGNALS: " + buyingSignalCtx + "\n" +
-      // Cap KL injections to top 5 verticals + cross-cutting (prevents 400 from oversized prompts)
-      (()=>{
-        const hypoKls = [
-          ["vertical", getVerticalInjection(sellerICP, member.ind)],
-          ["payments", getPaymentsInjection(sellerICP, member.ind)],
-          ["compliance", getComplianceInjection(sellerICP, member.ind)],
-          ["realEstate", getRealEstateInjection(sellerICP, member.ind)],
-          ["banking", getBankingInjection(sellerICP, member.ind)],
-          ["healthcare", getHealthcareInjection(sellerICP, member.ind)],
-          ["aiMl", getAiMlInjection(sellerICP, member.ind)],
-          ["fintechDeep", getFintechDeepInjection(sellerICP, member.ind)],
-          ["rewards", getRewardsInjection(sellerICP, member.ind)],
-          ["qsr", getQsrInjection(sellerICP, member.ind)],
-          ["investor", getInvestorInjection(sellerICP, member.ind)],
-          ["baas", getBaasInjection(sellerICP, member.ind)],
-          ["charitable", getCharitableInjection(sellerICP, member.ind)],
-          ["medicalPayments", getMedicalPaymentsInjection(sellerICP, member.ind)],
-          ["smbMidmarket", getSmbMidmarketInjection(sellerICP, member.ind, member)],
-          ["insurance", getInsuranceInjection(sellerICP, member.ind)],
-          ["digitalIncentives", getDigIncentivesInjection(sellerICP, member.ind)],
-          ["retail", getRetailInjection(sellerICP, member.ind)],
-          ["professionalServices", getProfServicesInjection(sellerICP, member.ind)],
-          ["manufacturing", getManufacturingInjection(sellerICP, member.ind)],
-          ["cannabis", getCannabisInjection(sellerICP, member.ind)],
-          ["crypto", getCryptoInjection(sellerICP, member.ind)],
-          ["gaming", getGamingInjection(sellerICP, member.ind)],
-          ["predictionMarkets", getPredictionMarketsInjection(sellerICP, member.ind)],
-          ["cybersecurity", getCybersecurityInjection(sellerICP, member.ind)],
-          ["education", getEducationInjection(sellerICP, member.ind)],
-          ["energy", getEnergyInjection(sellerICP, member.ind)],
-          ["hrTech", getHrTechInjection(sellerICP, member.ind)],
-          ["government", getGovernmentInjection(sellerICP, member.ind)],
-          ["executivePerspectives", KL_EXEC_PERSPECTIVES ? "\n" + KL_EXEC_PERSPECTIVES : ""],
-          ["approvalGates", KL_APPROVAL_GATES ? "\n" + KL_APPROVAL_GATES : ""],
-          ["peHoldco", KL_PE_HOLDCO ? "\n" + KL_PE_HOLDCO : ""],
-        ];
-        // Smart 2-tier injection (same as brief — prioritize by relevance, not size)
-        return _rankAndCapKls(hypoKls, member.ind, sellerICP);
-      })() +
-      "\n" +
+      // KL injection removed — brief findings below already carry the KL intelligence.
+      // KL → Brief → Hypothesis is the intended cascade. Raw KL re-injection was duplicating 5-15K tokens.
       "UNIVERSAL ASSUMPTION: Every company wants to grow, expand, stay compliant, reduce fraud/risk, satisfy investors, and make customers happy. Ground every RIVER stage in which of these six this seller can directly address for " + co + ".\n" +
       "SELLER STAGE: " + (sellerStage||"not specified") + ". Adjust the Route stage accordingly: Series A → channel/partner; Series B/C → departmental landing; Series D+/PE/Public → full enterprise.\n" +
       "SELLER (" + sellerUrl + ") CONTEXT:\n" + sellerCtx + "\n" +
@@ -8515,38 +8490,29 @@ Return ONLY raw JSON:
       `You are a senior discovery coach trained in BOTH (a) sales discovery and (b) solution-architecture qualification. You produce two question tracks for each RIVER stage: SALES (deal qualification) and ARCHITECTURE (solution feasibility — answers we'd otherwise wait for SA / onboarding to ask).\n\n`+
       (KL_DISCOVERY_KNOWLEDGE ? KL_DISCOVERY_KNOWLEDGE + "\n" : "") +
       (KL_DISCOVERY_SCORECARD ? KL_DISCOVERY_SCORECARD + "\n" : "") +
-      (KL_PAYMENTS_DISCOVERY && getPaymentsInjection(sellerICP, member?.ind) ? KL_PAYMENTS_DISCOVERY + "\n" : "") +
-      getVerticalInjection(sellerICP, member?.ind) +
-      getComplianceDiscovery(sellerICP, member?.ind) +
-      (KL_REAL_ESTATE_DISCOVERY && getRealEstateInjection(sellerICP, member?.ind) ? KL_REAL_ESTATE_DISCOVERY + "\n" : "") +
-      (KL_BANKING_DISCOVERY && getBankingInjection(sellerICP, member?.ind) ? KL_BANKING_DISCOVERY + "\n" : "") +
-      (KL_HEALTHCARE_DISCOVERY && getHealthcareInjection(sellerICP, member?.ind) ? KL_HEALTHCARE_DISCOVERY + "\n" : "") +
-      (KL_AI_ML_DISCOVERY && getAiMlInjection(sellerICP, member?.ind) ? KL_AI_ML_DISCOVERY + "\n" : "") +
-      (KL_FINTECH_DEEP_DISCOVERY && getFintechDeepInjection(sellerICP, member?.ind) ? KL_FINTECH_DEEP_DISCOVERY + "\n" : "") +
-      (KL_REWARDS_DISCOVERY && getRewardsInjection(sellerICP, member?.ind) ? KL_REWARDS_DISCOVERY + "\n" : "") +
-      (KL_QSR_DISCOVERY && getQsrInjection(sellerICP, member?.ind) ? KL_QSR_DISCOVERY + "\n" : "") +
-      (KL_BAAS_DISCOVERY && getBaasInjection(sellerICP, member?.ind) ? KL_BAAS_DISCOVERY + "\n" : "") +
-      (KL_CHARITABLE_DISCOVERY && getCharitableInjection(sellerICP, member?.ind) ? KL_CHARITABLE_DISCOVERY + "\n" : "") +
-      (KL_INVESTOR_DISCOVERY && getInvestorInjection(sellerICP, member?.ind) ? KL_INVESTOR_DISCOVERY + "\n" : "") +
-      (KL_MEDICAL_PAYMENTS_DISCOVERY && getMedicalPaymentsInjection(sellerICP, member?.ind) ? KL_MEDICAL_PAYMENTS_DISCOVERY + "\n" : "") +
-      (KL_SMB_MIDMARKET_DISCOVERY && getSmbMidmarketInjection(sellerICP, member?.ind, member) ? KL_SMB_MIDMARKET_DISCOVERY + "\n" : "") +
-      (KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY + "\n" : "") +
-      (KL_DIG_INCENTIVES_DISCOVERY && getDigIncentivesInjection(sellerICP, member?.ind) ? KL_DIG_INCENTIVES_DISCOVERY + "\n" : "") +
-      (KL_RETAIL_DISCOVERY && getRetailInjection(sellerICP, member?.ind) ? KL_RETAIL_DISCOVERY + "\n" : "") +
-      (KL_PROF_SERVICES_DISCOVERY && getProfServicesInjection(sellerICP, member?.ind) ? KL_PROF_SERVICES_DISCOVERY + "\n" : "") +
-      (KL_MANUFACTURING_DISCOVERY && getManufacturingInjection(sellerICP, member?.ind) ? KL_MANUFACTURING_DISCOVERY + "\n" : "") +
-      (KL_CANNABIS_DISCOVERY && getCannabisInjection(sellerICP, member?.ind) ? KL_CANNABIS_DISCOVERY + "\n" : "") +
-      (KL_CRYPTO_DISCOVERY && getCryptoInjection(sellerICP, member?.ind) ? KL_CRYPTO_DISCOVERY + "\n" : "") +
-      (KL_GAMING_DISCOVERY && getGamingInjection(sellerICP, member?.ind) ? KL_GAMING_DISCOVERY + "\n" : "") +
-      (KL_PREDICTION_MARKETS_DISCOVERY && getPredictionMarketsInjection(sellerICP, member?.ind) ? KL_PREDICTION_MARKETS_DISCOVERY + "\n" : "") +
-      (KL_CYBERSECURITY_DISCOVERY && getCybersecurityInjection(sellerICP, member?.ind) ? KL_CYBERSECURITY_DISCOVERY + "\n" : "") +
-      (KL_EDUCATION_DISCOVERY && getEducationInjection(sellerICP, member?.ind) ? KL_EDUCATION_DISCOVERY + "\n" : "") +
-      (KL_ENERGY_DISCOVERY && getEnergyInjection(sellerICP, member?.ind) ? KL_ENERGY_DISCOVERY + "\n" : "") +
-      (KL_HR_TECH_DISCOVERY && getHrTechInjection(sellerICP, member?.ind) ? KL_HR_TECH_DISCOVERY + "\n" : "") +
-      (KL_GOVERNMENT_DISCOVERY && getGovernmentInjection(sellerICP, member?.ind) ? KL_GOVERNMENT_DISCOVERY + "\n" : "") +
-      (KL_EXEC_PERSPECTIVES_DISCOVERY ? KL_EXEC_PERSPECTIVES_DISCOVERY + "\n" : "") +
-      (KL_APPROVAL_GATES_DISCOVERY ? KL_APPROVAL_GATES_DISCOVERY + "\n" : "") +
-      (KL_PE_HOLDCO_DISCOVERY ? KL_PE_HOLDCO_DISCOVERY + "\n" : "") +
+      // Discovery KLs — ranked and capped like brief KLs (top 2 full, next 3 truncated)
+      (()=>{
+        const discKls = [
+          ["payments", KL_PAYMENTS_DISCOVERY && getPaymentsInjection(sellerICP, member?.ind) ? KL_PAYMENTS_DISCOVERY : ""],
+          ["banking", KL_BANKING_DISCOVERY && getBankingInjection(sellerICP, member?.ind) ? KL_BANKING_DISCOVERY : ""],
+          ["healthcare", KL_HEALTHCARE_DISCOVERY && getHealthcareInjection(sellerICP, member?.ind) ? KL_HEALTHCARE_DISCOVERY : ""],
+          ["aiMl", KL_AI_ML_DISCOVERY && getAiMlInjection(sellerICP, member?.ind) ? KL_AI_ML_DISCOVERY : ""],
+          ["fintechDeep", KL_FINTECH_DEEP_DISCOVERY && getFintechDeepInjection(sellerICP, member?.ind) ? KL_FINTECH_DEEP_DISCOVERY : ""],
+          ["rewards", KL_REWARDS_DISCOVERY && getRewardsInjection(sellerICP, member?.ind) ? KL_REWARDS_DISCOVERY : ""],
+          ["baas", KL_BAAS_DISCOVERY && getBaasInjection(sellerICP, member?.ind) ? KL_BAAS_DISCOVERY : ""],
+          ["insurance", KL_INSURANCE_DISCOVERY && getInsuranceInjection(sellerICP, member?.ind) ? KL_INSURANCE_DISCOVERY : ""],
+          ["retail", KL_RETAIL_DISCOVERY && getRetailInjection(sellerICP, member?.ind) ? KL_RETAIL_DISCOVERY : ""],
+          ["manufacturing", KL_MANUFACTURING_DISCOVERY && getManufacturingInjection(sellerICP, member?.ind) ? KL_MANUFACTURING_DISCOVERY : ""],
+          ["cybersecurity", KL_CYBERSECURITY_DISCOVERY && getCybersecurityInjection(sellerICP, member?.ind) ? KL_CYBERSECURITY_DISCOVERY : ""],
+          ["government", KL_GOVERNMENT_DISCOVERY && getGovernmentInjection(sellerICP, member?.ind) ? KL_GOVERNMENT_DISCOVERY : ""],
+          ["energy", KL_ENERGY_DISCOVERY && getEnergyInjection(sellerICP, member?.ind) ? KL_ENERGY_DISCOVERY : ""],
+          ["hrTech", KL_HR_TECH_DISCOVERY && getHrTechInjection(sellerICP, member?.ind) ? KL_HR_TECH_DISCOVERY : ""],
+          ["education", KL_EDUCATION_DISCOVERY && getEducationInjection(sellerICP, member?.ind) ? KL_EDUCATION_DISCOVERY : ""],
+          ["executivePerspectives", KL_EXEC_PERSPECTIVES_DISCOVERY || ""],
+          ["approvalGates", KL_APPROVAL_GATES_DISCOVERY || ""],
+        ];
+        return _rankAndCapKls(discKls, member?.ind, sellerICP);
+      })() +
 
       (KL_FOUR_FORCES ? `═══ FOUR FORCES PROBING (Moesta) ═══\nAsk about switching anxiety ("What concerns you about changing from your current approach?"), incumbent habit ("What keeps you with the current solution even when it's painful?"), push signals ("What has changed that makes this problem more urgent now?"), and pull signals ("What does success look like with a new approach?").\n\n` : "") +
       `═══ SALES TRACK FRAMEWORKS ═══\n`+
@@ -8689,7 +8655,7 @@ Return ONLY raw JSON:
     // ground its "confirmedSolutions" + "saRecommendation" in the
     // seller's actual differentiators and named customer wins, not
     // generic SA-school theory.
-    const proofPack = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
+    const proofPack = getProofPack();
 
     // Inject vertical + approval context for industry-aware SA review
     const saVertical = getVerticalInjection(sellerICP, selectedAccount?.ind)?.slice(0, 400) || "";
@@ -8798,7 +8764,7 @@ Return ONLY raw JSON:
     }).join("\n");
 
     // Inject seller proof pack so deal routing is grounded in real capabilities
-    const postCallProof = buildSellerProofPack({ sellerICP, sellerDocs, products, sellerProofPoints, icpEdits, userEdits });
+    const postCallProof = getProofPack();
 
     // Inject vertical context so post-call routing is industry-aware
     const postCallVertical = getVerticalInjection(sellerICP, selectedAccount?.ind)?.slice(0, 500) || "";
@@ -9809,7 +9775,7 @@ Return ONLY raw JSON:
       icpEdits.length > 0 ? `\n═══ CHANGES THE USER MADE THIS SESSION ═══\n${icpEdits.map(e => `  Changed "${e.field}": "${String(e.oldValue).slice(0,80)}" → "${String(e.newValue).slice(0,80)}"`).join("\n")}\nIf the user asks about their changes, reference this list.` : "",
       // Intel adjustments the user has added
       Object.keys(intelAdjustments).length > 0 ? `\n═══ USER INTEL ADJUSTMENTS (insider knowledge) ═══\n${Object.entries(intelAdjustments).map(([co,adj])=>`  ${co}: ${adj.modifier>0?"+":""}${adj.modifier} — ${sanitizeForPrompt(adj.reason||"no reason given")}`).join("\n")}\nThese reflect facts the user knows that aren't public. Reference them when discussing these accounts.` : "",
-      buildSellerProofPack({sellerICP, sellerDocs, products, sellerProofPoints, icpEdits}).slice(0, 800),
+      getProofPack().slice(0, 800),
     ].filter(Boolean).join("\n");
 
     // Build conversation history (last 6 turns max, sanitize user inputs)
@@ -15216,7 +15182,7 @@ Return ONLY raw JSON:
                     // Clean VTT/SRT timestamps if present
                     const cleaned = text.replace(/^\d{2}:\d{2}[:\.][\d,.]+\s*-->\s*\d{2}:\d{2}[:\.][\d,.]+\s*$/gm,"")
                       .replace(/^WEBVTT.*$/gm,"").replace(/^\d+$/gm,"").replace(/\n{3,}/g,"\n\n").trim();
-                    const transcriptProof = buildSellerProofPack({sellerICP,sellerDocs,products,sellerProofPoints});
+                    const transcriptProof = getProofPack();
                     const prompt =
                       transcriptProof +
                       `You are a senior sales coach analyzing a recorded sales call transcript. Apply the RIVER framework (Reality, Impact, Vision, Entry Points, Route) to synthesize what happened.\n\n`+
