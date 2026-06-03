@@ -2488,7 +2488,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     } else { failed.push("competitive"); }
     if (r8?.boardAndInvestors) next.boardAndInvestors = r8.boardAndInvestors;
     if (r9?.financialDeepDive) next.financialDeepDive = r9.financialDeepDive;
-    else { failed.push("financial"); }
+    // Don't flag financial as failed for Quick Brief or private companies — no public data is expected
+    else if (sellerUrl !== "research-only" && !/private|bootstrapped/i.test(prev?.publicPrivate || "")) { failed.push("financial"); }
     if (r10?.gateMap) next.gateMap = r10.gateMap;
     else if (sellerUrl !== "research-only") { failed.push("gateMap"); console.warn("[brief] Gate map (P10) returned null — section will be missing"); }
     if (failed.length > (prev._failedSections||[]).length) next._failedSections = failed;
@@ -8293,30 +8294,40 @@ Return ONLY raw JSON:
             tldr: current.tldr,
             fiveQuestions: current.fiveQuestions,
           };
-          fetch(`${SB_URL}/rest/v1/account_outputs`, {
-            method: "POST",
+          // Mark old "latest" as superseded before inserting new one (prevents 409 conflict)
+          const aoSeller = encodeURIComponent((sellerUrl || "").slice(0, 200));
+          const aoTarget = encodeURIComponent((member.company || "").slice(0, 200));
+          fetch(`${SB_URL}/rest/v1/account_outputs?output_type=eq.brief&seller_url=eq.${aoSeller}&target_company=eq.${aoTarget}&is_latest=eq.true`, {
+            method: "PATCH",
             headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-            body: JSON.stringify({
-              org_id: orgCtx?.id || null,
-              user_id: sbUser.id,
-              seller_url: (sellerUrl || "").slice(0, 200),
-              target_company: (member.company || "").slice(0, 200),
-              target_domain: (member.company_url || "").slice(0, 200),
-              target_industry: (member.ind || member.industry || "").slice(0, 100),
-              output_type: "brief",
-              output_version: 1,
-              fit_score: null,
-              fit_label: null,
-              dim1: null,
-              dim2: null,
-              dim3: null,
-              deal_route: null,
-              deal_confidence: null,
-              data_confidence: current._dataConfidence || null,
-              sections_completed: completed,
-              data: trimmedBrief,
-              is_latest: true,
-            }),
+            body: JSON.stringify({ is_latest: false, superseded_at: new Date().toISOString() }),
+          }).then(() => {
+            // Now insert the new latest
+            return fetch(`${SB_URL}/rest/v1/account_outputs`, {
+              method: "POST",
+              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+              body: JSON.stringify({
+                org_id: orgCtx?.id || null,
+                user_id: sbUser.id,
+                seller_url: (sellerUrl || "").slice(0, 200),
+                target_company: (member.company || "").slice(0, 200),
+                target_domain: (member.company_url || "").slice(0, 200),
+                target_industry: (member.ind || member.industry || "").slice(0, 100),
+                output_type: "brief",
+                output_version: 1,
+                fit_score: null,
+                fit_label: null,
+                dim1: null,
+                dim2: null,
+                dim3: null,
+                deal_route: null,
+                deal_confidence: null,
+                data_confidence: current._dataConfidence || null,
+                sections_completed: completed,
+                data: trimmedBrief,
+                is_latest: true,
+              }),
+            });
           }).catch(() => {});
 
           // kl_effectiveness — one row per active KL
