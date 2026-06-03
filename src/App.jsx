@@ -5739,6 +5739,15 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       if (sellerName && buyer.includes(sellerName)) return false;
       // Relevance floor
       if (typeof r.relevanceScore === "number" && r.relevanceScore < 30) return false;
+      // Recency filter — reject stale RFPs/awards
+      const dateStr = r.deadline || r.awardDate || "";
+      if (dateStr) {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime()) && d < new Date("2025-01-01")) return false;
+      }
+      // Reject if title or description explicitly mentions old years
+      const text = ((r.title||"") + " " + (r.relevanceReason||"")).toLowerCase();
+      if (/\b202[0-3]\b/.test(text) && !/\b202[5-9]\b/.test(text)) return false;
       return true;
     };
 
@@ -5776,7 +5785,7 @@ ${isOpen ? `
   Search 3 (Aggregator sites): "${sanitizeForPrompt(category || industries[0])}" RFP 2025 2026 site:bidnet.com OR site:demandstar.com OR site:findrfp.com OR site:govwin.com
   Search 4 (Private/commercial): "${sanitizeForPrompt(industries[0] || category)}" "request for proposal" OR RFP OR "vendor selection" 2025 2026
   Search 5 (Competitor + category): "${sanitizeForPrompt(competitors[0] || industries[0] || category)}" RFP OR solicitation OR procurement 2025 2026
-  Search 6 (SLED niche — use the seller's SPECIFIC product/service terms, not generic industry labels): "${sanitizeForPrompt(trigger || category)}" RFP OR solicitation site:.gov 2024 OR 2025 OR 2026
+  Search 6 (SLED niche — use the seller's SPECIFIC product/service terms, not generic industry labels): "${sanitizeForPrompt(trigger || category)}" RFP OR solicitation site:.gov 2025 OR 2026
 
   SEARCH QUALITY GUIDANCE:
   - Do NOT use broad terms like "insurance RFP site:.gov" — too many results, state agencies get buried.
@@ -5785,9 +5794,9 @@ ${isOpen ? `
   - Procurement aggregators (BidNet, DemandStar, GovWin) index thousands of SLED solicitations that individual .gov searches miss.
 ` : `
   Search 1 (Buyer websites): "${sanitizeForPrompt(category || industries[0])}" "administered by" OR "powered by" OR "provided by" OR "vendor" site:.com
-  Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2024 OR 2025
-  Search 3 (Competitor displacement): "${sanitizeForPrompt(competitors[0] || category)}" "selected" OR "awarded" OR "contract" 2024 OR 2025
-  Search 4 (Press + SLED): "${sanitizeForPrompt(industries[0] || "SaaS")}" "contract awarded" OR "selects vendor" OR "vendor selected" 2024 OR 2025
+  Search 2 (Federal awards): site:usaspending.gov ${sanitizeForPrompt(category || industries[0])} contract 2025 OR 2026
+  Search 3 (Competitor displacement): "${sanitizeForPrompt(competitors[0] || category)}" "selected" OR "awarded" OR "contract" 2025 OR 2026
+  Search 4 (Press + SLED): "${sanitizeForPrompt(industries[0] || "SaaS")}" "contract awarded" OR "selects vendor" OR "vendor selected" 2025 OR 2026
 
   CRITICAL: For incumbent intel, buyer websites are the gold standard. Health plan member portals, state agency vendor pages, and benefit program descriptions reveal exactly who administers what. A buyer's page showing "OTC benefits administered by [vendor]" is verified competitive intelligence.
 `}
@@ -5838,6 +5847,10 @@ ${isOpen ? `
 
   Return {"rows":[]} if no verified intel found.
 `}
+RECENCY RULE (CRITICAL — violations destroy credibility):
+  - ${isOpen ? "ONLY return solicitations that are CURRENTLY OPEN or were posted within the last 90 days. If the deadline has passed, do NOT include it. A seller who responds to a closed RFP looks incompetent." : "ONLY return awards from 2025 or 2026. Do NOT return contracts awarded in 2024 or earlier — stale intel wastes the seller's time."}
+  - If a result does not have a clear date, or the date is before ${isOpen ? "March 2026" : "January 2025"}, EXCLUDE it.
+
 DATA INTEGRITY:
   - URL must link to the solicitation, award notice, or buyer page — not research articles.
   ${!isOpen ? "- If awarded vendor cannot be verified, leave \"awardedTo\" empty.\n  " : ""}- Every row MUST include the isGovernment boolean.
