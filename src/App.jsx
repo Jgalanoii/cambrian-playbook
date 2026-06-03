@@ -1143,9 +1143,10 @@ async function claudeFetch(body, { retries = 3, extraHeaders = {} } = {}) {
         const t = d.error.type;
         const isOverload = t === "overloaded_error" || r.status === 529;
         const isRate     = t === "rate_limit_error" || r.status === 429;
-        if ((isOverload || isRate) && attempt < retries - 1) {
-          const wait = isOverload ? [2000, 5000, 10000][attempt] : 15000 * (attempt + 1);
-          console.warn(`[claude] ${t}, retrying in ${wait/1000}s (attempt ${attempt+1}/${retries})`);
+        const isServer   = r.status === 500 || r.status === 502 || r.status === 503;
+        if ((isOverload || isRate || isServer) && attempt < retries - 1) {
+          const wait = isServer ? [3000, 6000, 12000][attempt] : isOverload ? [2000, 5000, 10000][attempt] : 15000 * (attempt + 1);
+          console.warn(`[claude] ${t || "server_error"} (${r.status}), retrying in ${wait/1000}s (attempt ${attempt+1}/${retries})`);
           await sleep(wait);
           continue;
         }
@@ -3193,7 +3194,7 @@ function PasswordGate({ onAuth }) {
           <input placeholder="Last name"  value={last}  onChange={e=>setLast(e.target.value)}/>
         </div>
       )}
-      <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}} readOnly={!!inviteEmail && mode==="signup"}/>
+      <input type="email" autoComplete="username" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoFocus={mode==="signin"} onKeyDown={e=>e.key==="Enter"&&pw&&submit()} style={{marginBottom:10}} readOnly={!!inviteEmail && mode==="signup"}/>
       {mode!=="reset"&&<input type="password" autoComplete={mode==="signup"?"new-password":"current-password"} placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} style={{marginBottom:10}}/>}
       {err && <div className="pw-error">{err}</div>}
       {resetSent && <div style={{fontSize:12,color:"var(--green)",fontWeight:600,marginBottom:8}}>Password reset link sent to {email}. Check your inbox.</div>}
@@ -5331,8 +5332,6 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
               method: "POST",
               headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
               body: JSON.stringify(chunk),
-            }).then(r => {
-              if (r.ok) console.log(`[output-persist] Logged ${chunk.length} fit_score rows`);
             }).catch(() => {});
           }
         }
@@ -5469,7 +5468,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
     if (!SB_URL || !SB_KEY) return "";
     try {
-      const r = await fetch(`${SB_URL}/rest/v1/prospect_events?seller_url=eq.${encodeURIComponent(sellerUrl)}&event_type=in.(called,advanced,disqualified)&select=event_type,metadata&limit=50`, {
+      const r = await fetch(`${SB_URL}/rest/v1/prospect_events?seller_url=eq.${encodeURIComponent(sellerUrl)}&event_type=in.(called,advanced,disqualified)&select=event_type,deal_route&limit=50`, {
         headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}` }
       });
       if (!r.ok) return "";
@@ -5478,10 +5477,10 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       const routes = { FAST_TRACK: 0, NURTURE: 0, DISQUALIFY: 0 };
       const dqReasons = {};
       events.forEach(e => {
-        const route = e.metadata?.dealRoute;
+        const route = e.deal_route;
         if (route && routes[route] !== undefined) routes[route]++;
-        if (e.event_type === "disqualified" && e.metadata?.reason) {
-          dqReasons[e.metadata.reason] = (dqReasons[e.metadata.reason] || 0) + 1;
+        if (e.event_type === "disqualified") {
+          dqReasons["disqualified"] = (dqReasons["disqualified"] || 0) + 1;
         }
       });
       const total = Object.values(routes).reduce((s, v) => s + v, 0);
@@ -7681,7 +7680,7 @@ Return ONLY raw JSON:
             fetch(`${SB_URL_CS}/rest/v1/competitor_intel?industry=ilike.*${encodeURIComponent(member.ind.slice(0,30))}*&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&select=competitor_name,customer_names,evidence_type&limit=8`, {
               headers: { apikey: SB_KEY_CS, Authorization: `Bearer ${sbToken}` }
             }).then(r=>r.ok?r.json():[]).catch(()=>[]),
-            fetch(`${SB_URL_CS}/rest/v1/account_outputs?output_type=eq.brief&company=eq.${encodeURIComponent(co)}&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&is_latest=eq.true&select=created_at&limit=1`, {
+            fetch(`${SB_URL_CS}/rest/v1/account_outputs?output_type=eq.brief&target_company=eq.${encodeURIComponent(co)}&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&is_latest=eq.true&select=created_at&limit=1`, {
               headers: { apikey: SB_KEY_CS, Authorization: `Bearer ${sbToken}` }
             }).then(r=>r.ok?r.json():[]).catch(()=>[]),
           ]);
@@ -8261,9 +8260,6 @@ Return ONLY raw JSON:
               data: trimmedBrief,
               is_latest: true,
             }),
-          }).then(r => {
-            if (r.ok) console.log(`[output-persist] Logged brief for ${member.company} to account_outputs`);
-            else console.warn(`[output-persist] brief write failed:`, r.status);
           }).catch(() => {});
 
           // kl_effectiveness — one row per active KL
