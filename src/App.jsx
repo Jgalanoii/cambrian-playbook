@@ -8002,8 +8002,10 @@ Return ONLY raw JSON:
             const ceoName = ceoExec.name;
             // Look for "CEO [Name]" or "[Name], CEO" patterns that don't match
             // Case-sensitive: look for "CEO FirstName LastName" where names are capitalized
-            const ceoMentions = allText.match(/(?:CEO|Chief Executive Officer)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/g) || [];
-            const nameMentions = allText.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?:,\s*)?(?:CEO|Chief Executive Officer)/g) || [];
+            // Name pattern handles: McGuire, O'Brien, DeSantis, van der Berg, etc.
+            const NP = "[A-Z][a-zA-Z'\\-]+(?:\\s+(?:de|van|von|del|di|la|le|el))?\\s+[A-Z][a-zA-Z'\\-]+";
+            const ceoMentions = allText.match(new RegExp(`(?:CEO|Chief Executive Officer)\\s+(${NP})`, "g")) || [];
+            const nameMentions = allText.match(new RegExp(`(${NP})\\s*(?:,\\s*)?(?:CEO|Chief Executive Officer)`, "g")) || [];
             const allMentions = [...ceoMentions, ...nameMentions].map(m => m.replace(/CEO|chief executive officer|,/gi, "").trim()).filter(Boolean);
 
             const conflicts = allMentions.filter(m => {
