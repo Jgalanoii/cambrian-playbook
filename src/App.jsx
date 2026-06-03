@@ -6080,6 +6080,7 @@ Return ONLY raw JSON: {"rows":[{"title":"RFP title","buyer":"Agency name","count
   // Triggered after accounts are imported/generated. Uses Opus + web search.
   const fetchAccountRFPs = async (accounts) => {
     if (!accounts?.length || !sellerICP?.icp) return;
+    if (sellerUrl === "research-only") return; // Skip for Quick Briefs
     const names = accounts.map(a => a.company).filter(Boolean).slice(0, 20);
     if (!names.length) return;
 
@@ -6263,6 +6264,8 @@ Return ONLY raw JSON:
     if (icpSignature === lastIcpSigRef.current) return;
     const wasFirstLoad = lastIcpSigRef.current === "";
     lastIcpSigRef.current = icpSignature;
+    // Skip RFP pipeline for Quick Briefs — no seller means no relevant procurement intel
+    if (sellerUrl === "research-only") return;
     // First load: check localStorage cache; ICP regeneration: bypass
     // cache (old RFP data no longer matches the regenerated ICP).
     fetchRFPIntel({ forceRefresh: !wasFirstLoad });
@@ -7597,11 +7600,9 @@ Return ONLY raw JSON:
 
     const co = member.company;
 
-    // ── Brief caching: DISABLED until brief pipeline is stable ──
-    // Too many incomplete cached briefs served during rapid development.
-    // Re-enable once all 10 sections are confirmed working end-to-end.
+    // ── Brief caching: RE-ENABLED June 3 — saves all 35+ fields, validates completeness ──
     const _isQuickBrief = (overrideSellerUrl === "research-only") || (sellerUrl === "research-only");
-    if (false && !forceRebuild && !_isQuickBrief && sbToken && sbUser) {
+    if (!forceRebuild && !_isQuickBrief && sbToken && sbUser) {
       try {
         const SB_URL_BC = import.meta.env.VITE_SUPABASE_URL;
         const SB_KEY_BC = import.meta.env.VITE_SUPABASE_ANON_KEY;
