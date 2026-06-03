@@ -1904,20 +1904,18 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const result = parseExecResponse(d);
       if(result?.keyExecutives?.length) return result;
 
-      // Phase 2: fallback — no web search, use training knowledge only
-      console.log(`[p2] Web search returned no executives for ${co}, falling back to training knowledge`);
+      // Phase 2: fallback — use P1 snapshot as primary source + training knowledge
+      console.log(`[p2] Web search returned no executives for ${co}, falling back to P1 snapshot + training knowledge`);
       const d2 = await claudeFetch({
         model: SONNET,
         max_tokens:3000,
         messages:[{role:"user",content:
+          p1ExecHint +
           `You are a senior sales researcher. Return the CURRENT leadership team of "${co}".\n\n`+
-          `WARNING: This is a FALLBACK call without web search. Your training data may be STALE. Executives change jobs frequently. If you are not confident that a person is CURRENTLY at ${co} as of 2025-2026, do NOT include them. A rep who names a departed executive in a sales call loses credibility instantly.\n\n`+
-          `Use your training knowledge but ONLY for executives you are highly confident are still at the company. Better to return 2 people you're sure about than 6 that include someone who left.\n`+
-          `For SMALL COMPANIES, STARTUPS, and NONPROFITS: return founders, co-founders, board members, and any named team leads. 2 verified founders is a valid result.\n`+
-          `For LARGE COMPANIES: return CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders — ONLY if you're confident they're current.\n\n`+
+          `IMPORTANT: If the GROUND TRUTH section above names specific people (CEO, founder, CTO, etc.), USE THOSE NAMES. They come from the company's own website and are verified.\n\n`+
+          `For SMALL COMPANIES, STARTUPS, and NONPROFITS: return founders, co-founders, and any named team leads. 2 verified people is a valid result.\n`+
+          `For LARGE COMPANIES: return CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders.\n\n`+
           `For each: name (real full name), title, initials, background (1 sentence), angle (2-3 sentences on their mandate and how a seller at ${sellerUrl} should approach them).\n\n`+
-          `If you genuinely don't know a specific name, use the ROLE as the name (e.g. "CEO" with title "Chief Executive Officer") and set background to "Verify current leadership via LinkedIn or company About page".\n\n`+
-          `You MUST return at least 2 people. Prefer role-based stubs over potentially stale named executives.\n\n`+
           `Return ONLY raw JSON:\n`+
           `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role","angle":"Their mandate. 2-3 sentences."}],`+
           `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
@@ -1926,14 +1924,24 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const result2 = parseExecResponse(d2);
       if(result2?.keyExecutives?.length) return result2;
 
-      // Phase 3: absolute last resort — return role-based stubs so the brief is never empty
-      console.warn(`[p2] Both phases failed for ${co}, returning role stubs`);
+      // Phase 3: extract from P1 snapshot directly — if it names people, build exec entries from them
+      console.warn(`[p2] Phase 2 failed for ${co}, extracting from P1 snapshot`);
+      if (p1Snapshot.length > 50) {
+        try {
+          const extractResult = await callAI(
+            `Extract the names and titles of people who WORK AT "${co}" from this text. Return ONLY employees/founders, not consultants or partners.\n\n"${p1Snapshot.slice(0,800)}"\n\nReturn ONLY raw JSON: {"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"From the text above","angle":"Their role at ${co} and how to approach them. 2 sentences."}]}`,
+            { maxTokens: 500 }
+          );
+          if (extractResult?.keyExecutives?.length) return { ...extractResult, sellerSnapshot: `${sellerUrl} provides solutions relevant to ${co}'s market.` };
+        } catch {}
+      }
+
+      // Phase 4: absolute last resort — generic stubs
+      console.warn(`[p2] All phases failed for ${co}, returning role stubs`);
       return {
         keyExecutives: [
-          {name:"CEO",title:"Chief Executive Officer",initials:"CEO",background:"Research needed — verify via LinkedIn",angle:`As CEO of ${co}, this person sets strategic direction. Research their background and recent public statements to find the right angle.`},
-          {name:"CFO",title:"Chief Financial Officer",initials:"CFO",background:"Research needed — verify via LinkedIn",angle:`The CFO controls budget allocation. Lead with ROI, cost reduction, or revenue impact to get their attention.`},
-          {name:"CTO",title:"Chief Technology Officer",initials:"CTO",background:"Research needed — verify via LinkedIn",angle:`The CTO evaluates technical fit. Lead with architecture, integration, and security posture.`},
-          {name:"COO",title:"Chief Operating Officer",initials:"COO",background:"Research needed — verify via LinkedIn",angle:`The COO owns operational efficiency. Lead with process improvement, time savings, and measurable operational outcomes.`},
+          {name:"CEO",title:"Chief Executive Officer",initials:"CEO",background:"Verify via company website or LinkedIn",angle:`Research ${co}'s leadership team on their website or LinkedIn before reaching out.`},
+          {name:"CTO",title:"Chief Technology Officer",initials:"CTO",background:"Verify via company website or LinkedIn",angle:`Research ${co}'s technical leadership before discussing architecture or integration.`},
         ],
         sellerSnapshot: `${sellerUrl} provides solutions relevant to ${co}'s market.`,
       };
@@ -1941,10 +1949,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       console.warn("Exec search failed:",e.message);
       return {
         keyExecutives: [
-          {name:"CEO",title:"Chief Executive Officer",initials:"CEO",background:"Research needed — verify via LinkedIn",angle:`As CEO of ${co}, this person sets strategic direction. Research their background to find the right angle.`},
-          {name:"CFO",title:"Chief Financial Officer",initials:"CFO",background:"Research needed — verify via LinkedIn",angle:`The CFO controls budget allocation. Lead with ROI and cost impact.`},
-          {name:"CTO",title:"Chief Technology Officer",initials:"CTO",background:"Research needed — verify via LinkedIn",angle:`The CTO evaluates technical fit. Lead with architecture and integration.`},
-          {name:"COO",title:"Chief Operating Officer",initials:"COO",background:"Research needed — verify via LinkedIn",angle:`The COO owns operational efficiency. Lead with process improvement and measurable outcomes.`},
+          {name:"CEO",title:"Chief Executive Officer",initials:"CEO",background:"Verify via company website or LinkedIn",angle:`Research ${co}'s leadership team on their website or LinkedIn before reaching out.`},
+          {name:"CTO",title:"Chief Technology Officer",initials:"CTO",background:"Verify via company website or LinkedIn",angle:`Research ${co}'s technical leadership before discussing architecture or integration.`},
         ],
         sellerSnapshot: `${sellerUrl} provides solutions relevant to ${co}'s market.`,
       };
@@ -2154,40 +2160,6 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r2?.keyExecutives?.length) next.keyExecutives = sanitizeWebResult(r2.keyExecutives);
     else { next._failedSections = [...(prev._failedSections||[]), "executives"]; }
     if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
-    // Post-merge: if execs are role stubs but P1 snapshot has real names, fire a fast
-    // Haiku call to extract them properly. Regex was too fragile (failed on McGuire, etc.)
-    const hasStubs = (next.keyExecutives||[]).some(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name));
-    const snap = next.companySnapshot || "";
-    if (hasStubs && snap.length > 50) {
-      // Fire-and-forget: fast Haiku extraction, merge when it resolves
-      callAI(
-        `Extract the names and titles of executives mentioned in this company description. Return ONLY people who WORK AT this company (not consultants, authors, or partners).\n\n"${snap.slice(0,800)}"\n\nReturn ONLY raw JSON: {"executives":[{"name":"Full Name","title":"Exact Title"}]}`,
-        { maxTokens: 300 }
-      ).then(r => {
-        if (!r?.executives?.length) return;
-        setBrief(prev => {
-          if (!prev) return prev;
-          const execs = [...(prev.keyExecutives || [])];
-          const extracted = r.executives.filter(e => e.name && e.title && e.name.length > 3);
-          // Match extracted names to stub roles by title
-          extracted.forEach(ext => {
-            const titleNorm = ext.title.toLowerCase();
-            const stubIdx = execs.findIndex(e =>
-              /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name) &&
-              (titleNorm.includes(e.name.toLowerCase()) || titleNorm.includes(e.title.toLowerCase().replace("chief ","").split(" ")[0]))
-            );
-            if (stubIdx >= 0) {
-              execs[stubIdx] = { ...execs[stubIdx], name: ext.name, title: ext.title, initials: ext.name.split(" ").map(w=>w[0]).join("").slice(0,2) };
-            } else {
-              // No matching stub — find first remaining stub and replace it
-              const anyStub = execs.findIndex(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name));
-              if (anyStub >= 0) execs[anyStub] = { ...execs[anyStub], name: ext.name, title: ext.title, initials: ext.name.split(" ").map(w=>w[0]).join("").slice(0,2) };
-            }
-          });
-          return { ...prev, keyExecutives: execs };
-        });
-      }).catch(() => {});
-    }
     return next;
   };
   const mergeStrategy = (r3) => (prev) => {
