@@ -1827,8 +1827,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"Use figures from web search or Apollo data if available. For private companies with no public data, provide a reasoned estimate: '~$X-$YM (estimated based on [employee count/funding/industry benchmarks])'. NEVER leave empty — always estimate with disclosure.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"MUST match Apollo/web data if provided. For private companies, estimate from team page, LinkedIn, or industry benchmarks: '~XX (estimated from [source])'. NEVER leave empty.",`+
-    `"headquarters":"City, State — find from website footer, contact page, or LinkedIn. Estimate from domain registration if needed.","founded":"Year — find from about page, LinkedIn, or press. Estimate if needed with '~YYYY (estimated)'.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
+    `"revenue":"$2.4B (FY2024) OR for private companies: '~$1-3M (estimated — early-stage SaaS in [industry] with ~20 employees typically generates this range)'. MUST provide an estimate if no public data. NEVER return empty string.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"~270,000 OR for private companies: '~20-50 (estimated from team page/LinkedIn)'. MUST provide an estimate. NEVER return empty string.",`+
+    `"headquarters":"Denver, CO OR best estimate from website/LinkedIn. MUST provide a value — check website footer, contact page, LinkedIn.","founded":"2023 OR best estimate. MUST provide a value.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
@@ -1906,40 +1906,30 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
       // Phase 2: extract ONLY from P1 snapshot — no training knowledge guessing.
       // Joe's directive: "We can only name executives that are listed explicitly on the company website."
-      console.log(`[p2] Web search returned no executives for ${co}, extracting from P1 snapshot only`);
-      if (p1Snapshot.length > 50) {
-        const d2 = await claudeFetch({
-          model: SONNET,
-          max_tokens:2000,
-          messages:[{role:"user",content:
-            `Extract the names and titles of people who WORK AT "${co}" from this company overview. Return ONLY people explicitly named in the text below — do NOT add anyone from your training knowledge.\n\n`+
-            `COMPANY OVERVIEW:\n"${p1Snapshot.slice(0, 800)}"\n\n`+
-            `RULES:\n`+
-            `- ONLY return people whose names appear in the text above\n`+
-            `- If the text says "founded by Rick Rubin" → return Rick Rubin as Founder/CEO\n`+
-            `- If the text mentions "CTO Todd McGuire" → return Todd McGuire as CTO\n`+
-            `- Do NOT add executives from training knowledge — only what's in the text\n`+
-            `- If no names appear in the text, return an empty array\n\n`+
-            `For each: name, title, initials, background (from the text), angle (2-3 sentences on their mandate at ${co} and how a seller at ${sellerUrl} should approach them).\n\n`+
-            `Return ONLY raw JSON:\n`+
-            `{"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"From the text above","angle":"Their mandate. 2-3 sentences."}],`+
-            `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
-          }],
-        });
-        const result2 = parseExecResponse(d2);
-        if(result2?.keyExecutives?.some(e => e.name && !/^(CEO|CFO|CTO|COO)$/i.test(e.name))) return result2;
-      }
-
-      // Phase 3: extract from P1 snapshot directly — if it names people, build exec entries from them
-      console.warn(`[p2] Phase 2 failed for ${co}, extracting from P1 snapshot`);
+      // Uses callAI (not claudeFetch) for reliable JSON extraction.
+      console.log(`[p2] Web search returned no executives for ${co}, extracting from P1 snapshot`);
       if (p1Snapshot.length > 50) {
         try {
           const extractResult = await callAI(
-            `Extract the names and titles of people who WORK AT "${co}" from this text. Return ONLY employees/founders, not consultants or partners.\n\n"${p1Snapshot.slice(0,800)}"\n\nReturn ONLY raw JSON: {"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"From the text above","angle":"Their role at ${co} and how to approach them. 2 sentences."}]}`,
-            { maxTokens: 500 }
+            `Extract the names and titles of people who WORK AT "${co}" from this company overview.\n\n`+
+            `COMPANY OVERVIEW:\n"${p1Snapshot.slice(0, 800)}"\n\n`+
+            `RULES:\n`+
+            `- ONLY return people whose names appear in the text above\n`+
+            `- "founded by Rick Rubin" → Rick Rubin, Founder & CEO\n`+
+            `- "CTO Todd McGuire" → Todd McGuire, Chief Technology Officer\n`+
+            `- Do NOT add anyone from training knowledge — only names from the text\n`+
+            `- If no names appear, return an empty keyExecutives array\n`+
+            `- For each person: full name, title, initials (first letter of first + last name), background (from the text), angle (2-3 sentences on their role and how to approach them)\n\n`+
+            `Return ONLY raw JSON:\n`+
+            `{"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"From the text","angle":"Their mandate. 2-3 sentences."}],`+
+            `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`,
+            { maxTokens: 1000 }
           );
-          if (extractResult?.keyExecutives?.length) return { ...extractResult, sellerSnapshot: `${sellerUrl} provides solutions relevant to ${co}'s market.` };
-        } catch {}
+          if (extractResult?.keyExecutives?.some(e => e.name && e.name.length > 3 && !/^(CEO|CFO|CTO|COO|CRO|CHRO|Founder)$/i.test(e.name))) {
+            console.log(`[p2] Extracted ${extractResult.keyExecutives.length} executives from P1 snapshot`);
+            return extractResult;
+          }
+        } catch(e) { console.warn("[p2] P1 snapshot extraction failed:", e?.message); }
       }
 
       // Phase 4: absolute last resort — generic stubs
