@@ -1840,7 +1840,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   );
 
   // MICRO 2: Executives — reuse pre-cache promise/result. Never duplicate.
-  const execCache = caches.execs;
+  // Reject cached execs if they're stubs (CEO/CTO with no real names) — force re-extraction
+  const _rawExecCache = caches.execs;
+  const _execCacheIsStubs = _rawExecCache && !(_rawExecCache instanceof Promise) &&
+    (_rawExecCache?.keyExecutives || []).every(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e?.name || ""));
+  const execCache = _execCacheIsStubs ? null : _rawExecCache;
   const p2 = execCache
     ? (execCache instanceof Promise ? execCache : Promise.resolve(execCache))
     : (async()=>{
@@ -7679,6 +7683,11 @@ Return ONLY raw JSON:
         }
       } catch { /* non-critical — fall through to fresh build */ }
     }
+    // Reject cached execs that are stubs — force fresh extraction with P1 snapshot
+    const _rawCachedExecs = execCacheRef.current[co] || null;
+    const _cachedIsStubs = _rawCachedExecs && !(_rawCachedExecs instanceof Promise) &&
+      (_rawCachedExecs?.keyExecutives || []).every(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e?.name || ""));
+    if (_cachedIsStubs) execCacheRef.current[co] = null;
     const cachedExecs = execCacheRef.current[co] || null;
     const cachedBrief = briefPreCacheRef.current[co] || {};
 
