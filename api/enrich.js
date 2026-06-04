@@ -133,7 +133,7 @@ async function enrichPerson(personId) {
 }
 
 export default async function handler(req, res) {
-  if (!APOLLO_API_KEY) return res.status(501).json({ error: "Apollo not configured" });
+  if (!APOLLO_API_KEY) return res.status(200).json({ organization: null, people: [], _note: "Enrichment unavailable — Apollo not configured" });
 
   // Origin + rate limit
   const origin = req.headers.origin || req.headers.referer || "";

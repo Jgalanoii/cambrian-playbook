@@ -1827,8 +1827,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"e.g. $2.4B (FY2024) — use ONLY figures from web search or Apollo data. Empty string if not found.","publicPrivate":"MUST be accurate as of today — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"MUST match the 'Employees' number from KNOWN COMPANY DATA or VERIFIED COMPANY DATA above if provided. Do NOT return a different number. If no ground truth provided, use web search. This is the company's OWN headcount — NOT platform users, customers served, or partner network.",`+
-    `"headquarters":"City, State","founded":"Year","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if you are certain it's correct (e.g. linkedin.com/company/gusto). A wrong LinkedIn link is worse than no link. Empty string if unsure.",`+
+    `"revenue":"Use figures from web search or Apollo data if available. For private companies with no public data, provide a reasoned estimate: '~$X-$YM (estimated based on [employee count/funding/industry benchmarks])'. NEVER leave empty — always estimate with disclosure.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"MUST match Apollo/web data if provided. For private companies, estimate from team page, LinkedIn, or industry benchmarks: '~XX (estimated from [source])'. NEVER leave empty.",`+
+    `"headquarters":"City, State — find from website footer, contact page, or LinkedIn. Estimate from domain registration if needed.","founded":"Year — find from about page, LinkedIn, or press. Estimate if needed with '~YYYY (estimated)'.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
@@ -1904,25 +1904,31 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const result = parseExecResponse(d);
       if(result?.keyExecutives?.length) return result;
 
-      // Phase 2: fallback — use P1 snapshot as primary source + training knowledge
-      console.log(`[p2] Web search returned no executives for ${co}, falling back to P1 snapshot + training knowledge`);
-      const d2 = await claudeFetch({
-        model: SONNET,
-        max_tokens:3000,
-        messages:[{role:"user",content:
-          p1ExecHint +
-          `You are a senior sales researcher. Return the CURRENT leadership team of "${co}".\n\n`+
-          `IMPORTANT: If the GROUND TRUTH section above names specific people (CEO, founder, CTO, etc.), USE THOSE NAMES. They come from the company's own website and are verified.\n\n`+
-          `For SMALL COMPANIES, STARTUPS, and NONPROFITS: return founders, co-founders, and any named team leads. 2 verified people is a valid result.\n`+
-          `For LARGE COMPANIES: return CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders.\n\n`+
-          `For each: name (real full name), title, initials, background (1 sentence), angle (2-3 sentences on their mandate and how a seller at ${sellerUrl} should approach them).\n\n`+
-          `Return ONLY raw JSON:\n`+
-          `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role","angle":"Their mandate. 2-3 sentences."}],`+
-          `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
-        }],
-      });
-      const result2 = parseExecResponse(d2);
-      if(result2?.keyExecutives?.length) return result2;
+      // Phase 2: extract ONLY from P1 snapshot — no training knowledge guessing.
+      // Joe's directive: "We can only name executives that are listed explicitly on the company website."
+      console.log(`[p2] Web search returned no executives for ${co}, extracting from P1 snapshot only`);
+      if (p1Snapshot.length > 50) {
+        const d2 = await claudeFetch({
+          model: SONNET,
+          max_tokens:2000,
+          messages:[{role:"user",content:
+            `Extract the names and titles of people who WORK AT "${co}" from this company overview. Return ONLY people explicitly named in the text below — do NOT add anyone from your training knowledge.\n\n`+
+            `COMPANY OVERVIEW:\n"${p1Snapshot.slice(0, 800)}"\n\n`+
+            `RULES:\n`+
+            `- ONLY return people whose names appear in the text above\n`+
+            `- If the text says "founded by Rick Rubin" → return Rick Rubin as Founder/CEO\n`+
+            `- If the text mentions "CTO Todd McGuire" → return Todd McGuire as CTO\n`+
+            `- Do NOT add executives from training knowledge — only what's in the text\n`+
+            `- If no names appear in the text, return an empty array\n\n`+
+            `For each: name, title, initials, background (from the text), angle (2-3 sentences on their mandate at ${co} and how a seller at ${sellerUrl} should approach them).\n\n`+
+            `Return ONLY raw JSON:\n`+
+            `{"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"From the text above","angle":"Their mandate. 2-3 sentences."}],`+
+            `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`
+          }],
+        });
+        const result2 = parseExecResponse(d2);
+        if(result2?.keyExecutives?.some(e => e.name && !/^(CEO|CFO|CTO|COO)$/i.test(e.name))) return result2;
+      }
 
       // Phase 3: extract from P1 snapshot directly — if it names people, build exec entries from them
       console.warn(`[p2] Phase 2 failed for ${co}, extracting from P1 snapshot`);
@@ -2279,37 +2285,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         console.log("[p6] web_search call errored — falling back to inference");
       }
 
-      // Phase 2: fast fallback — no web_search, infer from training knowledge.
-      // No assistant prefill — just a clean prompt. Haiku can infer plausible
-      // roles for any well-known company from training knowledge alone.
-      const d2 = await claudeFetch({
-        model: activeModel(),
-        max_tokens: 800,
-        temperature: 0,
-        messages: [{ role: "user", content:
-          `You are a sales intelligence analyst. Based on your knowledge of "${co}"` +
-          (url ? ` (${url})` : "") + `, list 3-5 roles they are likely hiring for right now.\n\n` +
-          `Consider: their industry, company size, growth stage, recent strategic moves, and typical hiring patterns for companies like them.\n\n` +
-          `REQUIREMENTS:\n` +
-          `- Every role MUST have a specific, realistic job title (e.g. "Senior Data Engineer", "VP of Product Marketing") — NOT generic placeholders like "..." or "Specific Job Title"\n` +
-          `- Every role MUST have a department and a signal explaining what the hire reveals\n` +
-          `- Include a 2-3 sentence summary of what the hiring pattern reveals about strategic direction\n` +
-          `- Be CONFIDENT — every company hires. Return plausible roles, not disclaimers or apologies.\n\n` +
-          `Return ONLY raw JSON (start with {):\n` +
-          `{"openRoles":{"summary":"2-3 sentences on hiring pattern","roles":[{"title":"Senior Data Engineer","dept":"Engineering","signal":"Investing in data infrastructure"},{"title":"Director of Customer Success","dept":"Customer Success","signal":"Scaling post-sale retention"},{"title":"Product Marketing Manager","dept":"Marketing","signal":"Go-to-market expansion"}]}}`
-        }],
-      });
-      if (d2.error) { console.warn("[p6] fallback call errored:", d2.error); return null; }
-      const tb2 = (d2.content || []).filter(b => b.type === "text").map(b => b.text || "");
-      for (let i = tb2.length - 1; i >= 0; i--) {
-        const parsed = extractJsonWithKey(tb2[i], "openRoles");
-        if (rolesHaveData(parsed)) { console.log("[p6] fallback inference returned roles"); return parsed; }
-      }
-      const raw2 = tb2.join("").trim();
-      const parsed2 = safeParseJSON(raw2.startsWith("{") ? raw2 : "{" + raw2);
-      if (rolesHaveData(parsed2)) { console.log("[p6] fallback inference returned roles (joined)"); return parsed2; }
-      console.warn("[p6] fallback produced no titled roles");
-      return null;
+      // Phase 2 REMOVED — was hallucinating roles from training knowledge.
+      // Joe's directive: "Job postings must be sourced exclusively from the company website."
+      // If web search found nothing, that's the answer — no invented roles.
+      console.log(`[p6] No job postings found for ${co} via web search — returning honest empty`);
+      return { openRoles: { summary: `No open positions found on public job boards or ${co}'s website. Check their careers page directly${url ? ` at ${url}` : ""} for current openings.`, roles: [] } };
     } catch (e) { console.warn("Open roles search failed:", e.message); return null; }
   })();
 
@@ -2411,15 +2391,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
               `- 10-K Item 1A (Risk Factors) contains: competitive vulnerabilities, technology dependencies, regulatory exposure\n`+
               `Cite specific filing dates and exact figures. "Per 10-K filed 2/28/2025" is authoritative.\n\n`
             : `For PRIVATE/STARTUP companies: search for funding rounds, growth metrics, valuation signals.\n`+
-              `For NONPROFITS: search for annual reports, grant funding, program spending.\n\n`) +
+              `For NONPROFITS: search for annual reports, grant funding, program spending.\n`+
+              `CRITICAL FOR PRIVATE COMPANIES: If no public financial data exists, provide REASONED ESTIMATES based on company size, industry, funding stage, and comparable companies. Format: "No published data. Based on [evidence], estimated [metric] is [range]. Comparable companies like [name] in [industry] typically [benchmark]." NEVER leave fields empty — always provide your best estimate with cited reasoning. NEVER state estimates as facts — always disclose they are estimates.\n\n`) +
           `Return raw JSON:\n`+
           `{"financialDeepDive":{`+
-          `"revenueTrend":"2-3 sentences: revenue trajectory over 2-3 years. Growth rate, acceleration/deceleration, key drivers. ${isPublicCompany ? "Cite specific numbers from 10-K filings (e.g. '$4.2B FY2024, up 12% from $3.75B FY2023')." : "Cite specific numbers when available."}",`+
-          `"marginTrend":"1-2 sentences: gross margin, operating margin, or EBITDA margin direction. ${isPublicCompany ? "Reference specific 10-K data (e.g. 'Operating margin expanded 200bps to 18.3% per 10-K filed 3/1/2025')." : "What's driving margin expansion or compression?"}",`+
-          `"segmentBreakdown":"Which business segments or product lines drive the most revenue? ${isPublicCompany ? "Use 10-K segment reporting. Public companies must disclose segment revenue/profit by accounting standards." : "Any segment growing faster or shrinking?"}",`+
-          `"earningsInsight":"${isPublicCompany ? "1-2 sentences: the most revealing quote from the latest earnings call. Attribute to a specific executive by name and title (e.g. 'CFO Jane Smith stated...'). Include the call date." : "1-2 sentences: the most revealing thing from their latest annual report or investor update. A direct quote from leadership is ideal."}",`+
-          `"capitalPriorities":"${isPublicCompany ? "Where is capex going? Reference 10-K capital expenditure figures, R&D spend as % of revenue, M&A activity, share buyback authorization. What does capital allocation reveal about strategic priorities?" : "Where are they investing? R&D, M&A, geographic expansion, headcount? What does capital allocation reveal about strategy?"}",`+
-          `"guidanceQuote":"A direct quote from leadership about future direction — ${isPublicCompany ? "from earnings call transcript with speaker name, title, and call date. This is the most valuable field for a seller — a CEO's own words about where they're headed." : "from press release or interview. Empty if not found."}"}}`
+          `"revenueTrend":"${isPublicCompany ? "2-3 sentences: revenue trajectory over 2-3 years. Cite specific numbers from 10-K filings (e.g. '$4.2B FY2024, up 12% from $3.75B FY2023')." : "2-3 sentences. If public data exists, cite it. If not, provide a reasoned estimate: 'No published revenue data. Based on [employee count/funding stage/industry], estimated annual revenue is $X-$Y. Companies like [comparable] at similar stage typically generate [range].'"}",`+
+          `"marginTrend":"${isPublicCompany ? "1-2 sentences: Reference specific 10-K data (e.g. 'Operating margin expanded 200bps to 18.3% per 10-K filed 3/1/2025')." : "1-2 sentences. If no data, estimate based on business model: 'SaaS companies at this stage typically operate at [X-Y%] gross margin with [negative/breakeven] EBITDA.'"}",`+
+          `"segmentBreakdown":"Which business segments or product lines drive the most revenue? ${isPublicCompany ? "Use 10-K segment reporting." : "Describe their product lines and estimate which drives the most revenue based on pricing and market signals."}",`+
+          `"earningsInsight":"${isPublicCompany ? "1-2 sentences: the most revealing quote from the latest earnings call with speaker name, title, and call date." : "1-2 sentences: most revealing public statement from leadership (press release, interview, LinkedIn). If none found, describe what their product launches and hiring patterns suggest about priorities."}",`+
+          `"capitalPriorities":"${isPublicCompany ? "Where is capex going? Reference 10-K capital expenditure figures, R&D spend, M&A, share buybacks." : "Based on hiring patterns, product launches, and partnerships — where are they investing? Estimate R&D vs sales vs operations allocation."}",`+
+          `"guidanceQuote":"${isPublicCompany ? "Direct quote from earnings call with speaker name, title, and date." : "Direct quote from leadership if found in search. If not, summarize their stated direction from press or social media. Empty only if truly nothing found."}"}}`
         }],
       });
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
