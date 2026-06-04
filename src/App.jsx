@@ -1906,28 +1906,32 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
       // Phase 2: extract ONLY from P1 snapshot — no training knowledge guessing.
       // Joe's directive: "We can only name executives that are listed explicitly on the company website."
-      // Uses callAI (not claudeFetch) for reliable JSON extraction.
+      // Uses SONNET directly (not Haiku via callAI) — Haiku was returning stubs instead of extracting names.
       console.log(`[p2] Web search returned no executives for ${co}, extracting from P1 snapshot`);
       if (p1Snapshot.length > 50) {
         try {
-          const extractResult = await callAI(
-            `Extract the names and titles of people who WORK AT "${co}" from this company overview.\n\n`+
-            `COMPANY OVERVIEW:\n"${p1Snapshot.slice(0, 800)}"\n\n`+
-            `RULES:\n`+
-            `- ONLY return people whose names appear in the text above\n`+
-            `- "founded by Rick Rubin" → Rick Rubin, Founder & CEO\n`+
-            `- "CTO Todd McGuire" → Todd McGuire, Chief Technology Officer\n`+
-            `- Do NOT add anyone from training knowledge — only names from the text\n`+
-            `- If no names appear, return an empty keyExecutives array\n`+
-            `- For each person: full name, title, initials (first letter of first + last name), background (from the text), angle (2-3 sentences on their role and how to approach them)\n\n`+
+          const extractPrompt =
+            `Extract the names and titles of people who WORK AT "${co}" from this text.\n\n`+
+            `TEXT:\n"${p1Snapshot.slice(0, 800)}"\n\n`+
+            `EXAMPLES: "founded by Rick Rubin" → {"name":"Rick Rubin","title":"Founder & CEO"}. "CTO Todd McGuire" → {"name":"Todd McGuire","title":"Chief Technology Officer"}.\n`+
+            `ONLY return people named in the text. Do NOT add anyone else.\n\n`+
             `Return ONLY raw JSON:\n`+
-            `{"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"From the text","angle":"Their mandate. 2-3 sentences."}],`+
-            `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`,
-            { maxTokens: 1000 }
-          );
-          if (extractResult?.keyExecutives?.some(e => e.name && e.name.length > 3 && !/^(CEO|CFO|CTO|COO|CRO|CHRO|Founder)$/i.test(e.name))) {
-            console.log(`[p2] Extracted ${extractResult.keyExecutives.length} executives from P1 snapshot`);
-            return extractResult;
+            `{"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"1 sentence from text","angle":"2 sentences on their role."}],"sellerSnapshot":"${sellerUrl} for ${co}"}`;
+          const d2 = await claudeFetch({
+            model: SONNET, max_tokens: 1000, temperature: 0,
+            messages: [{ role: "user", content: extractPrompt }],
+          });
+          const result2 = parseExecResponse(d2);
+          if (result2?.keyExecutives?.some(e => e.name && e.name.length > 3 && !/^(CEO|CFO|CTO|COO|CRO|CHRO|Founder)$/i.test(e.name))) {
+            console.log(`[p2] Extracted ${result2.keyExecutives.length} executives from P1 snapshot`);
+            return result2;
+          }
+          // parseExecResponse may have failed — try manual extraction from response text
+          const tb = (d2?.content || []).filter(b => b.type === "text").map(b => b.text || "").join("");
+          const manual = safeParseJSON(tb.includes("{") ? tb.slice(tb.indexOf("{")) : tb);
+          if (manual?.keyExecutives?.some(e => e.name && e.name.length > 3)) {
+            console.log(`[p2] Manual parse extracted ${manual.keyExecutives.length} executives`);
+            return manual;
           }
         } catch(e) { console.warn("[p2] P1 snapshot extraction failed:", e?.message); }
       }
