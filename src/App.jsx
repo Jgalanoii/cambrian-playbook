@@ -4953,7 +4953,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
       const prompt =
         `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
-        `CRITICAL — DETERMINISM: Scores MUST be identical for the same company across runs. Follow the decision trees EXACTLY — each dimension has a step-by-step tree with YES/NO branches. Pick the FIRST match and stop. Do NOT use judgment, intuition, or "it feels like" reasoning. If the tree says 40, score 40 — even if your instinct says 32. The tree IS the score.\n`+
+        `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n`+
       `CRITICAL: The ONLY way to compute a score is dim1 + dim2 + dim3 using the FIXED VALUES in the tables below. Vertical calibration context (percentages like "70-80%") is background knowledge only — it does NOT override the point tables. Never adjust a dimension score to match a calibration percentage.\n`+
         `CRITICAL: You MUST return a score for EVERY company listed below. If industry says "Unknown", use your training knowledge to identify the company's real industry. Every company in the list MUST appear in your output — never skip a company.\n`+
         `COMPETITOR CHECK: The seller's competitive alternatives are: [${(sellerICP?.icp?.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}]. If a prospect IS one of these competitors (or a subsidiary/brand of one), score dim1=0, dim2=0, dim3=0. They sell the same thing — they are NOT a prospect.\n\n`+
@@ -4965,12 +4965,11 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           ? `SELLER'S ACTUAL PRODUCTS/SERVICES (match these to prospect needs):\n${sellerICP.icp.productCatalog.map(p=>`  • ${p.name}: ${p.description} → for ${(p.industries||[]).join(", ")}`).join("\n")}\n\n`
           : `Seller's target industries: [${(sellerICP?.icp?.industries||[]).join(", ")}]\nSeller's market category: ${sellerICP?.marketCategory||"unknown"}\n\n`) +
         `STEP A — PRODUCT-INDUSTRY FIT (core of the score):\n`+
-        `  THIS MUST BE DETERMINISTIC. Use this decision tree IN ORDER — stop at the first YES:\n`+
-        `  40 = Does the prospect's industry APPEAR in the seller's target industry list or productCatalog industries above? If YES → 40. (Also 40 if the seller's product is horizontal/universal — e.g. payments, rewards, security, HR — and the prospect has employees or customers that need it.)\n`+
-        `  32 = The prospect's industry is NOT in the seller's list, but a closely RELATED industry IS listed. Example: seller lists "banking" and prospect is "credit unions" — same buyer persona, adjacent vertical. Or the seller's product solves a universal business need (recognition, compliance, security) but the prospect's industry is niche.\n`+
-        `  22 = Neither the prospect's industry nor any related industry appears in the seller's targets. But the prospect has a department or function that could use the product. Weak connection.\n`+
-        `  12 = No meaningful product-industry connection. The seller's products don't solve problems in this prospect's world.\n`+
-        `  TIEBREAKER: If you are torn between 40 and 32, check the seller's productCatalog above. Can you name a SPECIFIC seller product that maps to a SPECIFIC prospect need? If yes → 40. If you have to stretch → 32. This is the most important consistency rule.\n\n`+
+        `  Pick ONE:\n`+
+        `  40 = Seller's product/service DIRECTLY addresses a stated need in this prospect's industry. The prospect's industry is in the seller's target list AND the seller has products that map to real use cases in this vertical. (Sysco→restaurant, Savvi AI→bank, CrowdStrike→any company with IT infrastructure)\n`+
+        `  32 = Prospect's industry matches seller's targets, but the product-to-need mapping is indirect or requires explanation. The seller COULD serve them but it's not the obvious fit.\n`+
+        `  22 = Adjacent industry — different vertical but same buyer persona or problem domain. The seller's product COULD work here but it's not the core market.\n`+
+        `  12 = No meaningful product-industry connection. The seller's products don't solve problems in this prospect's world.\n\n`+
         `STEP B — SIZE (tiebreaker only — size is NOT a gate):\n`+
         `  Seller's target: ${sellerICP?.icp?.companySize || "any"} | Brackets: 1-49 | 50-499 | 500-4,999 | 5,000-49,999 | 50,000+\n`+
         `  +3 = same bracket as seller's ICP target\n`+
@@ -4989,13 +4988,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           : "") +
         (customerList.length
           ? `The seller's EXISTING CUSTOMERS are: ${customerList.join(", ")}.\n`+
-            `Score using EXACTLY these fixed values — use this decision tree IN ORDER, stop at first YES:\n`+
+            `Score using EXACTLY these fixed values (pick the HIGHEST that applies):\n`+
             `  30 = target IS one of the seller's named customers (fuzzy match: "Wyndham Hotels" matches "Wyndham"). Maximum score.\n`+
-            `  27 = target is in the SAME INDUSTRY as a named customer AND serves the same end-user type (B2B↔B2B or B2C↔B2C). NAME the specific customer. Example: if seller's customer is "Bank of America" and prospect is "Wells Fargo" → both banks → 27.\n`+
-            `  18 = target is in the same BROAD SECTOR as a named customer but different sub-industry. Example: seller's customer is a bank, prospect is an insurance company — both financial services, but different sub-industry → 18.\n`+
-            `  10 = target is in a COMPLETELY different industry from all named customers, but the seller's product category is relevant (e.g. rewards/HR/security are horizontal). Weak signal.\n`+
-            `   3 = no meaningful similarity AND the seller's product category is not relevant to this prospect.\n`+
-            `CONSISTENCY RULE: If you scored 27 last time for this type of company, score 27 again. The decision tree above should produce the same result every time for the same industry pair.\n`+
+            `  27 = target matches the PROFILE of a verified customer: same industry, same use case, similar buyer persona. NAME the specific customer they're most similar to.\n`+
+            `  18 = same industry as a named customer but different use case or buyer persona. Adjacency, not a direct analogue.\n`+
+            `  10 = different industry but the seller's value proposition could transfer. Weak signal.\n`+
+            `   3 = no meaningful similarity. The seller has never won anything like this prospect.\n`+
             `In "customerSimilarity": name the MOST similar existing customer and explain the parallel. If no match: "No close analogue in current customer base."\n\n`
           : `No named customers available — score this dimension at 15 (fixed neutral) for ALL targets.\n\n`)+
         `━━━ DIMENSION 3: COMPETITIVE DISPLACEMENT OPPORTUNITY (25 points max) ━━━\n`+
