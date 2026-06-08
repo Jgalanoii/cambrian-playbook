@@ -2024,8 +2024,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // and organizational intelligence are grounded in live search results.
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
   // and (when possible) a named customer from the seller's proof pack above.
+  // WAVE 2: delayed 3s to avoid rate-limiting from 9 concurrent calls
   const isResearchOnly = sellerUrl === "research-only";
-  const p4 = streamAIWithSearch(baseFull+
+  const p4 = (async()=>{ await new Promise(r=>setTimeout(r,3000)); return streamAIWithSearch(baseFull+
     `SEARCH INSTRUCTION: Search for "${co}" leadership team, technology stack, and organizational structure. Use the search results to ground contacts and tech stack.\n\n`+
     `Return ONLY raw JSON (start with {) for ${isResearchOnly ? "organizational intelligence" : "solution fit and contacts"}:\n`+
     (isResearchOnly
@@ -2068,7 +2069,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         }
       } catch { /* partial — wait for more */ }
     }, 4500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus, model: SONNET }
-  );
+  ); })();
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
   const liveCache = preCache.live;
@@ -2291,7 +2292,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const rolesSummaryOk = (obj) => obj?.openRoles?.summary &&
     !/unable|could not|couldn't|not available|no results|cannot|search limit/i.test(obj.openRoles.summary);
 
+  // WAVE 2: delayed 3s to reduce concurrent API load
   const p6 = (async () => {
+    await new Promise(r => setTimeout(r, 3000));
     try {
       // Phase 1: web search for real listings
       const d = await claudeFetch({
@@ -2398,7 +2401,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     secFilingCtx;
 
   // MICRO 7: Competitive Positioning — who they compete with and where they win/lose
+  // WAVE 3: delayed 6s to reduce concurrent API load
   const p7 = (async()=>{
+    await new Promise(r => setTimeout(r, 6000));
     try {
       const d = await claudeFetch({
         model: SONNET, max_tokens:2000,
@@ -2429,7 +2434,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 8: Board & Investors — who governs and funds this company
+  // WAVE 3: delayed 6s to reduce concurrent API load
   const p8 = (async()=>{
+    await new Promise(r => setTimeout(r, 6000));
     try {
       const d = await claudeFetch({
         model:SONNET, max_tokens:2000,
@@ -2460,7 +2467,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 9: Financial Deep Dive — trends, margins, segments, guidance
+  // WAVE 3: delayed 6s to reduce concurrent API load
   const p9 = (async()=>{
+    await new Promise(r => setTimeout(r, 6000));
     try {
       const d = await claudeFetch({
         model:SONNET, max_tokens:2000,
@@ -7908,14 +7917,14 @@ Return ONLY raw JSON:
       });
     });
 
-    // Hard timeout — clear ALL loading states after 60s so user is never stuck.
-    // Strategy/solutions with full knowledge layer can take 20-30s; deep intel retry adds 10-15s.
+    // Hard timeout — clear ALL loading states after 90s so user is never stuck.
+    // Wave stagger adds 6s before deep intel fires; each call takes 5-15s; 90s covers the full pipeline.
     setTimeout(() => {
       setBrief(prev => {
         if (!prev) return prev;
         const pending = Object.values(prev._loadingSections || {}).filter(Boolean).length;
         if (pending === 0) return prev;
-        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 60s — clearing loading state`);
+        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 90s — clearing loading state`);
         return {
           ...prev,
           _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false },
@@ -7925,7 +7934,7 @@ Return ONLY raw JSON:
         };
       });
       setBriefLoading(false);
-    }, 60000);
+    }, 90000);
 
     // Hypothesis only needs overview + strategy (p1+p3). Fire on earlyDone
     // so it starts 5-10s before slow web_search calls finish.
