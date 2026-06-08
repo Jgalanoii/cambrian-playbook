@@ -2463,8 +2463,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 10: Gate Map — approval paths for both seller and buyer side
+  // DEFERRED: Waits for p1+p3+p4 to settle before firing. P10 was failing 100%
+  // of runs because 10 concurrent API calls competed for bandwidth and P10 (the
+  // last to resolve, no web search, lowest priority) consistently got rate-limited.
   // Skip for Quick Brief (research-only) — no seller means no deal to map gates for
-  const p10 = (async()=>{
+  const p10 = earlyDone.then(async () => {
     if (sellerUrl === "research-only") return null;
     try {
       const dealSize = sellerICP?.icp?.dealSize || "";
@@ -2499,7 +2502,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       console.warn("[p10] Gate map parse failed. Raw length:", raw.length, "Preview:", raw.slice(0,200));
       return null;
     }catch(e){console.warn("[p10] Gate map error:", e?.message); return null;}
-  })();
+  });
 
   // Merge deep intelligence layers
   const mergeDeepIntel = (r7, r8, r9, r10) => (prev) => {
