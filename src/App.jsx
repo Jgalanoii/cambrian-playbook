@@ -5326,15 +5326,26 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
               is_latest: true,
             };
           });
-          // Batch insert up to 10 rows per POST
-          for (let i = 0; i < outputRows.length; i += 10) {
-            const chunk = outputRows.slice(i, i + 10);
-            fetch(`${SB_URL}/rest/v1/account_outputs`, {
-              method: "POST",
-              headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-              body: JSON.stringify(chunk),
-            }).catch(() => {});
-          }
+          // Mark old "latest" fit scores as superseded, then insert new ones
+          const sellerEnc = encodeURIComponent((sellerUrl || "").slice(0, 200));
+          const companies = outputRows.map(r => r.target_company);
+          // PATCH all existing latest fit_scores for these companies in one call
+          const companyFilter = companies.map(c => `"${c.replace(/"/g, '\\"')}"`).join(",");
+          fetch(`${SB_URL}/rest/v1/account_outputs?output_type=eq.fit_score&seller_url=eq.${sellerEnc}&target_company=in.(${encodeURIComponent(companyFilter)})&is_latest=eq.true`, {
+            method: "PATCH",
+            headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+            body: JSON.stringify({ is_latest: false, superseded_at: new Date().toISOString() }),
+          }).then(() => {
+            // Now insert new latest rows
+            for (let i = 0; i < outputRows.length; i += 10) {
+              const chunk = outputRows.slice(i, i + 10);
+              fetch(`${SB_URL}/rest/v1/account_outputs`, {
+                method: "POST",
+                headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                body: JSON.stringify(chunk),
+              }).catch(() => {});
+            }
+          }).catch(() => {});
         }
       }
 
@@ -13433,14 +13444,21 @@ Return ONLY raw JSON:
                       const text = sessionSummaryToText(summary);
                       navigator.clipboard?.writeText(text);
                       setEditToast("Full session summary copied — paste into CRM, email, or doc");
-                      // Persist session summary to account_outputs (fire-and-forget)
+                      // Persist session summary to account_outputs (PATCH old → POST new)
                       if (sbToken && sbUser) {
                         const SB_URL = import.meta.env.VITE_SUPABASE_URL;
                         const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
                         if (SB_URL && SB_KEY) {
-                          fetch(`${SB_URL}/rest/v1/account_outputs`, {
-                            method: "POST", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-                            body: JSON.stringify({ org_id: orgCtx?.id || null, user_id: sbUser.id, seller_url: (sellerUrl||"").slice(0,200), output_type: "session_summary", target_company: (selectedAccount?.company||"").slice(0,200), target_domain: (selectedAccount?.company_url||"").slice(0,200), is_latest: true, data: summary }),
+                          const ssSellerEnc = encodeURIComponent((sellerUrl||"").slice(0,200));
+                          const ssTargetEnc = encodeURIComponent((selectedAccount?.company||"").slice(0,200));
+                          fetch(`${SB_URL}/rest/v1/account_outputs?output_type=eq.session_summary&seller_url=eq.${ssSellerEnc}&target_company=eq.${ssTargetEnc}&is_latest=eq.true`, {
+                            method: "PATCH", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                            body: JSON.stringify({ is_latest: false, superseded_at: new Date().toISOString() }),
+                          }).then(() => {
+                            return fetch(`${SB_URL}/rest/v1/account_outputs`, {
+                              method: "POST", headers: { apikey: SB_KEY, Authorization: `Bearer ${sbToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+                              body: JSON.stringify({ org_id: orgCtx?.id || null, user_id: sbUser.id, seller_url: (sellerUrl||"").slice(0,200), output_type: "session_summary", target_company: (selectedAccount?.company||"").slice(0,200), target_domain: (selectedAccount?.company_url||"").slice(0,200), is_latest: true, data: summary }),
+                            });
                           }).catch(() => {});
                         }
                       }
