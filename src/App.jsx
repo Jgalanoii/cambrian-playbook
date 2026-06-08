@@ -5386,7 +5386,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           // Trigger pre-cache by simulating account selection for the useEffect
           // We can't call setSelectedAccount here (would navigate the UI), so
           // we directly populate the cache refs if empty.
-          if (!execCacheRef.current[co]) {
+          if (!execCacheRef.current[co] && sellerUrl !== "research-only") {
             execCacheRef.current[co] = (async () => {
               try {
                 const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\nACCURACY: NEVER invent facts. Empty string if unknown.\n`;
@@ -9542,8 +9542,16 @@ Return ONLY raw JSON:
   // holds the parsed result object for instant cache hits.
   useEffect(() => {
     if (!selectedAccount?.company || !sellerUrl) return;
+    // Skip pre-cache for Quick Brief — P2 needs P1 snapshot which doesn't exist yet
+    if (sellerUrl === "research-only") return;
     const co = selectedAccount.company;
-    if (execCacheRef.current[co]) return; // already cached or in-flight
+    // Skip if already cached WITH real names (not stubs)
+    const existing = execCacheRef.current[co];
+    if (existing && !(existing instanceof Promise)) {
+      const hasRealNames = (existing?.keyExecutives || []).some(e => e?.name && !/^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name));
+      if (hasRealNames) return; // good cache, keep it
+    }
+    if (existing instanceof Promise) return; // in-flight, don't duplicate
     const promise = (async () => {
       try {
         const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\n`;
