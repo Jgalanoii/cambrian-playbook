@@ -1716,7 +1716,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // IDENTITY ANCHOR: when a URL is available, use it as the primary identifier
   // to prevent cross-company contamination in briefs.
   const identityAnchor = url && url !== co
-    ? `IDENTITY ANCHOR: Research ONLY the company at https://${url}. The company name "${co}" may be shared by multiple entities — use the website ${url} as the definitive identifier. Every fact in this brief must be about the company that operates ${url}. If you find conflicting information about different companies with similar names, ONLY use information about the entity at ${url}.\n\n`
+    ? `IDENTITY ANCHOR (CRITICAL — CONTAMINATION PREVENTION):\n`+
+      `You are researching ONLY the company at https://${url}.\n`+
+      `SEARCH STRATEGY: Your FIRST search MUST be: site:${url}\n`+
+      `This ensures you get information from the company's OWN website. "${co}" is a common name shared by multiple unrelated companies (education, biotech, therapy, consulting, etc.). Results NOT from ${url} are about DIFFERENT companies.\n`+
+      `CONTAMINATION CHECK: Before including ANY fact, ask: "Did this come from ${url} or a page specifically about the company at ${url}?" If NO → discard it. A headline about "BrightPath Bio" or "YouScience Brightpath" is NOT about ${co}.\n`+
+      `If your search returns a mix of results about different companies with similar names, use ONLY results from or specifically about the entity at ${url}. Return empty string for any field where you cannot verify the data is about THIS specific company.\n`+
+      `NEVER list multiple companies in companySnapshot. This brief is about ONE company: the entity at ${url}.\n\n`
     : `IDENTITY ANCHOR: Research the company "${co}". CONTAMINATION GUARD: Do NOT mix facts from similarly-named companies. "${co}" is ONE specific entity. If your search returns results for multiple companies with similar names (e.g., "TheBancorp" vs "Columbia Bancorp" vs "Banc of California"), use ONLY results about "${co}" specifically. Every fact — revenue, employees, executives, headquarters, strategy — must be about "${co}" and no other entity. If you cannot distinguish which results belong to "${co}", return empty string rather than risk citing the wrong company. A brief with wrong-company data is worse than a brief with missing data.\n\n`;
 
   // Canonical seller name — use consistently across all sections
@@ -2074,10 +2080,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       // by the dedicated p6 call which has its own web_search budget + fallback.
       const prompt =
         firmographicsTruth +
-        `Search for recent information about "${co}". Use at least one search specifically for press releases.\n\n`+
+        `Search for recent information about "${co}"${url && url !== co ? ` (website: ${url})` : ""}. Use at least one search specifically for press releases.\n\n`+
+        (url && url !== co
+          ? `CONTAMINATION WARNING: "${co}" is a common name shared by multiple unrelated companies. You MUST only include results about the company at ${url}. Discard any results about differently-named entities (e.g., "YouScience Brightpath", "BrightPath Bio", "BrightPath Behavior" are all DIFFERENT companies). Check: does the result reference ${url} or the specific entity described at ${url}? If not → discard.\n\n`
+          : "") +
         `SEARCH STRATEGY (you have 2 searches — use BOTH, one for each purpose):\n`+
-        `- Search 1 (NEWS): "${co}" news OR press release 2025 OR 2026\n`+
-        `- Search 2 (REVIEWS — MANDATORY): "${co}" Glassdoor rating reviews\n`+
+        `- Search 1 (NEWS): ${url && url !== co ? `site:${url} OR "${url}"` : `"${co}"`} news OR press release 2025 OR 2026\n`+
+        `- Search 2 (REVIEWS — MANDATORY): "${co}" ${url && url !== co ? `"${url}" ` : ""}Glassdoor rating reviews\n`+
         `You MUST use Search 2 for Glassdoor. Every company with 100+ employees has Glassdoor reviews. BHN has thousands. A missing Glassdoor rating for a major employer is a data failure.\n\n`+
         `RECENCY RULE: ONLY include events, headlines, or signals from the last 18 months. Include the date or year in every headline.\n\n`+
         `WHAT TO EXTRACT:\n`+
@@ -2140,6 +2149,22 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     }
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), overview:false}};
     P1_FIELDS.forEach(f => { if (r1[f] !== undefined) next[f] = r1[f]; });
+
+    // Post-process: contamination detector
+    // If companySnapshot mentions "multiple companies", "also known as", or lists other entities,
+    // the model mixed data from similarly-named companies. Strip and warn.
+    if (next.companySnapshot) {
+      const snap = next.companySnapshot;
+      const contaminationPatterns = /multiple\s+compan(?:ies|y)\s+(?:operate|exist|share|use)|clarification\s+needed|which\s+specific\s+company|No\s+single\s+['"]?[\w\s]+['"]?\s+entity\s+dominates/i;
+      if (contaminationPatterns.test(snap)) {
+        console.warn(`[p1] CONTAMINATION DETECTED in companySnapshot for ${co}. Stripping.`);
+        // Replace with a clean fallback using the URL
+        next.companySnapshot = url && url !== co
+          ? `${co} (${url}) — limited public data available. Verify company details on their website before the call.`
+          : `${co} — limited public data available. Verify company details before the call.`;
+        next._dataConfidence = "low";
+      }
+    }
 
     // Post-process: fix ownership contradictions
     // If fundingProfile mentions "acquired", "PE-backed", "private equity", or "went private"
@@ -2206,9 +2231,30 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (!r5raw) { next._failedSections = [...(prev._failedSections||[]), "live"]; return next; }
     const r5 = sanitizeWebResult(r5raw); // Sanitize web search results
     const errorWords = ["unable","cannot","search failed","not available","web search"];
+    // Contamination filter: strip headlines about differently-named companies
+    const coLower = co.toLowerCase().replace(/\s*(llc|inc|corp|ltd|co)\s*\.?$/i, "").trim();
+    const urlLower = (url || "").toLowerCase().replace(/^www\./, "");
+    // Extract the "base name" (first 1-2 words) to detect same-prefix different-suffix entities
+    const baseName = coLower.split(/\s+/).slice(0, 2).join(" ");
     const cleanHL = (r5.recentHeadlines||[]).filter(h => {
       const t = (h?.headline||"").toLowerCase();
-      return h?.headline && h.headline.length > 10 && !errorWords.some(w=>t.includes(w));
+      if (!h?.headline || h.headline.length <= 10 || errorWords.some(w=>t.includes(w))) return false;
+      // If URL is available and differs from company name, filter more aggressively
+      if (url && url !== co) {
+        // Check if headline mentions a DIFFERENT entity sharing the base name
+        // e.g. "BrightPath Bio" when target is "BrightPath Consulting"
+        const mentionsTarget = t.includes(coLower) || t.includes(urlLower.replace(/\.com|\.org|\.net|\.io/g, ""));
+        if (!mentionsTarget && baseName.length > 3) {
+          // If the headline uses the base name + a different suffix, it's likely a different company
+          const baseIdx = t.indexOf(baseName);
+          if (baseIdx >= 0) {
+            const afterBase = t.slice(baseIdx + baseName.length).trim().split(/\s+/)[0] || "";
+            const targetSuffix = coLower.replace(baseName, "").trim().split(/\s+/)[0] || "";
+            if (afterBase && targetSuffix && afterBase !== targetSuffix) return false; // different entity
+          }
+        }
+      }
+      return true;
     });
     if (cleanHL.length) next.recentHeadlines = cleanHL;
     // Open roles are handled by dedicated p6 call — don't set from p5.
