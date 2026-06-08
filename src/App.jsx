@@ -2462,47 +2462,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     }catch(e){console.warn("[p9] Financial deep dive error:", e?.message); return null;}
   })();
 
-  // MICRO 10: Gate Map — approval paths for both seller and buyer side
-  // DEFERRED: Waits 3s before firing to let p1-p9 establish their API connections first.
-  // P10 was failing 100% of runs because 10 concurrent API calls competed for bandwidth.
-  // Skip for Quick Brief (research-only) — no seller means no deal to map gates for
-  const p10 = (async()=>{
-    await new Promise(r => setTimeout(r, 5000)); // let p1-p9 get their connections first
-    if (sellerUrl === "research-only") return null;
-    try {
-      const dealSize = sellerICP?.icp?.dealSize || "";
-      const d = await claudeFetch({
-        model:SONNET, max_tokens:2000, temperature:0,
-        messages:[{role:"user",content:
-          firmographicsTruth+
-          `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n\n`+
-          `SELLER CONTEXT: ${buildSellerCtx()}. Deal size: ${dealSize}. Stage: ${sellerICP?.icp?.salesCycle || "unknown"}.\n`+
-          ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `Seller's competitors: ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. Factor competitor displacement complexity into gate analysis.\n` : "") +
-          `TARGET CONTEXT: ${co} — Industry: ${_fg.industry || "unknown"}. Size: ${_fg.employees || "unknown"} employees. Ownership: ${_fg.ownership || "unknown"}.\n\n`+
-          (KL_APPROVAL_GATES ? `APPROVAL GATES KNOWLEDGE:\n${KL_APPROVAL_GATES.slice(0, 3000)}\n\n` : "") +
-          `CRITICAL: Return ONLY raw JSON. No explanation, no markdown fences, no text before or after the JSON. Start your response with { and end with }.\n\n`+
-          `{"gateMap":{"sellerGates":{"summary":"1-2 sentences: what the SELLER's own organization will likely require to approve this deal (deal desk, discount authority, legal review, etc.)","gates":[{"gate":"Gate name (e.g. Deal Desk Review)","owner":"Who owns this gate (e.g. RevOps / Sales Manager)","trigger":"What triggers this gate (e.g. discount >10% or non-standard terms)","artifact":"What you need to prepare (e.g. competitive context, margin analysis)","timeline":"Typical timeline (e.g. 2-5 business days)"}]},"buyerGates":{"summary":"1-2 sentences: what the BUYER (${co}) will likely require internally to approve this purchase — based on their industry, size, and the deal value","gates":[{"gate":"Gate name (e.g. Procurement Review)","owner":"Who at ${co} owns this gate (by role, not name)","trigger":"What triggers this gate","artifact":"What the seller needs to provide to clear this gate","timeline":"Typical timeline"}]},"criticalPath":"1-2 sentences: which gate is most likely to stall or kill this deal and what to do about it","mapAdvice":"1 sentence: the single most important action the seller should take THIS WEEK to de-risk the approval sequence"}}`
-        }],
-      });
-      const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
-      for(let i=textBlocks.length-1;i>=0;i--){
-        const parsed=extractJsonWithKey(textBlocks[i],"gateMap");
-        if(parsed?.gateMap) return parsed;
-      }
-      // Fallback: try repairJSON + safeParseJSON on concatenated text
-      const raw = textBlocks.join("").trim();
-      // Strip any markdown fences or thinking tags the model may have added
-      const cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").replace(/<\/?(?:thinking|antml:thinking)>/g, "").trim();
-      const fb = safeParseJSON(cleaned.startsWith("{")?cleaned:"{"+cleaned);
-      if(fb?.gateMap) return fb;
-      // Last resort: try repairJSON
-      const repaired = repairJSON(cleaned);
-      const fb2 = safeParseJSON(repaired);
-      if(fb2?.gateMap) return fb2;
-      console.warn("[p10] Gate map parse failed. Raw length:", raw.length, "Preview:", raw.slice(0,200));
-      return null;
-    }catch(e){console.warn("[p10] Gate map error:", e?.message); return null;}
-  })();
+  // MICRO 10: Gate Map — REMOVED from brief pipeline.
+  // GateMap failed 7/7 runs because 10 concurrent API calls caused rate limiting.
+  // The call works perfectly in isolation (tested directly against Anthropic API).
+  // Fix: generate lazily when user clicks "Prep for the Call" (step 6), when the
+  // API is idle and the brief context is available for richer gate analysis.
+  const p10 = Promise.resolve(null); // placeholder — generated on-demand at step 6
 
   // Merge deep intelligence layers
   const mergeDeepIntel = (r7, r8, r9, r10) => (prev) => {
@@ -2554,7 +2519,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     // Don't flag financial as failed for Quick Brief or private companies — no public data is expected
     else if (sellerUrl !== "research-only" && !/private|bootstrapped/i.test(prev?.publicPrivate || "")) { failed.push("financial"); }
     if (r10?.gateMap) next.gateMap = r10.gateMap;
-    else if (sellerUrl !== "research-only") { failed.push("gateMap"); console.warn("[brief] Gate map (P10) returned null — section will be missing"); }
+    // gateMap is now generated on-demand at step 6 (call prep) — don't flag as failed
     if (failed.length > (prev._failedSections||[]).length) next._failedSections = failed;
     return next;
   };
@@ -2580,27 +2545,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       solutions: p4.then(mergeSolutions).catch(catchLog("p4-solutions", mergeSolutions)),
       live:      p5.then(mergeLive).catch(catchLog("p5-live", mergeLive)),
       roles:     p6.then(mergeRoles).catch(catchLog("p6-roles", mergeRoles)),
-      deepIntel: deepIntelDone.then(async ([r7,r8,r9,r10]) => {
-        let gateResult = r10?.status==="fulfilled"?r10.value:null;
-        // gateMap (P10) fails consistently — retry once if null
-        if (!gateResult?.gateMap && sellerUrl !== "research-only") {
-          console.log("[p10] Gate map failed on first attempt — retrying once...");
-          try {
-            const retryPrompt = firmographicsTruth+
-              `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n`+
-              `SELLER: ${buildSellerCtx()}. TARGET: ${co} — ${_fg.industry || "unknown"}, ${_fg.employees || "unknown"} employees.\n`+
-              `CRITICAL: Return ONLY raw JSON. No explanation, no markdown. Start with { and end with }.\n`+
-              `{"gateMap":{"sellerGates":{"summary":"What the seller needs to approve this deal","gates":[{"gate":"Gate name","owner":"Role","trigger":"What triggers it","artifact":"What to prepare","timeline":"How long"}]},"buyerGates":{"summary":"What ${co} needs internally to approve this purchase","gates":[{"gate":"Gate name","owner":"Role at ${co}","trigger":"Trigger","artifact":"What seller provides","timeline":"Timeline"}]},"criticalPath":"Which gate most likely stalls the deal","mapAdvice":"Most important action this week"}}`;
-            const d2 = await claudeFetch({ model:SONNET, max_tokens:1500, temperature:0, messages:[{role:"user",content:retryPrompt}] });
-            const tb2 = (d2?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
-            const raw2 = tb2.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").replace(/<\/?(?:thinking|antml:thinking)>/g,"").trim();
-            gateResult = extractJsonWithKey(raw2,"gateMap") || safeParseJSON(raw2.startsWith("{")?raw2:"{"+raw2);
-            if (gateResult?.gateMap) console.log("[p10] Gate map retry SUCCEEDED");
-            else console.warn("[p10] Gate map retry also failed. Raw:", raw2.slice(0,200));
-          } catch(e) { console.warn("[p10] Gate map retry error:", e?.message); }
-        }
-        return mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null, gateResult);
-      }),
+      deepIntel: deepIntelDone.then(([r7,r8,r9,r10]) => mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null, r10?.status==="fulfilled"?r10.value:null)),
     },
     earlyDone,
     allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10]),
@@ -8629,6 +8574,43 @@ Return ONLY raw JSON:
     setRiverHypoLoading(false);
   };
 
+  // ── LAZY GATE MAP — fires at call prep (step 6), not during brief gen ──
+  // Removed from generateBrief() because 10 concurrent API calls caused P10
+  // to fail 100% of runs. Now fires against an idle API when the user actually
+  // needs it. Uses the completed brief for richer context.
+  const buildGateMap = async (briefData, member) => {
+    if (!briefData || !member || sellerUrl === "research-only") return;
+    if (briefData.gateMap) return; // already have it
+    const co = member.company;
+    const url = member.company_url || "";
+    const ind = member.ind || "";
+    const emp = briefData.employeeCount || member.employees || "unknown";
+    const ownership = briefData.publicPrivate || member.publicPrivate || "unknown";
+    try {
+      console.log("[gateMap] Building lazily for", co);
+      const d = await claudeFetch({
+        model: SONNET, max_tokens: 1500, temperature: 0,
+        messages: [{ role: "user", content:
+          `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url ? ` (${url})` : ""}.\n`+
+          `SELLER: ${sellerICP?.sellerDescription || sellerUrl}. Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ") || "various"}.\n`+
+          `TARGET: ${co} — ${ind}, ~${emp} employees, ${ownership}.\n`+
+          (KL_APPROVAL_GATES ? `APPROVAL GATES KNOWLEDGE:\n${KL_APPROVAL_GATES.slice(0, 2000)}\n\n` : "") +
+          `CRITICAL: Return ONLY raw JSON. Start with { end with }.\n`+
+          `{"gateMap":{"sellerGates":{"summary":"1-2 sentences: what the seller needs to approve","gates":[{"gate":"Gate name","owner":"Role","trigger":"Trigger","artifact":"What to prepare","timeline":"Timeline"}]},"buyerGates":{"summary":"What ${co} needs internally to approve","gates":[{"gate":"Gate name","owner":"Role","trigger":"Trigger","artifact":"What seller provides","timeline":"Timeline"}]},"criticalPath":"Which gate stalls the deal","mapAdvice":"Most important action this week"}}`
+        }],
+      });
+      const tb = (d?.content || []).filter(b => b.type === "text").map(b => b.text || "");
+      const raw = tb.join("").replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").replace(/<\/?(?:thinking|antml:thinking)>/g, "").trim();
+      const parsed = extractJsonWithKey(raw, "gateMap") || safeParseJSON(raw.startsWith("{") ? raw : "{" + raw);
+      if (parsed?.gateMap) {
+        console.log("[gateMap] Success for", co);
+        setBrief(prev => prev ? { ...prev, gateMap: parsed.gateMap } : prev);
+      } else {
+        console.warn("[gateMap] Parse failed. Raw:", raw.slice(0, 200));
+      }
+    } catch (e) { console.warn("[gateMap] Error:", e?.message); }
+  };
+
   // ── GENERATE PRODUCT-SPECIFIC DISCOVERY QUESTIONS ───────────────────────
   // Informed by: seller products, prospect context, 5 listening frameworks
   // Fires after brief completes, alongside hypothesis build
@@ -13585,7 +13567,7 @@ Return ONLY raw JSON:
                     {(briefLoading || brief?._error || brief?._failedSections?.length > 0 || Object.values(brief?._loadingSections || {}).some(Boolean)) && (
                     <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                     )}
-                    {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
+                    {sellerUrl!=="research-only"&&<button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);buildGateMap(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>}
                     <button className="btn btn-secondary" onClick={clearAccount} title="Clear this account and go back to Fit Scores">Switch Account</button>
                   </div>
                 </div>
@@ -14824,7 +14806,7 @@ Return ONLY raw JSON:
                   <button className="btn btn-secondary" disabled={briefLoading} onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}>{briefLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   )}
                   <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("Brief", brief)} />
-                  <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>
+                  <button className="btn btn-green btn-lg" onClick={()=>{if(!riverHypo&&!riverHypoLoading&&brief)buildRiverHypo(brief,selectedAccount);buildGateMap(brief,selectedAccount);setStep(6);}}>Prep for the Call →</button>
                 </div>
               </>
             )}
