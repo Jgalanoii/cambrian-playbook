@@ -2024,9 +2024,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // and organizational intelligence are grounded in live search results.
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
   // and (when possible) a named customer from the seller's proof pack above.
-  // WAVE 2: delayed 5s to let Wave 1 (P1/P3/P5) finish before firing
+  // WAVE 2: P4 waits for P1 to resolve before firing (P1 is the fastest Wave 1 call).
+  // This ensures Wave 1 has at least started returning before P4 adds load.
   const isResearchOnly = sellerUrl === "research-only";
-  const p4 = (async()=>{ await new Promise(r=>setTimeout(r,5000)); return streamAIWithSearch(baseFull+
+  const p4 = p1.then(() => streamAIWithSearch(baseFull+
     `SEARCH INSTRUCTION: Search for "${co}" leadership team, technology stack, and organizational structure. Use the search results to ground contacts and tech stack.\n\n`+
     `Return ONLY raw JSON (start with {) for ${isResearchOnly ? "organizational intelligence" : "solution fit and contacts"}:\n`+
     (isResearchOnly
@@ -2069,7 +2070,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         }
       } catch { /* partial — wait for more */ }
     }, 7500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus, model: SONNET }
-  ); })();
+  ));
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
   const liveCache = preCache.live;
@@ -2218,6 +2219,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const mergeSolutions = (r4) => (prev) => {
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), solutions:false}};
+    console.log("[p4-merge] r4:", r4 ? `keys=[${Object.keys(r4).join(",")}] products=${(r4.solutionMapping||[]).filter(s=>s?.product).length} contacts=${(r4.keyContacts||[]).length} mobilizer=${!!r4.mobilizer?.description}` : "NULL");
     if (!r4) { next._failedSections = [...(prev._failedSections||[]), "solutions"]; }
     if (r4?.solutionMapping?.some(s=>s?.product)) next.solutionMapping = r4.solutionMapping;
     if (r4?.caseStudies?.some(c=>c?.title)) next.caseStudies = r4.caseStudies;
