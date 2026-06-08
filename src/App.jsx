@@ -2024,9 +2024,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // and organizational intelligence are grounded in live search results.
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
   // and (when possible) a named customer from the seller's proof pack above.
-  // WAVE 2: delayed 3s to avoid rate-limiting from 9 concurrent calls
+  // WAVE 2: delayed 5s to let Wave 1 (P1/P3/P5) finish before firing
   const isResearchOnly = sellerUrl === "research-only";
-  const p4 = (async()=>{ await new Promise(r=>setTimeout(r,3000)); return streamAIWithSearch(baseFull+
+  const p4 = (async()=>{ await new Promise(r=>setTimeout(r,5000)); return streamAIWithSearch(baseFull+
     `SEARCH INSTRUCTION: Search for "${co}" leadership team, technology stack, and organizational structure. Use the search results to ground contacts and tech stack.\n\n`+
     `Return ONLY raw JSON (start with {) for ${isResearchOnly ? "organizational intelligence" : "solution fit and contacts"}:\n`+
     (isResearchOnly
@@ -2068,7 +2068,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           if (parsed.solutionMapping?.[0]?.product) onStream("solutions", parsed);
         }
       } catch { /* partial — wait for more */ }
-    }, 4500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus, model: SONNET }
+    }, 7500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus, model: SONNET }
   ); })();
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
@@ -2292,9 +2292,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const rolesSummaryOk = (obj) => obj?.openRoles?.summary &&
     !/unable|could not|couldn't|not available|no results|cannot|search limit/i.test(obj.openRoles.summary);
 
-  // WAVE 2: delayed 3s to reduce concurrent API load
+  // WAVE 2: delayed 5s to let Wave 1 (P1/P3/P5) finish before firing
   const p6 = (async () => {
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 5000));
     try {
       // Phase 1: web search for real listings
       const d = await claudeFetch({
@@ -2401,9 +2401,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     secFilingCtx;
 
   // MICRO 7: Competitive Positioning — who they compete with and where they win/lose
-  // WAVE 3: delayed 6s to reduce concurrent API load
+  // WAVE 3: delayed 12s to let Wave 1+2 finish before firing
   const p7 = (async()=>{
-    await new Promise(r => setTimeout(r, 6000));
+    await new Promise(r => setTimeout(r, 12000));
     try {
       const d = await claudeFetch({
         model: SONNET, max_tokens:2000,
@@ -2434,9 +2434,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 8: Board & Investors — who governs and funds this company
-  // WAVE 3: delayed 6s to reduce concurrent API load
+  // WAVE 3: delayed 12s to let Wave 1+2 finish before firing
   const p8 = (async()=>{
-    await new Promise(r => setTimeout(r, 6000));
+    await new Promise(r => setTimeout(r, 12000));
     try {
       const d = await claudeFetch({
         model:SONNET, max_tokens:2000,
@@ -2467,9 +2467,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   })();
 
   // MICRO 9: Financial Deep Dive — trends, margins, segments, guidance
-  // WAVE 3: delayed 6s to reduce concurrent API load
+  // WAVE 3: delayed 12s to let Wave 1+2 finish before firing
   const p9 = (async()=>{
-    await new Promise(r => setTimeout(r, 6000));
+    await new Promise(r => setTimeout(r, 12000));
     try {
       const d = await claudeFetch({
         model:SONNET, max_tokens:2000,
