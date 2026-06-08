@@ -1729,7 +1729,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     fallbackFirmographics +
     secFilingCtx +
     `RULE: All fields describe ${co} NOT the seller. ASCII only.\n`+
-    `EMPTY FIELD RULE (CRITICAL): If a fact is unknown, return an EMPTY STRING "". NEVER return "Not found", "Not specified", "Not available", "N/A", "Unknown", "[Verify]", or any placeholder text. The UI handles empty fields gracefully — placeholder text breaks the display. Empty string is ALWAYS correct for unknown data.\n`+
+    `EMPTY FIELD RULE (CRITICAL): If a fact is unknown, return an EMPTY STRING "". NEVER return "Not found", "Not specified", "Not available", "N/A", "Unknown", "[Verify]", or any placeholder text. The UI handles empty fields gracefully — placeholder text breaks the display. EXCEPTION: revenue, employeeCount, and headquarters fields should provide a REASONED ESTIMATE with disclosure (e.g. "~$3-6M (estimated based on ~30 employees in consulting)") rather than empty string — these are too important to leave blank.\n`+
     `ACCURACY: NEVER invent facts about ${co} — no fabricated revenue, employee counts, executives, products, partnerships, or acquisitions. If unknown, use an empty string.\n`+
     `DATA CONFIDENCE RULE (CRITICAL — a brief with 5 verified facts is worth more than one with 15 guesses):\n`+
     `- If web search found no data for a field, return empty string "" — do NOT fill it from training knowledge alone.\n`+
@@ -1827,8 +1827,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"$2.4B (FY2024) OR for private companies: '~$1-3M (estimated — early-stage SaaS in [industry] with ~20 employees typically generates this range)'. MUST provide an estimate if no public data. NEVER return empty string.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"~270,000 OR for private companies: '~20-50 (estimated from team page/LinkedIn)'. MUST provide an estimate. NEVER return empty string.",`+
-    `"headquarters":"Denver, CO OR best estimate from website/LinkedIn. MUST provide a value — check website footer, contact page, LinkedIn.","founded":"2023 OR best estimate. MUST provide a value.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
+    `"revenue":"$2.4B (FY2024) OR for private companies: '~$3-6M (estimated — [industry] consulting firm with ~30 employees typically generates $100-200K/employee annually)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — you MUST provide a reasoned estimate with cited reasoning for private companies. NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"~270,000 OR for private companies: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide an estimate. NEVER return empty string or 'Not found'.",`+
+    `"headquarters":"Denver, CO OR best estimate from website/LinkedIn. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — check website footer, contact page, LinkedIn. MUST provide a value. Kennesaw, GA if that's what the website says.","founded":"2023 OR best estimate. MUST provide a value.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
@@ -2320,13 +2320,14 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           `Research the competitive landscape of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
           `COMPETITOR ACCURACY (CRITICAL): Only list companies that DIRECTLY compete with ${co} in the SAME product category. A competitor must offer a substitute product that a buyer would evaluate alongside ${co}. Companies in adjacent categories (analytics, CRM, data platforms, etc.) are NOT competitors unless they directly compete for the same budget and use case. If web search returns no clear competitors, return fewer entries or empty array — do NOT fill with companies from your training data that seem vaguely related. A wrong competitor name makes the rep look uninformed.\n\n`+
+          `EDGE FIELDS (CRITICAL — NEVER leave blank): For each competitor, "strength" and "weakness" MUST be filled even if you need to reason from the competitor's positioning, pricing, size, or focus. Use what you know about the competitive landscape — e.g. a larger competitor's edge is scale/brand; a smaller one's edge is agility/specialization. A rep needs something for every competitor, not blank cards.\n\n`+
           `Return raw JSON:\n`+
           `{"competitivePositioning":{`+
           `"marketPosition":"2-3 sentences: where ${co} sits in the market. Category leadership or challenger status, analyst positioning (Gartner MQ, Forrester Wave if applicable). CRITICAL: Do NOT cite G2 Grid rankings, review-site 'market share' percentages, or product-listing counts as real market share. G2/Capterra/TrustRadius rank by reviews and traffic, NOT by actual revenue or market share. If the only market-share data available is from a review platform, omit it.",`+
-          `"primaryCompetitors":[{"name":"ONLY companies found in your web search results that directly compete with ${co} in the same category. Empty array if search found no clear competitors.","strength":"Their #1 advantage over ${co}","weakness":"Where ${co} beats them","recentMove":"Latest competitive action — empty if unknown"}],`+
-          `"whereWinning":"1-2 sentences: deal types, segments, or use cases where ${co} consistently wins and why",`+
-          `"whereLosing":"1-2 sentences: where they lose deals and to whom — be specific about WHY (price, feature, relationship, incumbent)",`+
-          `"displacementAngle":"1 sentence: if you were competing against ${co}, what's the angle that works? What assumption about them can be challenged?"}}`
+          `"primaryCompetitors":[{"name":"ONLY companies found in your web search results that directly compete with ${co} in the same category. Empty array if search found no clear competitors.","strength":"Their #1 advantage over ${co} — MUST be filled. Reason from their size, focus, pricing, or positioning if direct evidence is limited.","weakness":"Where ${co} beats them — MUST be filled. What does ${co} do better? Think: specialization, relationships, local knowledge, flexibility, pricing.","recentMove":"Latest competitive action — empty if unknown"}],`+
+          `"whereWinning":"1-2 sentences: deal types, segments, or use cases where ${co} consistently wins and why. If insufficient data, reason from their positioning — e.g. a boutique firm wins on specialization and relationships.",`+
+          `"whereLosing":"1-2 sentences: where they lose deals and to whom — be specific about WHY (price, feature, relationship, incumbent). If insufficient data, reason from their size/positioning constraints.",`+
+          `"displacementAngle":"CONTEXT: The seller '${canonicalSellerName}' (${sellerUrl}) is trying to SELL TO ${co}. This angle is about how the seller should displace ${co}'s CURRENT vendor or existing approach for the seller's product category. What is ${co} likely doing today instead of buying from the seller? How should the seller position against that status quo? 1-2 sentences."}}`
         }],
       });
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
@@ -14042,8 +14043,12 @@ Return ONLY raw JSON:
                     <div><div className="bb-title">Key Executives</div><div className="bb-sub">{brief._loadingSections?.executives ? "Searching..." : "Know someone here? Edit names and angles — your corrections carry forward"}</div></div>
                   </div>
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
-                    {(brief.keyExecutives||[]).filter(e=>e?.name).length > 0
-                      ? (brief.keyExecutives||[]).filter(e=>e?.name).map((ex,i)=>(
+                    {(()=>{
+                      const isStub = (n) => /^(CEO|CFO|CTO|COO|CRO|CHRO|Founder|President)$/i.test(n?.trim());
+                      const realExecs = (brief.keyExecutives||[]).filter(e=>e?.name && !isStub(e.name));
+                      return realExecs.length > 0;
+                    })()
+                      ? (brief.keyExecutives||[]).filter(e=>e?.name && !/^(CEO|CFO|CTO|COO|CRO|CHRO|Founder|President)$/i.test(e?.name?.trim())).map((ex,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
                           <div className="contact-av" style={{background:"#2C4A7A",color:"var(--surface)",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
@@ -14058,12 +14063,23 @@ Return ONLY raw JSON:
                           </div>
                         </div>
                       ))
-                      : <div style={{fontSize:13,color:"var(--ink-3)",padding:12,textAlign:"center"}}>
-                            Executive data not available.
-                            <button onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}
-                              style={{marginLeft:8,fontSize:12,fontWeight:600,padding:"4px 12px",borderRadius:6,border:"1px solid var(--tan-2)",background:"var(--bg-1)",color:"var(--ink-1)",cursor:"pointer"}}>
-                              Retry
-                            </button>
+                      : <div style={{background:"var(--bg-1)",borderLeft:"4px solid var(--amber)",borderRadius:"0 10px 10px 0",padding:"14px 16px"}}>
+                            <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>No named executives found in public sources</div>
+                            <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>
+                              This is common for private companies with limited web presence. Before your call:
+                            </div>
+                            <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.8}}>
+                              {selectedAccount?.company_url ? (
+                                <>• Check their <a href={`https://${selectedAccount.company_url.replace(/^https?:\/\//,"")}/about`} target="_blank" rel="noopener noreferrer" style={{color:"var(--tan-0)",fontWeight:600}}>About page</a> for leadership team<br/></>
+                              ) : <>• Check their website's About or Team page<br/></>}
+                              • Search LinkedIn for "<strong>{selectedAccount?.company}</strong>" → People → filter by title (CEO, Founder, VP)
+                            </div>
+                            <div style={{marginTop:10}}>
+                              <button onClick={()=>{if(!checkNoChange("brief",getBriefSig,()=>pickAccount(selectedAccount)))pickAccount(selectedAccount);}}
+                                style={{fontSize:12,fontWeight:600,padding:"6px 14px",borderRadius:6,border:"1px solid var(--tan-2)",background:"var(--surface)",color:"var(--ink-1)",cursor:"pointer"}}>
+                                ↻ Retry Search
+                              </button>
+                            </div>
                           </div>
                     }
                   </div>
@@ -14177,7 +14193,7 @@ Return ONLY raw JSON:
                 ) : null}
 
                 {/* Public Sentiment */}
-                {brief.publicSentiment&&(brief.publicSentiment.onlineSentiment||brief.publicSentiment.standoutReview?.text||brief.publicSentiment.glassdoorRating)&&(
+                {brief.publicSentiment&&(
                   <div className="bb bb-arrive">
                     <div className="bb-hdr">
                       <div className="bb-icon" style={{fontSize:11}}>💬</div>
@@ -14262,6 +14278,16 @@ Return ONLY raw JSON:
                         <div style={{background:"var(--bg-0)",borderLeft:"3px solid var(--tan-0)",padding:"9px 12px",borderRadius:"0 7px 7px 0"}}>
                           <div className="field-label" style={{marginBottom:4}}>How to Use This</div>
                           <EF value={brief.publicSentiment.salesAngle||brief.publicSentiment.sentimentSummary||""} onChange={v=>patchBrief(b=>{if(!b.publicSentiment)b.publicSentiment={};b.publicSentiment.salesAngle=v;})} single placeholder="How to reference this in your conversation..."/>
+                        </div>
+                      )}
+                      {/* Graceful empty state when no sentiment data exists */}
+                      {!brief.publicSentiment.glassdoorRating && !brief.publicSentiment.standoutReview?.text && !brief.publicSentiment.onlineSentiment && !brief.publicSentiment.salesAngle && !brief.publicSentiment.sentimentSummary && (
+                        <div style={{background:"var(--bg-1)",borderLeft:"4px solid var(--amber)",borderRadius:"0 10px 10px 0",padding:"14px 16px"}}>
+                          <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>Limited employer sentiment data</div>
+                          <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.7}}>
+                            No Glassdoor reviews, press coverage, or public sentiment found for {selectedAccount?.company}. This is common for private companies with fewer than 50 employees.<br/><br/>
+                            <strong>Before your call:</strong> Ask early in discovery how they currently handle employee engagement and recognition — companies with no public employer brand often have no formal program, which is exactly the whitespace your solution fills.
+                          </div>
                         </div>
                       )}
                     </div>
@@ -14439,8 +14465,8 @@ Return ONLY raw JSON:
                                   <div key={i} style={{background:"var(--bg-1)",borderRadius:8,padding:"10px 12px",border:"1px solid var(--line-0)"}}>
                                     <div style={{fontSize:13,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>{c.name}</div>
                                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12,lineHeight:1.5}}>
-                                      <div><span style={{color:"var(--red)",fontWeight:600,fontSize:10}}>THEIR EDGE:</span> {c.strength}</div>
-                                      <div><span style={{color:"var(--green)",fontWeight:600,fontSize:10}}>OUR EDGE:</span> {c.weakness}</div>
+                                      <div><span style={{color:"var(--red)",fontWeight:600,fontSize:10}}>THEIR EDGE:</span> {c.strength || <span style={{color:"var(--ink-3)",fontStyle:"italic"}}>Not enough data — research before the call</span>}</div>
+                                      <div><span style={{color:"var(--green)",fontWeight:600,fontSize:10}}>OUR EDGE:</span> {c.weakness || <span style={{color:"var(--ink-3)",fontStyle:"italic"}}>Not enough data — research before the call</span>}</div>
                                     </div>
                                     {c.recentMove && <div style={{fontSize:11,color:"var(--ink-3)",marginTop:4,fontStyle:"italic"}}>{c.recentMove}</div>}
                                   </div>
