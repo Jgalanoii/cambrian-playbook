@@ -7736,7 +7736,7 @@ Return ONLY raw JSON:
         const SB_KEY_CS = import.meta.env.VITE_SUPABASE_ANON_KEY;
         if (SB_URL_CS && SB_KEY_CS && sbToken && member.ind) {
           const [compRes, priorRes] = await Promise.all([
-            fetch(`${SB_URL_CS}/rest/v1/competitor_intel?industry=ilike.*${encodeURIComponent(member.ind.slice(0,30))}*&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&select=competitor_name,customer_names,evidence_type&limit=8`, {
+            fetch(`${SB_URL_CS}/rest/v1/competitor_intel?market_category=ilike.*${encodeURIComponent(member.ind.slice(0,30))}*&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&select=competitor_name,customer_name,evidence_type&limit=8`, {
               headers: { apikey: SB_KEY_CS, Authorization: `Bearer ${sbToken}` }
             }).then(r=>r.ok?r.json():[]).catch(()=>[]),
             fetch(`${SB_URL_CS}/rest/v1/account_outputs?output_type=eq.brief&target_company=eq.${encodeURIComponent(co)}&seller_url=eq.${encodeURIComponent(effectiveSellerUrl)}&is_latest=eq.true&select=created_at&limit=1`, {
@@ -7745,7 +7745,13 @@ Return ONLY raw JSON:
           ]);
           if (compRes.length > 0) {
             crossCtx += `\n═══ COMPETITOR INTELLIGENCE (from prior research) ═══\n`;
-            compRes.forEach(c => { crossCtx += `- ${c.competitor_name}: serves ${(c.customer_names||[]).slice(0,3).join(", ")} (${c.evidence_type||"observed"})\n`; });
+            // Group rows by competitor (each row is one competitor-customer pair)
+            const byComp = {};
+            compRes.forEach(c => {
+              if (!byComp[c.competitor_name]) byComp[c.competitor_name] = { customers: [], evidence: c.evidence_type || "observed" };
+              if (c.customer_name) byComp[c.competitor_name].customers.push(c.customer_name);
+            });
+            Object.entries(byComp).forEach(([comp, info]) => { crossCtx += `- ${comp}: serves ${info.customers.slice(0,3).join(", ")} (${info.evidence})\n`; });
             crossCtx += `Use this to position against known competitors in ${member.ind}.\n\n`;
           }
           if (priorRes.length > 0) {
