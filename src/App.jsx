@@ -2085,7 +2085,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           ? `CONTAMINATION WARNING: "${co}" is a common name shared by multiple unrelated companies. You MUST only include results about the company at ${url}. Discard any results about differently-named entities (e.g., "YouScience Brightpath", "BrightPath Bio", "BrightPath Behavior" are all DIFFERENT companies). Check: does the result reference ${url} or the specific entity described at ${url}? If not → discard.\n\n`
           : "") +
         `SEARCH STRATEGY (you have 2 searches — use BOTH, one for each purpose):\n`+
-        `- Search 1 (NEWS): ${url && url !== co ? `site:${url} OR "${url}"` : `"${co}"`} news OR press release 2025 OR 2026\n`+
+        `- Search 1 (NEWS): "${co}"${url && url !== co ? ` "${url}"` : ""} news OR press release 2025 OR 2026\n`+
         `- Search 2 (REVIEWS — MANDATORY): "${co}" ${url && url !== co ? `"${url}" ` : ""}Glassdoor rating reviews\n`+
         `You MUST use Search 2 for Glassdoor. Every company with 100+ employees has Glassdoor reviews. BHN has thousands. A missing Glassdoor rating for a major employer is a data failure.\n\n`+
         `RECENCY RULE: ONLY include events, headlines, or signals from the last 18 months. Include the date or year in every headline.\n\n`+
