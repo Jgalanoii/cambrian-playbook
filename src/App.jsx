@@ -2467,7 +2467,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // P10 was failing 100% of runs because 10 concurrent API calls competed for bandwidth.
   // Skip for Quick Brief (research-only) — no seller means no deal to map gates for
   const p10 = (async()=>{
-    await new Promise(r => setTimeout(r, 3000)); // let p1-p9 get their connections first
+    await new Promise(r => setTimeout(r, 5000)); // let p1-p9 get their connections first
     if (sellerUrl === "research-only") return null;
     try {
       const dealSize = sellerICP?.icp?.dealSize || "";
@@ -2524,7 +2524,33 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       next.competitivePositioning = cp;
     } else { failed.push("competitive"); }
     if (r8?.boardAndInvestors) next.boardAndInvestors = r8.boardAndInvestors;
-    if (r9?.financialDeepDive) next.financialDeepDive = r9.financialDeepDive;
+    if (r9?.financialDeepDive) {
+      next.financialDeepDive = r9.financialDeepDive;
+      // ── BACKFILL: If P1 left revenue/HQ empty, extract from P9's richer estimates ──
+      // P9 (financial deep dive) always generates reasoned estimates for private companies.
+      // P1 returns "" due to conflicting empty-field rules. Use P9 data to fill the overview.
+      if (!next.revenue || !next.revenue.trim()) {
+        const rt = r9.financialDeepDive.revenueTrend || "";
+        // Extract the dollar estimate: "$3-6M", "$3-6 million", "~$4.5M", etc.
+        const dollarMatch = rt.match(/(?:estimated\s+(?:annual\s+)?revenue\s+(?:is|of)\s+)?([\$~]\s*[\d.,]+-?[\d.,]*\s*(?:million|M|billion|B|K))/i)
+                         || rt.match(/([\$~]\s*[\d.,]+-[\d.,]*\s*(?:million|M))/i)
+                         || rt.match(/([\$~]\s*[\d.,]+\s*(?:million|M|billion|B))/i);
+        if (dollarMatch) {
+          next.revenue = `${dollarMatch[1].trim()} (estimated)`;
+          console.log(`[backfill] Revenue filled from P9: ${next.revenue}`);
+        }
+      }
+      if (!next.headquarters || !next.headquarters.trim()) {
+        // Try to extract location from companySnapshot (P1 often mentions it)
+        const snap = next.companySnapshot || "";
+        const locMatch = snap.match(/(?:based in|headquartered in|located in)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?,\s*[A-Z]{2})/i)
+                      || snap.match(/([A-Z][a-z]+,\s*(?:Georgia|GA|California|CA|Texas|TX|New York|NY|Florida|FL|Illinois|IL|Ohio|OH|Virginia|VA|Colorado|CO|Washington|WA|Massachusetts|MA|Pennsylvania|PA|Arizona|AZ|North Carolina|NC|Oregon|OR|Minnesota|MN|Tennessee|TN|Maryland|MD|Wisconsin|WI|Missouri|MO|Indiana|IN|Connecticut|CT|Kentucky|KY|Utah|UT|Nevada|NV|Michigan|MI|New Jersey|NJ))/);
+        if (locMatch) {
+          next.headquarters = locMatch[1].trim();
+          console.log(`[backfill] HQ filled from snapshot: ${next.headquarters}`);
+        }
+      }
+    }
     // Don't flag financial as failed for Quick Brief or private companies — no public data is expected
     else if (sellerUrl !== "research-only" && !/private|bootstrapped/i.test(prev?.publicPrivate || "")) { failed.push("financial"); }
     if (r10?.gateMap) next.gateMap = r10.gateMap;
