@@ -2015,7 +2015,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         if (oppMatch) data.sellerOpportunity = oppMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
         onStream("strategy", data);
       }
-    }, 5500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: OPUS }
+    }, 5500, { maxSearches: 1, anchorKey: "elevatorPitch", onStatus, model: SONNET }
   );
   // relationshipSignals feature tabled
 
@@ -2329,11 +2329,45 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         console.log("[p6] web_search call errored — falling back to inference");
       }
 
-      // Phase 2 REMOVED — was hallucinating roles from training knowledge.
-      // Joe's directive: "Job postings must be sourced exclusively from the company website."
-      // If web search found nothing, that's the answer — no invented roles.
-      console.log(`[p6] No job postings found for ${co} via web search — returning honest empty`);
-      return { openRoles: { summary: `No open positions found on public job boards or ${co}'s website. Check their careers page directly${url ? ` at ${url}` : ""} for current openings.`, roles: [] } };
+      // Phase 2: Retry with secondary sources (Indeed, LinkedIn, Glassdoor jobs)
+      // Phase 1 may fail because careers pages are JS-heavy / ATS-gated.
+      // Secondary sources often have indexed copies of the same listings.
+      console.log(`[p6] Phase 1 found no roles for ${co} — trying secondary sources`);
+      try {
+        const d2 = await claudeFetch({
+          model: activeModel(),
+          max_tokens: 1200,
+          temperature: 0,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+          messages: [{ role: "user", content:
+            `Search for current job openings at "${co}"${url && url !== co ? ` (${url})` : ""} on job boards and career platforms.\n\n` +
+            `SEARCH STRATEGY:\n` +
+            `1. Search: "${co}" jobs 2025 OR 2026 site:indeed.com OR site:linkedin.com/jobs\n` +
+            `2. Search: "${co}" careers hiring site:glassdoor.com OR site:builtin.com OR site:ziprecruiter.com\n\n` +
+            `If you find open roles, return them. If job boards also show nothing, return an honest empty result.\n\n` +
+            `Return ONLY raw JSON:\n` +
+            `{"openRoles":{"summary":"2-3 sentences on what the hiring pattern reveals, OR an honest statement that no positions were found","roles":[{"title":"Exact job title","dept":"Department","signal":"What this hire tells a seller"}]}}`
+          }],
+        });
+        if (!d2.error) {
+          const tb2 = (d2.content || []).filter(b => b.type === "text").map(b => b.text || "");
+          for (let i = tb2.length - 1; i >= 0; i--) {
+            const parsed2 = extractJsonWithKey(tb2[i], "openRoles");
+            if (rolesHaveData(parsed2)) { console.log("[p6] Phase 2 (secondary sources) found roles"); return parsed2; }
+          }
+          const raw2 = tb2.join("").trim();
+          const parsed2 = safeParseJSON(raw2.startsWith("{") ? raw2 : "{" + raw2);
+          if (rolesHaveData(parsed2)) { console.log("[p6] Phase 2 found roles (joined)"); return parsed2; }
+        }
+      } catch (e2) { console.warn("[p6] Phase 2 failed:", e2.message); }
+
+      // Phase 3: Both passes found nothing — return honest empty with context-aware message
+      console.log(`[p6] No job postings found for ${co} via any source — returning honest empty`);
+      const empNum = parseInt(String(member.employees || "").replace(/[^0-9]/g, ""), 10) || 0;
+      const summaryText = empNum > 5000
+        ? `No specific open positions were found via web search for ${co}. For a company of this size (~${member.employees} employees), open roles are very likely available but may be listed on their internal careers portal${url ? ` at ${url}/careers` : ""} or through ATS platforms (Workday, Greenhouse, Lever) that aren't indexed by general search. Check directly before your call.`
+        : `No open positions found on public job boards or ${co}'s website. Check their careers page directly${url ? ` at ${url}` : ""} for current openings.`;
+      return { openRoles: { summary: summaryText, roles: [] } };
     } catch (e) { console.warn("Open roles search failed:", e.message); return null; }
   })();
 
@@ -2349,8 +2383,17 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // ── DEEP INTELLIGENCE LAYERS (p7, p8, p9) — fire in parallel with p1-p6 ──
 
   // Identity context for deep intel calls — prevents cross-company contamination (Apollo.io vs Apollo Global)
+  // CRITICAL: Must enforce the same site: search strategy as identityAnchor in baseLight.
+  // Stripe contamination (Stage 0 audit): P9 searched "Stripe financial data" broadly and found
+  // Stripe Construction Products (adhesives company in Chicago Heights, IL). All deep intel
+  // searches must anchor on the target's URL.
   const deepIntelIdentity = (url && url !== co
-    ? `IDENTITY: Research ONLY the company at https://${url} ("${co}"). Multiple companies share this name — use the website ${url} as the definitive identifier. Do NOT mix facts from different companies.\n\n`
+    ? `IDENTITY (CRITICAL — CONTAMINATION PREVENTION):\n`+
+      `You are researching ONLY the company at https://${url} ("${co}").\n`+
+      `SEARCH STRATEGY: Include "${url}" or site:${url} in your search queries to anchor results.\n`+
+      `"${co}" is a common name shared by multiple unrelated companies. Results NOT about the company at ${url} are about DIFFERENT companies and MUST be discarded.\n`+
+      `CONTAMINATION CHECK: Before including ANY fact, ask: "Did this come from ${url} or a page specifically about the company at ${url}?" If NO → discard it.\n`+
+      `If your search returns a mix of results about different companies, use ONLY results from or specifically about the entity at ${url}. Return empty string for any field where you cannot verify the data is about THIS specific company.\n\n`
     : `IDENTITY: Research "${co}" ONLY. CONTAMINATION GUARD: If search returns results for similarly-named companies, use ONLY results about "${co}" specifically. Return empty string for any field where you cannot verify the data belongs to "${co}" and not a different entity.\n\n`) +
     secFilingCtx;
 
@@ -14364,8 +14407,18 @@ Return ONLY raw JSON:
                         <div style={{background:"var(--bg-1)",borderLeft:"4px solid var(--amber)",borderRadius:"0 10px 10px 0",padding:"14px 16px"}}>
                           <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>Limited employer sentiment data</div>
                           <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.7}}>
-                            No Glassdoor reviews, press coverage, or public sentiment found for {selectedAccount?.company}. This is common for private companies with fewer than 50 employees.<br/><br/>
-                            <strong>Before your call:</strong> Ask early in discovery how they currently handle employee engagement and recognition — companies with no public employer brand often have no formal program, which is exactly the whitespace your solution fills.
+                            {(()=>{
+                              const emp = brief.employeeCount || selectedAccount?.employees || "";
+                              const empNum = parseInt(String(emp).replace(/[^0-9]/g, ""), 10) || 0;
+                              const isPub = /public/i.test(brief.publicPrivate || "");
+                              if (isPub || empNum > 1000) {
+                                return <>No Glassdoor reviews or public sentiment found for {selectedAccount?.company} despite being {isPub ? "a publicly traded company" : `a ${emp}-employee organization`}. This may indicate limited employee review activity on major platforms, or the company uses a parent/subsidiary brand for employer listings.<br/><br/><strong>Before your call:</strong> Search Glassdoor and Indeed directly for {selectedAccount?.company} or their parent brand. Employee sentiment is valuable context for positioning — if reviews exist, note themes around culture, leadership, and compensation.</>;
+                              }
+                              if (empNum > 50) {
+                                return <>No Glassdoor reviews, press coverage, or public sentiment found for {selectedAccount?.company}. For a mid-sized company with {emp} employees, this may indicate the company operates under a different brand name or has limited digital presence.<br/><br/><strong>Before your call:</strong> Ask early in discovery how they think about employee engagement and employer brand — companies with no public employer presence often haven't formalized recognition, which is exactly the whitespace your solution fills.</>;
+                              }
+                              return <>No Glassdoor reviews, press coverage, or public sentiment found for {selectedAccount?.company}. This is common for smaller private companies with limited public presence.<br/><br/><strong>Before your call:</strong> Ask early in discovery how they currently handle employee engagement and recognition — companies with no public employer brand often have no formal program, which is exactly the whitespace your solution fills.</>;
+                            })()}
                           </div>
                         </div>
                       )}
