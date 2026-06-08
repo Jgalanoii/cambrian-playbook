@@ -2423,7 +2423,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     try {
       const dealSize = sellerICP?.icp?.dealSize || "";
       const d = await claudeFetch({
-        model:SONNET, max_tokens:2000,
+        model:SONNET, max_tokens:2000, temperature:0,
         messages:[{role:"user",content:
           firmographicsTruth+
           `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n\n`+
@@ -2431,12 +2431,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `Seller's competitors: ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. Factor competitor displacement complexity into gate analysis.\n` : "") +
           `TARGET CONTEXT: ${co} — Industry: ${_fg.industry || "unknown"}. Size: ${_fg.employees || "unknown"} employees. Ownership: ${_fg.ownership || "unknown"}.\n\n`+
           (KL_APPROVAL_GATES ? `APPROVAL GATES KNOWLEDGE:\n${KL_APPROVAL_GATES.slice(0, 3000)}\n\n` : "") +
-          `Return raw JSON with TWO sections:\n`+
-          `{"gateMap":{\n`+
-          `"sellerGates":{"summary":"1-2 sentences: what the SELLER's own organization will likely require to approve this deal (deal desk, discount authority, legal review, etc.)","gates":[{"gate":"Gate name (e.g. Deal Desk Review)","owner":"Who owns this gate (e.g. RevOps / Sales Manager)","trigger":"What triggers this gate (e.g. discount >10% or non-standard terms)","artifact":"What you need to prepare (e.g. competitive context, margin analysis)","timeline":"Typical timeline (e.g. 2-5 business days)"}]},\n`+
-          `"buyerGates":{"summary":"1-2 sentences: what the BUYER (${co}) will likely require internally to approve this purchase — based on their industry, size, and the deal value","gates":[{"gate":"Gate name (e.g. Procurement Review)","owner":"Who at ${co} owns this gate (by role, not name)","trigger":"What triggers this gate","artifact":"What the seller needs to provide to clear this gate","timeline":"Typical timeline"},{"gate":"","owner":"","trigger":"","artifact":"","timeline":""}]},\n`+
-          `"criticalPath":"1-2 sentences: which gate is most likely to stall or kill this deal and what to do about it",\n`+
-          `"mapAdvice":"1 sentence: the single most important action the seller should take THIS WEEK to de-risk the approval sequence"}}`
+          `CRITICAL: Return ONLY raw JSON. No explanation, no markdown fences, no text before or after the JSON. Start your response with { and end with }.\n\n`+
+          `{"gateMap":{"sellerGates":{"summary":"1-2 sentences: what the SELLER's own organization will likely require to approve this deal (deal desk, discount authority, legal review, etc.)","gates":[{"gate":"Gate name (e.g. Deal Desk Review)","owner":"Who owns this gate (e.g. RevOps / Sales Manager)","trigger":"What triggers this gate (e.g. discount >10% or non-standard terms)","artifact":"What you need to prepare (e.g. competitive context, margin analysis)","timeline":"Typical timeline (e.g. 2-5 business days)"}]},"buyerGates":{"summary":"1-2 sentences: what the BUYER (${co}) will likely require internally to approve this purchase — based on their industry, size, and the deal value","gates":[{"gate":"Gate name (e.g. Procurement Review)","owner":"Who at ${co} owns this gate (by role, not name)","trigger":"What triggers this gate","artifact":"What the seller needs to provide to clear this gate","timeline":"Typical timeline"}]},"criticalPath":"1-2 sentences: which gate is most likely to stall or kill this deal and what to do about it","mapAdvice":"1 sentence: the single most important action the seller should take THIS WEEK to de-risk the approval sequence"}}`
         }],
       });
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
@@ -2444,10 +2440,16 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         const parsed=extractJsonWithKey(textBlocks[i],"gateMap");
         if(parsed?.gateMap) return parsed;
       }
-      // Fallback: try safeParseJSON on concatenated text
+      // Fallback: try repairJSON + safeParseJSON on concatenated text
       const raw = textBlocks.join("").trim();
-      const fb = safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+      // Strip any markdown fences or thinking tags the model may have added
+      const cleaned = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").replace(/<\/?(?:thinking|antml:thinking)>/g, "").trim();
+      const fb = safeParseJSON(cleaned.startsWith("{")?cleaned:"{"+cleaned);
       if(fb?.gateMap) return fb;
+      // Last resort: try repairJSON
+      const repaired = repairJSON(cleaned);
+      const fb2 = safeParseJSON(repaired);
+      if(fb2?.gateMap) return fb2;
       console.warn("[p10] Gate map parse failed. Raw length:", raw.length, "Preview:", raw.slice(0,200));
       return null;
     }catch(e){console.warn("[p10] Gate map error:", e?.message); return null;}
