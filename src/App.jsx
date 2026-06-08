@@ -14138,8 +14138,8 @@ Return ONLY raw JSON:
                             </div>
                             <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.8}}>
                               {selectedAccount?.company_url ? (
-                                <>• Check their <a href={`https://${selectedAccount.company_url.replace(/^https?:\/\//,"")}/about`} target="_blank" rel="noopener noreferrer" style={{color:"var(--tan-0)",fontWeight:600}}>About page</a> for leadership team<br/></>
-                              ) : <>• Check their website's About or Team page<br/></>}
+                                <>• Check <a href={`https://${selectedAccount.company_url.replace(/^https?:\/\//,"")}`} target="_blank" rel="noopener noreferrer" style={{color:"var(--tan-0)",fontWeight:600}}>{selectedAccount.company_url.replace(/^https?:\/\//,"")}</a> for a Team or About page<br/></>
+                              ) : <>• Check their website for a Team or About page<br/></>}
                               • Search LinkedIn for "<strong>{selectedAccount?.company}</strong>" → People → filter by title (CEO, Founder, VP)
                             </div>
                             <div style={{marginTop:10}}>
