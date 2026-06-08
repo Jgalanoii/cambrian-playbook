@@ -2551,7 +2551,27 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       solutions: p4.then(mergeSolutions).catch(catchLog("p4-solutions", mergeSolutions)),
       live:      p5.then(mergeLive).catch(catchLog("p5-live", mergeLive)),
       roles:     p6.then(mergeRoles).catch(catchLog("p6-roles", mergeRoles)),
-      deepIntel: deepIntelDone.then(([r7,r8,r9,r10]) => mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null, r10?.status==="fulfilled"?r10.value:null)),
+      deepIntel: deepIntelDone.then(async ([r7,r8,r9,r10]) => {
+        let gateResult = r10?.status==="fulfilled"?r10.value:null;
+        // gateMap (P10) fails consistently — retry once if null
+        if (!gateResult?.gateMap && sellerUrl !== "research-only") {
+          console.log("[p10] Gate map failed on first attempt — retrying once...");
+          try {
+            const retryPrompt = firmographicsTruth+
+              `You are a B2B sales strategist. Analyze the approval gates for a deal between seller "${sellerUrl}" and target "${co}"${url && url !== co ? ` (${url})` : ""}.\n`+
+              `SELLER: ${buildSellerCtx()}. TARGET: ${co} — ${_fg.industry || "unknown"}, ${_fg.employees || "unknown"} employees.\n`+
+              `CRITICAL: Return ONLY raw JSON. No explanation, no markdown. Start with { and end with }.\n`+
+              `{"gateMap":{"sellerGates":{"summary":"What the seller needs to approve this deal","gates":[{"gate":"Gate name","owner":"Role","trigger":"What triggers it","artifact":"What to prepare","timeline":"How long"}]},"buyerGates":{"summary":"What ${co} needs internally to approve this purchase","gates":[{"gate":"Gate name","owner":"Role at ${co}","trigger":"Trigger","artifact":"What seller provides","timeline":"Timeline"}]},"criticalPath":"Which gate most likely stalls the deal","mapAdvice":"Most important action this week"}}`;
+            const d2 = await claudeFetch({ model:SONNET, max_tokens:1500, temperature:0, messages:[{role:"user",content:retryPrompt}] });
+            const tb2 = (d2?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+            const raw2 = tb2.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").replace(/<\/?(?:thinking|antml:thinking)>/g,"").trim();
+            gateResult = extractJsonWithKey(raw2,"gateMap") || safeParseJSON(raw2.startsWith("{")?raw2:"{"+raw2);
+            if (gateResult?.gateMap) console.log("[p10] Gate map retry SUCCEEDED");
+            else console.warn("[p10] Gate map retry also failed. Raw:", raw2.slice(0,200));
+          } catch(e) { console.warn("[p10] Gate map retry error:", e?.message); }
+        }
+        return mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null, gateResult);
+      }),
     },
     earlyDone,
     allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10]),
@@ -7871,14 +7891,14 @@ Return ONLY raw JSON:
       });
     });
 
-    // Hard timeout — clear ALL loading states after 45s so user is never stuck.
-    // Strategy/solutions with full knowledge layer can take 20-30s; 45s gives headroom.
+    // Hard timeout — clear ALL loading states after 60s so user is never stuck.
+    // Strategy/solutions with full knowledge layer can take 20-30s; deep intel retry adds 10-15s.
     setTimeout(() => {
       setBrief(prev => {
         if (!prev) return prev;
         const pending = Object.values(prev._loadingSections || {}).filter(Boolean).length;
         if (pending === 0) return prev;
-        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 45s — clearing loading state`);
+        console.warn(`[brief] Hard timeout: ${pending} sections still pending after 60s — clearing loading state`);
         return {
           ...prev,
           _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false },
@@ -7888,7 +7908,7 @@ Return ONLY raw JSON:
         };
       });
       setBriefLoading(false);
-    }, 45000);
+    }, 60000);
 
     // Hypothesis only needs overview + strategy (p1+p3). Fire on earlyDone
     // so it starts 5-10s before slow web_search calls finish.
