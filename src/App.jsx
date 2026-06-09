@@ -7,6 +7,7 @@ import { fetchOrgContext, sbPatch } from "./lib/org.js";
 import SuperAdmin from "./components/SuperAdmin.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
+import { computeFitScore, buildSignalExtractionPrompt } from "./lib/fitScoring.js";
 
 // ── Sortable column header for Fit Check table ──
 function FitSortTh({ sortKey, sortDir, onSort, colKey, children, style }) {
@@ -5082,12 +5083,10 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 
     const scoreBatch = async (batch) => {
       const companies = batch.map(m => `${sanitizeForPrompt(m.company)}|${sanitizeForPrompt(m.ind||"Unknown — use training knowledge to identify industry")}|${sanitizeForPrompt(m.company_url||"")}`).join("\n");
-      const customerList = (sellerICP?.icp?.customerExamples||[]).filter(Boolean);
-      const competitorList = (sellerICP?.icp?.competitiveAlternatives||[]).filter(Boolean);
-      const prompt =
-        `You are a sales strategist scoring ICP fit. Use THREE dimensions with FIXED-POINT scoring.\n`+
-        `CRITICAL: Scores must be DETERMINISTIC. For the same company, the same inputs must produce the same score every time. Use the fixed-point tables below — do NOT interpolate or use judgment within ranges.\n`+
-      `CRITICAL: The ONLY way to compute a score is dim1 + dim2 + dim3 using the FIXED VALUES in the tables below. Vertical calibration context (percentages like "70-80%") is background knowledge only — it does NOT override the point tables. Never adjust a dimension score to match a calibration percentage.\n`+
+      // Option C: LLM extracts signals, JS computes scores deterministically
+      const prompt = buildSignalExtractionPrompt(companies, sellerCtx, sellerICP, icpContext);
+      // Old 240-line scoring prompt removed — replaced by buildSignalExtractionPrompt()
+      void(0 &&
         `CRITICAL: You MUST return a score for EVERY company listed below. If industry says "Unknown", use your training knowledge to identify the company's real industry. Every company in the list MUST appear in your output — never skip a company.\n`+
         `COMPETITOR CHECK: The seller's competitive alternatives are: [${(sellerICP?.icp?.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}]. If a prospect IS one of these competitors (or a subsidiary/brand of one), score dim1=0, dim2=0, dim3=0. They sell the same thing — they are NOT a prospect.\n\n`+
         `━━━ DIMENSION 1: PRODUCT/SERVICE FIT (45 points max) ━━━\n`+
@@ -5322,7 +5321,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         `\n`+
         `COMPANIES (Name|Industry|URL):\n${companies}\n\n`+
         `Return ONLY raw JSON, start with {:\n`+
-        `{"scores":[{"company":"exact name","dim1":34,"dim2":27,"dim3":20,"reason":"Strong ICP alignment: mid-market financial services company with 50K employees matches the seller's sweet spot. PE-backed ownership creates a cost-optimization mandate that aligns with the seller's ROI story.","customerSimilarity":"Most similar to [specific named customer from profiles above] — same vertical, comparable size, identical use case. Be specific about WHY they're similar.","incumbentRisk":"Name the incumbent vendor ONLY if certain. If uncertain: 'No verified incumbent.'","bestLOB":"Which seller line of business best fits this prospect","closestCustomer":"Name of the seller's existing customer most similar to this prospect","orgSize":"Best estimate employee count (e.g. ~500, ~5,000) — provide for any recognizable company","ownership":"CURRENT status only — Private if acquired/delisted","ownershipType":"public | pe-backed | vc-backed | private | bootstrapped"}]}`;
+        ""); // end of dead old prompt
 
       console.log(`[scoreFit] Calling API for batch of ${batch.length}...`);
       const result = await callAI(prompt, { maxTokens: 7500, skipJsonSuffix: true });
@@ -5332,24 +5331,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         return;
       }
 
-      // Client-side label normalizer. The prompt instructs "Strong Fit" |
-      // "Potential Fit" | "Poor Fit" only, but Haiku occasionally leaks
-      // variants like "Tier 1 Fit" or "Good Fit" or "High Fit". Coerce
-      // everything to one of the three canonical labels based on the
-      // numeric score — single source of truth.
-      // Hysteresis: Potential Fit starts at 55 (not 50) so accounts hovering
-      // around the boundary don't flip labels between runs. Consistency tests
-      // showed State Farm/USAA/Allstate swinging [48,52,55] across runs —
-      // at threshold 50 that's a label flip; at 55 they're consistently Poor Fit
-      // until the score is clearly in the Potential range.
-      const canonicalLabel = (score) => score >= 75 ? "Strong Fit" : score >= 55 ? "Potential Fit" : "Poor Fit";
-      // Also strip "tier"/"wall"/"band"/"bucket" from reason text if the
-      // model leaked it anyway — those are internal scoring terminology
-      // we don't want the seller to see.
+      // ── OPTION C: Client-side deterministic scoring ──────────────────
+      // LLM extracted signals; JS computes scores. Zero variance.
       const cleanReason = (r) => (r || "")
         .replace(/\b(tier\s*\d+|the\s+wall|band\s*\d+|bucket\s*\d+)\b/gi, "")
         .replace(/\b(dim[123]\s*[=:]\s*\d+|total\s*dim\d*\s*[=:]\s*\d+)\b/gi, "")
-        .replace(/\(\s*[+\-]?\d+\s*\)/g, "") // strip "(+32)", "(+2)", etc.
+        .replace(/\(\s*[+\-]?\d+\s*\)/g, "")
         .replace(/\bscored?\s+dim\d\s*[=:]\s*\d+/gi, "")
         .replace(/\b(step\s+[abc]|bracket|dimension\s+\d)\b/gi, "")
         .replace(/[+\-]\d+\s*(?:points?|pts?)\b/gi, "")
@@ -5358,60 +5345,26 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
 
       const map = {};
       const memberUpdates = {};
-      // Snap a dimension score to the nearest allowed fixed value.
-      // This prevents the model from interpolating between fixed points.
-      const DIM1_VALID = [12, 14, 22, 24, 25, 27, 32, 34, 35, 37, 40, 42, 43, 45]; // stepA(12/22/32/40) + stepB(0/2/3) + stepC(0/2)
-      const DIM2_VALID = [3, 10, 15, 18, 27, 30]; // fixed lookup values (30 = known customer)
-      const DIM3_VALID = [5, 12, 18, 25]; // fixed lookup values (25 = verified competitor customer)
-      const snap = (val, allowed) => allowed.reduce((best, v) => Math.abs(v - val) < Math.abs(best - val) ? v : best, allowed[0]);
-
-      // Detect known customers — client-side override for dim2
-      const customerNames = (sellerICP?.icp?.customerExamples || []).map(c => (typeof c === "string" ? c : "").toLowerCase().trim()).filter(Boolean);
-      const profileNames = (sellerICP?.icp?.namedCustomerProfiles || []).map(c => (typeof c === "object" ? c.name : c || "").toLowerCase().trim()).filter(Boolean);
-      const allKnownNames = [...new Set([...customerNames, ...profileNames])];
-      const isKnownCustomer = (company) => {
-        const norm = company.toLowerCase().trim().replace(/[^a-z0-9\s]/g, "");
-        return allKnownNames.some(known => {
-          const knownNorm = known.replace(/[^a-z0-9\s]/g, "");
-          return norm.includes(knownNorm) || knownNorm.includes(norm);
-        });
-      };
 
       result.scores.forEach(s => {
-        // Compute total from per-dimension scores with user-adjustable weights
-        // Snap to nearest fixed value to prevent interpolation variance
-        const rawD1 = snap(Math.max(0, Math.min(45, Number(s.dim1) || 0)), DIM1_VALID);
-        let rawD2 = snap(Math.max(0, Math.min(30, Number(s.dim2) || 0)), DIM2_VALID);
-        const rawD3 = snap(Math.max(0, Math.min(25, Number(s.dim3) || 0)), DIM3_VALID);
-        // Override dim2 for known customers
-        if (isKnownCustomer(s.company)) {
-          rawD2 = 30;
-          s.customerSimilarity = `${s.company} is an existing customer — maximum customer similarity.`;
-          s._isKnownCustomer = true;
-        }
-        // Apply weights: normalize raw scores to 0-1, then scale by weight
-        // Dim1 max=45 (product fit), Dim2 max=30 (customer lookalike), Dim3 max=25 (competitive)
-        const d1 = (rawD1 / 45) * fitWeights.dim1;
-        const d2 = (rawD2 / 30) * fitWeights.dim2;
-        const d3 = (rawD3 / 25) * fitWeights.dim3;
-        const baseScore = Math.round(d1 + d2 + d3);
-        const computedScore = Math.max(0, Math.min(100, baseScore));
-        // If all dimensions are null/0, don't fake a score — flag for review
-        if (!Number(s.dim1) && !Number(s.dim2) && !Number(s.dim3)) {
-          console.warn(`[scoring] All dimensions null for ${s.company} — marking as Needs Review`);
-          s.score = 0; s.label = "Needs Review"; s._needsReview = true;
-        } else {
-          s.score = computedScore;
-        }
-        // Store raw dimensions for display
-        s.rawDim1 = rawD1; s.rawDim2 = rawD2; s.rawDim3 = rawD3;
-        const color       = s._needsReview?"var(--ink-3)":s.score>=75?"var(--green)":s.score>=55?"var(--amber)":"var(--red)";
-        const bg          = s._needsReview?"var(--bg-1)":s.score>=75?"var(--green-bg)":s.score>=55?"var(--amber-bg)":"var(--red-bg)";
-        const ot = (s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
-        const ownerColor  = ot.includes("public")?"var(--navy)":ot.includes("pe")?"#6B3A3A":ot.includes("vc")?"var(--green)":ot.includes("bootstrap")?"var(--ink-1)":"var(--ink-1)";
-        // Match against original member names — API may return slightly different casing/suffix
-        // Strip common suffixes for better fuzzy matching (Inc, Corp, LLC, Technologies, etc.)
-        const normalize = (n) => (n||"").toLowerCase().replace(/[,.]?\s*(inc|corp|llc|ltd|co|technologies|technology|group|holdings|solutions|services|platform|software)\s*\.?$/i, "").trim();
+        const signals = s.signals || s; // handle both {company, signals:{...}} and flat format
+        // Compute score deterministically from signals
+        const computed = computeFitScore(signals, sellerICP, fitWeights);
+        s.score = computed.score;
+        s.rawDim1 = computed.rawDim1;
+        s.rawDim2 = computed.rawDim2;
+        s.rawDim3 = computed.rawDim3;
+        s.label = computed.label;
+        s._needsReview = computed.score === 0 && !signals.isCompetitor;
+
+        console.log(`[scoreFit] ${s.company}: dim1=${computed.rawDim1} dim2=${computed.rawDim2} dim3=${computed.rawDim3} = ${computed.score}% (${computed.label}) | industry=${signals.industryMatch} customer=${signals.closestCustomerName||"none"} competitor=${signals.isCompetitor}`);
+
+        const color = s._needsReview ? "var(--ink-3)" : s.score >= 75 ? "var(--green)" : s.score >= 55 ? "var(--amber)" : "var(--red)";
+        const bg = s._needsReview ? "var(--bg-1)" : s.score >= 75 ? "var(--green-bg)" : s.score >= 55 ? "var(--amber-bg)" : "var(--red-bg)";
+        const ot = (signals.ownershipType || s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
+        const ownerColor = ot.includes("public") ? "var(--navy)" : ot.includes("pe") ? "#6B3A3A" : ot.includes("vc") ? "var(--green)" : "var(--ink-1)";
+        // Match against original member names
+        const normalize = (n) => (n || "").toLowerCase().replace(/[,.]?\s*(inc|corp|llc|ltd|co|technologies|technology|group|holdings|solutions|services|platform|software)\s*\.?$/i, "").trim();
         const exactMatch = batch.find(m => m.company === s.company);
         const fuzzyMatch = !exactMatch && batch.find(m =>
           m.company.toLowerCase() === s.company?.toLowerCase() ||
@@ -5419,16 +5372,18 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           s.company?.toLowerCase().includes(m.company.toLowerCase()) ||
           m.company.toLowerCase().includes(s.company?.toLowerCase()));
         const matchedName = exactMatch?.company || fuzzyMatch?.company || s.company;
-        map[matchedName]             = {
+        map[matchedName] = {
           ...s,
-          label: s._needsReview ? "Needs Review" : canonicalLabel(s.score),
-          reason: cleanReason(s.reason),
-          customerSimilarity: cleanReason(s.customerSimilarity),
-          incumbentRisk: cleanReason(s.incumbentRisk),
+          label: computed.label,
+          reason: cleanReason(signals.reason || s.reason),
+          customerSimilarity: cleanReason(signals.customerSimilarity || s.customerSimilarity),
+          incumbentRisk: cleanReason(signals.incumbentRisk || s.incumbentRisk),
           color, bg, ownerColor,
+          bestLOB: signals.bestLOB || s.bestLOB || "",
+          closestCustomer: signals.closestCustomerName || s.closestCustomer || "",
           adoptionProfile: s.adoptionProfile || "",
         };
-        memberUpdates[matchedName]   = { orgSize: s.orgSize||"", ownership: s.ownership||"", ownershipType: s.ownershipType||"" };
+        memberUpdates[matchedName] = { orgSize: signals.orgSize || s.orgSize || "", ownership: signals.ownership || s.ownership || "", ownershipType: signals.ownershipType || s.ownershipType || "" };
       });
 
       // ── Known customer override — client-side catch for fuzzy name matches ──
