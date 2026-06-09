@@ -13658,7 +13658,7 @@ Return ONLY raw JSON:
               return (
                 <div style={{fontSize:11,color:isCached?"var(--green)":isStale?"var(--amber)":"var(--ink-3)",marginBottom:8,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                   {isCached ? "⚡" : isStale ? "⚠" : ageDays >= 1 ? "🕐" : ""}
-                  {isCached ? `Loaded from cache (${ageDays === 0 ? "today" : ageDays === 1 ? "yesterday" : ageDays + " days ago"}) — live data refreshing` : ageDays >= 1 ? `Researched ${ageDays === 1 ? "yesterday" : ageDays + " days ago"}` : ""}
+                  {isCached ? `Loaded from cache (${ageDays === 0 ? "today" : ageDays === 1 ? "yesterday" : ageDays + " days ago"})${brief._loadingSections?.live ? " — live data refreshing" : ""}` : ageDays >= 1 ? `Researched ${ageDays === 1 ? "yesterday" : ageDays + " days ago"}` : ""}
                   {isStale && !isCached && <span style={{fontWeight:600}}> — data may be stale</span>}
                   {isCached && <button onClick={()=>pickAccount(selectedAccount,null,true)} style={{fontSize:10,fontWeight:600,color:"var(--ink-2)",background:"none",border:"1px solid var(--line-0)",borderRadius:6,padding:"2px 8px",cursor:"pointer",marginLeft:4}}>Full Rebuild</button>}
                 </div>
