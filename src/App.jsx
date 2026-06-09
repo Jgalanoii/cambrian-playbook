@@ -1830,15 +1830,48 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p1 = overviewCache
     ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
     : streamAIWithSearch(baseLight+
-    `PUBLIC COMPANY CHECK (FIRST PRIORITY):\n`+
-    `- BEFORE anything else, determine: is ${co} currently publicly traded on ANY stock exchange (NYSE, NASDAQ, LSE, TSX, etc.)?\n`+
-    `- If YES: search for their most recent annual report or 10-K filing. Revenue MUST be TOTAL consolidated revenue from their annual report — NOT a sub-metric like "net fee revenue", "subscription revenue", or "product revenue." A rep who cites a sub-metric sounds uninformed.\n`+
-    `- If YES: employee count, revenue, HQ, and founding year are ALL available in SEC filings. There is ZERO excuse for estimates on a public company. Use exact figures.\n`+
-    `- If the company WAS public but was acquired, taken private, or delisted, it is NOW PRIVATE — do NOT show a ticker.\n\n`+
-    `OWNERSHIP ACCURACY — CRITICAL:\n`+
-    `- Many companies have CHANGED ownership status. Do NOT rely on stale data. Common examples: Blackhawk Network went private (acquired 2018), Dell went private then re-IPO'd, Worldpay was acquired by FIS then spun out to Global Payments.\n`+
-    `- The publicPrivate field and fundingProfile field MUST agree. If fundingProfile says "PE-backed" or "Acquired by X", then publicPrivate MUST say "Private" — never "Public" with a ticker.\n`+
-    `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
+    `OWNERSHIP-DRIVEN INTELLIGENCE (FIRST PRIORITY):\n`+
+    `BEFORE generating any fields, determine the ownership type of ${co}. This dictates your search strategy and data quality requirements:\n\n`+
+    `1. PUBLIC COMPANY (traded on NYSE, NASDAQ, LSE, TSX, etc.):\n`+
+    `   - Search: "${co}" 10-K annual report OR "${co}" investor relations\n`+
+    `   - Revenue: TOTAL consolidated revenue from income statement. NOT a sub-metric (net fee, subscription, product). Cite the fiscal year.\n`+
+    `   - Employee count: Exact figure from annual report. NO estimates.\n`+
+    `   - HQ, founded, ownership: All in SEC filings. Use exact data.\n`+
+    `   - Funding: "Public ([EXCHANGE]: [TICKER])" with market cap if available.\n`+
+    `   - Standard: ZERO tolerance for estimates. All data is publicly available.\n\n`+
+    `2. PE-BACKED (acquired by private equity firm):\n`+
+    `   - Search: "${co}" acquisition OR "${co}" private equity\n`+
+    `   - Revenue: Search for press release at time of acquisition (often discloses revenue/EBITDA). If not found, estimate with reasoning.\n`+
+    `   - Key intel: PE firm name, acquisition year, deal value (if disclosed), hold period, add-on acquisitions, operating partners.\n`+
+    `   - Funding: "Private (PE-backed by [firm name], acquired [year])" — cite the PE firm from search results.\n`+
+    `   - Standard: Acquisition details should be verifiable via press release. Revenue may require estimation.\n\n`+
+    `3. VC-BACKED (venture capital funded):\n`+
+    `   - Search: "${co}" funding round OR "${co}" Crunchbase OR "${co}" Series\n`+
+    `   - Revenue: Rarely public. Estimate based on funding stage, employee count, and industry benchmarks. Always disclose as estimate.\n`+
+    `   - Key intel: Latest round (Series A/B/C/D), lead investors, total raised, valuation (if disclosed), board members from investor firms.\n`+
+    `   - Funding: "Private (VC-backed, Series [X], $[total] raised)" — cite from Crunchbase or press.\n`+
+    `   - Standard: Funding rounds have press releases. Search TechCrunch, Crunchbase, company blog.\n\n`+
+    `4. PRIVATE / BOOTSTRAPPED:\n`+
+    `   - Search: site:${url || co + ".com"} about OR team, then "${co}" LinkedIn\n`+
+    `   - Revenue: Estimate with cited reasoning based on employee count and industry. Always disclose as estimate.\n`+
+    `   - Employee count: Estimate from LinkedIn, team page, or industry databases.\n`+
+    `   - Standard: Limited data expected. Estimates acceptable with reasoning.\n\n`+
+    `5. NONPROFIT:\n`+
+    `   - Search: "${co}" Form 990 OR "${co}" annual report OR "${co}" GuideStar\n`+
+    `   - Revenue: Total public support and revenue from Form 990 or annual report. Available for all US nonprofits.\n`+
+    `   - Key intel: Program spend, administrative ratio, major donors/grantors, board members.\n`+
+    `   - Funding: "Nonprofit — total revenue $[X] (FY[year] Form 990)"\n`+
+    `   - Standard: Form 990 is public record. Revenue should be exact, not estimated.\n\n`+
+    `6. GOVERNMENT:\n`+
+    `   - Search: "${co}" budget OR "${co}" SAM.gov\n`+
+    `   - Revenue: Use budget allocation, not revenue. Cite the fiscal year.\n`+
+    `   - Key intel: Agency head, budget trends, contract vehicles, procurement calendar.\n`+
+    `   - Standard: Public budgets are available. Use exact figures.\n\n`+
+    `OWNERSHIP CHANGE CHECK:\n`+
+    `- Many companies have CHANGED ownership status. Do NOT rely on stale data.\n`+
+    `- Examples: Blackhawk Network went private (acquired 2018), Dell went private then re-IPO'd, Worldpay was acquired by FIS then spun out.\n`+
+    `- The publicPrivate field and fundingProfile field MUST agree.\n`+
+    `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
     `"revenue":"TOTAL consolidated revenue from most recent annual report (e.g. '$25.1B (FY2024)'). For PUBLIC companies: use the TOTAL revenue line from their income statement — NOT a segment, NOT net fee revenue, NOT subscription-only. For PRIVATE companies: provide a reasoned estimate with cited reasoning. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"For PUBLIC companies: use exact figure from annual report (e.g. '418,000'). For PRIVATE: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide exact figure for public companies, estimate for private. NEVER return empty string or 'Not found'.",`+
@@ -2555,7 +2588,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
               `- 10-K Item 1 (Business) contains: business segment descriptions, key customers, competitive position\n`+
               `- 10-K Item 1A (Risk Factors) contains: competitive vulnerabilities, technology dependencies, regulatory exposure\n`+
               `Cite specific filing dates and exact figures. "Per 10-K filed 2/28/2025" is authoritative.\n\n`
-            : `For PRIVATE/STARTUP companies: search for funding rounds, growth metrics, valuation signals.\n`+
+            : `OWNERSHIP-DRIVEN FINANCIAL SEARCH:\n`+
+              `- PE-BACKED: Search "${co}" acquisition deal value EBITDA. PE portfolio companies often disclose revenue/EBITDA at acquisition. Check PE firm's portfolio page. Search for add-on acquisitions and bolt-ons.\n`+
+              `- VC-BACKED: Search "${co}" funding round Series Crunchbase. Total raised and valuation are often in press releases. Revenue is rarely disclosed — estimate from stage + employee count.\n`+
+              `- NONPROFIT: Search "${co}" Form 990 OR annual report. Total revenue, program spend, and executive compensation are public record for US nonprofits.\n`+
+              `- GOVERNMENT: Search "${co}" budget allocation. Use fiscal year budget, not revenue.\n`+
+              `- PRIVATE/BOOTSTRAPPED: Search for funding rounds, growth metrics, valuation signals.\n`+
               `For NONPROFITS: search for annual reports, grant funding, program spending.\n`+
               `CRITICAL FOR PRIVATE COMPANIES: If no public financial data exists, provide REASONED ESTIMATES based on company size, industry, funding stage, and comparable companies. Format: "No published data. Based on [evidence], estimated [metric] is [range]. Comparable companies like [name] in [industry] typically [benchmark]." NEVER leave fields empty — always provide your best estimate with cited reasoning. NEVER state estimates as facts — always disclose they are estimates.\n\n`) +
           `Return raw JSON:\n`+
