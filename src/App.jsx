@@ -2695,6 +2695,23 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           console.log(`[backfill] Revenue filled from P9: ${next.revenue}`);
         }
       }
+      // Revenue RECONCILIATION — if P1 has a sub-metric and P9 has total, P9 wins.
+      // This runs inside mergeDeepIntel where both values are available in the same state update.
+      if (next.revenue && r9.financialDeepDive.revenueTrend) {
+        const p1Value = parseFloat(String(next.revenue).replace(/[^0-9.]/g, "")) * (/B/i.test(next.revenue) ? 1e9 : /M/i.test(next.revenue) ? 1e6 : 1);
+        const p9Text = r9.financialDeepDive.revenueTrend;
+        const p9Figures = [...p9Text.matchAll(/([\$])([\d.,]+)\s*(billion|million|B|M)/gi)].map(m => {
+          const num = parseFloat(m[2].replace(/,/g, ""));
+          const mult = /billion|B/i.test(m[3]) ? 1e9 : 1e6;
+          return { value: num * mult, num, isBillion: /billion|B/i.test(m[3]) };
+        }).filter(f => f.value > 0);
+        const largest = p9Figures.sort((a, b) => b.value - a.value)[0];
+        if (largest && p1Value > 0 && largest.value > p1Value * 2) {
+          const display = largest.isBillion ? `$${largest.num.toFixed(1)}B` : `$${Math.round(largest.num)}M`;
+          console.warn(`[mergeDeepIntel] Revenue reconciled: P1="${next.revenue}" → "${display}" (P9 total is ${(largest.value/p1Value).toFixed(1)}x larger)`);
+          next.revenue = display;
+        }
+      }
       if (!next.headquarters || !next.headquarters.trim()) {
         // Try to extract location from companySnapshot (P1 often mentions it)
         const snap = next.companySnapshot || "";
