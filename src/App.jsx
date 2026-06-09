@@ -2095,11 +2095,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"jobToBeDone":"The core job this product does for ${co} — one sentence in the buyer's language",`+
     `"painRelieved":"The specific pain this removes — concrete and measurable, not abstract",`+
     `"gainCreated":"What ${co} gains — quantified when possible",`+
-    `"challengerInsight":"One assumption ${co}'s industry holds about this area that the seller can disprove with data or a case study — this is the teaching moment",`+
+    `"challengerInsight":"One assumption ${co}'s industry holds about this area that the seller can disprove. CRITICAL: if you cite a specific statistic (e.g. '63% prefer prepaid cards' or '2.3x higher LTV'), you MUST tag the source: [proof pack], [web search], or [industry benchmark]. If you cannot identify the source, write the insight WITHOUT a specific number — 'a majority prefer prepaid cards' is honest, '63% prefer' without a source is fabrication. A rep who cites a fabricated stat in a meeting loses the deal.",`+
     `"joltRiskRemover":"How to take risk off the table for this solution — pilot scope, SLA, phased rollout, or reference customer",`+
-    `"fit":"2 sentences: why this product fits ${co}. Cite ONE differentiator from the proof pack.",`+
-    `"provenWith":"Named customer from the proof pack similar to ${co}, or '[no analogue — verify]'",`+
-    `"measurableOutcome":"Specific outcome (e.g. 'Cut HR ticket volume 30% in 90 days')"},`+
+    `"fit":"2 sentences: why this product fits ${co}. Cite ONE differentiator from the proof pack. Do NOT invent capabilities the seller doesn't have.",`+
+    `"provenWith":"Named customer from the proof pack similar to ${co}, or '[no analogue — verify]'. NEVER invent customer names.",`+
+    `"measurableOutcome":"Specific outcome target. If citing a percentage improvement (e.g. '30% reduction'), tag with [industry benchmark] or [proof pack]. Do NOT invent precise metrics without a source — round numbers like '30%' are suspect without evidence."},`+
     `{"product":"","imperativeServed":"","buyerRole":"","jobToBeDone":"","painRelieved":"","gainCreated":"","challengerInsight":"","joltRiskRemover":"","fit":"","provenWith":"","measurableOutcome":""}],`+
     `"caseStudies":[{"title":"Use a NAMED CUSTOMER from the seller's proof pack — do NOT invent","customer":"Customer name from the seller's list","relevance":"Why this past win is analogous to ${co}'s situation. Cite the specific parallel (industry, size, trigger, pain, outcome).","quantifiedOutcome":"What measurable result that customer achieved — quote from uploaded docs if available, mark as '[unsupported — verify]' if not"},{"title":"","customer":"","relevance":"","quantifiedOutcome":""}],`+
     `"keyContacts":[{"name":"Use ONLY names found in your web search results or the Apollo-verified contacts above. If search returned no name for this role, leave as EMPTY STRING — do NOT guess or fabricate names","title":"Likely title e.g. VP of Operations or Director of Procurement — always fill this even if name is unknown","initials":"First+last initials if name is known, empty string if not","angle":"Use role-specific language: CFO cares about margins and ROI, CIO cares about architecture and integration, CHRO cares about talent and engagement, VP Ops cares about efficiency and process. Match the angle to THEIR mandate, not a generic 'they would benefit from...' Write how to REACH them — what language resonates, what their first-90-day priority likely is."},{"name":"","title":"","initials":"","angle":""}],`+
@@ -8305,12 +8305,12 @@ Return ONLY raw JSON:
       });
 
       // ── CROSS-SECTION CONSISTENCY VALIDATOR ────────────────────────────
-      // Runs after ALL micro-calls merge. Checks for entity contradictions
-      // (same person → different titles across sections, CEO conflicts,
-      // fabricated names, date mismatches). Auto-reconciles or strips.
-      // This is the P0 fix for the "Alyson Caruso" vs "Joe Ucuzoglu" bug.
-      setTimeout(() => {
-        setBrief(current => {
+      // SYNCHRONOUS — runs immediately after allDone, before Quick Take/5Q.
+      // Pure JS (no API calls) so it completes in <100ms. Previously was in
+      // setTimeout(500) which could be cut off by the 90s hard timeout.
+      // Checks: CEO conflicts, revenue reconciliation, employee counts,
+      // P3 metric cross-check, placeholder stripping, data confidence.
+      setBrief(current => {
           if (!current?.companySnapshot) return current;
 
           // Gather all named entities and claims across sections
@@ -8635,7 +8635,9 @@ Return ONLY raw JSON:
 
           return current;
         });
-      }, 500); // slight delay to ensure all mergers have applied
+      // ── POST-VALIDATOR: Quick Take, 5 Questions, Discovery ──────────
+      // These fire AFTER the consistency validator has cleaned the data,
+      // so they work from reconciled, verified facts.
       setTimeout(() => {
         setBrief(current => {
           if (current) {
