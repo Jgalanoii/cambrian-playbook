@@ -7841,106 +7841,116 @@ Return ONLY raw JSON:
               if (hqContaminated) console.warn(`[brief-cache] Cache contaminated — snapshot says "${snapCity}" but HQ says "${hqCity}" — rebuilding`);
               if (ageDays < 7 && hasCritical && !hqContaminated) {
                 console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
-                // Clear ALL loading/failure flags from cached data — the brief IS complete.
-                // Only mark 'live' as loading since we refresh headlines in background.
-                const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: true, roles: false, deepIntel: false }, _failedSections: [], _error: null };
+                // ── CACHE BACKFILL: serve cached data instantly, then fill gaps ──
+                // Detect which sections are missing from cached data and fire targeted calls.
+                const missingFinancial = !cd.financialDeepDive?.revenueTrend;
+                const missingCompetitive = !cd.competitivePositioning?.primaryCompetitors?.length;
+                const missingTldr = !cd.tldr;
+                const missingFiveQs = !cd.fiveQuestions;
+                const gapCount = [missingFinancial, missingCompetitive, missingTldr, missingFiveQs].filter(Boolean).length;
+                if (gapCount) console.log(`[cache] ${gapCount} gaps detected — backfilling: ${[missingFinancial&&"financial", missingCompetitive&&"competitive", missingTldr&&"quickTake", missingFiveQs&&"5questions"].filter(Boolean).join(", ")}`);
+
+                // Mark missing deep intel sections as loading so UI shows spinners
+                const loadingFlags = { overview: false, executives: false, strategy: false, solutions: false, live: true, roles: false, deepIntel: missingFinancial || missingCompetitive };
+                const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: loadingFlags, _failedSections: [], _error: null };
                 setBrief(cachedBriefData);
                 setBriefLoading(false);
                 setBriefStatus("");
-                // Refresh live sections (P5 headlines) + generate Quick Take, 5Q, Discovery
-                // Safety timeout: clear ALL loading flags after 30s in case any call hangs
-                setTimeout(() => {
-                  setBrief(prev => {
-                    if (!prev?._loadingSections) return prev;
-                    const anyLoading = Object.values(prev._loadingSections).some(Boolean);
-                    if (!anyLoading) return prev;
-                    console.warn("[cache] Safety timeout: clearing stale loading flags after 30s");
-                    return { ...prev, _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false } };
-                  });
-                }, 30000);
+
+                const url = member.company_url || "";
+                const deepIntelIdentityCache = url && url !== co
+                  ? `IDENTITY: Research ONLY the company at https://${url} ("${co}"). Include "${url}" in search queries. Discard results about different companies.\n\n`
+                  : `IDENTITY: Research "${co}" ONLY.\n\n`;
+
                 (async () => {
-                  // P5: refresh headlines in background
+                  // P5: refresh headlines
                   try {
-                    const p5 = streamAIWithSearch(
+                    const p5Result = await streamAIWithSearch(
                       `Search for recent information about "${co}". Use at least one search for press releases.\n` +
                       `Search 1: "${co}" news OR press release 2025 OR 2026\nSearch 2: "${co}" Glassdoor rating reviews\n` +
                       `Return ONLY raw JSON: {"recentHeadlines":[{"headline":"","relevance":"","type":""}],"recentSignals":[],"growthSignals":[]}`,
                       null, 1800, { maxSearches: 2 }
                     );
-                    const p5Result = await p5;
                     if (p5Result) setBrief(prev => prev ? { ...prev, ...(p5Result.recentHeadlines ? { recentHeadlines: p5Result.recentHeadlines } : {}), ...(p5Result.growthSignals ? { growthSignals: p5Result.growthSignals } : {}), ...(p5Result.recentSignals ? { recentSignals: p5Result.recentSignals } : {}), _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev);
                   } catch { setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev); }
 
-                  // Generate Quick Take, 5 Questions, and Discovery Qs from cached brief data.
-                  // These fire after allDone in a fresh build, but allDone never runs on cache hits.
-                  // Use the cached brief as context — same quality, just computed on load.
+                  // Backfill missing deep intel sections
+                  if (missingFinancial) {
+                    try {
+                      const d = await claudeFetch({ model: SONNET, max_tokens: 2000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+                        messages: [{ role: "user", content: deepIntelIdentityCache + `Research the financial performance of ${co}${url ? ` (${url})` : ""}.\nReturn raw JSON:\n{"financialDeepDive":{"revenueTrend":"Revenue data with growth rates","marginTrend":"Margin analysis","segmentBreakdown":"Business segment breakdown","capitalPriorities":"Where they invest","earningsInsight":"Leadership quotes or strategic signals","guidanceQuote":"Forward-looking statements"}}` }] });
+                      const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+                      const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
+                      const parsed = extractJsonWithKey(raw, "financialDeepDive") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+                      if (parsed?.financialDeepDive) {
+                        setBrief(prev => prev ? { ...prev, financialDeepDive: parsed.financialDeepDive } : prev);
+                        console.log("[cache] Financial backfilled");
+                      }
+                    } catch (e) { console.warn("[cache] Financial backfill failed:", e?.message); }
+                  }
+                  if (missingCompetitive) {
+                    try {
+                      const d = await claudeFetch({ model: SONNET, max_tokens: 2000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+                        messages: [{ role: "user", content: deepIntelIdentityCache + `Research the competitive landscape of ${co}${url ? ` (${url})` : ""}.\nReturn raw JSON:\n{"competitivePositioning":{"marketPosition":"2-3 sentences on market position","primaryCompetitors":[{"name":"Competitor","strength":"Their edge","weakness":"Where ${co} beats them","recentMove":"Latest action"}],"whereWinning":"Where ${co} wins deals","whereLosing":"Where they lose","displacementAngle":"How the seller should position against ${co}'s current approach"}}` }] });
+                      const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+                      const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
+                      const parsed = extractJsonWithKey(raw, "competitivePositioning") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+                      if (parsed?.competitivePositioning) {
+                        setBrief(prev => prev ? { ...prev, competitivePositioning: parsed.competitivePositioning } : prev);
+                        console.log("[cache] Competitive backfilled");
+                      }
+                    } catch (e) { console.warn("[cache] Competitive backfill failed:", e?.message); }
+                  }
+                  // Clear deepIntel loading flag
+                  setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), deepIntel: false } } : prev);
+
+                  // Quick Take + 5 Questions + Discovery (lightweight Haiku calls)
                   setTimeout(() => {
                     setBrief(current => {
                       if (!current?.companySnapshot) return current;
-                      // Quick Take
                       if (!current.tldr) {
-                        const fullContext = [
+                        const ctx = [
                           current.companySnapshot ? `Company: ${current.companySnapshot.slice(0, 400)}` : "",
                           current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0, 300)}` : "",
                           current.openingAngle ? `Opening: ${current.openingAngle.slice(0, 200)}` : "",
-                          current.fundingProfile ? `Funding: ${current.fundingProfile.slice(0, 200)}` : "",
                           current.revenue ? `Revenue: ${current.revenue}` : "",
-                          current.employeeCount ? `Employees: ${current.employeeCount}` : "",
-                          (current.recentHeadlines||[]).slice(0,3).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean).join("; "),
-                          (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
                           current.competitivePositioning?.marketPosition ? `Market: ${current.competitivePositioning.marketPosition.slice(0, 200)}` : "",
                           current.financialDeepDive?.revenueTrend ? `Trend: ${current.financialDeepDive.revenueTrend.slice(0, 200)}` : "",
                         ].filter(Boolean).join("\n");
-                        callAI(
-                          `You are a senior sales strategist. Extract a 3-part Quick Take on ${co} from the intelligence below.\n\n` +
-                          `FULL COMPANY INTELLIGENCE:\n${fullContext}\n\n` +
-                          `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
-                          { maxTokens: 600 }
-                        ).then(r => {
-                          if (r?.tldr?.topFinding) {
-                            setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev);
-                            console.log("[cache] Quick Take generated from cached brief");
-                          }
-                        }).catch(() => {});
+                        callAI(`You are a senior sales strategist. Extract a 3-part Quick Take on ${co}.\n\nINTELLIGENCE:\n${ctx}\n\nReturn ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`, { maxTokens: 600 })
+                          .then(r => { if (r?.tldr?.topFinding) { setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev); console.log("[cache] Quick Take generated"); } }).catch(() => {});
                       }
-                      // 5 Questions
                       if (!current.fiveQuestions) {
-                        const briefContext = [
-                          current.companySnapshot ? `Company: ${current.companySnapshot.slice(0,300)}` : "",
-                          current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0,300)}` : "",
-                          current.openingAngle ? `Opening: ${current.openingAngle}` : "",
-                          (current.recentHeadlines||[]).slice(0,3).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean).join("; "),
-                          current.fundingProfile ? `Funding: ${current.fundingProfile.slice(0,200)}` : "",
-                          (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
-                        ].filter(Boolean).join("\n");
-                        const sellerCtxForQs = sellerUrl && sellerUrl !== "research-only"
-                          ? `\nSELLER CONTEXT (the user sells for ${sellerUrl}):\n` +
-                            (sellerICP?.sellerDescription ? `What they sell: ${sellerICP.sellerDescription}\n` : "") +
-                            (sellerICP?.marketCategory ? `Category: ${sellerICP.marketCategory}\n` : "") +
-                            (products.filter(p=>p.name?.trim()).length ? `Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")}\n` : "") +
-                            `\nQuestions should uncover whether ${co} has needs that align with what this seller offers.\n`
-                          : "";
-                        callAI(
-                          `You are a senior sales strategist. Based on the research below about ${co}, generate exactly 5 discovery questions.\n\n` +
-                          `RESEARCH FINDINGS:\n${briefContext}\n\n` + sellerCtxForQs +
-                          `RULES: open-ended, reference specific findings, conversational, no seller product names.\n\n` +
-                          `Return ONLY raw JSON: {"fiveQuestions":[{"question":"...","rationale":"...","source":"..."}]}`,
-                          { maxTokens: 1200 }
-                        ).then(r => {
-                          if (r?.fiveQuestions?.length) {
-                            setBrief(prev => prev ? { ...prev, fiveQuestions: r.fiveQuestions } : prev);
-                            console.log("[cache] 5 Questions generated from cached brief");
-                          }
-                        }).catch(() => {});
+                        const ctx = [current.companySnapshot?.slice(0,300), current.strategicTheme?.slice(0,300), current.openingAngle].filter(Boolean).join("\n");
+                        const sellerCtx = sellerUrl && sellerUrl !== "research-only" ? `\nSELLER: ${sellerICP?.sellerDescription || sellerUrl}\n` : "";
+                        callAI(`Generate 5 discovery questions about ${co}.\n\nRESEARCH:\n${ctx}\n${sellerCtx}\nReturn ONLY raw JSON: {"fiveQuestions":[{"question":"...","rationale":"...","source":"..."}]}`, { maxTokens: 1200 })
+                          .then(r => { if (r?.fiveQuestions?.length) { setBrief(prev => prev ? { ...prev, fiveQuestions: r.fiveQuestions } : prev); console.log("[cache] 5 Questions generated"); } }).catch(() => {});
                       }
-                      // Discovery Qs — fire from generateDiscoveryQs if available
                       if (!discoveryQs && current.solutionMapping?.some(s=>s?.product)) {
                         Promise.resolve().then(() => generateDiscoveryQs(current, member));
                       }
                       return current;
                     });
-                  }, 1000); // slight delay to let P5 refresh merge first
+                  }, 1000);
                 })();
+
+                // Auto-rebuild safety net: if gaps remain after 45s, trigger full rebuild
+                setTimeout(() => {
+                  setBrief(current => {
+                    if (!current?._cached) return current; // already rebuilt
+                    const stillMissing = !current.financialDeepDive?.revenueTrend || !current.competitivePositioning?.primaryCompetitors?.length;
+                    if (stillMissing) {
+                      console.warn("[cache] Gaps remain after 45s — triggering automatic full rebuild");
+                      pickAccount(member, null, true); // forceRebuild = true
+                    } else {
+                      // Clear any remaining loading flags
+                      if (Object.values(current._loadingSections || {}).some(Boolean)) {
+                        return { ...current, _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false } };
+                      }
+                    }
+                    return current;
+                  });
+                }, 45000);
                 return;
               } else if (ageDays < 7 && !hasCritical) {
                 console.warn(`[brief-cache] Cached brief for ${co} is incomplete (missing critical sections) — rebuilding fresh`);
