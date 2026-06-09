@@ -2491,19 +2491,21 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     secFilingCtx;
 
   // MICRO 7: Competitive Positioning — who they compete with and where they win/lose
-  // WAVE 3: delayed 12s to let Wave 1+2 finish before firing
+  // WAVE 3: waits for P1 to resolve, then uses its companySnapshot as identity context.
+  // This eliminates ambiguity — P1 already knows what the company does.
   const p7 = (async()=>{
-    await new Promise(r => setTimeout(r, 12000));
+    // Wait for P1 to resolve — we need its companySnapshot to disambiguate
+    let p1Snapshot = "";
+    try { const r1 = await p1; p1Snapshot = r1?.companySnapshot || ""; } catch {}
     try {
+      const companyDescription = p1Snapshot ? `\nCOMPANY DESCRIPTION (from verified web research — use this to filter search results):\n"${p1Snapshot.slice(0, 400)}"\nIf a search result describes a company that does NOT match this description, DISCARD it. This company is in ${p1Snapshot.match(/(?:is a|is an|provides|offers|specializes in)\s+([^.]{10,60})/i)?.[1] || "technology/services"} — not adhesives, manufacturing, or any other unrelated industry.\n\n` : "";
       const d = await claudeFetch({
         model: SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
-          // P7 uses relaxed identity — competitive analysis comes from industry reports,
-          // analyst coverage, and comparison sites, not the company's own website.
           (url && url !== co
-            ? `IDENTITY: Research the competitive landscape of the company at ${url} ("${co}"). Include "${url}" in EVERY search query to anchor results to the correct company. "${co}" alone is ambiguous — there may be unrelated companies with the same name in different industries. If a search result describes a company in a DIFFERENT industry than what ${url} does, DISCARD it entirely. Every competitor you list must compete with the company at ${url}, not a same-named company in a different industry.\n\n`
-            : `IDENTITY: Research "${co}" ONLY.\n\n`) +
+            ? `IDENTITY: Research the competitive landscape of "${co}" (${url}).${companyDescription}Include "${url}" in search queries when possible. "${co}" alone is ambiguous.\n\n`
+            : `IDENTITY: Research "${co}" ONLY.${companyDescription}\n\n`) +
           secFilingCtx +
           firmographicsTruth+
           `Research the competitive landscape of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
@@ -2531,8 +2533,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // MICRO 8: Board & Investors — who governs and funds this company
   // WAVE 3: delayed 12s to let Wave 1+2 finish before firing
   const p8 = (async()=>{
-    await new Promise(r => setTimeout(r, 12000));
+    // Wait for P1 to resolve — we need its companySnapshot to disambiguate
+    let p1Snapshot = "";
+    try { const r1 = await p1; p1Snapshot = r1?.companySnapshot || ""; } catch {}
     try {
+      const companyDescription = p1Snapshot ? `\nCOMPANY DESCRIPTION (from verified web research — use this to filter search results):\n"${p1Snapshot.slice(0, 400)}"\nIf a search result describes a company that does NOT match this description, DISCARD it. This company is in ${p1Snapshot.match(/(?:is a|is an|provides|offers|specializes in)\s+([^.]{10,60})/i)?.[1] || "technology/services"} — not adhesives, manufacturing, or any other unrelated industry.\n\n` : "";
       const d = await claudeFetch({
         model:SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -2540,8 +2545,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           // P8 uses relaxed identity — board/investor data comes from Crunchbase,
           // PitchBook, press releases, SEC filings — not the company's own site.
           (url && url !== co
-            ? `IDENTITY: Research board and investor data for the company at ${url} ("${co}"). Include "${url}" in EVERY search query. "${co}" alone is ambiguous. Board/investor data comes from Crunchbase, PitchBook, SEC filings, and press. Verify each result is about the company at ${url}, not a same-named entity.\n\n`
-            : `IDENTITY: Research "${co}" ONLY.\n\n`) +
+            ? `IDENTITY: Research board and investor data for the company at ${url} ("${co}").${companyDescription}Include "${url}" in EVERY search query. "${co}" alone is ambiguous. Board/investor data comes from Crunchbase, PitchBook, SEC filings, and press. Verify each result is about the company at ${url}, not a same-named entity.\n\n`
+            : `IDENTITY: Research "${co}" ONLY.${companyDescription}\n\n`) +
           secFilingCtx +
           firmographicsTruth+
           `Research the board of directors, investors, and governance of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
@@ -2569,8 +2574,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // MICRO 9: Financial Deep Dive — trends, margins, segments, guidance
   // WAVE 3: delayed 12s to let Wave 1+2 finish before firing
   const p9 = (async()=>{
-    await new Promise(r => setTimeout(r, 12000));
+    // Wait for P1 to resolve — we need its companySnapshot to disambiguate
+    let p1Snapshot = "";
+    try { const r1 = await p1; p1Snapshot = r1?.companySnapshot || ""; } catch {}
     try {
+      const companyDescription = p1Snapshot ? `\nCOMPANY DESCRIPTION (from verified web research — use this to filter search results):\n"${p1Snapshot.slice(0, 400)}"\nIf a search result describes a company that does NOT match this description, DISCARD it. This company is in ${p1Snapshot.match(/(?:is a|is an|provides|offers|specializes in)\s+([^.]{10,60})/i)?.[1] || "technology/services"} — not adhesives, manufacturing, or any other unrelated industry.\n\n` : "";
       const d = await claudeFetch({
         model:SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
@@ -2579,8 +2587,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           // external sources (TechCrunch, Bloomberg, Crunchbase), not the company's own site.
           // The strict site: search in deepIntelIdentity blocks these and returns nothing.
           (url && url !== co
-            ? `IDENTITY: Research financial data for the company at ${url} ("${co}"). Include "${url}" in EVERY search query. "${co}" alone is ambiguous — there may be unrelated companies with the same name. If search returns financial data for a company in a DIFFERENT industry than ${url}, DISCARD it entirely. For PRIVATE companies, search TechCrunch, Bloomberg, Crunchbase, PitchBook with "${url}" as anchor.\n\n`
-            : `IDENTITY: Research "${co}" ONLY.\n\n`) +
+            ? `IDENTITY: Research financial data for the company at ${url} ("${co}").${companyDescription}Include "${url}" in EVERY search query. "${co}" alone is ambiguous — there may be unrelated companies with the same name. If search returns financial data for a company in a DIFFERENT industry than ${url}, DISCARD it entirely. For PRIVATE companies, search TechCrunch, Bloomberg, Crunchbase, PitchBook with "${url}" as anchor.\n\n`
+            : `IDENTITY: Research "${co}" ONLY.${companyDescription}\n\n`) +
           secFilingCtx +
           firmographicsTruth+
           `Research the financial performance and trajectory of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
