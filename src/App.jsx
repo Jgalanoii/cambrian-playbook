@@ -1830,14 +1830,18 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const p1 = overviewCache
     ? (overviewCache instanceof Promise ? overviewCache : Promise.resolve(overviewCache))
     : streamAIWithSearch(baseLight+
+    `PUBLIC COMPANY CHECK (FIRST PRIORITY):\n`+
+    `- BEFORE anything else, determine: is ${co} currently publicly traded on ANY stock exchange (NYSE, NASDAQ, LSE, TSX, etc.)?\n`+
+    `- If YES: search for their most recent annual report or 10-K filing. Revenue MUST be TOTAL consolidated revenue from their annual report — NOT a sub-metric like "net fee revenue", "subscription revenue", or "product revenue." A rep who cites a sub-metric sounds uninformed.\n`+
+    `- If YES: employee count, revenue, HQ, and founding year are ALL available in SEC filings. There is ZERO excuse for estimates on a public company. Use exact figures.\n`+
+    `- If the company WAS public but was acquired, taken private, or delisted, it is NOW PRIVATE — do NOT show a ticker.\n\n`+
     `OWNERSHIP ACCURACY — CRITICAL:\n`+
     `- Many companies have CHANGED ownership status. Do NOT rely on stale data. Common examples: Blackhawk Network went private (acquired 2018), Dell went private then re-IPO'd, Worldpay was acquired by FIS then spun out to Global Payments.\n`+
-    `- If a company was acquired, taken private, or delisted, it is PRIVATE — do NOT show a ticker.\n`+
     `- The publicPrivate field and fundingProfile field MUST agree. If fundingProfile says "PE-backed" or "Acquired by X", then publicPrivate MUST say "Private" — never "Public" with a ticker.\n`+
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded on that exchange. When in doubt, write "Private" or "Public" without a ticker.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"$2.4B (FY2024) OR for private companies: '~$3-6M (estimated — [industry] consulting firm with ~30 employees typically generates $100-200K/employee annually)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — you MUST provide a reasoned estimate with cited reasoning for private companies. NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"~270,000 OR for private companies: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide an estimate. NEVER return empty string or 'Not found'.",`+
+    `"revenue":"TOTAL consolidated revenue from most recent annual report (e.g. '$25.1B (FY2024)'). For PUBLIC companies: use the TOTAL revenue line from their income statement — NOT a segment, NOT net fee revenue, NOT subscription-only. For PRIVATE companies: provide a reasoned estimate with cited reasoning. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"For PUBLIC companies: use exact figure from annual report (e.g. '418,000'). For PRIVATE: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide exact figure for public companies, estimate for private. NEVER return empty string or 'Not found'.",`+
     `"headquarters":"Denver, CO OR best estimate from website/LinkedIn. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — check website footer, contact page, LinkedIn. MUST provide a value. Kennesaw, GA if that's what the website says.","founded":"2023 OR best estimate. MUST provide a value.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field AND companySnapshot. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year. ANTI-HALLUCINATION: ONLY state acquisition or funding facts that appeared in your web search results. If companySnapshot mentions an acquirer, use THAT name — do NOT contradict it with a different acquirer from training knowledge. A wrong acquirer name (e.g. naming a medical device company as the acquirer of a rewards platform) destroys credibility instantly. Empty string if no verified funding data found.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
@@ -8354,15 +8358,27 @@ Return ONLY raw JSON:
           }
 
           // Revenue reconciliation: P9 financials are web-searched and higher trust than P1 overview.
-          // If they disagree, P9 wins.
+          // For PUBLIC companies, P9 uses SEC filings (10-K) — authoritative source.
+          // If P1 shows a sub-metric (net fee revenue, subscription revenue) and P9 shows total, P9 wins.
           if (current.financialDeepDive?.revenueTrend && current.revenue) {
-            const overviewRev = current.revenue.replace(/[^0-9.]/g, "");
-            if (overviewRev && !current.financialDeepDive.revenueTrend.includes(overviewRev.slice(0, 4))) {
-              // Extract the dollar figure from P9's revenueTrend as the authoritative source
-              const p9Rev = current.financialDeepDive.revenueTrend.match(/([\$][\d.,]+\s*(?:billion|million|B|M))/i);
-              if (p9Rev) {
-                console.warn(`[consistency] Revenue reconciled: P1="${current.revenue}" → P9="${p9Rev[1]}" (P9 is authoritative)`);
-                current.revenue = p9Rev[1];
+            const overviewRev = parseFloat(current.revenue.replace(/[^0-9.]/g, "")) || 0;
+            const p9Text = current.financialDeepDive.revenueTrend;
+            // Extract all dollar figures from P9 and find the largest (likely total revenue)
+            const p9Figures = [...p9Text.matchAll(/([\$])([\d.,]+)\s*(billion|million|B|M)/gi)].map(m => {
+              const num = parseFloat(m[2].replace(/,/g, ""));
+              const mult = /billion|B/i.test(m[3]) ? 1e9 : 1e6;
+              return { raw: m[0], value: num * mult, display: `$${m[2]}${/billion|B/i.test(m[3]) ? "B" : "M"}` };
+            }).filter(f => f.value > 0);
+            const largest = p9Figures.sort((a, b) => b.value - a.value)[0];
+            if (largest) {
+              const p1Value = overviewRev * (/B/i.test(current.revenue) ? 1e9 : 1e6);
+              // If P9's largest figure is >2x P1's figure, P1 likely has a sub-metric
+              if (p1Value > 0 && largest.value > p1Value * 2) {
+                console.warn(`[consistency] Revenue reconciled: P1="${current.revenue}" (likely sub-metric) → P9="${largest.display}" (total revenue)`);
+                current.revenue = largest.display.replace(/\$(\d+),?(\d*)M/, (_, a, b) => `$${a}${b ? ","+b : ""} million`);
+                // Use cleaner format
+                if (largest.value >= 1e9) current.revenue = `$${(largest.value / 1e9).toFixed(1)}B`;
+                else current.revenue = `$${(largest.value / 1e6).toFixed(0)}M`;
               }
             }
           }
