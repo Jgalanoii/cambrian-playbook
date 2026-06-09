@@ -2688,15 +2688,15 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const snapLow = (prev?.companySnapshot || '').toLowerCase();
       const finContaminated = contaminantIndustries.some(ci => finText.includes(ci) && !snapLow.includes(ci));
       if (finContaminated) {
-        console.warn(`[p9] FINANCIAL CONTAMINATION: P9 references industries not in snapshot — discarding entire section`);
-        // Don't set financialDeepDive — it's about the wrong company
+        console.warn(`[p9] FINANCIAL CONTAMINATION: P9 references industries not in snapshot — discarding entire section and skipping all P9 backfills`);
+        // Don't set financialDeepDive AND skip all downstream P9 usage
+        r9 = null; // null out to prevent any further access to contaminated data
       } else {
         next.financialDeepDive = r9.financialDeepDive;
       }
       // ── BACKFILL: If P1 left revenue/HQ empty, extract from P9's richer estimates ──
-      // P9 (financial deep dive) always generates reasoned estimates for private companies.
-      // P1 returns "" due to conflicting empty-field rules. Use P9 data to fill the overview.
-      if (!next.revenue || !next.revenue.trim()) {
+      // SKIP if P9 was contaminated (r9 nulled above)
+      if (r9 && (!next.revenue || !next.revenue.trim())) {
         const rt = r9.financialDeepDive.revenueTrend || "";
         // Extract the dollar estimate: "$3-6M", "$3-6 million", "~$4.5M", etc.
         const dollarMatch = rt.match(/(?:estimated\s+(?:annual\s+)?revenue\s+(?:is|of)\s+)?([\$~]\s*[\d.,]+-?[\d.,]*\s*(?:million|M|billion|B|K))/i)
@@ -2708,8 +2708,8 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         }
       }
       // Revenue RECONCILIATION — if P1 has a sub-metric and P9 has total, P9 wins.
-      // This runs inside mergeDeepIntel where both values are available in the same state update.
-      if (next.revenue && r9.financialDeepDive.revenueTrend) {
+      // SKIP if P9 was contaminated (r9 nulled above)
+      if (r9 && next.revenue && r9.financialDeepDive?.revenueTrend) {
         const p1Value = parseFloat(String(next.revenue).replace(/[^0-9.]/g, "")) * (/B/i.test(next.revenue) ? 1e9 : /M/i.test(next.revenue) ? 1e6 : 1);
         const p9Text = r9.financialDeepDive.revenueTrend;
         const p9Figures = [...p9Text.matchAll(/([\$])([\d.,]+)\s*(billion|million|B|M)/gi)].map(m => {
