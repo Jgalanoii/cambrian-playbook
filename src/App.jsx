@@ -1806,6 +1806,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const crossSessionCtx = _crossSessionCtx || "";
 
   const baseFull = baseLight +
+    firmographicsTruth +
     `${universalCtx}\n`+
     `SELLER CONTEXT:\n${sellerCtx}${prodCtx}\n`+
     proofPack +
@@ -8352,11 +8353,17 @@ Return ONLY raw JSON:
             }
           }
 
-          // Check: does employeeCount in overview conflict with workforce section?
+          // Revenue reconciliation: P9 financials are web-searched and higher trust than P1 overview.
+          // If they disagree, P9 wins.
           if (current.financialDeepDive?.revenueTrend && current.revenue) {
             const overviewRev = current.revenue.replace(/[^0-9.]/g, "");
             if (overviewRev && !current.financialDeepDive.revenueTrend.includes(overviewRev.slice(0, 4))) {
-              console.warn(`[consistency] Revenue mismatch: overview="${current.revenue}" vs financials mentions different figure`);
+              // Extract the dollar figure from P9's revenueTrend as the authoritative source
+              const p9Rev = current.financialDeepDive.revenueTrend.match(/([\$][\d.,]+\s*(?:billion|million|B|M))/i);
+              if (p9Rev) {
+                console.warn(`[consistency] Revenue reconciled: P1="${current.revenue}" → P9="${p9Rev[1]}" (P9 is authoritative)`);
+                current.revenue = p9Rev[1];
+              }
             }
           }
 
@@ -8380,6 +8387,32 @@ Return ONLY raw JSON:
           };
           stripAllPlaceholders(current);
           if (current.publicSentiment) stripAllPlaceholders(current.publicSentiment);
+
+          // ── P3 vs P6 HIRING CLAIM CROSS-CHECK ───────────────────────────
+          // P3 (strategy) runs in parallel with P6 (open positions) and may
+          // fabricate specific hiring numbers. Strip numeric job claims from
+          // P3 fields if they contradict P6's actual findings.
+          const p6RoleCount = (current.openRoles?.roles || []).filter(r => r?.title).length;
+          const stripFakeHiringClaims = (text) => {
+            if (!text) return text;
+            // Match patterns like "115 open roles", "posting 200 jobs", "hiring for 50 positions"
+            return text.replace(/\b(\d{2,})\s*(?:open\s+)?(?:roles?|jobs?|positions?|postings?|openings?)\b/gi, (match, num) => {
+              const claimed = parseInt(num);
+              // If P6 found roles, allow claims within 2x of actual. Otherwise strip.
+              if (p6RoleCount > 0 && claimed <= p6RoleCount * 2) return match;
+              console.warn(`[consistency] P3 claimed "${match}" but P6 found ${p6RoleCount} roles — stripping`);
+              return "open roles";
+            });
+          };
+          if (current.openingAngle) current.openingAngle = stripFakeHiringClaims(current.openingAngle);
+          if (current.elevatorPitch) current.elevatorPitch = stripFakeHiringClaims(current.elevatorPitch);
+          if (current.outreachEmails?.length) {
+            current.outreachEmails = current.outreachEmails.map(e => ({
+              ...e,
+              subject: stripFakeHiringClaims(e.subject),
+              body: stripFakeHiringClaims(e.body),
+            }));
+          }
 
           // ── DATA CONFIDENCE COMPUTATION ────────────────────────────────
           // Count how many sections have substantive data (proxy for web-grounded)
