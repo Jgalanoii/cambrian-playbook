@@ -7845,8 +7845,9 @@ Return ONLY raw JSON:
                 setBrief(cachedBriefData);
                 setBriefLoading(false);
                 setBriefStatus("");
-                // Refresh ONLY live sections (P5 headlines) in background
+                // Refresh live sections (P5 headlines) + generate Quick Take, 5Q, Discovery
                 (async () => {
+                  // P5: refresh headlines in background
                   try {
                     const p5 = streamAIWithSearch(
                       `Search for recent information about "${co}". Use at least one search for press releases.\n` +
@@ -7857,6 +7858,76 @@ Return ONLY raw JSON:
                     const p5Result = await p5;
                     if (p5Result) setBrief(prev => prev ? { ...prev, ...(p5Result.recentHeadlines ? { recentHeadlines: p5Result.recentHeadlines } : {}), ...(p5Result.growthSignals ? { growthSignals: p5Result.growthSignals } : {}), ...(p5Result.recentSignals ? { recentSignals: p5Result.recentSignals } : {}), _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev);
                   } catch { setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev); }
+
+                  // Generate Quick Take, 5 Questions, and Discovery Qs from cached brief data.
+                  // These fire after allDone in a fresh build, but allDone never runs on cache hits.
+                  // Use the cached brief as context — same quality, just computed on load.
+                  setTimeout(() => {
+                    setBrief(current => {
+                      if (!current?.companySnapshot) return current;
+                      // Quick Take
+                      if (!current.tldr) {
+                        const fullContext = [
+                          current.companySnapshot ? `Company: ${current.companySnapshot.slice(0, 400)}` : "",
+                          current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0, 300)}` : "",
+                          current.openingAngle ? `Opening: ${current.openingAngle.slice(0, 200)}` : "",
+                          current.fundingProfile ? `Funding: ${current.fundingProfile.slice(0, 200)}` : "",
+                          current.revenue ? `Revenue: ${current.revenue}` : "",
+                          current.employeeCount ? `Employees: ${current.employeeCount}` : "",
+                          (current.recentHeadlines||[]).slice(0,3).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean).join("; "),
+                          (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
+                          current.competitivePositioning?.marketPosition ? `Market: ${current.competitivePositioning.marketPosition.slice(0, 200)}` : "",
+                          current.financialDeepDive?.revenueTrend ? `Trend: ${current.financialDeepDive.revenueTrend.slice(0, 200)}` : "",
+                        ].filter(Boolean).join("\n");
+                        callAI(
+                          `You are a senior sales strategist. Extract a 3-part Quick Take on ${co} from the intelligence below.\n\n` +
+                          `FULL COMPANY INTELLIGENCE:\n${fullContext}\n\n` +
+                          `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
+                          { maxTokens: 600 }
+                        ).then(r => {
+                          if (r?.tldr?.topFinding) {
+                            setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev);
+                            console.log("[cache] Quick Take generated from cached brief");
+                          }
+                        }).catch(() => {});
+                      }
+                      // 5 Questions
+                      if (!current.fiveQuestions) {
+                        const briefContext = [
+                          current.companySnapshot ? `Company: ${current.companySnapshot.slice(0,300)}` : "",
+                          current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0,300)}` : "",
+                          current.openingAngle ? `Opening: ${current.openingAngle}` : "",
+                          (current.recentHeadlines||[]).slice(0,3).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean).join("; "),
+                          current.fundingProfile ? `Funding: ${current.fundingProfile.slice(0,200)}` : "",
+                          (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
+                        ].filter(Boolean).join("\n");
+                        const sellerCtxForQs = sellerUrl && sellerUrl !== "research-only"
+                          ? `\nSELLER CONTEXT (the user sells for ${sellerUrl}):\n` +
+                            (sellerICP?.sellerDescription ? `What they sell: ${sellerICP.sellerDescription}\n` : "") +
+                            (sellerICP?.marketCategory ? `Category: ${sellerICP.marketCategory}\n` : "") +
+                            (products.filter(p=>p.name?.trim()).length ? `Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")}\n` : "") +
+                            `\nQuestions should uncover whether ${co} has needs that align with what this seller offers.\n`
+                          : "";
+                        callAI(
+                          `You are a senior sales strategist. Based on the research below about ${co}, generate exactly 5 discovery questions.\n\n` +
+                          `RESEARCH FINDINGS:\n${briefContext}\n\n` + sellerCtxForQs +
+                          `RULES: open-ended, reference specific findings, conversational, no seller product names.\n\n` +
+                          `Return ONLY raw JSON: {"fiveQuestions":[{"question":"...","rationale":"...","source":"..."}]}`,
+                          { maxTokens: 1200 }
+                        ).then(r => {
+                          if (r?.fiveQuestions?.length) {
+                            setBrief(prev => prev ? { ...prev, fiveQuestions: r.fiveQuestions } : prev);
+                            console.log("[cache] 5 Questions generated from cached brief");
+                          }
+                        }).catch(() => {});
+                      }
+                      // Discovery Qs — fire from generateDiscoveryQs if available
+                      if (!discoveryQs && current.solutionMapping?.some(s=>s?.product)) {
+                        Promise.resolve().then(() => generateDiscoveryQs(current, member));
+                      }
+                      return current;
+                    });
+                  }, 1000); // slight delay to let P5 refresh merge first
                 })();
                 return;
               } else if (ageDays < 7 && !hasCritical) {
