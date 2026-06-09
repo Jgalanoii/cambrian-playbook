@@ -136,9 +136,9 @@ export function buildSignalExtractionPrompt(companies, sellerCtx, sellerICP, icp
     `For EACH company, extract these signals:\n\n` +
 
     `SIGNAL DEFINITIONS:\n` +
-    `- industryMatch: "direct" (seller's product DIRECTLY solves a stated need in this industry) | "adjacent" (related industry, indirect product fit) | "unrelated" (no meaningful connection)\n` +
+    `- industryMatch: "direct" | "adjacent" | "unrelated". Use "direct" if the seller's product is USED BY this industry — even if they're in different verticals. Example: a gift card company selling to a hotel chain = "direct" because hotels BUY gift cards for loyalty programs. A payment processor selling to a retailer = "direct" because retailers BUY payment processing. The question is "would this prospect BUY what the seller sells?" not "are they in the same industry?"\n` +
     `- industryInSellerTargetList: true if the prospect's industry appears in the seller's target industry list above\n` +
-    `- specificProductMapping: Name the specific seller product(s) that map to specific prospect needs. Empty string if none.\n` +
+    `- specificProductMapping: Name the SPECIFIC seller product(s) that map to SPECIFIC prospect needs. Be concrete: "Gift card distribution for Marriott Bonvoy loyalty program" not "gift cards for hospitality." Empty string if no specific mapping exists.\n` +
     `- isExistingCustomer: true if this company appears in the seller's customer list above (fuzzy match: "Wyndham Hotels" matches "Wyndham")\n` +
     `- closestCustomerName: Name of the seller's existing customer most similar to this prospect. Empty if none.\n` +
     `- closestCustomerIndustry: Industry of that closest customer.\n` +
