@@ -2135,8 +2135,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           : "") +
         `SEARCH STRATEGY (you have 2 searches — use BOTH, one for each purpose):\n`+
         `- Search 1 (NEWS): "${co}"${url && url !== co ? ` "${url}"` : ""} news OR press release 2025 OR 2026\n`+
-        `- Search 2 (REVIEWS — MANDATORY): "${co}" ${url && url !== co ? `"${url}" ` : ""}Glassdoor rating reviews\n`+
-        `You MUST use Search 2 for Glassdoor. Every company with 100+ employees has Glassdoor reviews. BHN has thousands. A missing Glassdoor rating for a major employer is a data failure.\n\n`+
+        `- Search 2 (REVIEWS — MANDATORY): "${co}" Glassdoor rating employer reviews site:glassdoor.com\n`+
+        `  For PUBLIC companies or large employers (1,000+ employees): Glassdoor data MUST be found. Search specifically: site:glassdoor.com "${co}". If your first attempt returns no Glassdoor data for a well-known employer, you likely searched the wrong entity — try the parent company name or the formal legal name.\n`+
+        `  For SMALL private companies (<100 employees): Glassdoor data may not exist. Acknowledge this honestly.\n\n`+
         `RECENCY RULE: ONLY include events, headlines, or signals from the last 18 months. Include the date or year in every headline.\n\n`+
         `WHAT TO EXTRACT:\n`+
         `1. Press releases and company announcements from the last 12 months\n`+
@@ -6642,14 +6643,22 @@ Return ONLY raw JSON:
     try {
       const researchPrompt =
         `Research the company at https://${url}. Use BOTH web searches.\n\n`+
+        `OWNERSHIP-DRIVEN SEARCH STRATEGY:\n`+
+        `First, determine: is this company PUBLIC, PE-BACKED, VC-BACKED, PRIVATE, NONPROFIT, or GOVERNMENT?\n`+
+        `- If PUBLIC: also search for SEC filings, 10-K product segments, investor relations. Revenue/products are in annual reports.\n`+
+        `- If PE-BACKED: search for acquisition press releases, PE firm portfolio page, deal details, add-on acquisitions.\n`+
+        `- If VC-BACKED: search Crunchbase for funding rounds, total raised, lead investors, valuation.\n`+
+        `- If NONPROFIT: search for Form 990, annual report, program descriptions.\n`+
+        `Use this context to ground your research in authoritative sources for this ownership type.\n\n`+
         `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n`+
         `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`+
         `Return a structured research summary:\n`+
-        `1. COMPANY: What they do (2 sentences, specific)\n`+
+        `1. COMPANY: What they do (2 sentences, specific). Include ownership type, approximate revenue, and employee count if findable.\n`+
         `2. PRODUCTS/SERVICES: List each product/service found on their website with a 1-sentence description and the URL where you found it\n`+
         `3. NAMED CUSTOMERS: Every customer name found in case studies, press releases, partner pages, or logo walls — with the source URL for each\n`+
         `4. COMPETITORS: Named competitors found in the research, with any evidence of their customers\n`+
-        `5. DIFFERENTIATORS: What makes this company different from competitors (specific, not generic)\n\n`+
+        `5. DIFFERENTIATORS: What makes this company different from competitors (specific, not generic)\n`+
+        `6. FINANCIAL CONTEXT: Revenue, funding, ownership details. For PUBLIC companies: total revenue from most recent annual report. For PE: deal details. For VC: funding rounds and total raised.\n\n`+
         `Be thorough. This research determines the quality of everything downstream. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable.`;
       const researchTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 45000));
       const researchCall = streamAIWithSearch(researchPrompt, (partial) => {

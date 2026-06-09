@@ -149,12 +149,12 @@ export function buildSignalExtractionPrompt(companies, sellerCtx, sellerICP, icp
     `- hasVerifiedCompetitorRelationship: true ONLY if you can cite specific evidence (case study, press release, 10-K, partner page)\n` +
     `- hasDeepPlatformLockin: true if there's evidence of a multi-year contract or enterprise-wide deployment with a competitor\n` +
     `- ownershipType: "public" | "pe-backed" | "vc-backed" | "private" | "bootstrapped" | "nonprofit" | "government"\n` +
-    `- employeeBracket: "1-49" | "50-499" | "500-4999" | "5000-49999" | "50000+"\n` +
+    `- employeeBracket: "1-49" | "50-499" | "500-4999" | "5000-49999" | "50000+". For PUBLIC companies, use the exact figure from their most recent annual report — do NOT rely on estimates or stale data. Marriott has ~414,000 employees (not ~190,000). Use your training knowledge for well-known public companies if the input data looks wrong.\n` +
     `- reason: 2-3 sentences for a SALESPERSON explaining why this is/isn't a good fit. Plain business language, no scoring terminology.\n` +
     `- customerSimilarity: 1-2 sentences naming the most similar existing customer and why. "No close analogue" if none.\n` +
     `- incumbentRisk: 1-2 sentences on what vendor they currently use (if known) and switching difficulty.\n` +
     `- bestLOB: Which seller line of business best fits this prospect (empty if no LOBs defined).\n` +
-    `- orgSize: Best estimate employee count (e.g. "~5,000", "~120,000")\n` +
+    `- orgSize: For PUBLIC companies, use exact employee count from annual report (e.g. "414,000" not "~190,000"). For PRIVATE, best estimate (e.g. "~5,000", "~120,000"). If the input data shows an employee count that seems wrong for a well-known company, use the correct figure from your knowledge.\n` +
     `- ownership: Current ownership status (e.g. "Public (NYSE: MAR)", "Private (PE-backed)")\n\n` +
 
     `ACCURACY RULES:\n` +
