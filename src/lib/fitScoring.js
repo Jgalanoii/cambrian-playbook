@@ -144,7 +144,7 @@ export function buildSignalExtractionPrompt(companies, sellerCtx, sellerICP, icp
     `- closestCustomerIndustry: Industry of that closest customer.\n` +
     `- customerIndustryMatch: "same" (exact industry) | "same_sector" (same broad sector, different sub-industry) | "different"\n` +
     `- customerUseCaseMatch: "same" (prospect would use the product for the same reason as the named customer) | "different"\n` +
-    `- isCompetitor: true if this prospect IS one of the seller's competitors or a subsidiary/brand of one\n` +
+    `- isCompetitor: true ONLY if this prospect appears in the SELLER'S COMPETITORS list above OR is a subsidiary/brand of a named competitor. A company in an adjacent industry (e.g. payment processing vs gift card distribution) is NOT a competitor — they are a potential CUSTOMER. This field must be FALSE unless the prospect directly competes with the seller for the same buyers with a substitute product.\n` +
     `- competitorCustomerEvidence: Specific evidence that this prospect uses a competitor's product. Cite the source. Empty if none.\n` +
     `- hasVerifiedCompetitorRelationship: true ONLY if you can cite specific evidence (case study, press release, 10-K, partner page)\n` +
     `- hasDeepPlatformLockin: true if there's evidence of a multi-year contract or enterprise-wide deployment with a competitor\n` +
