@@ -7841,7 +7841,9 @@ Return ONLY raw JSON:
               if (hqContaminated) console.warn(`[brief-cache] Cache contaminated — snapshot says "${snapCity}" but HQ says "${hqCity}" — rebuilding`);
               if (ageDays < 7 && hasCritical && !hqContaminated) {
                 console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
-                const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { live: true } };
+                // Clear ALL loading/failure flags from cached data — the brief IS complete.
+                // Only mark 'live' as loading since we refresh headlines in background.
+                const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: true, roles: false, deepIntel: false }, _failedSections: [], _error: null };
                 setBrief(cachedBriefData);
                 setBriefLoading(false);
                 setBriefStatus("");
