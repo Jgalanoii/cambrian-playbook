@@ -2023,8 +2023,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `GROUNDING RULES (learned from audit — CRITICAL):\n`+
     `- Do NOT invent executive names. If you're unsure who the CEO is, describe the role without naming anyone. "The CEO" not "CEO Jane Doe."\n`+
     `- Do NOT fabricate statistics about the seller (customer counts, revenue, market share). Only cite numbers from the proof pack above.\n`+
-    `- Do NOT fabricate statistics about the PROSPECT either. Do NOT claim specific numbers of job postings (e.g. "115 loyalty roles"), specific investment amounts, or specific growth rates UNLESS those exact numbers appeared in your web search results. If your search found no specific number, use qualitative language ("actively hiring in loyalty" not "posting 115 loyalty roles").\n`+
-    `- Do NOT cite specific hiring counts or job posting numbers. Another section handles hiring data from job boards. You do NOT have access to job board data. If you want to reference hiring as a signal, say "actively hiring" or "expanding their team" — NEVER cite a specific number of open roles.\n`+
+    `- Do NOT fabricate statistics about the PROSPECT. This section runs IN PARALLEL with financial and hiring sections — you do NOT have access to their data. Use qualitative language for metrics that other sections will provide precisely:\n`+
+    `  • Revenue/financial metrics: say "strong revenue growth" NOT "8% RevPAR growth" or "$25B revenue" — the Financial Intelligence section provides exact figures\n`+
+    `  • Employee/member counts: say "massive loyalty member base" NOT "180 million members" — the Overview section provides the exact count\n`+
+    `  • Hiring data: say "actively hiring" NOT "115 loyalty roles" — the Open Positions section provides real job data\n`+
+    `  • Growth rates: say "accelerating expansion" NOT "4.3% net rooms growth" — the Financial section provides precise rates\n`+
+    `  SPECIFIC NUMBERS IN YOUR SECTION WILL BE CROSS-CHECKED against the financial and overview sections. If they disagree, YOUR numbers get stripped. Use themes, not metrics.\n`+
     `- Do NOT suggest use cases that require capabilities in the seller's exclusion list.\n`+
     `- Do NOT attribute direct quotes to executives unless you found the quote in web search results. Paraphrase instead.\n`+
     `- Every claim must be grounded in either (a) your web search results, or (b) the seller proof pack. If neither provides data for a field, return an empty string — do NOT guess from training knowledge. A brief with 5 verified facts is worth more than one with 15 guesses.\n\n`+
@@ -5568,7 +5572,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         ...c,
         members: (c.members || []).map(m => memberUpdates[m.company]
           ? { ...m,
-              employees:     m.employees     || memberUpdates[m.company].orgSize,
+              employees:     memberUpdates[m.company].orgSize || m.employees,
               publicPrivate: m.publicPrivate || memberUpdates[m.company].ownership }
           : m)
       })));
@@ -8556,6 +8560,78 @@ Return ONLY raw JSON:
 
           // Glassdoor: p5 (web-searched) is authoritative over p3
           // Already handled by mergeStrategy backfill logic — p5 takes priority
+
+          // ── P3 METRIC CROSS-CHECK ───────────────────────────────────────
+          // P3 runs in parallel with P9 and may cite different financial metrics.
+          // P9 (SEC-sourced) is authoritative. Strip P3 metrics that contradict P9.
+          if (current.financialDeepDive?.revenueTrend) {
+            const p9Text = (current.financialDeepDive.revenueTrend || "") + " " + (current.financialDeepDive.marginTrend || "");
+            // Extract key metrics from P9 for cross-checking
+            const p9RevPAR = p9Text.match(/RevPAR\s*(?:grew|increased|rose|up)\s*([\d.]+%)/i)?.[1];
+            const p9Members = p9Text.match(/([\d.,]+)\s*million\s*members/i)?.[1];
+
+            const stripWrongMetrics = (text) => {
+              if (!text) return text;
+              let fixed = text;
+              // Strip specific percentage claims that contradict P9
+              if (p9RevPAR) {
+                fixed = fixed.replace(/(\d+(?:\.\d+)?%)\s*RevPAR\s*(?:growth|increase)/gi, (match, pct) => {
+                  if (pct !== p9RevPAR) {
+                    console.warn(`[consistency] P3 RevPAR "${pct}" contradicts P9 "${p9RevPAR}" — stripping`);
+                    return `RevPAR growth`;
+                  }
+                  return match;
+                });
+              }
+              return fixed;
+            };
+            if (current.elevatorPitch) current.elevatorPitch = stripWrongMetrics(current.elevatorPitch);
+            if (current.openingAngle) current.openingAngle = stripWrongMetrics(current.openingAngle);
+            if (current.strategicTheme) current.strategicTheme = stripWrongMetrics(current.strategicTheme);
+          }
+
+          // ── EMPLOYEE COUNT RECONCILIATION ──────────────────────────────
+          // P9 or P1's companySnapshot may have a different employee count than
+          // the overview field. For public companies, the largest verified count wins.
+          if (current.employeeCount && current.financialDeepDive?.revenueTrend) {
+            const overviewEmp = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
+            // Check if P9 or companySnapshot mentions a significantly larger employee count
+            const allText = (current.companySnapshot || "") + " " + (current.financialDeepDive.revenueTrend || "") + " " + (current.financialDeepDive.segmentBreakdown || "");
+            const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over)\s*([\d,]+)\s*(?:employees|associates|colleagues|staff|team members)/gi)];
+            if (empMatches.length > 0) {
+              const largest = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).sort((a, b) => b - a)[0];
+              if (largest > overviewEmp * 1.5 && largest > 1000) {
+                console.warn(`[consistency] Employee count reconciled: overview=${current.employeeCount} → ${largest.toLocaleString()} (from brief text)`);
+                current.employeeCount = `~${largest.toLocaleString()}`;
+              }
+            }
+          }
+
+          // ── PROPAGATE CORRECTED DATA TO PRODUCT DESCRIPTIONS ──────────
+          // Product sections may cite old employee counts or member numbers.
+          // After reconciliation, scan solution mapping for stale figures.
+          if (current.solutionMapping?.length && current.employeeCount) {
+            const correctedEmp = current.employeeCount;
+            current.solutionMapping = current.solutionMapping.map(s => {
+              if (!s) return s;
+              const updated = { ...s };
+              // Only fix if the solution cites a specific number that's clearly wrong
+              for (const field of ['jobToBeDone', 'painRelieved', 'gainCreated']) {
+                if (updated[field]) {
+                  updated[field] = updated[field].replace(/\b([\d,]+)\+?\s*(?:associates|employees|global workforce|team members)\b/gi, (match, num) => {
+                    const cited = parseInt(num.replace(/,/g, ""), 10);
+                    const correct = parseInt(String(correctedEmp).replace(/[^0-9]/g, ""), 10);
+                    if (correct > 0 && cited > 0 && (cited < correct * 0.4 || cited > correct * 2.5)) {
+                      console.warn(`[consistency] Product cited ${num} employees, corrected to ${correctedEmp}`);
+                      return match.replace(num, String(correctedEmp).replace(/^~/, ""));
+                    }
+                    return match;
+                  });
+                }
+              }
+              return updated;
+            });
+          }
 
           return current;
         });
