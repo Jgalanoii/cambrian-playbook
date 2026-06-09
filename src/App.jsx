@@ -7850,24 +7850,30 @@ Return ONLY raw JSON:
               // MUST include solutionMapping — a cached brief without products is useless
               // MUST NOT have cross-company contamination (e.g. wrong HQ from a same-name entity)
               const hasCritical = cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product);
-              // Contamination check: if snapshot mentions one city but HQ has another, cache is tainted
-              const snapCity = (cd.companySnapshot || "").match(/(?:based in|headquartered in)\s+([A-Za-z\s]+,\s*[A-Z]{2})/i)?.[1]?.split(",")[0]?.trim().toLowerCase();
+              // Contamination check: if snapshot mentions one city but HQ has another, fix HQ
+              const snapCityMatch = (cd.companySnapshot || "").match(/(?:based in|headquartered in|dual HQ:\s*|HQ:\s*|offices in)\s*([A-Za-z\s]+(?:,\s*[A-Za-z.]+)?)/i);
+              const snapCity = snapCityMatch?.[1]?.split(/[&,]/)[0]?.trim().toLowerCase();
               const hqCity = (cd.headquarters || "").split(",")[0]?.trim().toLowerCase();
               const hqContaminated = snapCity && hqCity && snapCity.length > 2 && hqCity.length > 2 && !snapCity.includes(hqCity) && !hqCity.includes(snapCity);
-              if (hqContaminated) console.warn(`[brief-cache] Cache contaminated — snapshot says "${snapCity}" but HQ says "${hqCity}" — rebuilding`);
+              if (hqContaminated) {
+                console.warn(`[brief-cache] HQ mismatch — snapshot says "${snapCity}" but HQ says "${hqCity}" — overriding`);
+                cd.headquarters = snapCityMatch[1].split("&")[0].trim();
+              }
               if (ageDays < 7 && hasCritical && !hqContaminated) {
                 console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
                 // ── CACHE BACKFILL: serve cached data instantly, then fill gaps ──
                 // Detect which sections are missing from cached data and fire targeted calls.
                 const missingFinancial = !cd.financialDeepDive?.revenueTrend;
                 const missingCompetitive = !cd.competitivePositioning?.primaryCompetitors?.length;
+                const missingBoard = !cd.boardAndInvestors?.leadInvestors;
                 const missingTldr = !cd.tldr;
                 const missingFiveQs = !cd.fiveQuestions;
-                const gapCount = [missingFinancial, missingCompetitive, missingTldr, missingFiveQs].filter(Boolean).length;
-                if (gapCount) console.log(`[cache] ${gapCount} gaps detected — backfilling: ${[missingFinancial&&"financial", missingCompetitive&&"competitive", missingTldr&&"quickTake", missingFiveQs&&"5questions"].filter(Boolean).join(", ")}`);
+                const missingCaseStudies = !cd.caseStudies?.some(c => c?.title);
+                const gapCount = [missingFinancial, missingCompetitive, missingBoard, missingTldr, missingFiveQs, missingCaseStudies].filter(Boolean).length;
+                if (gapCount) console.log(`[cache] ${gapCount} gaps detected — backfilling: ${[missingFinancial&&"financial", missingCompetitive&&"competitive", missingBoard&&"board", missingTldr&&"quickTake", missingFiveQs&&"5questions", missingCaseStudies&&"caseStudies"].filter(Boolean).join(", ")}`);
 
                 // Mark missing deep intel sections as loading so UI shows spinners
-                const loadingFlags = { overview: false, executives: false, strategy: false, solutions: false, live: true, roles: false, deepIntel: missingFinancial || missingCompetitive };
+                const loadingFlags = { overview: false, executives: false, strategy: false, solutions: false, live: true, roles: false, deepIntel: missingFinancial || missingCompetitive || missingBoard };
                 const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: loadingFlags, _failedSections: [], _error: null };
                 setBrief(cachedBriefData);
                 setBriefLoading(false);
@@ -7916,6 +7922,41 @@ Return ONLY raw JSON:
                         console.log("[cache] Competitive backfilled");
                       }
                     } catch (e) { console.warn("[cache] Competitive backfill failed:", e?.message); }
+                  }
+                  if (missingBoard) {
+                    try {
+                      const d = await claudeFetch({ model: SONNET, max_tokens: 2000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+                        messages: [{ role: "user", content:
+                          (url && url !== co ? `IDENTITY: Research board and investor data for ${co} (${url}). Search Crunchbase, PitchBook, SEC, press.\n\n` : `IDENTITY: Research "${co}" ONLY.\n\n`) +
+                          `Research the board of directors, investors, and governance of ${co}${url ? ` (${url})` : ""}.\nSearch for "${co} board of directors" and "${co} investors funding".\nReturn raw JSON:\n{"boardAndInvestors":{"leadInvestors":"Key investors or funding sources","investmentThesis":"What bet are investors making","boardMandate":"What the board is pushing for"}}` }] });
+                      const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+                      const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
+                      const parsed = extractJsonWithKey(raw, "boardAndInvestors") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+                      if (parsed?.boardAndInvestors) {
+                        setBrief(prev => prev ? { ...prev, boardAndInvestors: parsed.boardAndInvestors } : prev);
+                        console.log("[cache] Board backfilled");
+                      }
+                    } catch (e) { console.warn("[cache] Board backfill failed:", e?.message); }
+                  }
+                  if (missingCaseStudies) {
+                    // Case studies come from seller proof pack context — generate from cached brief + seller data
+                    try {
+                      const sellerCtxCs = sellerICP?.sellerDescription ? `Seller: ${sellerICP.sellerDescription}\n` : (sellerUrl ? `Seller: ${sellerUrl}\n` : "");
+                      const proofCtx = (sellerICP?.icp?.customerExamples||[]).filter(Boolean).length
+                        ? `Seller's customers: ${sellerICP.icp.customerExamples.filter(Boolean).join(", ")}\n` : "";
+                      const prodCtx = (cd.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product).join(", ");
+                      const r = await callAI(
+                        `Based on the seller's proof pack, identify 1-2 case studies relevant to ${co}.\n\n` +
+                        sellerCtxCs + proofCtx +
+                        `Products mapped for ${co}: ${prodCtx}\n\n` +
+                        `Return ONLY raw JSON: {"caseStudies":[{"title":"Named customer + use case","customer":"Customer name from seller's list","relevance":"Why analogous to ${co}","quantifiedOutcome":"Measurable result or [unsupported — verify]"}]}`,
+                        { maxTokens: 800 }
+                      );
+                      if (r?.caseStudies?.some(c=>c?.title)) {
+                        setBrief(prev => prev ? { ...prev, caseStudies: r.caseStudies } : prev);
+                        console.log("[cache] Case studies backfilled");
+                      }
+                    } catch (e) { console.warn("[cache] Case studies backfill failed:", e?.message); }
                   }
                   // Clear deepIntel loading flag
                   setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), deepIntel: false } } : prev);
