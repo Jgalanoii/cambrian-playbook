@@ -7766,7 +7766,8 @@ Return ONLY raw JSON:
               const ageDays = Math.floor(age / 86400000);
               const cd = cached[0].data;
               // Validate cache has critical sections — skip stale/incomplete briefs
-              const hasCritical = cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts;
+              // MUST include solutionMapping — a cached brief without products is useless
+              const hasCritical = cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product);
               if (ageDays < 7 && hasCritical) {
                 console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
                 const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { live: true } };
