@@ -2024,10 +2024,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // and organizational intelligence are grounded in live search results.
   // GROUNDING REQUIREMENT: every solution must cite a specific differentiator
   // and (when possible) a named customer from the seller's proof pack above.
-  // WAVE 2: P4 waits for P1 to resolve before firing (P1 is the fastest Wave 1 call).
-  // This ensures Wave 1 has at least started returning before P4 adds load.
+  // WAVE 1: P4 fires immediately — it's the heaviest call (biggest schema, most important
+  // section for users: products, champions, case studies). Must not be delayed or chained.
   const isResearchOnly = sellerUrl === "research-only";
-  const p4 = p1.then(() => streamAIWithSearch(baseFull+
+  const p4 = streamAIWithSearch(baseFull+
     `SEARCH INSTRUCTION: Search for "${co}" leadership team, technology stack, and organizational structure. Use the search results to ground contacts and tech stack.\n\n`+
     `Return ONLY raw JSON (start with {) for ${isResearchOnly ? "organizational intelligence" : "solution fit and contacts"}:\n`+
     (isResearchOnly
@@ -2070,13 +2070,17 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         }
       } catch { /* partial — wait for more */ }
     }, 7500, { maxSearches: 1, anchorKey: "solutionMapping", onStatus, model: SONNET }
-  ));
+  );
 
   // MICRO 5: Live search — reuse pre-cache promise/result. Never duplicate.
+  // WAVE 2: delayed 5s if no cache. P5 has a pre-cache from step 4 so the
+  // delay rarely fires. When it does, it prevents P5 from competing with
+  // Wave 1 (P1, P3, P4) for API bandwidth.
   const liveCache = preCache.live;
   const p5 = liveCache
     ? (liveCache instanceof Promise ? liveCache : Promise.resolve(liveCache))
     : (async()=>{
+    await new Promise(r => setTimeout(r, 5000));
     try{
       // p5 focuses on news, sentiment, and signals. Open roles are handled
       // by the dedicated p6 call which has its own web_search budget + fallback.
