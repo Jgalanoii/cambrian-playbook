@@ -2172,6 +2172,42 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       }
     }
 
+    // Post-process: cross-field consistency check
+    // If companySnapshot mentions a location but HQ field has a DIFFERENT location,
+    // the HQ field is likely from a wrong-entity source (e.g. scoring enrichment from
+    // a different company with the same name). Trust the snapshot over structured fields.
+    if (next.companySnapshot && next.headquarters && url) {
+      const snap = next.companySnapshot.toLowerCase();
+      const hq = next.headquarters.toLowerCase();
+      // Extract cities/states from snapshot
+      const snapCities = snap.match(/(?:based in|headquartered in|located in|offices in)\s+([a-z\s]+,\s*[a-z.]+)/i);
+      if (snapCities) {
+        const snapCity = snapCities[1].trim().toLowerCase();
+        const hqCity = hq.replace(/,.*/, "").trim();
+        // If snapshot mentions a specific city and HQ has a completely different one, trust snapshot
+        if (snapCity && hqCity && !snapCity.includes(hqCity) && !hqCity.includes(snapCity.split(",")[0])) {
+          console.warn(`[p1] HQ MISMATCH: snapshot says "${snapCities[1].trim()}" but HQ field says "${next.headquarters}" — overriding with snapshot`);
+          next.headquarters = snapCities[1].trim().replace(/^\w/, c => c.toUpperCase());
+        }
+      }
+    }
+
+    // Post-process: employee count sanity check
+    // If snapshot mentions "~N employees" but employeeCount has a wildly different number,
+    // the employeeCount may be from a wrong-entity source
+    if (next.companySnapshot && next.employeeCount) {
+      const snapEmpMatch = next.companySnapshot.match(/(?:~|approximately\s+)([\d,]+)\s*(?:employees|staff|people)/i);
+      const fieldEmpNum = parseInt(String(next.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
+      if (snapEmpMatch) {
+        const snapEmpNum = parseInt(snapEmpMatch[1].replace(/,/g, ""), 10) || 0;
+        // If the field value is >3x or <0.3x the snapshot value, it's likely from a different company
+        if (snapEmpNum > 0 && fieldEmpNum > 0 && (fieldEmpNum > snapEmpNum * 3 || fieldEmpNum < snapEmpNum * 0.3)) {
+          console.warn(`[p1] EMPLOYEE MISMATCH: snapshot says ~${snapEmpNum} but field says ${next.employeeCount} — overriding with snapshot`);
+          next.employeeCount = snapEmpMatch[0].replace(/approximately\s+/i, "~");
+        }
+      }
+    }
+
     // Post-process: fix ownership contradictions
     // If fundingProfile mentions "acquired", "PE-backed", "private equity", or "went private"
     // but publicPrivate still shows a ticker — strip the ticker
@@ -2543,6 +2579,33 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           .replace(/\b\d{2,3}[\s-]+(?:competitor|product|alternative)s?\b/gi, "")
           .replace(/ranked?\s*#?\d+\s*(?:of|out of|among)\s*\d+\s*(?:products?|competitors?|alternatives?)/gi, "")
           .replace(/\s{2,}/g, " ").trim();
+      }
+      // Post-process: cross-industry contamination filter
+      // If the company snapshot describes industry X but competitors reference industry Y,
+      // the competitive search found a different company with the same name.
+      // e.g. Stripe (payments) getting competitors from Stripe (adhesives/sealants)
+      if (prev?.companySnapshot && cp.marketPosition) {
+        const snapLow = (prev.companySnapshot || "").toLowerCase();
+        const compLow = (cp.marketPosition + " " + (cp.whereWinning || "") + " " + (cp.whereLosing || "")).toLowerCase();
+        // Detect industry mismatch: snapshot talks about payments/fintech but competitive talks about adhesives/chemicals/manufacturing
+        const contaminantIndustries = ['adhesive', 'sealant', 'chemical', 'construction products', 'petrochemical', 'pharmaceutical manufacturing'];
+        const hasContaminant = contaminantIndustries.some(ci => compLow.includes(ci) && !snapLow.includes(ci));
+        if (hasContaminant) {
+          console.warn(`[p7] COMPETITIVE CONTAMINATION: competitors reference industries not in company snapshot — stripping`);
+          // Strip contaminated competitors but keep the section
+          if (cp.primaryCompetitors?.length) {
+            cp.primaryCompetitors = cp.primaryCompetitors.filter(c => {
+              const edge = ((c.strength || "") + " " + (c.weakness || "")).toLowerCase();
+              return !contaminantIndustries.some(ci => edge.includes(ci));
+            });
+          }
+          // Clean the text fields
+          for (const field of ['marketPosition', 'whereWinning', 'whereLosing', 'displacementAngle']) {
+            if (cp[field] && contaminantIndustries.some(ci => cp[field].toLowerCase().includes(ci))) {
+              cp[field] = "";
+            }
+          }
+        }
       }
       next.competitivePositioning = cp;
     } else { failed.push("competitive"); }
@@ -7767,8 +7830,14 @@ Return ONLY raw JSON:
               const cd = cached[0].data;
               // Validate cache has critical sections — skip stale/incomplete briefs
               // MUST include solutionMapping — a cached brief without products is useless
+              // MUST NOT have cross-company contamination (e.g. wrong HQ from a same-name entity)
               const hasCritical = cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product);
-              if (ageDays < 7 && hasCritical) {
+              // Contamination check: if snapshot mentions one city but HQ has another, cache is tainted
+              const snapCity = (cd.companySnapshot || "").match(/(?:based in|headquartered in)\s+([A-Za-z\s]+,\s*[A-Z]{2})/i)?.[1]?.split(",")[0]?.trim().toLowerCase();
+              const hqCity = (cd.headquarters || "").split(",")[0]?.trim().toLowerCase();
+              const hqContaminated = snapCity && hqCity && snapCity.length > 2 && hqCity.length > 2 && !snapCity.includes(hqCity) && !hqCity.includes(snapCity);
+              if (hqContaminated) console.warn(`[brief-cache] Cache contaminated — snapshot says "${snapCity}" but HQ says "${hqCity}" — rebuilding`);
+              if (ageDays < 7 && hasCritical && !hqContaminated) {
                 console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
                 const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: { live: true } };
                 setBrief(cachedBriefData);
