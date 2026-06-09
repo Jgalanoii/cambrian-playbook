@@ -2228,7 +2228,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       const snap = next.companySnapshot.toLowerCase();
       const hq = next.headquarters.toLowerCase();
       // Extract cities/states from snapshot
-      const snapCities = snap.match(/(?:based in|headquartered in|located in|offices in)\s+([a-z\s]+,\s*[a-z.]+)/i);
+      const snapCities = snap.match(/(?:based in|headquartered in|headquarters in|located in|offices in|dual headquarters in)\s+([a-z\s]+(?:,\s*[a-z.]+)?)/i);
       if (snapCities) {
         const snapCity = snapCities[1].trim().toLowerCase();
         const hqCity = hq.replace(/,.*/, "").trim();
@@ -2502,7 +2502,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           // P7 uses relaxed identity — competitive analysis comes from industry reports,
           // analyst coverage, and comparison sites, not the company's own website.
           (url && url !== co
-            ? `IDENTITY: Research the competitive landscape of the company at ${url} ("${co}"). Competitor data comes from external analysts, comparison sites, and industry coverage — NOT from the company's own site. Include "${co}" or "${url}" in searches to stay anchored. If "${co}" is a common name, verify each result is about the company at ${url}.\n\n`
+            ? `IDENTITY: Research the competitive landscape of the company at ${url} ("${co}"). Include "${url}" in EVERY search query to anchor results to the correct company. "${co}" alone is ambiguous — there may be unrelated companies with the same name in different industries. If a search result describes a company in a DIFFERENT industry than what ${url} does, DISCARD it entirely. Every competitor you list must compete with the company at ${url}, not a same-named company in a different industry.\n\n`
             : `IDENTITY: Research "${co}" ONLY.\n\n`) +
           secFilingCtx +
           firmographicsTruth+
@@ -2540,7 +2540,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           // P8 uses relaxed identity — board/investor data comes from Crunchbase,
           // PitchBook, press releases, SEC filings — not the company's own site.
           (url && url !== co
-            ? `IDENTITY: Research board and investor data for the company at ${url} ("${co}"). Board/investor data comes from Crunchbase, PitchBook, SEC filings, and press — NOT the company's own site. Include "${co}" in searches to stay anchored.\n\n`
+            ? `IDENTITY: Research board and investor data for the company at ${url} ("${co}"). Include "${url}" in EVERY search query. "${co}" alone is ambiguous. Board/investor data comes from Crunchbase, PitchBook, SEC filings, and press. Verify each result is about the company at ${url}, not a same-named entity.\n\n`
             : `IDENTITY: Research "${co}" ONLY.\n\n`) +
           secFilingCtx +
           firmographicsTruth+
@@ -2579,7 +2579,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           // external sources (TechCrunch, Bloomberg, Crunchbase), not the company's own site.
           // The strict site: search in deepIntelIdentity blocks these and returns nothing.
           (url && url !== co
-            ? `IDENTITY: Research financial data for the company at ${url} ("${co}"). For PRIVATE companies, search external sources (TechCrunch, Bloomberg, Crunchbase, PitchBook) — financial data is rarely on the company's own website. Include "${co}" in all searches to stay anchored.\n\n`
+            ? `IDENTITY: Research financial data for the company at ${url} ("${co}"). Include "${url}" in EVERY search query. "${co}" alone is ambiguous — there may be unrelated companies with the same name. If search returns financial data for a company in a DIFFERENT industry than ${url}, DISCARD it entirely. For PRIVATE companies, search TechCrunch, Bloomberg, Crunchbase, PitchBook with "${url}" as anchor.\n\n`
             : `IDENTITY: Research "${co}" ONLY.\n\n`) +
           secFilingCtx +
           firmographicsTruth+
@@ -2680,7 +2680,19 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     } else { failed.push("competitive"); }
     if (r8?.boardAndInvestors) next.boardAndInvestors = r8.boardAndInvestors;
     if (r9?.financialDeepDive) {
-      next.financialDeepDive = r9.financialDeepDive;
+      // ── FINANCIAL CONTAMINATION CHECK ──────────────────────────────
+      // If the financial section references industries not in the company snapshot,
+      // P9 researched the wrong company (e.g. "Stripe" adhesives vs payments).
+      const contaminantIndustries = ['adhesive', 'sealant', 'chemical', 'construction products', 'petrochemical', 'pharmaceutical manufacturing'];
+      const finText = Object.values(r9.financialDeepDive).filter(v => typeof v === 'string').join(' ').toLowerCase();
+      const snapLow = (prev?.companySnapshot || '').toLowerCase();
+      const finContaminated = contaminantIndustries.some(ci => finText.includes(ci) && !snapLow.includes(ci));
+      if (finContaminated) {
+        console.warn(`[p9] FINANCIAL CONTAMINATION: P9 references industries not in snapshot — discarding entire section`);
+        // Don't set financialDeepDive — it's about the wrong company
+      } else {
+        next.financialDeepDive = r9.financialDeepDive;
+      }
       // ── BACKFILL: If P1 left revenue/HQ empty, extract from P9's richer estimates ──
       // P9 (financial deep dive) always generates reasoned estimates for private companies.
       // P1 returns "" due to conflicting empty-field rules. Use P9 data to fill the overview.
@@ -7945,7 +7957,7 @@ Return ONLY raw JSON:
 
                 const url = member.company_url || "";
                 const deepIntelIdentityCache = url && url !== co
-                  ? `IDENTITY: Research ONLY the company at https://${url} ("${co}"). Include "${url}" in search queries. Discard results about different companies.\n\n`
+                  ? `IDENTITY: Research ONLY the company at ${url} ("${co}"). Include "${url}" in EVERY search query. "${co}" alone is ambiguous. Discard ANY result about a company in a different industry than ${url}.\n\n`
                   : `IDENTITY: Research "${co}" ONLY.\n\n`;
 
                 (async () => {
