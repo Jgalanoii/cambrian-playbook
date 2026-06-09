@@ -2685,7 +2685,39 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       solutions: p4.then(mergeSolutions).catch(catchLog("p4-solutions", mergeSolutions)),
       live:      p5.then(mergeLive).catch(catchLog("p5-live", mergeLive)),
       roles:     p6.then(mergeRoles).catch(catchLog("p6-roles", mergeRoles)),
-      deepIntel: deepIntelDone.then(([r7,r8,r9,r10]) => mergeDeepIntel(r7.status==="fulfilled"?r7.value:null, r8.status==="fulfilled"?r8.value:null, r9.status==="fulfilled"?r9.value:null, r10?.status==="fulfilled"?r10.value:null)),
+      deepIntel: deepIntelDone.then(async ([r7,r8,r9,r10]) => {
+        let comp = r7.status==="fulfilled"?r7.value:null;
+        let board = r8.status==="fulfilled"?r8.value:null;
+        let fin = r9.status==="fulfilled"?r9.value:null;
+        const gate = r10?.status==="fulfilled"?r10.value:null;
+        // Retry failed deep intel sections once — they often fail from transient Anthropic 500s
+        const retryIdentity = (url && url !== co)
+          ? `IDENTITY: Research the company at ${url} ("${co}"). Include "${co}" in searches.\n\n`
+          : `IDENTITY: Research "${co}" ONLY.\n\n`;
+        if (!fin?.financialDeepDive && sellerUrl !== "research-only") {
+          console.log("[p9] Financial failed — retrying once");
+          try {
+            const d = await claudeFetch({ model: SONNET, max_tokens: 2000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+              messages: [{ role: "user", content: retryIdentity + firmographicsTruth + `Research the financial performance of ${co}${url ? ` (${url})` : ""}.\nReturn raw JSON:\n{"financialDeepDive":{"revenueTrend":"Revenue data","marginTrend":"Margins","segmentBreakdown":"Segments","capitalPriorities":"Investments","earningsInsight":"Leadership signals","guidanceQuote":"Forward statements"}}` }] });
+            const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+            const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
+            fin = extractJsonWithKey(raw,"financialDeepDive") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+            if (fin?.financialDeepDive) console.log("[p9] Financial retry succeeded");
+          } catch(e) { console.warn("[p9] Financial retry failed:", e?.message); }
+        }
+        if (!comp?.competitivePositioning && sellerUrl !== "research-only") {
+          console.log("[p7] Competitive failed — retrying once");
+          try {
+            const d = await claudeFetch({ model: SONNET, max_tokens: 2000, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+              messages: [{ role: "user", content: retryIdentity + firmographicsTruth + `Research the competitive landscape of ${co}${url ? ` (${url})` : ""}.\nReturn raw JSON:\n{"competitivePositioning":{"marketPosition":"Market position","primaryCompetitors":[{"name":"Competitor","strength":"Their edge","weakness":"Where ${co} beats them","recentMove":"Latest action"}],"whereWinning":"Where ${co} wins","whereLosing":"Where they lose","displacementAngle":"How seller should position"}}` }] });
+            const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+            const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
+            comp = extractJsonWithKey(raw,"competitivePositioning") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+            if (comp?.competitivePositioning) console.log("[p7] Competitive retry succeeded");
+          } catch(e) { console.warn("[p7] Competitive retry failed:", e?.message); }
+        }
+        return mergeDeepIntel(comp, board, fin, gate);
+      }),
     },
     earlyDone,
     allDone: Promise.allSettled([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10]),
