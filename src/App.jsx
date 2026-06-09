@@ -2453,7 +2453,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model: SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
-          deepIntelIdentity+
+          // P7 uses relaxed identity — competitive analysis comes from industry reports,
+          // analyst coverage, and comparison sites, not the company's own website.
+          (url && url !== co
+            ? `IDENTITY: Research the competitive landscape of the company at ${url} ("${co}"). Competitor data comes from external analysts, comparison sites, and industry coverage — NOT from the company's own site. Include "${co}" or "${url}" in searches to stay anchored. If "${co}" is a common name, verify each result is about the company at ${url}.\n\n`
+            : `IDENTITY: Research "${co}" ONLY.\n\n`) +
+          secFilingCtx +
           firmographicsTruth+
           `Research the competitive landscape of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}competitors" and "${co} vs" to find real competitive dynamics.\n\n`+
@@ -2486,7 +2491,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
-          deepIntelIdentity+
+          // P8 uses relaxed identity — board/investor data comes from Crunchbase,
+          // PitchBook, press releases, SEC filings — not the company's own site.
+          (url && url !== co
+            ? `IDENTITY: Research board and investor data for the company at ${url} ("${co}"). Board/investor data comes from Crunchbase, PitchBook, SEC filings, and press — NOT the company's own site. Include "${co}" in searches to stay anchored.\n\n`
+            : `IDENTITY: Research "${co}" ONLY.\n\n`) +
+          secFilingCtx +
           firmographicsTruth+
           `Research the board of directors, investors, and governance of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           `Search for "${co} ${url && url !== co ? url + ' ' : ''}board of directors" and "${co} investors funding".\n`+
@@ -2519,7 +2529,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         model:SONNET, max_tokens:2000,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:
-          deepIntelIdentity+
+          // P9 uses relaxed identity — financial data for private companies comes from
+          // external sources (TechCrunch, Bloomberg, Crunchbase), not the company's own site.
+          // The strict site: search in deepIntelIdentity blocks these and returns nothing.
+          (url && url !== co
+            ? `IDENTITY: Research financial data for the company at ${url} ("${co}"). For PRIVATE companies, search external sources (TechCrunch, Bloomberg, Crunchbase, PitchBook) — financial data is rarely on the company's own website. Include "${co}" in all searches to stay anchored.\n\n`
+            : `IDENTITY: Research "${co}" ONLY.\n\n`) +
+          secFilingCtx +
           firmographicsTruth+
           `Research the financial performance and trajectory of ${co}${url && url !== co ? ` (${url})` : ""}.\n\n`+
           (isPublicCompany
