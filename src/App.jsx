@@ -1654,7 +1654,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // verified firmographics so the model doesn't guess basic facts.
   const enrichment = member._enrichment?.organization;
   const enrichedPeople = member._enrichment?.people || [];
-  const enrichmentCtx = enrichment ? `\nVERIFIED COMPANY DATA (from Apollo.io — use these facts as ground truth, do NOT contradict them):\n` +
+  // Enrichment from SEC EDGAR/Wikidata (Apollo not live). Reliable for unambiguous companies
+  // but can match wrong entities for common names. Model should verify against web search.
+  const enrichmentCtx = enrichment ? `\nCOMPANY DATA (from automated enrichment — reliable for most companies, but if the company name is common, verify these facts match the entity at ${url || co} before using):\n` +
     (enrichment.name ? `Company name: ${enrichment.name}\n` : "") +
     (enrichment.description ? `Description: ${enrichment.description}\n` : "") +
     (enrichment.employeeCount ? `Employees: ${enrichment.employeeCount}\n` : "") +
@@ -1667,7 +1669,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     (enrichment.latestFundingRound ? `Latest funding: ${enrichment.latestFundingRound}${enrichment.latestFundingAmount ? ` ($${enrichment.latestFundingAmount})` : ""}${enrichment.latestFundingDate ? ` (${enrichment.latestFundingDate})` : ""}\n` : "") +
     (enrichment.technologies?.length ? `Tech stack: ${enrichment.technologies.slice(0, 15).join(", ")}\n` : "") +
     (enrichment.linkedIn ? `LinkedIn: ${enrichment.linkedIn}\n` : "") +
-    (enrichedPeople.length ? `\nKEY PEOPLE (verified from Apollo — use these names and titles as ground truth):\n` +
+    (enrichedPeople.length ? `\nKEY PEOPLE (from enrichment — verify these names are CURRENT and at the company at ${url || co} before using):\n` +
       enrichedPeople.slice(0, 8).map(p => `- ${p.name}, ${p.title}${p.department ? ` (${p.department})` : ""}${p.linkedIn ? ` — ${p.linkedIn}` : ""}`).join("\n") + "\n" : "") +
     "\n" : "";
 
@@ -1675,7 +1677,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // Quick Entry enrichment or scoring backfill. This prevents the brief from guessing
   // a different employee count than what's already shown in the Fit Check table.
   const fallbackFirmographics = !enrichment && (member.employees || member.publicPrivate || member.ind)
-    ? `\nKNOWN COMPANY DATA (use as ground truth — do NOT contradict these with different numbers):\n` +
+    ? `\nCOMPANY DATA FROM PRIOR STEP (use as reference — verify against web search if the company name is common or ambiguous):\n` +
       (member.employees ? `Employees: ${member.employees}\n` : "") +
       (member.publicPrivate ? `Ownership: ${member.publicPrivate}\n` : "") +
       (member.ind ? `Industry: ${member.ind}\n` : "") +
