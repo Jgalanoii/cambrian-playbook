@@ -7856,10 +7856,11 @@ Return ONLY raw JSON:
               const hqCity = (cd.headquarters || "").split(",")[0]?.trim().toLowerCase();
               const hqContaminated = snapCity && hqCity && snapCity.length > 2 && hqCity.length > 2 && !snapCity.includes(hqCity) && !hqCity.includes(snapCity);
               if (hqContaminated) {
-                console.warn(`[brief-cache] HQ mismatch — snapshot says "${snapCity}" but HQ says "${hqCity}" — overriding`);
+                console.warn(`[brief-cache] HQ mismatch — snapshot says "${snapCity}" but HQ says "${hqCity}" — overriding to ${snapCityMatch[1].split("&")[0].trim()}`);
                 cd.headquarters = snapCityMatch[1].split("&")[0].trim();
+                // HQ is now fixed — proceed with serving the cache
               }
-              if (ageDays < 7 && hasCritical && !hqContaminated) {
+              if (ageDays < 7 && hasCritical) {
                 console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
                 // ── CACHE BACKFILL: serve cached data instantly, then fill gaps ──
                 // Detect which sections are missing from cached data and fire targeted calls.
