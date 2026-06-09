@@ -7848,6 +7848,16 @@ Return ONLY raw JSON:
                 setBriefLoading(false);
                 setBriefStatus("");
                 // Refresh live sections (P5 headlines) + generate Quick Take, 5Q, Discovery
+                // Safety timeout: clear ALL loading flags after 30s in case any call hangs
+                setTimeout(() => {
+                  setBrief(prev => {
+                    if (!prev?._loadingSections) return prev;
+                    const anyLoading = Object.values(prev._loadingSections).some(Boolean);
+                    if (!anyLoading) return prev;
+                    console.warn("[cache] Safety timeout: clearing stale loading flags after 30s");
+                    return { ...prev, _loadingSections: { overview: false, executives: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false } };
+                  });
+                }, 30000);
                 (async () => {
                   // P5: refresh headlines in background
                   try {
