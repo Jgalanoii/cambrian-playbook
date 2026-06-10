@@ -158,6 +158,8 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
     if (userStatusFilter === "never_active" && u.last_active) return false;
     if (userStatusFilter === "new_7d" && u.created_at && (Date.now() - new Date(u.created_at).getTime()) > 604800000) return false;
     if (!matchesSearch(u)) return false;
+    // Date range filter: only exclude users who HAVE activity outside the range
+    // Users with no activity always pass (they're filtered via status filter instead)
     if (dateRange !== "all" && u.last_active && !inDateRange(u.last_active)) return false;
     return true;
   });
@@ -230,30 +232,30 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   // ── Sidebar nav config ──
   const navGroups = [
     {
-      items: [{ id: "overview", label: "Overview" }],
+      items: [{ id: "overview", label: "Overview", sub: "Key metrics at a glance" }],
     },
     {
       label: "PEOPLE",
       items: [
-        { id: "users", label: "Members", count: s.total_users },
-        { id: "orgs", label: "Organizations", count: s.total_orgs },
+        { id: "users", label: "Users", count: s.total_users, sub: "Accounts, roles, activity" },
+        { id: "orgs", label: "Organizations", count: s.total_orgs, sub: "Teams, plans, run limits" },
       ],
     },
     {
       label: "ANALYTICS",
       items: [
-        { id: "sessions", label: "Sessions", count: s.total_sessions },
-        { id: "costs", label: "API Costs", count: `$${(c.cost || 0).toFixed(2)}${dbTotal ? "" : "*"}` },
-        { id: "activity", label: "Activity" },
+        { id: "sessions", label: "Sessions", count: s.total_sessions, sub: "Briefs, pipeline, depth" },
+        { id: "costs", label: "API Costs", count: `$${(c.cost || 0).toFixed(2)}${dbTotal ? "" : "*"}`, sub: "Spend by user, model, day" },
+        { id: "activity", label: "Activity", sub: "Companies researched" },
       ],
     },
     {
       label: "SYSTEM",
       items: [
-        { id: "usage", label: "Usage" },
-        { id: "pricing", label: "Pricing" },
-        { id: "learnings", label: "Learnings" },
-        { id: "intelligence", label: "Intelligence" },
+        { id: "usage", label: "Usage", sub: "Env status, per-org tokens" },
+        { id: "pricing", label: "Pricing", sub: "Plans, margins, revenue" },
+        { id: "learnings", label: "Learnings", sub: "Edits, routing, patterns" },
+        { id: "intelligence", label: "Intelligence", sub: "Accuracy, calibration, KLs" },
         { id: "urls", label: "URLs", count: s.unique_seller_urls },
       ],
     },
@@ -411,8 +413,13 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                 <button key={item.id}
                   className={`admin-sidebar-item${tab === item.id ? " active" : ""}`}
                   onClick={() => setTab(item.id)}>
-                  {item.label}
-                  {item.count !== undefined && <span className="admin-sidebar-count">{item.count}</span>}
+                  <span style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:1}}>
+                    <span style={{display:"flex",alignItems:"center",gap:6,width:"100%"}}>
+                      {item.label}
+                      {item.count !== undefined && <span className="admin-sidebar-count">{item.count}</span>}
+                    </span>
+                    {item.sub && <span style={{fontSize:9,color:"var(--ink-3)",fontWeight:400,lineHeight:1.2}}>{item.sub}</span>}
+                  </span>
                 </button>
               ))}
             </div>
@@ -512,7 +519,9 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                     const atLimit = (data.orgs || []).filter(o => o.run_count >= o.run_limit && o.run_limit > 0).length;
                     const personalOrgs = (data.orgs || []).filter(o => !o.seller_url && o.member_count <= 1).length;
                     const items = [];
-                    if (neverActive > 0) items.push({ text: `${neverActive} users never active`, color: "var(--amber)", click: () => setTab("users") });
+                    const orphanUsers = (data.users || []).filter(u => !u.org_id).length;
+                    if (orphanUsers > 0) items.push({ text: `${orphanUsers} users without an organization`, color: "var(--red)", click: () => { setUserStatusFilter("orphan"); setTab("users"); } });
+                    if (neverActive > 0) items.push({ text: `${neverActive} users never active`, color: "var(--amber)", click: () => { setUserStatusFilter("never_active"); setTab("users"); } });
                     if (atLimit > 0) items.push({ text: `${atLimit} orgs at run limit`, color: "var(--red)", click: () => setTab("orgs") });
                     if (personalOrgs > 0) items.push({ text: `${personalOrgs} personal workspaces to clean up`, color: "var(--ink-2)", click: () => setTab("orgs") });
                     if (s.guest_api_calls > 0) items.push({ text: `${s.guest_api_calls} guest API calls`, color: "var(--ink-3)", click: () => setTab("activity") });
@@ -1042,7 +1051,11 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                     const personalOrgs = data.orgs.filter(o => !o.seller_url && o.member_count <= 1).sort((a,b) => (a.name||"").localeCompare(b.name||""));
 
                     return (
-                      <tr key={u.id} style={u.email === SUPERUSER_EMAIL ? { background: "var(--bg-1)" } : undefined}>
+                      <tr key={u.id} style={{
+                        ...(u.email === SUPERUSER_EMAIL ? { background: "var(--bg-1)" } : {}),
+                        ...(!u.org_id ? { borderLeft: "3px solid var(--red, #c33)" } : {}),
+                        ...(!u.last_active && u.org_id ? { opacity: 0.7 } : {}),
+                      }}>
                         <td>
                           <div style={{ fontWeight: 700, color: "var(--ink-0)", display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
                             {u.name || u.email?.split("@")[0]}

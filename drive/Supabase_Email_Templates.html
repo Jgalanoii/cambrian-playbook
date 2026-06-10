@@ -1,0 +1,131 @@
+<!--
+  Cambrian Catalyst — Supabase Email Templates
+
+  Paste each section into the matching template slot in:
+  Supabase Dashboard > Authentication > Email Templates
+
+  Each template uses {{ .ConfirmationURL }} which Supabase auto-generates.
+  Updated: June 10, 2026
+-->
+
+
+<!-- ============================================================ -->
+<!-- TEMPLATE 1: INVITE USER                                       -->
+<!-- Subject: You've been invited to Cambrian Catalyst              -->
+<!-- ============================================================ -->
+
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1a1a2e;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <div style="font-size: 24px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px;">Cambrian Catalyst</div>
+    <div style="font-size: 12px; color: #888; margin-top: 2px;">Sales Intelligence Platform</div>
+  </div>
+  <div style="background: #f8f9fa; border-radius: 12px; padding: 28px 24px; margin-bottom: 24px;">
+    <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #1a1a2e;">Your account is ready</div>
+    <p style="font-size: 14px; line-height: 1.6; color: #444; margin: 0 0 16px;">An account has been created for you on Cambrian Catalyst — an AI-powered platform that builds sales briefs, competitive intelligence, and call prep in minutes.</p>
+    <p style="font-size: 14px; line-height: 1.6; color: #444; margin: 0 0 20px;">Click below to set your password and get started. Takes about 30 seconds.</p>
+    <div style="text-align: center;">
+      <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #1a1a2e; color: #ffffff; font-size: 14px; font-weight: 700; padding: 12px 32px; border-radius: 8px; text-decoration: none;">Set Up Your Account</a>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #999; text-align: center; line-height: 1.5;">
+    <p style="margin: 0 0 4px;">If you didn't expect this, feel free to ignore it. No hard feelings.</p>
+    <p style="margin: 0; font-style: italic;">Built with unreasonable ambition and a deep respect for your quota.</p>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- TEMPLATE 2: CONFIRM SIGNUP                                     -->
+<!-- Subject: Confirm your Cambrian Catalyst account                -->
+<!-- ============================================================ -->
+
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1a1a2e;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <div style="font-size: 24px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px;">Cambrian Catalyst</div>
+    <div style="font-size: 12px; color: #888; margin-top: 2px;">Sales Intelligence Platform</div>
+  </div>
+  <div style="background: #f8f9fa; border-radius: 12px; padding: 28px 24px; margin-bottom: 24px;">
+    <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #1a1a2e;">Confirm your email to get started</div>
+    <p style="font-size: 14px; line-height: 1.6; color: #444; margin: 0 0 16px;">You just signed up for Cambrian Catalyst. Click below to confirm your email address and activate your account.</p>
+    <p style="font-size: 14px; line-height: 1.6; color: #444; margin: 0 0 20px;">Once confirmed, you can start building sales briefs immediately.</p>
+    <div style="text-align: center;">
+      <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #1a1a2e; color: #ffffff; font-size: 14px; font-weight: 700; padding: 12px 32px; border-radius: 8px; text-decoration: none;">Confirm Email Address</a>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #999; text-align: center; line-height: 1.5;">
+    <p style="margin: 0 0 4px;">If you didn't create this account, you can safely ignore this email.</p>
+    <p style="margin: 0; font-style: italic;">Your unfair advantage starts here.</p>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- TEMPLATE 3: RESET PASSWORD                                     -->
+<!-- Subject: Reset your Cambrian Catalyst password                 -->
+<!-- ============================================================ -->
+
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1a1a2e;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <div style="font-size: 24px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px;">Cambrian Catalyst</div>
+    <div style="font-size: 12px; color: #888; margin-top: 2px;">Sales Intelligence Platform</div>
+  </div>
+  <div style="background: #f8f9fa; border-radius: 12px; padding: 28px 24px; margin-bottom: 24px;">
+    <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #1a1a2e;">Reset your password</div>
+    <p style="font-size: 14px; line-height: 1.6; color: #444; margin: 0 0 20px;">We received a request to reset your password. Click below to choose a new one. This link expires in 24 hours.</p>
+    <div style="text-align: center;">
+      <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #1a1a2e; color: #ffffff; font-size: 14px; font-weight: 700; padding: 12px 32px; border-radius: 8px; text-decoration: none;">Reset Password</a>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #999; text-align: center; line-height: 1.5;">
+    <p style="margin: 0 0 4px;">If you didn't request this, no action needed. Your password hasn't changed.</p>
+    <p style="margin: 0; font-style: italic;">We've got your back. And your pipeline.</p>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- TEMPLATE 4: MAGIC LINK                                         -->
+<!-- Subject: Your Cambrian Catalyst login link                     -->
+<!-- ============================================================ -->
+
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1a1a2e;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <div style="font-size: 24px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px;">Cambrian Catalyst</div>
+    <div style="font-size: 12px; color: #888; margin-top: 2px;">Sales Intelligence Platform</div>
+  </div>
+  <div style="background: #f8f9fa; border-radius: 12px; padding: 28px 24px; margin-bottom: 24px;">
+    <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #1a1a2e;">Your login link</div>
+    <p style="font-size: 14px; line-height: 1.6; color: #444; margin: 0 0 20px;">Click below to sign in to Cambrian Catalyst. This link expires in 1 hour and can only be used once.</p>
+    <div style="text-align: center;">
+      <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #1a1a2e; color: #ffffff; font-size: 14px; font-weight: 700; padding: 12px 32px; border-radius: 8px; text-decoration: none;">Sign In</a>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #999; text-align: center; line-height: 1.5;">
+    <p style="margin: 0 0 4px;">If you didn't request this link, you can safely ignore it.</p>
+    <p style="margin: 0; font-style: italic;">Less password resets. More closed deals.</p>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- TEMPLATE 5: CHANGE EMAIL ADDRESS                               -->
+<!-- Subject: Confirm your new email for Cambrian Catalyst          -->
+<!-- ============================================================ -->
+
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1a1a2e;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <div style="font-size: 24px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px;">Cambrian Catalyst</div>
+    <div style="font-size: 12px; color: #888; margin-top: 2px;">Sales Intelligence Platform</div>
+  </div>
+  <div style="background: #f8f9fa; border-radius: 12px; padding: 28px 24px; margin-bottom: 24px;">
+    <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: #1a1a2e;">Confirm your new email address</div>
+    <p style="font-size: 14px; line-height: 1.6; color: #444; margin: 0 0 20px;">You requested to change your email address. Click below to confirm the switch.</p>
+    <div style="text-align: center;">
+      <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: #1a1a2e; color: #ffffff; font-size: 14px; font-weight: 700; padding: 12px 32px; border-radius: 8px; text-decoration: none;">Confirm New Email</a>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #999; text-align: center; line-height: 1.5;">
+    <p style="margin: 0 0 4px;">If you didn't request this change, contact your admin immediately.</p>
+    <p style="margin: 0; font-style: italic;">New email, same quota-crushing energy.</p>
+  </div>
+</div>
