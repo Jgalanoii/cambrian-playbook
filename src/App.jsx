@@ -2049,7 +2049,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how to USE this sentiment in a discovery call — a specific talk-track pivot, not just 'mention their pain'"},`+
-    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. MUST use a fact NOT already mentioned in the elevator pitch or opening angle. No product mention. No pitch. Close with 'Am I way off base?' or similar. First name sign-off."},{"style":"insight","subject":"Reference a DIFFERENT specific finding about ${co} than email 1 — lowercase, specific, under 40 chars.","body":"2 sentences. Lead with ONE specific observation about ${co} NOT used anywhere else in this brief — a different data point, a different initiative, a different signal. Connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' First name sign-off."}]}`,
+    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. MUST use a fact NOT already mentioned in the elevator pitch or opening angle. No product mention. No pitch. Close with 'Am I way off base?' or similar. Sign off with '[Your name here]' — do NOT invent a sender name."},{"style":"insight","subject":"Reference a DIFFERENT specific finding about ${co} than email 1 — lowercase, specific, under 40 chars.","body":"2 sentences. Lead with ONE specific observation about ${co} NOT used anywhere else in this brief — a different data point, a different initiative, a different signal. Connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' Sign off with '[Your name here]' — do NOT invent a sender name."}]}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
       const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -8513,10 +8513,32 @@ Return ONLY raw JSON:
           if (current.openingAngle) current.openingAngle = stripFakeHiringClaims(current.openingAngle);
           if (current.elevatorPitch) current.elevatorPitch = stripFakeHiringClaims(current.elevatorPitch);
           if (current.outreachEmails?.length) {
+            // Replace any AI-invented sender name with a fun placeholder
+            const funSignoffs = [
+              "Your future favorite vendor",
+              "Somebody who did their homework",
+              "A human who actually read your 10-K",
+              "Your friendly neighborhood sales rep",
+            ];
+            const stripInventedName = (body) => {
+              if (!body) return body;
+              // Match common sign-off patterns: "Best, Sarah" / "Cheers, Alex" / "— Mike" / "Sarah"(alone at end)
+              return body.replace(/(?:(?:Best|Cheers|Thanks|Warmly|Regards|All the best|Talk soon),?\s+)([A-Z][a-z]{2,12})\s*$/,
+                (match, name) => {
+                  // Don't strip if it's part of the prospect company or a known proper noun from the brief
+                  const pick = funSignoffs[Math.floor(Math.random() * funSignoffs.length)];
+                  return match.replace(name, pick);
+                })
+              .replace(/(?:^|\n)\s*(?:—\s*)?([A-Z][a-z]{2,12})\s*$/,
+                (match, name) => {
+                  const pick = funSignoffs[Math.floor(Math.random() * funSignoffs.length)];
+                  return match.replace(name, pick);
+                });
+            };
             current.outreachEmails = current.outreachEmails.map(e => ({
               ...e,
               subject: stripFakeHiringClaims(e.subject),
-              body: stripFakeHiringClaims(e.body),
+              body: stripInventedName(stripFakeHiringClaims(e.body)),
             }));
           }
 
@@ -8671,9 +8693,9 @@ Return ONLY raw JSON:
               if (!s) return s;
               const updated = { ...s };
               // Only fix if the solution cites a specific number that's clearly wrong
-              for (const field of ['jobToBeDone', 'painRelieved', 'gainCreated']) {
+              for (const field of ['jobToBeDone', 'painRelieved', 'gainCreated', 'challengerInsight', 'joltRiskRemover', 'fit', 'targetOutcome']) {
                 if (updated[field]) {
-                  updated[field] = updated[field].replace(/\b([\d,]+)\+?\s*(?:associates|employees|global workforce|team members)\b/gi, (match, num) => {
+                  updated[field] = updated[field].replace(/\b([\d,]+)\+?\s*(?:global\s+)?(?:associates|employees|workforce|team members|workers|staff|people)\b/gi, (match, num) => {
                     const cited = parseInt(num.replace(/,/g, ""), 10);
                     const correct = parseInt(String(correctedEmp).replace(/[^0-9]/g, ""), 10);
                     if (correct > 0 && cited > 0 && (cited < correct * 0.4 || cited > correct * 2.5)) {
