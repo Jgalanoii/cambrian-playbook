@@ -3402,7 +3402,7 @@ function PasswordGate({ onAuth }) {
     <AuthShell>
       <div className="page" style={{maxWidth:440,paddingTop:48}}>
         <div className="page-title">Welcome to Cambrian Catalyst</div>
-        <div className="page-sub">You've been invited to join a team. Set a password below to activate your account.</div>
+        <div className="page-sub">Your account is ready. Set a password below to get started.</div>
         <div className="card" style={{padding:22}}>
           {inviteEmail && (
             <div style={{fontSize:13,color:"var(--ink-1)",marginBottom:12,padding:"8px 12px",background:"var(--bg-1)",borderRadius:8}}>
