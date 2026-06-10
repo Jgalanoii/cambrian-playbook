@@ -3401,8 +3401,8 @@ function PasswordGate({ onAuth }) {
   if (mode === "invite_setpassword") return (
     <AuthShell>
       <div className="page" style={{maxWidth:440,paddingTop:48}}>
-        <div className="page-title">You're in. Set your password.</div>
-        <div className="page-sub">Your team is already using Cambrian Catalyst. Set a password and you'll be building briefs in 30 seconds.</div>
+        <div className="page-title">Welcome to Cambrian Catalyst</div>
+        <div className="page-sub">You've been invited to join a team. Set a password below to activate your account.</div>
         <div className="card" style={{padding:22}}>
           {inviteEmail && (
             <div style={{fontSize:13,color:"var(--ink-1)",marginBottom:12,padding:"8px 12px",background:"var(--bg-1)",borderRadius:8}}>
@@ -3416,10 +3416,10 @@ function PasswordGate({ onAuth }) {
           {err && <div className="pw-error">{err}</div>}
           <button className="btn btn-primary btn-lg" style={{width:"100%",justifyContent:"center",opacity:loading?0.7:1}}
             onClick={submit} disabled={loading||!newPw||!newPwConfirm}>
-            {loading ? "Setting up..." : "Join My Team →"}
+            {loading ? "Setting up..." : "Create Account"}
           </button>
           <div style={{textAlign:"center",marginTop:12,fontSize:11,color:"var(--ink-3)",fontStyle:"italic"}}>
-            One password. That's it. Then you'll see what all the fuss is about.
+            Quota starts at 5 briefs/month. Your admin can upgrade anytime.
           </div>
         </div>
       </div>

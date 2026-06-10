@@ -102,12 +102,12 @@ export default async function handler(req, res) {
   const token = invResult?.[0]?.token;
   if (!token) return res.status(500).json({ error: "Failed to generate invitation token" });
 
-  // Email sending is DISABLED by default — admin must explicitly opt in
-  // by passing sendEmail: true in the request body. This prevents accidental
-  // spam when managing users in the admin panel.
-  const sendEmail = body.sendEmail === true;
+  // Always send invite email — the admin clicked "Send Invite" in the UI,
+  // so they intend for the user to receive it. Supabase auth creates the
+  // user in a pending state and sends the invite email with a magic link.
+  const skipEmail = req.body?.skipEmail === true; // escape hatch for admin scripts
 
-  if (sendEmail) {
+  if (!skipEmail) {
     try {
       const authRes = await fetch(`${SB_URL}/auth/v1/invite`, {
         method: "POST",

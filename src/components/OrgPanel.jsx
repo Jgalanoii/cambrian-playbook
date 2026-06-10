@@ -186,7 +186,7 @@ export default function OrgPanel({ orgCtx, setOrgCtx, sbUser, sbToken, onClose }
       });
       const data = await res.json();
       if (data.ok) {
-        setInviteMsg(data.email_sent === false ? "Invitation created — share the link directly." : `Invitation sent to ${email}`);
+        setInviteMsg(data.email_sent === false ? "Invitation created — copy the invite link below and share it directly." : `Invite sent to ${email}. They'll receive an email with a link to set their password.`);
         setInviteEmail("");
         fetchOrgInvitations(orgCtx.id, sbToken).then(setInvitations);
       } else {
