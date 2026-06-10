@@ -1688,25 +1688,27 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   // FIRMOGRAPHICS SINGLE SOURCE OF TRUTH — compact block injected into EVERY micro-call.
   // Establishes non-negotiable facts so P1/P2/P4/P5/P7/P9 never contradict each other.
   // Priority: Apollo > member-level (from scoring/enrichment) > empty
+  // FIRMOGRAPHICS — enrichment is name-matched (SEC EDGAR, Wikidata) and can hit
+  // wrong entities for ambiguous names (Stripe, Mercury, Apollo). HQ is NOT included
+  // because name-matching frequently returns wrong addresses. P1 finds HQ from the
+  // actual target URL. Revenue/employees are included as hints, not as immutable facts.
   const _fg = {
     employees: enrichment?.employeeCount || member.employees || "",
     ownership: enrichment?.publiclyTraded || member.publicPrivate || "",
     industry: enrichment?.industry ? `${enrichment.industry}${enrichment.subIndustry ? ` / ${enrichment.subIndustry}` : ""}` : (member.ind || ""),
-    hq: enrichment?.headquarters || "",
     founded: enrichment?.founded || "",
     revenue: enrichment?.revenue || "",
     website: member.company_url || enrichment?.linkedIn || "",
   };
   const firmographicsTruth = Object.values(_fg).some(v => v)
-    ? `\nESTABLISHED FACTS about ${co} (do NOT contradict — these come from verified sources):\n` +
+    ? `\nCOMPANY DATA (from automated enrichment — use as reference, but if your web search on ${url || co} returns different data, trust the web search):\n` +
       (_fg.employees ? `Employees: ${_fg.employees}\n` : "") +
       (_fg.ownership ? `Ownership: ${_fg.ownership}\n` : "") +
       (_fg.industry ? `Industry: ${_fg.industry}\n` : "") +
-      (_fg.hq ? `Headquarters: ${_fg.hq}\n` : "") +
       (_fg.founded ? `Founded: ${_fg.founded}\n` : "") +
       (_fg.revenue ? `Revenue: ${_fg.revenue}\n` : "") +
       (_fg.website ? `Website: ${_fg.website}\n` : "") +
-      `If your web search returns a DIFFERENT number for any of these, use the number above — it's been verified.\n\n`
+      `This data was matched by company name and may be wrong for ambiguously named companies. If web search contradicts any of these, use the web search result.\n\n`
     : "";
 
   // PUBLIC COMPANY: inject SEC filing search instructions for publicly traded targets
@@ -8540,11 +8542,11 @@ Return ONLY raw JSON:
           const apollo = member._enrichment?.organization;
           const apolloPeople = member._enrichment?.people || [];
 
-          // Revenue: Apollo > p9 (web-searched financials) > p1 (overview)
-          if (apollo?.revenue) {
-            if (current.revenue && current.revenue !== apollo.revenue) {
-              console.log(`[corroboration] Revenue: Apollo "${apollo.revenue}" overrides p1 "${current.revenue}"`);
-            }
+          // Revenue: p1/p9 > Apollo (p1 revenue was already reconciled with P9 in mergeDeepIntel;
+          // enrichment matches by name and can hit wrong entity for ambiguous companies)
+          if (apollo?.revenue && !current.revenue) {
+            // Apollo as fallback only when P1/P9 didn't find revenue
+            console.log(`[corroboration] Revenue: Apollo "${apollo.revenue}" used as fallback (no P1/P9 revenue)`);
             current.revenue = apollo.revenue;
           } else if (current.financialDeepDive?.revenueTrend && current.revenue) {
             // Both p1 and p9 have revenue — check if they agree (rough check)
@@ -8555,24 +8557,40 @@ Return ONLY raw JSON:
             }
           }
 
-          // Employee count: Apollo > p1
+          // Employee count: p1 > Apollo (p1 is URL-anchored, enrichment matches by name and can hit wrong entity)
+          // Apollo is only used as fallback when P1 didn't find employee count
           if (apollo?.employeeCount && current.employeeCount) {
             const apolloNum = parseInt(String(apollo.employeeCount).replace(/[^0-9]/g, ""));
             const p1Num = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""));
             if (apolloNum && p1Num && Math.abs(apolloNum - p1Num) / apolloNum > 0.3) {
-              console.log(`[corroboration] Employees: Apollo ${apolloNum} overrides p1 ${p1Num} (>30% diff)`);
-              current.employeeCount = apollo.employeeCount;
+              console.log(`[corroboration] Employees: p1 ${p1Num} kept over Apollo ${apolloNum} (>30% diff — enrichment may match wrong entity)`);
+              // Keep P1's value — it's from web search on the target URL
             }
+          } else if (apollo?.employeeCount && !current.employeeCount) {
+            current.employeeCount = apollo.employeeCount;
           }
 
-          // HQ: Apollo > p1
+          // HQ: p1 > Apollo (p1 is URL-anchored, enrichment matches by name and can hit wrong entity)
+          // Use companySnapshot as tiebreaker — it's from P1's web search on the actual target URL
           if (apollo?.headquarters && current.headquarters) {
             const aHQ = (apollo.headquarters || "").toLowerCase();
             const pHQ = (current.headquarters || "").toLowerCase();
             if (aHQ && pHQ && !pHQ.includes(aHQ.split(",")[0]) && !aHQ.includes(pHQ.split(",")[0])) {
-              console.log(`[corroboration] HQ: Apollo "${apollo.headquarters}" overrides p1 "${current.headquarters}"`);
-              current.headquarters = apollo.headquarters;
+              // They disagree — check companySnapshot for which city it mentions
+              const snap = (current.companySnapshot || "").toLowerCase();
+              const p1City = pHQ.split(",")[0].trim();
+              const apolloCity = aHQ.split(",")[0].trim();
+              if (snap && apolloCity && snap.includes(apolloCity) && !snap.includes(p1City)) {
+                console.log(`[corroboration] HQ: Apollo "${apollo.headquarters}" confirmed by snapshot, overrides p1 "${current.headquarters}"`);
+                current.headquarters = apollo.headquarters;
+              } else {
+                console.log(`[corroboration] HQ: p1 "${current.headquarters}" wins over Apollo "${apollo.headquarters}" (p1 is URL-anchored)`);
+                // Keep P1's value — it's from web search on the target URL
+              }
             }
+          } else if (apollo?.headquarters && !current.headquarters) {
+            // P1 didn't find HQ, use Apollo as fallback
+            current.headquarters = apollo.headquarters;
           }
 
           // Key contacts (p4) vs executives (p2): p2 is web-searched, higher trust
