@@ -40,6 +40,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   const [userTypeFilter, setUserTypeFilter] = useState("all"); // all | authenticated | guest
   const [roleFilter, setRoleFilter] = useState(""); // "" | admin | manager | rep
   const [planFilter, setPlanFilter] = useState(""); // "" | trial | paid | enterprise | suspended
+  const [userStatusFilter, setUserStatusFilter] = useState(""); // "" | orphan | never_active | new_7d
   const [searchQuery, setSearchQuery] = useState("");
   const isSuperuser = sbUser?.email === SUPERUSER_EMAIL || orgCtx?.userRole === "admin";
 
@@ -153,6 +154,9 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
     if (userTypeFilter === "guest") return false; // guests aren't in users table
     if (roleFilter && u.role !== roleFilter) return false;
     if (planFilter && u.org_plan !== planFilter) return false;
+    if (userStatusFilter === "orphan" && u.org_id) return false;
+    if (userStatusFilter === "never_active" && u.last_active) return false;
+    if (userStatusFilter === "new_7d" && u.created_at && (Date.now() - new Date(u.created_at).getTime()) > 604800000) return false;
     if (!matchesSearch(u)) return false;
     if (dateRange !== "all" && u.last_active && !inDateRange(u.last_active)) return false;
     return true;
@@ -188,7 +192,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
     return true;
   });
 
-  const hasActiveFilters = dateRange !== "all" || userTypeFilter !== "all" || roleFilter || planFilter || searchQuery;
+  const hasActiveFilters = dateRange !== "all" || userTypeFilter !== "all" || roleFilter || planFilter || userStatusFilter || searchQuery;
 
   // ── Generic sort comparator for tables ──
   const sortRows = (rows, key, dir, opts = {}) => {
@@ -258,13 +262,16 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   // ── Render filters per section ──
   const renderFilters = () => {
     const clearBtn = hasActiveFilters && (
-      <button onClick={() => { setDateRange("all"); setUserTypeFilter("all"); setRoleFilter(""); setPlanFilter(""); setSearchQuery(""); }}
+      <button onClick={() => { setDateRange("all"); setUserTypeFilter("all"); setRoleFilter(""); setPlanFilter(""); setUserStatusFilter(""); setSearchQuery(""); }}
         style={{ fontSize: 10, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1.5px solid var(--amber)", background: "var(--surface)", color: "var(--amber)", cursor: "pointer", whiteSpace: "nowrap" }}>
         Clear filters
       </button>
     );
 
     if (tab === "users") {
+      const orphanCount = (data.users || []).filter(u => !u.org_id).length;
+      const neverActiveCount = (data.users || []).filter(u => !u.last_active).length;
+      const newCount = (data.users || []).filter(u => u.created_at && (Date.now() - new Date(u.created_at).getTime()) < 604800000).length;
       return (
         <div className="admin-filters">
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search members..."
@@ -281,6 +288,12 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
             <option value="paid">Paid</option>
             <option value="enterprise">Enterprise</option>
             <option value="suspended">Suspended</option>
+          </select>
+          <select value={userStatusFilter} onChange={e => setUserStatusFilter(e.target.value)}>
+            <option value="">Any status</option>
+            <option value="orphan">No org ({orphanCount})</option>
+            <option value="never_active">Never active ({neverActiveCount})</option>
+            <option value="new_7d">Joined last 7d ({newCount})</option>
           </select>
           {clearBtn}
           {hasActiveFilters && <span style={{ fontSize: 10, color: "var(--amber)", fontWeight: 600 }}>{filteredUsers.length} of {data.users.length}</span>}
@@ -991,13 +1004,16 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                     <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="role">Role</SortTh>
                     <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="org_name">Organization</SortTh>
                     <th>Status</th>
+                    <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="created_at">Joined</SortTh>
                     <SortTh sortKey={memberSortKey} sortDir={memberSortDir} onSort={onMemberSort} colKey="last_active">Last Active</SortTh>
+                    <th style={{textAlign:"center"}}>Sessions</th>
+                    <th style={{textAlign:"center"}}>Briefs</th>
                     <th>Researched</th>
                     <th style={{ width: 50 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortRows(filteredUsers, memberSortKey, memberSortDir, { dateKeys: { last_active: true } }).map(u => {
+                  {sortRows(filteredUsers, memberSortKey, memberSortDir, { dateKeys: { last_active: true, created_at: true } }).map(u => {
                     const adminAction = async (action, extra = {}) => {
                       try {
                         const r = await fetch("/api/admin", {
@@ -1060,14 +1076,29 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                           </select>
                         </td>
                         <td>
-                          {u.last_active ? (
-                            <span className="admin-badge" style={{ background: "var(--green-bg)", color: "var(--green)" }}>Active</span>
-                          ) : (
-                            <span className="admin-badge" style={{ background: "var(--bg-2)", color: "var(--ink-3)" }}>Never active</span>
-                          )}
+                          {(() => {
+                            const now = Date.now();
+                            const la = u.last_active ? new Date(u.last_active).getTime() : 0;
+                            const noOrg = !u.org_id;
+                            if (!la && noOrg) return <span className="admin-badge" style={{ background: "var(--red-bg,#fee)", color: "var(--red,#c33)", border: "1px solid var(--red,#c33)" }}>No org</span>;
+                            if (!la) return <span className="admin-badge" style={{ background: "var(--bg-2)", color: "var(--ink-3)" }}>Never active</span>;
+                            if (now - la < 86400000) return <span className="admin-badge" style={{ background: "var(--green-bg)", color: "var(--green)" }}>Active today</span>;
+                            if (now - la < 604800000) return <span className="admin-badge" style={{ background: "var(--blue-bg,#e8f0fe)", color: "var(--blue,#1a73e8)" }}>This week</span>;
+                            if (now - la < 2592000000) return <span className="admin-badge" style={{ background: "var(--amber-bg)", color: "var(--amber)" }}>This month</span>;
+                            return <span className="admin-badge" style={{ background: "var(--bg-2)", color: "var(--ink-3)" }}>Inactive 30d+</span>;
+                          })()}
                         </td>
                         <td style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
-                          {u.last_active ? timeAgo(u.last_active) : "\u2014"}
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "\u2014"}
+                        </td>
+                        <td style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap" }}>
+                          {u.last_active ? timeAgo(u.last_active) : u.last_login ? timeAgo(u.last_login) : "\u2014"}
+                        </td>
+                        <td style={{ fontSize: 12, textAlign: "center", fontWeight: 600, color: u.session_count > 0 ? "var(--ink-0)" : "var(--ink-3)" }}>
+                          {u.session_count || 0}
+                        </td>
+                        <td style={{ fontSize: 12, textAlign: "center", fontWeight: 600, color: u.brief_count > 0 ? "var(--green)" : "var(--ink-3)" }}>
+                          {u.brief_count || 0}
                         </td>
                         <td style={{ fontSize: 10 }}>
                           {(() => {
