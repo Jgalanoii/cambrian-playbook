@@ -79,10 +79,15 @@ export default async function handler(req, res) {
     });
     const totalSessions = parseInt(sessionCountRes.headers.get("content-range")?.split("/")?.[1]) || 0;
 
-    // Fetch all data in parallel (sessions are paginated)
-    const [users, orgs, sessions, usageLogs, guestLogs, dbCosts] = await Promise.all([
+    // Fetch all data in parallel
+    // sessionIndex: lightweight query of ALL sessions (no data blob) for accurate per-user counts
+    // sessions: paginated with full data blob for session detail view
+    const [users, orgs, sessionIndex, sessions, usageLogs, guestLogs, dbCosts] = await Promise.all([
       sbFetch("users?select=id,email,name,role,org_id,created_at,last_login&order=created_at.desc"),
       sbFetch("orgs?select=id,name,seller_url,plan,run_count,run_limit,max_run_count,max_run_limit,created_at&order=created_at.desc"),
+      // ALL sessions — lightweight (no data blob) for accurate user activity stats
+      sbFetch("sessions?select=id,user_id,seller_url,updated_at,created_at&order=updated_at.desc"),
+      // Paginated sessions WITH data blob for detail view
       sbFetch(`sessions?select=id,name,seller_url,user_id,updated_at,created_at,data&order=updated_at.desc&limit=${limit}&offset=${offset}`),
       sbFetch("api_usage_log?select=user_id,org_id,model,input_tokens,output_tokens,cache_read_tokens,cache_creation_tokens,web_searches,endpoint,target_company,seller_url,brief_type,created_at&order=created_at.desc", 50000),
       sbFetch("api_usage_log?user_id=is.null&select=model,input_tokens,output_tokens,web_searches,endpoint,created_at&order=created_at.desc&limit=2000"),
@@ -108,21 +113,27 @@ export default async function handler(req, res) {
       };
     });
 
-    // Enrich with session data
-    let totalMiltonMessages = 0;
-    (sessions || []).forEach(s => {
-      const miltonCount = Number(s.data?.miltonMsgCount) || 0;
-      totalMiltonMessages += miltonCount;
+    // Enrich with session index (ALL sessions — lightweight, accurate counts)
+    (sessionIndex || []).forEach(s => {
       if (userMap[s.user_id]) {
         userMap[s.user_id].session_count++;
-        if (s.data?.brief?.companySnapshot) userMap[s.user_id].brief_count++;
-        userMap[s.user_id].milton_messages = (userMap[s.user_id].milton_messages || 0) + miltonCount;
         if (!userMap[s.user_id].last_active || new Date(s.updated_at) > new Date(userMap[s.user_id].last_active)) {
           userMap[s.user_id].last_active = s.updated_at;
         }
         if (s.seller_url && !userMap[s.user_id].seller_urls.includes(s.seller_url)) {
           userMap[s.user_id].seller_urls.push(s.seller_url);
         }
+      }
+    });
+
+    // Enrich with paginated session data (full data blob for detail metrics)
+    let totalMiltonMessages = 0;
+    (sessions || []).forEach(s => {
+      const miltonCount = Number(s.data?.miltonMsgCount) || 0;
+      totalMiltonMessages += miltonCount;
+      if (userMap[s.user_id]) {
+        if (s.data?.brief?.companySnapshot) userMap[s.user_id].brief_count++;
+        userMap[s.user_id].milton_messages = (userMap[s.user_id].milton_messages || 0) + miltonCount;
       }
     });
 
