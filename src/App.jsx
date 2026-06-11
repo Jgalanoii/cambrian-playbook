@@ -3365,10 +3365,22 @@ function PasswordGate({ onAuth }) {
         });
         if(r.ok){
           if(mode==="invite_setpassword"){
-            // Invite flow — user just set their password, log them in directly
+            // Invite flow — user just set their password, try auto-login
+            // First try with the invite token (works if token is still valid)
             sbStoreTokens({access_token:recoveryToken});
             const u=await sbGetUser(recoveryToken);
             if(u?.id){onAuth(u,recoveryToken);return;}
+            // Token expired — fall back to email/password sign-in
+            // Extract email from the token payload or use the inviteEmail state
+            const loginEmail = inviteEmail || (() => { try { return JSON.parse(atob(recoveryToken.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).email; } catch { return ""; } })();
+            if(loginEmail && newPw){
+              const d=await sbAuth('token?grant_type=password',{email:loginEmail,password:newPw});
+              if(d.access_token){sbStoreTokens(d);onAuth(d.user,d.access_token);return;}
+            }
+            // If even that fails, show success and redirect to sign-in
+            setMode("signin");setEmail(loginEmail||"");setErr("");
+            setPasswordUpdated(true);
+            return;
           }
           setPasswordUpdated(true);setErr("");
         }
