@@ -47,6 +47,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   const [refreshing, setRefreshing] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [menuPos, setMenuPos] = useState(null);
+  const [menuContext, setMenuContext] = useState(null); // { userId, email, name, orgId, role, isSuperuserRow }
   const cleanupRef = useRef(null);
   const [expandedSession, setExpandedSession] = useState(null);
 
@@ -1139,74 +1140,17 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                             );
                           })()}
                         </td>
-                        <td style={{ position: "relative", overflow: "visible" }}>
+                        <td>
                           <button className="admin-dot-menu" aria-label="Actions" onClick={e => {
                             e.stopPropagation();
                             if (openMenu === u.id) { setOpenMenu(null); return; }
-                            // Calculate fixed position from button rect
                             const rect = e.currentTarget.getBoundingClientRect();
                             setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                            setMenuContext({ userId: u.id, email: u.email, name: u.name, orgId: u.org_id, role: u.role, isSuperuserRow: u.email === SUPERUSER_EMAIL });
                             setOpenMenu(u.id);
                           }}>
                             &#x22EF;
                           </button>
-                          {openMenu === u.id && (
-                            <div className="admin-action-menu" style={{ position: "fixed", top: menuPos?.top || 0, right: menuPos?.right || 0, left: "auto" }} onClick={e => e.stopPropagation()}>
-                              <button className="admin-action-item" onClick={() => { adminAction("reset_password"); setOpenMenu(null); }}>
-                                Reset Password
-                              </button>
-                              <button className="admin-action-item" onClick={() => {
-                                const targetEmail = window.prompt(`Clone ${u.name || u.email}'s setup to a new user.\n\nEnter the new user's email:`);
-                                if (!targetEmail || !targetEmail.includes("@")) return;
-                                patchUser({}, ""); // no-op to reuse pattern
-                                // Find the target user
-                                const target = data.users?.find(tu => tu.email?.toLowerCase() === targetEmail.toLowerCase());
-                                if (target) {
-                                  // Clone: set same org + role
-                                  fetch("/api/admin", {
-                                    method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                                    body: JSON.stringify({ action: "update_user", userId: target.id, email: target.email, fields: { org_id: u.org_id, role: u.role } }),
-                                  }).then(r => r.json()).then(d => {
-                                    setPlanSaveMsg(d.ok ? `Cloned ${u.name}'s setup → ${targetEmail}` : `Error: ${d.error}`);
-                                    setTimeout(fetchData, 500);
-                                  }).catch(() => setPlanSaveMsg("Clone failed"));
-                                } else {
-                                  setPlanSaveMsg(`User ${targetEmail} not found — they need to sign up first.`);
-                                }
-                                setTimeout(() => setPlanSaveMsg(""), 4000);
-                                setOpenMenu(null);
-                              }}>
-                                Clone Setup to User
-                              </button>
-                              <button className="admin-action-item" onClick={() => {
-                                const link = `${window.location.origin}?ref=admin`;
-                                navigator.clipboard?.writeText(link);
-                                setPlanSaveMsg("Signup link copied — share directly (no email sent)");
-                                setTimeout(() => setPlanSaveMsg(""), 3000);
-                                setOpenMenu(null);
-                              }}>
-                                Copy Invite Link
-                              </button>
-                              {u.email !== SUPERUSER_EMAIL && (
-                                <button className="admin-action-item danger" onClick={async () => {
-                                  if (!window.confirm(`Delete ${u.email}? This removes their auth account AND user record. They'll need to sign up again from scratch.`)) return;
-                                  try {
-                                    const r = await fetch("/api/admin", {
-                                      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
-                                      body: JSON.stringify({ action: "delete_user", userId: u.id, email: u.email }),
-                                    });
-                                    const d = await r.json();
-                                    setPlanSaveMsg(d.ok ? `Deleted ${u.email}` : `Error: ${d.error}`);
-                                    if (d.ok) setTimeout(fetchData, 1500);
-                                  } catch { setPlanSaveMsg("Failed to delete user"); }
-                                  setTimeout(() => setPlanSaveMsg(""), 4000);
-                                  setOpenMenu(null);
-                                }}>
-                                  Delete User
-                                </button>
-                              )}
-                            </div>
-                          )}
                         </td>
                       </tr>
                     );
@@ -2312,6 +2256,62 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
 
       {/* Toast */}
       {planSaveMsg && <div className="admin-toast">{planSaveMsg}</div>}
+
+      {/* Action menu — rendered outside all tables/scroll containers as a portal */}
+      {openMenu && menuPos && menuContext && (
+        <div className="admin-action-menu" style={{ position: "fixed", top: menuPos.top, right: menuPos.right, left: "auto", zIndex: 99999 }}
+          onClick={e => e.stopPropagation()}>
+          <button className="admin-action-item" onClick={() => {
+            fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+              body: JSON.stringify({ action: "reset_password", email: menuContext.email, userId: menuContext.userId }) })
+              .then(r => r.json()).then(d => setPlanSaveMsg(d.ok ? d.message || "Password reset sent" : `Error: ${d.error}`))
+              .catch(() => setPlanSaveMsg("Failed"));
+            setTimeout(() => setPlanSaveMsg(""), 4000);
+            setOpenMenu(null);
+          }}>Reset Password</button>
+          <button className="admin-action-item" onClick={() => {
+            const targetEmail = window.prompt(`Clone ${menuContext.name || menuContext.email}'s setup to a new user.\n\nEnter the new user's email:`);
+            if (!targetEmail || !targetEmail.includes("@")) { setOpenMenu(null); return; }
+            const target = data.users?.find(tu => tu.email?.toLowerCase() === targetEmail.toLowerCase());
+            if (target) {
+              fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                body: JSON.stringify({ action: "update_user", userId: target.id, email: target.email, fields: { org_id: menuContext.orgId, role: menuContext.role } }) })
+                .then(r => r.json()).then(d => { setPlanSaveMsg(d.ok ? `Cloned → ${targetEmail}` : `Error: ${d.error}`); setTimeout(fetchData, 500); })
+                .catch(() => setPlanSaveMsg("Clone failed"));
+            } else { setPlanSaveMsg(`User ${targetEmail} not found — they need to sign up first.`); }
+            setTimeout(() => setPlanSaveMsg(""), 4000);
+            setOpenMenu(null);
+          }}>Clone Setup to User</button>
+          <button className="admin-action-item" onClick={() => {
+            navigator.clipboard?.writeText(`${window.location.origin}?ref=admin`);
+            setPlanSaveMsg("Signup link copied");
+            setTimeout(() => setPlanSaveMsg(""), 3000);
+            setOpenMenu(null);
+          }}>Copy Invite Link</button>
+          <button className="admin-action-item" onClick={() => {
+            fetch("/api/invite", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+              body: JSON.stringify({ email: menuContext.email, role: menuContext.role }) })
+              .then(r => r.json()).then(d => setPlanSaveMsg(d.ok ? (d.note || `Sent to ${menuContext.email}`) : `Error: ${d.error}`))
+              .catch(() => setPlanSaveMsg("Failed"));
+            setTimeout(() => setPlanSaveMsg(""), 5000);
+            setOpenMenu(null);
+          }}>Resend Invite</button>
+          {!menuContext.isSuperuserRow && (
+            <button className="admin-action-item danger" onClick={async () => {
+              if (!window.confirm(`Delete ${menuContext.email}? This removes their account permanently.`)) { setOpenMenu(null); return; }
+              try {
+                const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sbToken}` },
+                  body: JSON.stringify({ action: "delete_user", userId: menuContext.userId, email: menuContext.email }) });
+                const d = await r.json();
+                setPlanSaveMsg(d.ok ? `Deleted ${menuContext.email}` : `Error: ${d.error}`);
+                if (d.ok) setTimeout(fetchData, 1500);
+              } catch { setPlanSaveMsg("Failed to delete"); }
+              setTimeout(() => setPlanSaveMsg(""), 4000);
+              setOpenMenu(null);
+            }}>Delete User</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
