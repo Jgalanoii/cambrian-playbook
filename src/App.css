@@ -897,14 +897,15 @@ input[type=text]::placeholder, input[type=email]::placeholder, textarea::placeho
 .admin-filters input { flex: 1 1 160px; min-width: 120px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .admin-table th { padding: 10px 12px; font-size: 10px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.3px; text-align: left; border-bottom: 2px solid var(--line-0); position: sticky; top: 0; background: var(--surface); z-index: 1; }
-.admin-table td { padding: 10px 12px; border-bottom: 1px solid var(--line-1); vertical-align: middle; }
+.admin-table td { padding: 10px 12px; border-bottom: 1px solid var(--line-1); vertical-align: middle; position: relative; }
+.admin-table td:last-child { overflow: visible; }
 .admin-table tbody tr:nth-child(even) td { background: var(--bg-0); }
 .admin-table tr:hover td { background: var(--bg-1); }
 .admin-table select { font-size: 11px; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--line-0); font-weight: 600; cursor: pointer; background: var(--surface); }
 .admin-badge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
 .admin-dot-menu { background: var(--bg-1); border: 1.5px solid var(--line-0); border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 16px; color: var(--ink-2); line-height: 1; transition: all 0.15s; }
 .admin-dot-menu:hover { background: var(--ink-0); color: var(--surface); border-color: var(--ink-0); }
-.admin-action-menu { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1.5px solid var(--line-0); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); min-width: 180px; z-index: 10; overflow: hidden; padding: 4px 0; }
+.admin-action-menu { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1.5px solid var(--line-0); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); min-width: 180px; z-index: 9999; overflow: visible; padding: 4px 0; }
 .admin-action-item { display: block; width: 100%; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--ink-1); background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; transition: background 0.1s; }
 .admin-action-item:hover { background: var(--bg-1); }
 .admin-action-item.danger { color: var(--red); }

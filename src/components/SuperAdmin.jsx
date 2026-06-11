@@ -46,6 +46,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
 
   const [refreshing, setRefreshing] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
+  const [menuPos, setMenuPos] = useState(null);
   const [expandedSession, setExpandedSession] = useState(null);
 
   // ── Sort state for Members table ──
@@ -1128,12 +1129,19 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                             );
                           })()}
                         </td>
-                        <td style={{ position: "relative" }}>
-                          <button className="admin-dot-menu" aria-label="Actions" onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === u.id ? null : u.id); }}>
+                        <td style={{ position: "relative", overflow: "visible" }}>
+                          <button className="admin-dot-menu" aria-label="Actions" onClick={e => {
+                            e.stopPropagation();
+                            if (openMenu === u.id) { setOpenMenu(null); return; }
+                            // Calculate fixed position from button rect
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                            setOpenMenu(u.id);
+                          }}>
                             &#x22EF;
                           </button>
                           {openMenu === u.id && (
-                            <div className="admin-action-menu" onClick={e => e.stopPropagation()}>
+                            <div className="admin-action-menu" style={{ position: "fixed", top: menuPos?.top || 0, right: menuPos?.right || 0, left: "auto" }} onClick={e => e.stopPropagation()}>
                               <button className="admin-action-item" onClick={() => { adminAction("reset_password"); setOpenMenu(null); }}>
                                 Reset Password
                               </button>
