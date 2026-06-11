@@ -1,7 +1,7 @@
 // src/components/SuperAdmin.jsx — Reporting dashboard (formerly Super Admin)
 // Locked to superuser email only. Shows engagement metrics across all users.
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { timeAgo } from "../lib/utils.js";
 
 // ── Sortable column header component ──
@@ -47,6 +47,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   const [refreshing, setRefreshing] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [menuPos, setMenuPos] = useState(null);
+  const cleanupRef = useRef(null);
   const [expandedSession, setExpandedSession] = useState(null);
 
   // ── Sort state for Members table ──
@@ -92,9 +93,18 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   // Close action menu on click outside
   useEffect(() => {
     if (openMenu === null) return;
-    const handler = () => setOpenMenu(null);
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
+    // Delay adding the listener so the current click event doesn't immediately close the menu
+    const timer = setTimeout(() => {
+      const handler = (e) => {
+        // Don't close if clicking inside the menu itself
+        if (e.target.closest && e.target.closest(".admin-action-menu")) return;
+        setOpenMenu(null);
+      };
+      document.addEventListener("click", handler);
+      // Store for cleanup
+      cleanupRef.current = () => document.removeEventListener("click", handler);
+    }, 10);
+    return () => { clearTimeout(timer); cleanupRef.current?.(); };
   }, [openMenu]);
 
   // Superuser check — after all hooks
