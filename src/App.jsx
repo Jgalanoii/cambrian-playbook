@@ -6868,10 +6868,13 @@ Return ONLY raw JSON:
             Object.assign(parsed, sanitized);
 
             // ICP confidence based on actual field population — not just call completion
-            const icpFields = parsed.icp || {};
-            const coreFields = [icpFields.sellerDescription, icpFields.marketCategory, icpFields.targetIndustries, icpFields.companySizeRange, parsed.sellerName];
-            const populatedCount = coreFields.filter(f => f && typeof f === "string" ? f.trim().length > 5 : Array.isArray(f) ? f.length > 0 : !!f).length;
-            parsed._confidence = populatedCount >= 4 ? "high" : populatedCount >= 2 ? "medium" : "low";
+            const coreFields = [
+              parsed.sellerDescription, parsed.marketCategory, parsed.sellerName,
+              parsed.icp?.industries, parsed.icp?.companySizeRange || parsed.icp?.orgSize,
+            ];
+            const populatedCount = coreFields.filter(f => f && (typeof f === "string" ? f.trim().length > 3 : Array.isArray(f) ? f.length > 0 : !!f)).length;
+            // High = 3+ core fields (normal). Medium = 1-2 (partial). Low = 0 (total failure).
+            parsed._confidence = populatedCount >= 3 ? "high" : populatedCount >= 1 ? "medium" : "low";
             parsed._researchChars = 0;
             setSellerICP(parsed);
             lastGenSig.current.icp = getIcpSig();
