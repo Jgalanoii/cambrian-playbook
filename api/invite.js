@@ -81,8 +81,10 @@ export default async function handler(req, res) {
   const existingMembers = await sbFetch(`users?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(email)}&select=id`);
   if (existingMembers?.length > 0) return res.status(400).json({ error: "This person is already a member of that organization. No invite needed." });
 
-  // Delete any existing pending invitation for this email (allows resend)
-  await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(email.trim().toLowerCase())}&accepted_at=is.null`, {
+  // Delete ALL existing invitations for this email in this org (pending AND accepted)
+  // so we can always re-invite. The UNIQUE(org_id, email) constraint blocks inserts
+  // if any prior invite exists — even accepted ones.
+  await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(email.trim().toLowerCase())}`, {
     method: "DELETE",
     headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
   });
@@ -96,7 +98,8 @@ export default async function handler(req, res) {
   });
 
   if (invResult?.code || invResult?.message) {
-    return res.status(400).json({ error: "Failed to create invitation. Please try again." });
+    console.warn("[invite] Failed to create invitation:", JSON.stringify(invResult));
+    return res.status(400).json({ error: `Failed to create invitation: ${invResult.message || invResult.code || "unknown error"}` });
   }
 
   const token = invResult?.[0]?.token;
