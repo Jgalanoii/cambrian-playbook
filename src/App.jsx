@@ -6648,7 +6648,9 @@ Return ONLY raw JSON:
   };
 
   const buildSellerICP = async(rawUrl, {forceRefresh=false}={}) => {
-    const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+    let url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"").replace(/^www\./,"");
+    // Auto-add .com if no TLD present — "meritincentives" → "meritincentives.com"
+    if (url && !url.includes(".")) url = url + ".com";
 
     // Cache hit — instant, deterministic. Check localStorage first, then org-level Supabase cache.
     if(!forceRefresh){
