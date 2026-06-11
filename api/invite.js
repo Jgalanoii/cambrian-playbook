@@ -77,14 +77,47 @@ export default async function handler(req, res) {
   if (!targetOrgId) return res.status(403).json({ error: "You must belong to an organization" });
   if (!isSuperuser && caller.role !== "admin") return res.status(403).json({ error: "Only admins can invite users" });
 
-  // Check if already a member of this org
-  const existingMembers = await sbFetch(`users?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(email)}&select=id`);
-  if (existingMembers?.length > 0) return res.status(400).json({ error: "This person is already a member of that organization. No invite needed." });
+  const cleanEmail = email.trim().toLowerCase();
 
-  // Delete ALL existing invitations for this email in this org (pending AND accepted)
-  // so we can always re-invite. The UNIQUE(org_id, email) constraint blocks inserts
-  // if any prior invite exists — even accepted ones.
-  await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(email.trim().toLowerCase())}`, {
+  // ── ROUTE 1: User already exists in our system ──────────────────────
+  const existingUsers = await sbFetch(`users?email=eq.${encodeURIComponent(cleanEmail)}&select=id,org_id,role`);
+  const existingUser = existingUsers?.[0];
+
+  if (existingUser) {
+    // User exists — are they already in this org?
+    if (existingUser.org_id === targetOrgId) {
+      // Already in the org — send a password reset so they can get back in
+      try {
+        await fetch(`${SB_URL}/auth/v1/recover`, {
+          method: "POST",
+          headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({ email: cleanEmail }),
+        });
+      } catch {}
+      return res.json({ ok: true, action: "password_reset", email_sent: true,
+        note: `${cleanEmail} is already a member. Sent a password reset link so they can get back in.` });
+    }
+
+    // User exists but in a different org (or no org) — move them to this org and send reset
+    await fetch(`${SB_URL}/rest/v1/users?id=eq.${existingUser.id}`, {
+      method: "PATCH",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ org_id: targetOrgId, role: role || existingUser.role || "rep" }),
+    });
+    try {
+      await fetch(`${SB_URL}/auth/v1/recover`, {
+        method: "POST",
+        headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+    } catch {}
+    return res.json({ ok: true, action: "reassigned_and_reset", email_sent: true,
+      note: `${cleanEmail} already had an account. Moved to your org and sent a password reset link.` });
+  }
+
+  // ── ROUTE 2: New user — create invitation ──────────────────────────
+  // Delete any stale PENDING invitations (not accepted ones — keep history)
+  await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(cleanEmail)}&accepted_at=is.null`, {
     method: "DELETE",
     headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
   });
@@ -92,23 +125,37 @@ export default async function handler(req, res) {
   // Create fresh invitation record
   const invResult = await sbFetch("invitations", "POST", {
     org_id: targetOrgId,
-    email: email.trim().toLowerCase(),
+    email: cleanEmail,
     role: role || "rep",
     invited_by: payload.sub,
   });
 
   if (invResult?.code || invResult?.message) {
-    console.warn("[invite] Failed to create invitation:", JSON.stringify(invResult));
-    return res.status(400).json({ error: `Failed to create invitation: ${invResult.message || invResult.code || "unknown error"}` });
+    // Might be UNIQUE constraint from an accepted invite — clean up and retry
+    if (invResult.code === "23505" || (invResult.message || "").includes("duplicate")) {
+      await fetch(`${SB_URL}/rest/v1/invitations?org_id=eq.${targetOrgId}&email=eq.${encodeURIComponent(cleanEmail)}`, {
+        method: "DELETE",
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+      });
+      const retryResult = await sbFetch("invitations", "POST", {
+        org_id: targetOrgId, email: cleanEmail, role: role || "rep", invited_by: payload.sub,
+      });
+      if (retryResult?.code || retryResult?.message) {
+        console.warn("[invite] Retry failed:", JSON.stringify(retryResult));
+        return res.status(400).json({ error: `Failed to create invitation: ${retryResult.message || retryResult.code}` });
+      }
+      Object.assign(invResult, retryResult);
+    } else {
+      console.warn("[invite] Failed to create invitation:", JSON.stringify(invResult));
+      return res.status(400).json({ error: `Failed to create invitation: ${invResult.message || invResult.code || "unknown error"}` });
+    }
   }
 
-  const token = invResult?.[0]?.token;
+  const token = (Array.isArray(invResult) ? invResult[0] : invResult)?.token;
   if (!token) return res.status(500).json({ error: "Failed to generate invitation token" });
 
-  // Always send invite email — the admin clicked "Send Invite" in the UI,
-  // so they intend for the user to receive it. Supabase auth creates the
-  // user in a pending state and sends the invite email with a magic link.
-  const skipEmail = req.body?.skipEmail === true; // escape hatch for admin scripts
+  // Send invite email — Supabase creates the auth user and sends the magic link
+  const skipEmail = req.body?.skipEmail === true;
 
   if (!skipEmail) {
     try {
@@ -120,22 +167,36 @@ export default async function handler(req, res) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           data: { invitation_token: token },
         }),
       });
       const authData = await authRes.json();
 
       if (authRes.status >= 400) {
+        // User might already exist in auth.users from a prior invite — send recovery instead
+        if (authRes.status === 422 || (authData.msg || "").includes("already been registered")) {
+          try {
+            await fetch(`${SB_URL}/auth/v1/recover`, {
+              method: "POST",
+              headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+              body: JSON.stringify({ email: cleanEmail }),
+            });
+          } catch {}
+          return res.json({ ok: true, invitation_id: (Array.isArray(invResult) ? invResult[0] : invResult).id,
+            email_sent: true, action: "recovery_sent",
+            note: `${cleanEmail} already had a partial account. Sent a password reset link instead.` });
+        }
         console.warn("[invite] Supabase auth invite failed:", authData);
-        return res.json({ ok: true, invitation_id: invResult[0].id, email_sent: false, note: "Invitation created but email failed. Share the invite link directly." });
+        return res.json({ ok: true, invitation_id: (Array.isArray(invResult) ? invResult[0] : invResult).id,
+          email_sent: false, note: "Invitation created but email failed. Share the invite link directly." });
       }
     } catch (e) {
       console.warn("[invite] Email send error:", e.message);
     }
-    res.json({ ok: true, invitation_id: invResult[0].id, email_sent: true });
+    res.json({ ok: true, invitation_id: (Array.isArray(invResult) ? invResult[0] : invResult).id, email_sent: true });
   } else {
-    // No email sent — return the invite link for manual sharing
-    res.json({ ok: true, invitation_id: invResult[0].id, email_sent: false, note: "Invitation created — use the invite link to share directly. No email was sent." });
+    res.json({ ok: true, invitation_id: (Array.isArray(invResult) ? invResult[0] : invResult).id,
+      email_sent: false, note: "Invitation created — use the invite link to share directly. No email was sent." });
   }
 }
