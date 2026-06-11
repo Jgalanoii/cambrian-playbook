@@ -6865,8 +6865,11 @@ Return ONLY raw JSON:
             const sanitized = sanitizeICP(parsed);
             Object.assign(parsed, sanitized);
 
-            // ICP confidence based on research depth
-            parsed._confidence = "high"; // single-pass Opus with web search = high confidence
+            // ICP confidence based on actual field population — not just call completion
+            const icpFields = parsed.icp || {};
+            const coreFields = [icpFields.sellerDescription, icpFields.marketCategory, icpFields.targetIndustries, icpFields.companySizeRange, parsed.sellerName];
+            const populatedCount = coreFields.filter(f => f && typeof f === "string" ? f.trim().length > 5 : Array.isArray(f) ? f.length > 0 : !!f).length;
+            parsed._confidence = populatedCount >= 4 ? "high" : populatedCount >= 2 ? "medium" : "low";
             parsed._researchChars = 0;
             setSellerICP(parsed);
             lastGenSig.current.icp = getIcpSig();
