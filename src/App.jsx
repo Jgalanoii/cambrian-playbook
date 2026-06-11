@@ -1876,7 +1876,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
-    `"revenue":"TOTAL consolidated revenue from most recent annual report (e.g. '$25.1B (FY2024)'). For PUBLIC companies: use the TOTAL revenue line from their income statement — NOT a segment, NOT net fee revenue, NOT subscription-only. For PRIVATE companies: provide a reasoned estimate with cited reasoning. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'","employeeCount":"For PUBLIC companies: use exact figure from annual report (e.g. '418,000'). For PRIVATE: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide exact figure for public companies, estimate for private. NEVER return empty string or 'Not found'.",`+
+    `"revenue":"TOTAL consolidated revenue from most recent annual report (e.g. '$25.1B (FY2024)'). For PUBLIC companies: use the TOTAL revenue line from their income statement — NOT a segment, NOT net fee revenue, NOT subscription-only. For PRIVATE companies: provide a reasoned estimate with cited reasoning. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, 'Nonprofit (501(c)(3))' for tax-exempt charities/foundations, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'. For nonprofits: check if they file Form 990 or are registered as a 501(c)(3).","employeeCount":"For PUBLIC companies: use exact figure from annual report (e.g. '418,000'). For PRIVATE: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide exact figure for public companies, estimate for private. NEVER return empty string or 'Not found'.",`+
     `"headquarters":"Denver, CO OR best estimate from website/LinkedIn. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — check website footer, contact page, LinkedIn. MUST provide a value. Kennesaw, GA if that's what the website says.","founded":"2023 OR best estimate. MUST provide a value.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field AND companySnapshot. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year. ANTI-HALLUCINATION: ONLY state acquisition or funding facts that appeared in your web search results. If companySnapshot mentions an acquirer, use THAT name — do NOT contradict it with a different acquirer from training knowledge. A wrong acquirer name (e.g. naming a medical device company as the acquirer of a rewards platform) destroys credibility instantly. Empty string if no verified funding data found.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
@@ -2049,7 +2049,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how to USE this sentiment in a discovery call — a specific talk-track pivot, not just 'mention their pain'"},`+
-    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. MUST use a fact NOT already mentioned in the elevator pitch or opening angle. No product mention. No pitch. Close with 'Am I way off base?' or similar. Sign off with '[Your name here]' — do NOT invent a sender name."},{"style":"insight","subject":"Reference a DIFFERENT specific finding about ${co} than email 1 — lowercase, specific, under 40 chars.","body":"2 sentences. Lead with ONE specific observation about ${co} NOT used anywhere else in this brief — a different data point, a different initiative, a different signal. Connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. Close with 'Worth a quick chat or should I go away?' Sign off with '[Your name here]' — do NOT invent a sender name."}]}`,
+    `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. MUST use a fact NOT already mentioned in the elevator pitch or opening angle. No product mention. No pitch. Close with 'Am I way off base?' or similar. If you cite a specific statistic or percentage, you MUST be able to source it — if not, use qualitative language instead. Sign off with '[Your name here]' — do NOT invent a sender name."},{"style":"insight","subject":"Reference a DIFFERENT specific finding about ${co} than email 1 — lowercase, specific, under 40 chars.","body":"2 sentences. Lead with ONE specific observation about ${co} NOT used anywhere else in this brief — a different data point, a different initiative, a different signal. Connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. If you cite a specific statistic, it MUST be from your research — do NOT fabricate numbers. Close with 'Worth a quick chat or should I go away?' Sign off with '[Your name here]' — do NOT invent a sender name."}]}`,
     (partial) => {
       if (!onStream || partial.length < 60) return;
       const pitchMatch = partial.match(/"elevatorPitch"\s*:\s*"((?:[^"\\]|\\.)*)"/);
@@ -2617,7 +2617,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           `"marginTrend":"${isPublicCompany ? "1-2 sentences: Reference specific 10-K data (e.g. 'Operating margin expanded 200bps to 18.3% per 10-K filed 3/1/2025')." : "1-2 sentences. If no data, estimate based on business model: 'SaaS companies at this stage typically operate at [X-Y%] gross margin with [negative/breakeven] EBITDA.'"}",`+
           `"segmentBreakdown":"Which business segments or product lines drive the most revenue? ${isPublicCompany ? "Use 10-K segment reporting." : "Describe their product lines and estimate which drives the most revenue based on pricing and market signals."}",`+
           `"earningsInsight":"${isPublicCompany ? "1-2 sentences: the most revealing quote from the latest earnings call with speaker name, title, and call date." : "1-2 sentences: most revealing public statement from leadership (press release, interview, LinkedIn). If none found, describe what their product launches and hiring patterns suggest about priorities."}",`+
-          `"capitalPriorities":"${isPublicCompany ? "Where is capex going? Reference 10-K capital expenditure figures, R&D spend, M&A, share buybacks." : "Based on hiring patterns, product launches, and partnerships — where are they investing? Estimate R&D vs sales vs operations allocation."}",`+
+          `"capitalPriorities":"${isPublicCompany ? "Where is capex going? Reference 10-K capital expenditure figures, R&D spend, M&A, share buybacks." : "Based on hiring patterns, product launches, and partnerships — where are they investing? Describe priorities qualitatively (e.g. 'heavily investing in engineering and international expansion'). Do NOT fabricate specific allocation percentages like '40% to R&D' — only cite percentages if found in a specific source."}",`+
           `"guidanceQuote":"${isPublicCompany ? "Direct quote from earnings call with speaker name, title, and date." : "Direct quote from leadership if found in search. If not, summarize their stated direction from press or social media. Empty only if truly nothing found."}"}}`
         }],
       });
@@ -8181,6 +8181,15 @@ Return ONLY raw JSON:
           }
         }
       } catch { /* non-critical */ }
+      // Guard: warn before generating brief for a company flagged as competitor
+      const memberScore = fitScores?.[member.company];
+      if (memberScore && (memberScore.isCompetitor || memberScore.score === 0)) {
+        if (!window.confirm(`"${member.company}" was flagged as a competitor (0% fit). Generating a brief will use one of your runs.\n\nContinue anyway?`)) {
+          setBriefLoading(false);
+          return;
+        }
+      }
+
       // Quick Brief (research-only) should NOT inject seller ICP — it's pure target research
       const isResearchOnly = effectiveSellerUrl === "research-only";
       const result = generateBrief(
@@ -8720,6 +8729,57 @@ Return ONLY raw JSON:
               }
               return updated;
             });
+          }
+
+          // ── DEAD COMPANY FILTER — strip bankrupt/defunct companies from competitors ──
+          const defunctCompanies = ["ftx", "lehman brothers", "wework", "theranos", "enron", "worldcom", "bear stearns", "silicon valley bank", "signature bank", "first republic bank"];
+          if (current.competitivePositioning?.competitors?.length) {
+            current.competitivePositioning.competitors = current.competitivePositioning.competitors.filter(c => {
+              const name = (c?.name || c?.company || "").toLowerCase();
+              if (defunctCompanies.some(d => name.includes(d))) {
+                console.warn(`[consistency] Stripped defunct competitor: ${name}`);
+                return false;
+              }
+              return true;
+            });
+          }
+
+          // ── NONPROFIT OWNERSHIP DETECTION ──
+          const snap = (current.companySnapshot || "").toLowerCase();
+          const isNonprofit = snap.includes("nonprofit") || snap.includes("non-profit") || snap.includes("501(c)") || snap.includes("tax-exempt") || snap.includes("charity") || snap.includes("charitable");
+          if (isNonprofit && current.publicPrivate && !current.publicPrivate.toLowerCase().includes("nonprofit")) {
+            console.log(`[consistency] Nonprofit detected from snapshot — overriding ownership from "${current.publicPrivate}" to "Nonprofit"`);
+            current.publicPrivate = "Nonprofit (501(c)(3))";
+          }
+
+          // ── REVENUE BACKFILL FROM P9 — if P1 returned empty but P9 has data ──
+          if ((!current.revenue || current.revenue === "Not found" || current.revenue.toLowerCase().includes("not available")) && current.financialDeepDive?.revenueTrend) {
+            const p9Rev = current.financialDeepDive.revenueTrend;
+            const dollarMatch = p9Rev.match(/\$[\d,.]+\s*(?:billion|B|million|M|trillion|T)/gi);
+            if (dollarMatch?.length) {
+              // Use the first revenue-context match (not volume)
+              const revenueMatch = dollarMatch.find(m => {
+                const idx = p9Rev.indexOf(m);
+                const context = p9Rev.slice(Math.max(0, idx - 80), idx + m.length + 40).toLowerCase();
+                return !context.includes("volume") && !context.includes("transaction") && !context.includes("payment volume");
+              });
+              if (revenueMatch) {
+                console.warn(`[consistency] Revenue backfilled from P9: "${revenueMatch}"`);
+                current.revenue = revenueMatch.trim();
+              }
+            }
+          }
+
+          // ── HQ BACKFILL FROM SNAPSHOT — if HQ is empty but snapshot mentions a city ──
+          if ((!current.headquarters || current.headquarters === "Not found" || current.headquarters.toLowerCase().includes("not found")) && current.companySnapshot) {
+            const snapCityMatch = current.companySnapshot.match(/(?:based in|headquartered in|dual HQ:\s*|HQ:\s*|offices in|located in)\s*([A-Za-z\s]+(?:,\s*[A-Za-z.]+)?)/i);
+            if (snapCityMatch?.[1]) {
+              const city = snapCityMatch[1].split(/[&]/)[0].trim();
+              if (city.length > 3) {
+                console.warn(`[consistency] HQ backfilled from snapshot: "${city}"`);
+                current.headquarters = city;
+              }
+            }
           }
 
           return current;
@@ -13559,9 +13619,11 @@ Return ONLY raw JSON:
                                 {(()=>{
                                   const intel = intelAdjustments[m.company];
                                   const adjusted = intel ? Math.max(0, Math.min(100, fitScores[m.company].score + intel.modifier)) : fitScores[m.company].score;
+                                  const fs = fitScores[m.company];
+                                  if (fs.isCompetitor || fs.score === 0 && fs.label?.toLowerCase().includes("competitor")) return "0% · Competitor";
                                   return intel
                                     ? `${adjusted}% (${intel.modifier>0?"+":""}${intel.modifier}) · ${adjusted>=75?"Strong Fit":adjusted>=55?"Potential Fit":"Poor Fit"}`
-                                    : `${fitScores[m.company].score}% · ${fitScores[m.company].label}${fitScores[m.company].score < 65 ? " · Stretch" : ""}`;
+                                    : `${fs.score}% · ${fs.label}${fs.score < 65 ? " · Stretch" : ""}`;
                                 })()}
                               </div>
                             </>):fitScoring?<span style={{fontSize:11,color:"var(--ink-3)"}}>scoring…</span>:<button className="btn btn-secondary btn-sm" onClick={e=>{e.stopPropagation();const allM=cohorts.flatMap(c=>c.members);scoreFit(allM,buildSellerCtx());}}>Run fit check</button>}
