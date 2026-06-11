@@ -8760,32 +8760,67 @@ Return ONLY raw JSON:
             current.publicPrivate = "Nonprofit (501(c)(3))";
           }
 
-          // ── REVENUE BACKFILL FROM P9 — if P1 returned empty but P9 has data ──
-          if ((!current.revenue || current.revenue === "Not found" || current.revenue.toLowerCase().includes("not available")) && current.financialDeepDive?.revenueTrend) {
+          // ── REVENUE RECONCILIATION WITH P9 — P9 is authoritative (deeper financial research) ──
+          if (current.financialDeepDive?.revenueTrend) {
             const p9Rev = current.financialDeepDive.revenueTrend;
             const dollarMatch = p9Rev.match(/\$[\d,.]+\s*(?:billion|B|million|M|trillion|T)/gi);
             if (dollarMatch?.length) {
-              // Use the first revenue-context match (not volume)
+              // Find the first revenue-context match (exclude volume/transaction figures)
               const revenueMatch = dollarMatch.find(m => {
                 const idx = p9Rev.indexOf(m);
                 const context = p9Rev.slice(Math.max(0, idx - 80), idx + m.length + 40).toLowerCase();
-                return !context.includes("volume") && !context.includes("transaction") && !context.includes("payment volume");
+                return !context.includes("volume") && !context.includes("transaction") && !context.includes("payment volume") && !context.includes("trading volume");
               });
               if (revenueMatch) {
-                console.warn(`[consistency] Revenue backfilled from P9: "${revenueMatch}"`);
-                current.revenue = revenueMatch.trim();
+                const p9Val = parseFloat(revenueMatch.replace(/[^0-9.]/g, "")) * (revenueMatch.toLowerCase().includes("billion") || revenueMatch.includes("B") ? 1e9 : revenueMatch.toLowerCase().includes("million") || revenueMatch.includes("M") ? 1e6 : revenueMatch.toLowerCase().includes("trillion") || revenueMatch.includes("T") ? 1e12 : 1);
+                const p1Val = current.revenue ? parseFloat(String(current.revenue).replace(/[^0-9.]/g, "")) * (String(current.revenue).toLowerCase().includes("billion") || String(current.revenue).includes("B") ? 1e9 : String(current.revenue).toLowerCase().includes("million") || String(current.revenue).includes("M") ? 1e6 : 1) : 0;
+
+                if (!current.revenue || current.revenue === "Not found" || current.revenue.toLowerCase().includes("not available") || current.revenue.toLowerCase().includes("estimated")) {
+                  // P1 has no revenue or just an estimate — use P9
+                  console.warn(`[consistency] Revenue from P9 (authoritative): "${revenueMatch}" overrides P1: "${current.revenue}"`);
+                  current.revenue = revenueMatch.trim();
+                } else if (p1Val > 0 && p9Val > 0 && (p9Val > p1Val * 2 || p1Val > p9Val * 3)) {
+                  // P1 and P9 disagree significantly — P9 wins (deeper research)
+                  console.warn(`[consistency] Revenue mismatch: P1="${current.revenue}" vs P9="${revenueMatch}" (${(p9Val/p1Val).toFixed(1)}x diff) — P9 wins`);
+                  current.revenue = revenueMatch.trim();
+                }
               }
             }
           }
 
-          // ── HQ BACKFILL FROM SNAPSHOT — if HQ is empty but snapshot mentions a city ──
-          if ((!current.headquarters || current.headquarters === "Not found" || current.headquarters.toLowerCase().includes("not found")) && current.companySnapshot) {
-            const snapCityMatch = current.companySnapshot.match(/(?:based in|headquartered in|dual HQ:\s*|HQ:\s*|offices in|located in)\s*([A-Za-z\s]+(?:,\s*[A-Za-z.]+)?)/i);
+          // ── EMPLOYEE COUNT RECONCILIATION WITH P9/P2 TEXT ──
+          if (current.employeeCount && current.financialDeepDive) {
+            const allText = [current.companySnapshot, current.financialDeepDive.revenueTrend, current.financialDeepDive.capitalPriorities, current.financialDeepDive.segmentBreakdown].filter(Boolean).join(" ");
+            const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over|employs?|employing|has)\s*([\d,]+)\s*(?:employees|people|staff|team members|workers)/gi)];
+            if (empMatches.length > 0) {
+              const p1Emp = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
+              const textEmps = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).filter(n => n > 0);
+              const largest = Math.max(...textEmps);
+              // If P9/snapshot mentions a significantly larger count, it's likely more authoritative
+              if (largest > p1Emp * 2 && largest > 20) {
+                console.warn(`[consistency] Employee count override: P1="${current.employeeCount}" → ${largest} (from brief text, ${(largest/p1Emp).toFixed(1)}x larger)`);
+                current.employeeCount = `~${largest.toLocaleString()}`;
+              }
+            }
+          }
+
+          // ── HQ RECONCILIATION — snapshot wins over P1 when they disagree ──
+          if (current.companySnapshot) {
+            const snapCityMatch = current.companySnapshot.match(/(?:based in|headquartered in|dual HQ:\s*|HQ:\s*|offices in|located in|founded in)\s*([A-Za-z\s]+(?:,\s*[A-Za-z.]+)?)/i);
             if (snapCityMatch?.[1]) {
-              const city = snapCityMatch[1].split(/[&]/)[0].trim();
-              if (city.length > 3) {
-                console.warn(`[consistency] HQ backfilled from snapshot: "${city}"`);
-                current.headquarters = city;
+              const snapCity = snapCityMatch[1].split(/[&]/)[0].trim();
+              const currentHQ = (current.headquarters || "").toLowerCase().trim();
+              const snapCityLower = snapCity.toLowerCase();
+              if (snapCity.length > 3) {
+                if (!currentHQ || currentHQ === "not found" || currentHQ.includes("not found") || currentHQ.includes("not available")) {
+                  // Empty HQ — backfill from snapshot
+                  console.warn(`[consistency] HQ backfilled from snapshot: "${snapCity}"`);
+                  current.headquarters = snapCity;
+                } else if (snapCityLower.length > 3 && currentHQ.length > 3 && !currentHQ.includes(snapCityLower) && !snapCityLower.includes(currentHQ.split(",")[0])) {
+                  // HQ contradicts snapshot — snapshot wins (from P1's own web search)
+                  console.warn(`[consistency] HQ mismatch: overview="${current.headquarters}" vs snapshot="${snapCity}" — snapshot wins`);
+                  current.headquarters = snapCity;
+                }
               }
             }
           }
