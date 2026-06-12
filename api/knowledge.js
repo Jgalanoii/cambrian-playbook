@@ -9,6 +9,8 @@
 // If the call fails (guest mode, offline), the app falls back to
 // minimal inline heuristics that don't expose exact numbers.
 
+export const config = { maxDuration: 120 };
+
 // Import from the same data modules the app uses
 import { FIT_SCORING_RULES } from "../src/data/prompts/fitScoring.js";
 import { ALL_NEGOTIATION_INJECTIONS, FISHER_URY_INJECTION, GRAHAM_INJECTION } from "../src/data/prompts/negotiationInjections.js";

@@ -3,6 +3,8 @@
 // GET with admin JWT → returns aggregated engagement data across all
 // users, orgs, and sessions. Locked to SUPERUSER_EMAIL only.
 
+export const config = { maxDuration: 120 };
+
 import { checkRateLimit, isAllowedOrigin, verifyJwt, decodeJwtPayload } from "./_guard.js";
 
 const SB_URL = process.env.VITE_SUPABASE_URL;

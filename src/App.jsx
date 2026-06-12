@@ -8224,6 +8224,7 @@ Return ONLY raw JSON:
       mergers = {};
       earlyDone = Promise.resolve();
       allDone = Promise.resolve();
+      setBriefError("Brief generation encountered an error. Click Regenerate to try again.");
     }
 
     setBrief(skeleton);

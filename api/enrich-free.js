@@ -148,8 +148,11 @@ function sicToIndustry(sic, desc) {
 // ── Wikidata SPARQL: company lookup ──
 async function wikidataLookup(company) {
   try {
+    // Sanitize company name for SPARQL — strip characters that could break out of string literal
+    const safeCompany = company.replace(/["\\\{\}\;\.\#\|\&\^\$\!\?\*\+\(\)\[\]]/g, "").trim();
+    if (!safeCompany) return null;
     const sparql = `SELECT ?item ?itemLabel ?employees ?foundedDate ?hqLabel ?industryLabel WHERE {
-  ?item rdfs:label "${company.replace(/"/g, '\\"')}"@en .
+  ?item rdfs:label "${safeCompany}"@en .
   ?item wdt:P31/wdt:P279* wd:Q4830453 .
   OPTIONAL { ?item wdt:P1128 ?employees }
   OPTIONAL { ?item wdt:P571 ?foundedDate }
@@ -174,9 +177,26 @@ async function wikidataLookup(company) {
   } catch { return null; }
 }
 
+// ── Origin check (replicates _guard.js logic) ──
+function isAllowedOrigin(origin) {
+  if (!origin) return process.env.VERCEL_ENV !== "production";
+  let u;
+  try { u = new URL(origin); } catch { return false; }
+  const h = u.hostname;
+  if (h === "cambriancatalyst.ai" || h === "www.cambriancatalyst.ai") return true;
+  if (h === "cambrian-playbook.vercel.app") return true;
+  if (/^cambrian-playbook[a-z0-9-]*\.vercel\.app$/.test(h)) return true;
+  if (h === "localhost" || h === "127.0.0.1") return true;
+  return false;
+}
+
 // ── Main handler ──
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
+
+  // Origin check — block external callers
+  const origin = req.headers.origin || req.headers.referer;
+  if (!isAllowedOrigin(origin)) return res.status(403).json({ error: "Forbidden" });
 
   const ip = req.headers["x-vercel-forwarded-for"] || req.headers["x-forwarded-for"]?.split(",")[0] || "unknown";
   if (!checkRate(ip)) return res.status(429).json({ error: "Rate limit exceeded" });
