@@ -11132,8 +11132,8 @@ Return ONLY raw JSON:
                 if(i===5) return !!brief;
                 if(i===6) return !!brief;
                 if(i===7) return !!riverHypo;
-                if(i===8) return !!postCall;
-                if(i===9) return !!solutionFit;
+                if(i===8) return !!solutionFit || !!brief;
+                if(i===9) return !!postCall || !!solutionFit;
                 return step>i;
               })();
               const state = step===i ? "active" : step>i ? "done" : "";
