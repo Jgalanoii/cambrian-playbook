@@ -12157,7 +12157,7 @@ Return ONLY raw JSON:
                 <div className="page-sub" style={{marginBottom:0}}>
                   {icpTab==="icp"
                     ? <>Built from deep research into <strong>{sellerUrl}</strong> — what you sell, who you've won, and who your competitors serve.
-                        {sellerICP?._confidence && (
+                        {sellerICP?._confidence && !sellerICP?._loading && (
                           <span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,
                             background:sellerICP._confidence==="high"?"var(--green-bg)":sellerICP._confidence==="medium"?"var(--amber-bg)":"var(--red-bg)",
                             color:sellerICP._confidence==="high"?"var(--green)":sellerICP._confidence==="medium"?"var(--amber)":"var(--red)"}}>
@@ -12212,7 +12212,7 @@ Return ONLY raw JSON:
               )}
             </div>
 
-            {icpLoading&&!sellerICP&&(
+            {icpLoading&&(!sellerICP||sellerICP?._loading)&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:"60px 0",textAlign:"center"}}>
                 <div className="load-spin" style={{width:32,height:32,borderWidth:3}}/>
                 <div style={{fontSize:15,color:"var(--ink-1)",fontWeight:500}}>{icpStatus || getQuip("icp")}</div>
