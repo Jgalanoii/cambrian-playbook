@@ -10635,17 +10635,17 @@ Return ONLY raw JSON:
   const refreshOrgCtx = () => { if (sbUser?.id && sbToken) fetchOrgContext(sbUser.id, sbToken).then(org => { if (org) setOrgCtx(org); }); };
 
   // Auto-populate seller URL from org context on new sessions
-  // so users don't have to re-enter their company every time
+  // so users don't have to re-enter their company every time.
+  // Pre-fills the field and sets sellerUrl, but does NOT auto-trigger
+  // ICP build or URL scan. User clicks Go, presses Enter, or tabs out
+  // to start the build. This prevents a 30-60s blocking scan on every
+  // New Session when the org website is thin or the user intends to
+  // change the URL.
   React.useEffect(() => {
     if (orgCtx?.seller_url && !sellerUrl && !currentSessionId) {
       const url = orgCtx.seller_url.replace(/^https?:\/\//, "").replace(/\/$/, "");
       setSellerUrl(url);
       setSellerInput(url);
-      // Auto-trigger ICP build — don't wait for user to click
-      if (url && !sellerICP && !icpLoading) {
-        console.log("[auto-seller] Populating seller URL from org:", url, "— triggering ICP build");
-        buildSellerICP(url);
-      }
     }
   }, [orgCtx?.seller_url]);
 
@@ -11658,7 +11658,11 @@ Return ONLY raw JSON:
                   // Green checkmark ONLY when ICP is loaded AND matches the current input
                   const inputNorm = sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"").toLowerCase();
                   const sellerNorm = (sellerUrl||"").toLowerCase();
-                  const icpVerified = sellerICP && !sellerICP._error && !sellerICP._loading && inputNorm && inputNorm === sellerNorm;
+                  // Verify ICP content actually matches the URL — not just that sellerICP exists
+                  const icpName = (sellerICP?.sellerName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+                  const inputBase = inputNorm.split(".")[0].replace(/[^a-z0-9]/g, "");
+                  const icpMatchesUrl = icpName && inputBase && (icpName.includes(inputBase) || inputBase.includes(icpName));
+                  const icpVerified = sellerICP && !sellerICP._error && !sellerICP._loading && inputNorm && inputNorm === sellerNorm && icpMatchesUrl;
                   const scanDone = urlScanConfirmed || urlScanStatus === "found";
                   const urlReady = icpVerified || scanDone;
                   const isLoading = (icpLoading || urlScanStatus === "scanning") && inputNorm && !urlReady;
