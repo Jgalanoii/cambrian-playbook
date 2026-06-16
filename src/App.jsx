@@ -11691,6 +11691,20 @@ Return ONLY raw JSON:
                     }}
                   style={{color: icpVerified ? "var(--green)" : undefined, fontWeight: icpVerified ? 600 : undefined}}
                 />
+                  <button
+                    onClick={()=>{
+                      const norm = sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+                      if(!norm) return;
+                      setSellerUrl(norm);
+                      if(!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(norm);
+                      if(!sellerICP||norm!==sellerUrl) buildSellerICP(norm);
+                    }}
+                    disabled={!sellerInput.trim() || isLoading}
+                    style={{padding:"8px 16px",fontSize:12,fontWeight:700,borderRadius:8,border:"none",
+                      background: urlReady ? "var(--green)" : "var(--tan-0)",color:"white",cursor:"pointer",
+                      opacity:(!sellerInput.trim()||isLoading)?0.5:1,whiteSpace:"nowrap",transition:"all 0.15s"}}>
+                    {isLoading ? "Scanning..." : urlReady ? "✓ Ready" : "Go"}
+                  </button>
                 </div>
                   );
                 })()}
