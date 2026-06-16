@@ -7311,24 +7311,63 @@ Return ONLY raw JSON:
     setUrlScanStatus("scanning");
     setUrlScanConfirmed(false);
 
+    // Cache check — serve cached scan results instantly
+    const scanCacheKey = `scan:v2:${url.toLowerCase()}`;
+    try {
+      const cached = localStorage.getItem(scanCacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.pages?.length && (Date.now() - (parsed._cachedAt || 0)) < 7 * 24 * 3600 * 1000) {
+          console.log(`[scan] Cache hit for "${url}": ${parsed.pages.length} pages`);
+          setProductUrls(parsed.pages.map(p => ({ url: p.url, label: p.label || "", type: p.type || "" })));
+          setUrlScanStatus("found");
+          return;
+        }
+      }
+    } catch {}
+
     const baseUrl = "https://"+url;
     const prompt =
-      `Search for the website ${baseUrl} and identify its product, solution, and service pages.\n\n`+
-      `Look specifically for pages in navigation menus labeled: Solutions, Use Cases, Services, Platform, Products, Catalog, Features, Industries, By Role, By Team.\n\n`+
-      `Search queries to try:\n`+
-      `1. site:${url} solutions OR products OR services OR platform\n`+
-      `2. "${url}" product pages OR solution pages\n`+
-      `3. ${baseUrl}/solutions OR ${baseUrl}/products OR ${baseUrl}/platform\n\n`+
-      `Find 3-5 specific product or solution pages with their full URLs. Exclude: /about, /blog, /careers, /contact, /pricing, /login, /news.\n\n`+
-      `Return ONLY raw JSON (no markdown, no backticks):\n`+
-      `{"pages":[{"url":"https://full-url-here","label":"Product or Solution Name"},{"url":"","label":""},{"url":"","label":""}]}`;
+      `You are a deep research analyst. Search the website ${baseUrl} and find the pages that reveal what this company sells, who they sell to, and proof they've done it.\n\n`+
+      `Search 1: site:${url} products OR solutions OR services OR platform OR "use cases" OR offerings\n`+
+      `Search 2: site:${url} "case study" OR "customer story" OR customers OR "powered by" OR partners OR integrations\n\n`+
+      `Find 5-8 of the MOST IMPORTANT pages across these categories:\n\n`+
+      `PRODUCTS & SERVICES (what they sell):\n`+
+      `- Product pages, solution pages, service offerings, platform features\n`+
+      `- Industry-specific solution pages (e.g., /solutions/healthcare, /industries/banking)\n`+
+      `- "How it works" or capability overview pages\n\n`+
+      `CUSTOMER EVIDENCE (proof they've delivered):\n`+
+      `- Case studies and customer success stories with named customers\n`+
+      `- Customer logos page or "trusted by" page\n`+
+      `- Press releases announcing customer wins or partnerships\n`+
+      `- "Powered by" or "built with" partner evidence\n\n`+
+      `MARKET POSITION (who they compete with and serve):\n`+
+      `- Partner and integration pages (ecosystem signals)\n`+
+      `- Industry or vertical landing pages (reveals target market)\n`+
+      `- Comparison or "why us" pages (reveals competitive positioning)\n`+
+      `- News or press releases about product launches, funding, or market expansion\n\n`+
+      `RANKING — return the highest-value pages first:\n`+
+      `1. Case study naming a specific customer with measurable outcomes (e.g., "Delta Airlines reduced costs by 30% using [product]")\n`+
+      `2. Product or solution page describing a specific offering with clear use cases\n`+
+      `3. Customer logos page or "trusted by" page with named companies\n`+
+      `4. Industry-specific landing page revealing target vertical\n`+
+      `5. Press release announcing a customer win, partnership, or product launch\n`+
+      `6. Partner or integration page showing ecosystem\n`+
+      `7. Generic marketing page describing capabilities without specifics\n\n`+
+      `A page with a named customer and a quantified outcome outranks everything else.\n`+
+      `A page with specific product names and use cases outranks generic "we help companies" copy.\n\n`+
+      `Only return pages on the company's own domain (${url}). Do not return third-party review sites, news articles, or Wikipedia.\n\n`+
+      `Exclude only: /login, /signup, /careers/apply, /cart, /checkout\n\n`+
+      `Return ONLY raw JSON (no markdown, no backticks, no explanation):\n`+
+      `{"pages":[{"url":"https://full-url","label":"Page Name","type":"product","rank":1},{"url":"https://full-url","label":"Customer — Case Study","type":"case_study","rank":1}]}\n\n`+
+      `Types: product | case_study | industry | partner | press | competitor`;
 
     try{
       const d = await claudeFetch({
-        model:activeModel(),
-        max_tokens:1200,
+        model:SONNET,
+        max_tokens:2000,
         temperature:0,
-        tools:[{type:"web_search_20250305",name:"web_search",max_uses:1}],
+        tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:prompt}],
       });
       if(d.error){console.warn("Scan error:",d.error);setUrlScanStatus("none");return;}
@@ -7355,11 +7394,13 @@ Return ONLY raw JSON:
         }
       }
 
-      const pages=(parsed?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,5);
+      const pages=(parsed?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,8);
       console.log("URL scan found pages:", pages.length, pages);
       if(pages.length>0){
-        setProductUrls(pages.map(p=>({url:p.url,label:p.label||""})));
+        setProductUrls(pages.map(p=>({url:p.url,label:p.label||"",type:p.type||""})));
         setUrlScanStatus("found");
+        // Cache results for instant repeat loads (7-day TTL)
+        try { localStorage.setItem(scanCacheKey, JSON.stringify({ pages, _cachedAt: Date.now() })); } catch {}
       } else {
         setUrlScanStatus("none");
       }
