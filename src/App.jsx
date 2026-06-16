@@ -11673,7 +11673,10 @@ Return ONLY raw JSON:
                   const icpMatchesUrl = icpName && inputBase && (icpName.includes(inputBase) || inputBase.includes(icpName));
                   const icpVerified = sellerICP && !sellerICP._error && !sellerICP._loading && inputNorm && inputNorm === sellerNorm && icpMatchesUrl;
                   const scanDone = urlScanConfirmed || urlScanStatus === "found";
+                  // URL bar border: green when ICP verified OR scan found pages
                   const urlReady = icpVerified || scanDone;
+                  // Go button: only shows "Ready" when ICP is fully verified — scan alone isn't enough
+                  const buttonReady = icpVerified;
                   const isLoading = (icpLoading || urlScanStatus === "scanning") && inputNorm && !urlReady;
                   return (
                 <div className="setup-url-bar" style={{borderColor: urlReady ? "var(--green)" : isLoading ? "var(--amber)" : undefined, transition:"border-color 0.2s"}}>
@@ -11714,9 +11717,9 @@ Return ONLY raw JSON:
                     }}
                     disabled={!sellerInput.trim() || isLoading}
                     style={{padding:"8px 16px",fontSize:12,fontWeight:700,borderRadius:8,border:"none",
-                      background: urlReady ? "var(--green)" : "var(--tan-0)",color:"white",cursor:"pointer",
+                      background: buttonReady ? "var(--green)" : "var(--tan-0)",color:"white",cursor:"pointer",
                       opacity:(!sellerInput.trim()||isLoading)?0.5:1,whiteSpace:"nowrap",transition:"all 0.15s"}}>
-                    {isLoading ? "Scanning..." : urlReady ? "✓ Ready" : "Go"}
+                    {isLoading ? "Scanning..." : buttonReady ? "✓ Ready" : "Go"}
                   </button>
                 </div>
                   );
