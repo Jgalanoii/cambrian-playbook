@@ -4437,7 +4437,9 @@ export default function App(){
     if (!sellerUrl || sellerUrl === "research-only") return;
     if (prevSellerUrlRef.current && prevSellerUrlRef.current !== sellerUrl && prevSellerUrlRef.current !== "research-only") {
       console.log(`[seller] URL changed from "${prevSellerUrlRef.current}" to "${sellerUrl}" — clearing cached seller context`);
-      setSellerICP(null);
+      // Don't clear sellerICP here — buildSellerICP handles it via cache check.
+      // Clearing here races with the cache read and causes a blank ICP flash
+      // even when valid cached data exists for the new URL.
       setSellerDocs([]);
       setProducts([{id:Date.now(),name:"",description:"",category:""}]);
       setSellerProofPoints([]);
