@@ -6033,6 +6033,11 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     const validateRfpResult = (r) => {
       const url = (r.url||"").toLowerCase();
       if (!url.startsWith("http")) return false;
+      // Strip fabricated/placeholder URLs — keep the row but blank the link
+      if (/\/opp\/\d{3,6}$/.test(url) || /supplier\.corporate\.com/.test(url) || /procurement\.state\.edu/.test(url) || /example\.com/.test(url) || /\/rfp\/?$/.test(url) || /\/solicitation\/\d{3,6}$/.test(url)) {
+        console.warn(`[RFP] Stripped fabricated URL: ${r.url}`);
+        r.url = "";
+      }
       // Reject seller's own domain
       if (sellerDomain && url.includes(sellerDomain)) return false;
       // Reject blocked social/content domains
@@ -6885,7 +6890,7 @@ Return ONLY raw JSON:
             // ICP confidence based on actual field population — not just call completion
             const coreFields = [
               parsed.sellerDescription, parsed.marketCategory, parsed.sellerName,
-              parsed.icp?.industries, parsed.icp?.companySizeRange || parsed.icp?.orgSize,
+              parsed.icp?.industries, parsed.icp?.companySize,
             ];
             const populatedCount = coreFields.filter(f => f && (typeof f === "string" ? f.trim().length > 3 : Array.isArray(f) ? f.length > 0 : !!f)).length;
             // High = 3+ core fields (normal). Medium = 1-2 (partial). Low = 0 (total failure).
@@ -6944,7 +6949,8 @@ Return ONLY raw JSON:
             const badPattern = /unknown|unable to determine|insufficient data|n\/a|PICK ONE|PICK FROM|PICK 1-2|PICK 1-3|PICK 2-3|PICK 2-4/i;
             const core = [parsed.marketCategory, parsed.icp?.companySize, parsed.icp?.revenueRange, parsed.icp?.dealSize];
             const hasIndustries = parsed.icp?.industries?.length > 0 && !badPattern.test(parsed.icp.industries[0]);
-            const usable = hasIndustries && core.every(v => typeof v === "string" && v.length > 0 && !badPattern.test(v));
+            const corePopulated = core.filter(v => typeof v === "string" && v.length > 0 && !badPattern.test(v)).length;
+            const usable = hasIndustries && corePopulated >= 2;
             if(usable){
               try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
               // Persist to org-level Supabase cache for cross-device/cross-session consistency.
