@@ -6654,7 +6654,7 @@ Return ONLY raw JSON:
     return out;
   };
 
-  const buildSellerICP = async(rawUrl, {forceRefresh=false}={}) => {
+  const buildSellerICP = async(rawUrl, {forceRefresh=false, cacheOnly=false}={}) => {
     let url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"").replace(/^www\./,"");
     // Auto-add .com if no TLD present — "meritincentives" → "meritincentives.com"
     if (url && !url.includes(".")) url = url + ".com";
@@ -6694,6 +6694,14 @@ Return ONLY raw JSON:
           }
         }
       }
+    }
+
+    // cacheOnly mode: auto-trigger effects only want cache hits, not expensive fresh builds.
+    // If we reach this point, no cache was found. Return without building.
+    // The user can click Go to start a fresh build explicitly.
+    if (cacheOnly) {
+      console.log(`[ICP] No cache for "${url}" — skipping auto-build (cacheOnly mode)`);
+      return;
     }
 
     // Check usage limit before starting a billable ICP build
@@ -7591,10 +7599,11 @@ Return ONLY raw JSON:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
 
-  // Build ICP whenever sellerUrl is set but ICP not yet loaded,
-  // or when user navigates to step 1 with a URL but no ICP
+  // Load cached ICP when sellerUrl is set but ICP not loaded.
+  // Uses cacheOnly — only serves from cache, never starts expensive fresh builds.
+  // Fresh builds are triggered by explicit user action (Go button, Enter, onBlur).
   useEffect(()=>{
-    if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl);
+    if(sellerUrl&&!sellerICP&&!icpLoading) buildSellerICP(sellerUrl, {cacheOnly:true});
   },[sellerUrl, step]);
 
   // Pre-fetch: kick off ICP build 900ms after the user stops typing a
@@ -7608,7 +7617,7 @@ Return ONLY raw JSON:
     if (!url || sellerICP || icpLoading) return;
     if (!/\.(com|io|ai|org|net|app|co|dev|so|gov|edu|xyz|us|uk|de|fr|eu)($|\/)/i.test(url)) return;
     const t = setTimeout(() => {
-      if (!sellerICP && !icpLoading) buildSellerICP(url);
+      if (!sellerICP && !icpLoading) buildSellerICP(url, {cacheOnly:true});
     }, 900);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
