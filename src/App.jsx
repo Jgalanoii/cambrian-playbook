@@ -4380,7 +4380,7 @@ export default function App(){
   const clearSession = () => {
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* non-critical */ }
     setCurrentSessionId(null); setSessionName('');
-    setSellerUrl(''); setSellerInput(''); setBrief(null); setRiverHypo(null);
+    setSellerUrl(''); setSellerInput(''); setSellerICP(null); setBrief(null); setRiverHypo(null);
     setCohorts([]); setRows([]); setSelectedAccount(null); setPostCall(null);
     setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
     setStep(0);
@@ -6659,17 +6659,32 @@ Return ONLY raw JSON:
         const cached = localStorage.getItem(icpCacheKey(url));
         if(cached){
           const parsed = JSON.parse(cached);
-          if(parsed?.sellerName||parsed?.icp){ setSellerICP(sanitizeICP(parsed)); return; }
+          if(parsed?.sellerName||parsed?.icp){
+            const cn = (parsed.sellerName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const ub = url.split(".")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+            if (cn && ub && !cn.includes(ub) && !ub.includes(cn)) {
+              console.warn(`[ICP cache] Stale localStorage: url="${url}" but sellerName="${parsed.sellerName}" — deleting`);
+              localStorage.removeItem(icpCacheKey(url));
+            } else {
+              setSellerICP(sanitizeICP(parsed)); return;
+            }
+          }
         }
       }catch{}
       // 2. Check org-level Supabase cache (cross-device, cross-session)
       if(orgCtx?.icp && orgCtx?.seller_url) {
-        const orgUrl = orgCtx.seller_url.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
+        const orgUrl = orgCtx.seller_url.toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"").replace(/^www\./, "");
         if(orgUrl === url.toLowerCase() && (orgCtx.icp.sellerName || orgCtx.icp.icp)) {
-          setSellerICP(sanitizeICP(orgCtx.icp));
-          // Backfill localStorage for faster subsequent loads
-          try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(orgCtx.icp)); }catch{}
-          return;
+          const cn = (orgCtx.icp.sellerName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          const ub = orgUrl.split(".")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (cn && ub && !cn.includes(ub) && !ub.includes(cn)) {
+            console.warn(`[ICP cache] Stale org cache: url="${orgUrl}" but sellerName="${orgCtx.icp.sellerName}" — clearing`);
+            if(sbToken) sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { icp: null }).catch(()=>{});
+          } else {
+            setSellerICP(sanitizeICP(orgCtx.icp));
+            try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(orgCtx.icp)); }catch{}
+            return;
+          }
         }
       }
     }
@@ -6932,10 +6947,16 @@ Return ONLY raw JSON:
             const usable = hasIndustries && core.every(v => typeof v === "string" && v.length > 0 && !badPattern.test(v));
             if(usable){
               try{ localStorage.setItem(icpCacheKey(url), JSON.stringify(parsed)); }catch{}
-              // Persist to org-level Supabase cache for cross-device/cross-session consistency
+              // Persist to org-level Supabase cache for cross-device/cross-session consistency.
+              // Only write ICP to org when session URL matches org's configured seller_url.
+              // Session-level URL overrides must never modify the org record.
+              // Org seller_url is set exclusively via Org Settings or org creation.
               if(orgCtx?.id && sbToken) {
-                sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { seller_url: url, icp: parsed }).catch(()=>{});
-                setOrgCtx(prev => prev ? { ...prev, seller_url: url, icp: parsed } : prev);
+                const orgSeller = (orgCtx.seller_url || "").toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "").replace(/^www\./, "");
+                if (orgSeller && orgSeller === url.toLowerCase()) {
+                  sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { icp: parsed }).catch(()=>{});
+                  setOrgCtx(prev => prev ? { ...prev, icp: parsed } : prev);
+                }
               }
             } else {
               // ICP has placeholder values — show warning and auto-retry once
@@ -7391,7 +7412,16 @@ Return ONLY raw JSON:
     if(d.sellerDocs?.length) setSellerDocs(d.sellerDocs);
     if(d.accountDocs?.length) setAccountDocs(d.accountDocs);
     if(d.productUrls?.length) setProductUrls(d.productUrls);
-    if(d.sellerICP) setSellerICP(d.sellerICP);
+    if(d.sellerICP) {
+      // Validate sellerName matches this session's URL — reject historically corrupted sessions
+      const rn = (d.sellerICP.sellerName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const ru = (d.sellerUrl || "").split(".")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (rn && ru && !rn.includes(ru) && !ru.includes(rn)) {
+        console.warn(`[restore] Session ICP mismatch: sellerName="${d.sellerICP.sellerName}" vs URL="${d.sellerUrl}" — ICP will rebuild`);
+      } else {
+        setSellerICP(d.sellerICP);
+      }
+    }
     if(d.products?.length) setProducts(d.products);
     if(d.rows?.length){setRows(d.rows);setHeaders(d.headers||[]);setMapping(d.mapping||{});setFileName(d.fileName||'');}
     if(d.cohorts?.length){setCohorts(d.cohorts);}
