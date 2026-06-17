@@ -387,8 +387,8 @@ function buildCohorts(rows,mapping){
   const get=(row,key)=>(mapping[key]?(row[mapping[key]]||""):"").toString().trim();
   const groups={};
   rows.forEach(row=>{
-    const ind      = get(row,"industry") || "Other",
-          band     = ind,
+    const ind      = get(row,"industry") || "",
+          band     = ind || "Other",
           src      = get(row,"lead_source") || "Direct",
           outcome  = getOutcomeTheme(row,mapping),
           company  = get(row,"company"),
