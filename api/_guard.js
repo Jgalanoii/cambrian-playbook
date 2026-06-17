@@ -208,7 +208,7 @@ export { checkRateLimit, isAllowedOrigin };
 //
 // Limits: 60 requests per minute per IP.
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 60;
+const RATE_MAX = 200;
 const rateBuckets = new Map(); // ip → { count, windowStart }
 
 function checkRateLimit(ip) {
@@ -227,7 +227,7 @@ function checkRateLimit(ip) {
 // Complements IP-based limiting — prevents a single authenticated user from
 // exhausting API budget even if they rotate IPs.
 const USER_RATE_WINDOW_MS = 60_000;
-const USER_RATE_MAX = 30; // 30 requests per minute per user
+const USER_RATE_MAX = 120; // 120 requests per minute per user — a single session operation uses 7-10 calls
 const userRateBuckets = new Map();
 
 function checkUserRateLimit(userId) {
