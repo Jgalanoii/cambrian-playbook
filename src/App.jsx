@@ -5118,19 +5118,17 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
       setTargetGenNote(`Generated ${generated.length} ICP-matched targets. Scoring now — Strong Fit accounts will surface at the top.`);
       setStep(3);
 
-      // Score all accounts — keep everything, don't filter
+      // Enrich + score — same pipeline as all other paths
       const allMembers = cohortsBuilt.flatMap(c => c.members);
-      // Stage 2 RFP search — search against actual prospect names
       fetchAccountRFPs(allMembers);
-      scoreFit(allMembers, buildSellerCtx()).then(() => {
-        setFitScores(prev => {
-          const strong = Object.values(prev).filter(v => v.score >= 65).length;
-          const stretch = Object.values(prev).filter(v => v.score < 65).length;
-          if (stretch > 0) {
-            setTargetGenNote(`${strong} Strong Fit accounts (65%+) and ${stretch} Stretch targets. Stretch targets may be viable with additional relationship context or intel.`);
-          }
-          return prev;
-        });
+      await enrichAndScore(allMembers);
+      setFitScores(prev => {
+        const strong = Object.values(prev).filter(v => v.score >= 65).length;
+        const stretch = Object.values(prev).filter(v => v.score < 65).length;
+        if (stretch > 0) {
+          setTargetGenNote(`${strong} Strong Fit accounts (65%+) and ${stretch} Stretch targets. Stretch targets may be viable with additional relationship context or intel.`);
+        }
+        return prev;
       });
     } catch (e) {
       console.error("generateTargets error:", e);
@@ -7705,91 +7703,98 @@ Return ONLY raw JSON:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sellerInput]);
 
+  // ── SHARED ENRICHMENT + SCORING PIPELINE ────────────────────────────────
+  // Every path (CSV Import, Quick Entry, Build Targets, Sample Data) calls
+  // this function. One prompt, one enrichment flow, one result.
+  // URL is the SSN — source of truth for company identity.
+  const enrichAndScore = async (members) => {
+    // Phase 0: AI identification — verify industry, employees, ownership
+    // Same prompt regardless of input path. Companies with industry already
+    // populated (e.g., from Build Target Accounts AI generation) are skipped.
+    const needsId = members.filter(m => !m.ind || m.ind === "Other");
+    let aiMap = {};
+    if (needsId.length) {
+      console.log(`[enrichAndScore] Phase 0: ${needsId.length}/${members.length} companies need AI identification`);
+      try {
+        const companiesStr = needsId.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
+        const result = await callAI(
+          `For each company below, identify the primary industry vertical, estimated employee count, ownership type, and verified website domain.\n\n` +
+          `ACCURACY OVER COMPLETENESS:\n` +
+          `- Return empty string for any field you are not confident about.\n` +
+          `- A wrong industry is worse than no industry. If unsure, return empty.\n` +
+          `- OWNERSHIP: If acquired or taken private, say "Private". Only include a stock ticker if you are CERTAIN the company is CURRENTLY publicly traded on that exchange.\n` +
+          `- EMPLOYEE COUNT: Best estimate using approximate ranges (e.g. "~500", "~5,000", "~50,000", "~414,000"). Empty if unknown.\n` +
+          `- URL: Return the company's primary website domain. Verify it matches the company — a wrong URL is worse than no URL.\n\n` +
+          `Companies (Name|URL):\n${companiesStr}\n\n` +
+          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Hospitality, Fintech, QSR, Aerospace","employees":"e.g. ~5,000","ownership":"Public (NYSE: XYZ) or Private or PE-backed or VC-backed or Nonprofit","url":"verified domain or empty"}]}`
+        );
+        if (result?.companies) {
+          result.companies.forEach(c => { if (c.company) aiMap[c.company] = c; });
+          setCohorts(prev => prev.map(co => ({
+            ...co,
+            members: co.members.map(m => {
+              const e = aiMap[m.company];
+              if (!e) return m;
+              return {
+                ...m,
+                ind: m.ind && m.ind !== "Other" ? m.ind : e.industry || "",
+                employees: m.employees || e.employees || "",
+                publicPrivate: m.publicPrivate || e.ownership || "",
+                company_url: m.company_url || e.url || "",
+              };
+            }),
+            topInd: [...new Set([...co.topInd, ...Object.values(aiMap).map(e => e.industry).filter(Boolean)])].slice(0, 3),
+          })));
+        }
+      } catch (e) { console.warn("[enrichAndScore] AI identification failed:", e.message); }
+    }
+
+    // Phase 1: Free enrichment (EDGAR) — employee count ONLY
+    // EDGAR matches by company name which returns wrong entities for ambiguous names.
+    // Industry from EDGAR SIC codes is unreliable (Stripe → "Adhesives & Sealants").
+    // AI identification above handles industry. EDGAR only supplements employee count.
+    try {
+      const freeResults = await Promise.all(members.map(async m => {
+        try {
+          const r = await fetch(`/api/enrich-free?company=${encodeURIComponent(m.company)}&domain=${encodeURIComponent(m.company_url || "")}`);
+          if (!r.ok) return [m.company, null];
+          const d = await r.json();
+          return [m.company, d.organization || null];
+        } catch { return [m.company, null]; }
+      }));
+      const freeMap = Object.fromEntries(freeResults.filter(([, v]) => v));
+      if (Object.keys(freeMap).length) {
+        console.log(`[enrichAndScore] Phase 1: EDGAR data for ${Object.keys(freeMap).length}/${members.length} companies`);
+        setCohorts(prev => prev.map(co => ({
+          ...co,
+          members: co.members.map(m => {
+            const fe = freeMap[m.company];
+            if (!fe) return m;
+            return { ...m, employees: m.employees || fe.employeeCount || "", _enrichment: { organization: fe } };
+          }),
+        })));
+      }
+    } catch (e) { console.warn("[enrichAndScore] EDGAR failed:", e.message); }
+
+    // Phase 2: Score with enriched data
+    setCohorts(currentCohorts => {
+      const enrichedMembers = currentCohorts.flatMap(c => c.members);
+      if (enrichedMembers.length) {
+        console.log(`[enrichAndScore] Phase 2: scoring ${enrichedMembers.length} companies`);
+        scoreFit(enrichedMembers, buildSellerCtx());
+      }
+      return currentCohorts;
+    });
+  };
+
   const goToCohorts=async()=>{
     const b=buildCohorts(rows,mapping);
     setCohorts(b);
     setSelectedCohort(b[0]||null);
     setStep(3);
     const members=b.flatMap(c=>c.members);
-    // Stage 2 RFP search — search against actual prospect names
     fetchAccountRFPs(members);
-
-    // Enrich before scoring — same pipeline as Quick Entry
-    // Phase 0: Free enrichment (SEC EDGAR + Wikidata)
-    const freeEnrichPromise = (async () => {
-      try {
-        const results = await Promise.all(members.map(async m => {
-          try {
-            const r = await fetch(`/api/enrich-free?company=${encodeURIComponent(m.company)}&domain=${encodeURIComponent(m.company_url || "")}`);
-            if (!r.ok) return [m.company, null];
-            const d = await r.json();
-            return [m.company, d.organization || null];
-          } catch { return [m.company, null]; }
-        }));
-        const freeMap = Object.fromEntries(results.filter(([, v]) => v));
-        if (Object.keys(freeMap).length) {
-          console.log(`[enrich-free] CSV: Got verified data for ${Object.keys(freeMap).length}/${members.length} companies`);
-          setCohorts(prev => prev.map(co => ({
-            ...co,
-            members: co.members.map(m => {
-              const fe = freeMap[m.company];
-              if (!fe) return m;
-              return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "", _enrichment: { organization: fe } };
-            }),
-          })));
-        }
-        return freeMap;
-      } catch (e) { console.warn("[enrich-free] CSV failed:", e.message); return {}; }
-    })();
-    const freeMap = await freeEnrichPromise;
-
-    // Phase 1: Haiku enrichment — fills gaps
-    const enrichPromise = (async () => {
-      const currentMembers = members.map(m => {
-        const fe = freeMap[m.company];
-        if (fe) return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "" };
-        return m;
-      });
-      const needsEnrich = currentMembers.filter(m => !m.ind || m.ind === "Other" || !m.employees);
-      if (!needsEnrich.length) { console.log("[enrich] CSV: All companies already enriched"); return; }
-      console.log(`[enrich] CSV: ${needsEnrich.length} companies need Haiku enrichment`);
-      try {
-        const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
-        const result = await callAI(
-          `For each company, return the primary industry vertical, estimated employee count, and ownership type.\n` +
-          `ACCURACY OVER COMPLETENESS: Return empty string for any field you are not confident about.\n` +
-          `OWNERSHIP ACCURACY: If acquired or taken private, say "Private" — NEVER include a stale ticker.\n` +
-          `EMPLOYEE COUNT: Provide your best estimate. Use approximate ranges (e.g. "~500", "~50,000").\n\n` +
-          `Companies (Name|URL):\n${companiesStr}\n\n` +
-          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"Public or Private or PE-backed","url":"verified domain or empty"}]}`
-        );
-        if (result?.companies) {
-          const map = {};
-          result.companies.forEach(c => { if (c.company) map[c.company] = c; });
-          setCohorts(prev => prev.map(co => ({
-            ...co,
-            members: co.members.map(m => {
-              if (freeMap[m.company]) return m;
-              const e = map[m.company];
-              if (!e) return m;
-              return { ...m, ind: m.ind || e.industry || "", employees: m.employees || e.employees || "", publicPrivate: m.publicPrivate || e.ownership || "", company_url: m.company_url || e.url || "" };
-            }),
-            topInd: [...new Set([...co.topInd, ...Object.values(map).map(e => e.industry).filter(Boolean)])].slice(0, 3),
-          })));
-        }
-      } catch (e) { console.warn("[enrich] CSV failed:", e.message); }
-    })();
-
-    await enrichPromise;
-
-    // Score with enriched data
-    setCohorts(currentCohorts => {
-      const enrichedMembers = currentCohorts.flatMap(c => c.members);
-      if (enrichedMembers.length) {
-        scoreFit(enrichedMembers, buildSellerCtx());
-      }
-      return currentCohorts;
-    });
+    await enrichAndScore(members);
   };
 
   // ── QUICK ENTRY: enrich a single company name → suggest URL ────────────
@@ -7820,19 +7825,20 @@ Return ONLY raw JSON:
     const entries = quickEntries.filter(e => e.name.trim());
     if (!entries.length) return;
 
-    // Navigate immediately — user sees companies in table right away
+    // Create members — start clean. suggestUrl may have provided URL but
+    // industry/employees come from enrichAndScore (same pipeline as all paths).
     const members = entries.map(e => ({
       company: e.name.trim(),
       company_url: (e.url || e._suggested || "").trim(),
-      ind: e._industry || "",
-      employees: e._employees || "",
+      ind: "",
+      employees: "",
       publicPrivate: "",
       acv: 0, src: (sellerICP?.marketCategory || "Imported Accounts"), outcome: "",
     }));
     const syntheticRows = entries.map(e => ({
       company: e.name.trim(),
       company_url: (e.url || e._suggested || "").trim(),
-      industry: e._industry || "", acv: "0", lead_source: (sellerICP?.marketCategory || "Imported Accounts"), outcome: "",
+      industry: "", acv: "0", lead_source: (sellerICP?.marketCategory || "Imported Accounts"), outcome: "",
     }));
     setRows(syntheticRows);
     setMapping({ company: "company", industry: "industry", acv: "0", lead_source: "lead_source", company_url: "company_url", outcome: "outcome", close_date: "", product: "" });
@@ -7842,108 +7848,15 @@ Return ONLY raw JSON:
     const cohort = {
       id: "qe", name: (sellerICP?.marketCategory || "Imported Accounts"), color: "var(--tan-0)",
       size: entries.length, pct: 100, avgACV: 0,
-      topInd: [...new Set(members.map(m => m.ind).filter(Boolean))].slice(0, 3),
-      topSrc: [(sellerICP?.marketCategory || "Imported Accounts")], topOut: [], members,
+      topInd: [], topSrc: [(sellerICP?.marketCategory || "Imported Accounts")], topOut: [], members,
     };
     setCohorts([cohort]);
     setSelectedCohort(cohort);
     setSelectedOutcomes([]);
     setStep(3);
 
-    // Fire enrichment + fit scoring in parallel
-    // Phase 0: Free enrichment (SEC EDGAR + Wikidata) — verified data, no AI cost
-    const freeEnrichPromise = (async () => {
-      try {
-        const results = await Promise.all(members.map(async m => {
-          try {
-            const r = await fetch(`/api/enrich-free?company=${encodeURIComponent(m.company)}&domain=${encodeURIComponent(m.company_url || "")}`);
-            if (!r.ok) return [m.company, null];
-            const d = await r.json();
-            return [m.company, d.organization || null];
-          } catch { return [m.company, null]; }
-        }));
-        const freeMap = Object.fromEntries(results.filter(([, v]) => v));
-        if (Object.keys(freeMap).length) {
-          console.log(`[enrich-free] Got verified data for ${Object.keys(freeMap).length}/${members.length} companies`);
-          setCohorts(prev => prev.map(co => ({
-            ...co,
-            members: co.members.map(m => {
-              const fe = freeMap[m.company];
-              if (!fe) return m;
-              return {
-                ...m,
-                ind: m.ind || fe.industry || "",
-                employees: m.employees || fe.employeeCount || "",
-                // Don't populate publicPrivate from free enrichment — EDGAR name matching
-                // returns wrong tickers for ambiguous company names (e.g., Polymarket → ITRI).
-                // Let the scoring phase determine ownership with AI verification.
-                _enrichment: { organization: fe },
-              };
-            }),
-          })));
-        }
-        return freeMap;
-      } catch (e) { console.warn("[enrich-free] Failed:", e.message); return {}; }
-    })();
-    const freeMap = await freeEnrichPromise;
-
-    // Phase 1: Haiku enrichment — fills gaps for companies that didn't get free data
-    const enrichPromise = (async () => {
-      // Re-read members to see what free enrichment already filled
-      const currentMembers = members.map(m => {
-        const fe = freeMap[m.company];
-        if (fe) return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "" };
-        return m;
-      });
-      const needsEnrich = currentMembers.filter(m => !m.ind || !m.employees);
-      if (!needsEnrich.length) { console.log("[enrich] All companies already enriched via free sources"); return; }
-      console.log(`[enrich] ${needsEnrich.length} companies still need Haiku enrichment`);
-      try {
-        const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
-        const result = await callAI(
-          `For each company, return the primary industry vertical, estimated employee count, and ownership type.\n` +
-          `ACCURACY OVER COMPLETENESS: Return empty string for any field you are not confident about. An empty employee count is better than a fabricated one. An empty ownership field is better than a wrong ticker.\n` +
-          `OWNERSHIP ACCURACY: Many companies have changed ownership. If acquired or taken private, say "Private" — NEVER include a stale ticker. Only include a ticker if you are certain the company is CURRENTLY publicly traded.\n` +
-          `EMPLOYEE COUNT: Provide your best estimate for any company you recognize. Use approximate ranges (e.g. "~500", "~2,000", "~50,000"). Only return empty string if you truly have no idea who the company is.\n\n` +
-          `Companies (Name|URL):\n${companiesStr}\n\n` +
-          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"Public or Private or PE-backed — no ticker unless certain","url":"verified domain or empty"}]}`
-        );
-        if (result?.companies) {
-          const map = {};
-          result.companies.forEach(c => { if (c.company) map[c.company] = c; });
-          setCohorts(prev => prev.map(co => ({
-            ...co,
-            members: co.members.map(m => {
-              // Don't overwrite free enrichment data
-              if (freeMap[m.company]) return m;
-              const e = map[m.company];
-              if (!e) return m;
-              return {
-                ...m,
-                ind: m.ind || e.industry || "",
-                employees: m.employees || e.employees || "",
-                publicPrivate: m.publicPrivate || e.ownership || "",
-                company_url: m.company_url || e.url || "",
-              };
-            }),
-            topInd: [...new Set([...co.topInd, ...Object.values(map).map(e => e.industry).filter(Boolean)])].slice(0, 3),
-          })));
-        }
-      } catch (e) { console.warn("Enrichment failed:", e.message); }
-    })();
-
-    // Wait for enrichment FIRST so scoring gets industry + employee data
-    await enrichPromise;
-
-    // 2. Fit scoring — now fires with enriched data
-    // Re-read members from cohorts state (enrichment may have filled in industry/employees)
-    setCohorts(currentCohorts => {
-      const enrichedMembers = currentCohorts.flatMap(c => c.members);
-      if (enrichedMembers.length) {
-        scoreFit(enrichedMembers, buildSellerCtx());
-      }
-      return currentCohorts; // no-op state update, just reading current value
-    });
+    // Same enrichment + scoring pipeline as all other paths
+    await enrichAndScore(members);
   };
   // ── URL DETECTION — extract domain from user input ──────────────────────
   function extractCompanyUrl(input) {
@@ -13485,7 +13398,7 @@ Return ONLY raw JSON:
                     const m={};hdrs.forEach(h=>m[h]=h);
                     if(!m["public_private"] && m["publicPrivate"]) m["public_private"] = "publicPrivate";
                     setMapping(m);
-                    setTimeout(()=>{
+                    setTimeout(async()=>{
                       const sampleMapping = Object.fromEntries(Object.keys(SAMPLE_ROWS[0]).map(h=>[h,h]));
                       if(!sampleMapping["public_private"] && sampleMapping["publicPrivate"]) sampleMapping["public_private"] = "publicPrivate";
                       const b=buildCohorts(SAMPLE_ROWS,sampleMapping);
@@ -13493,9 +13406,8 @@ Return ONLY raw JSON:
                         setCohorts(b);
                         const sel=b.find(c=>c.members.length>1)||b[0];
                         setSelectedCohort(sel);
-                        const allSampleMembers = b.flatMap(c=>c.members);
-                        scoreFit(allSampleMembers, buildSellerCtx());
                         setStep(3);
+                        await enrichAndScore(b.flatMap(c=>c.members));
                       }
                     },50);
                   }}>Load Sample Data — {SAMPLE_ROWS.length} accounts</button>
