@@ -4383,6 +4383,7 @@ export default function App(){
     setSellerUrl(''); setSellerInput(''); setSellerICP(null); setBrief(null); setRiverHypo(null);
     setCohorts([]); setRows([]); setSelectedAccount(null); setPostCall(null);
     setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
+    setIcpEdits([]); setUserEdits([]);
     setStep(0);
   };
   const clearAccount = () => {
@@ -11840,9 +11841,11 @@ Return ONLY raw JSON:
                     }}
                     disabled={!sellerInput.trim() || isLoading || disambigLoading}
                     style={{padding:"8px 16px",fontSize:12,fontWeight:700,borderRadius:8,border:"none",
-                      background:"var(--tan-0)",color:"white",cursor:"pointer",
-                      opacity:(!sellerInput.trim()||isLoading)?0.5:1,whiteSpace:"nowrap",transition:"all 0.15s"}}>
-                    {disambigLoading ? "Verifying..." : isLoading ? "Scanning..." : "Go"}
+                      background: (isLoading || disambigLoading) ? "var(--ink-3)" : (scanDone && !isLoading) ? "var(--bg-2)" : "var(--tan-0)",
+                      color: (scanDone && !isLoading && !disambigLoading) ? "var(--ink-2)" : "white",
+                      cursor:"pointer",
+                      opacity:(!sellerInput.trim()||isLoading||disambigLoading)?0.5:1,whiteSpace:"nowrap",transition:"all 0.15s"}}>
+                    {disambigLoading ? "Verifying..." : isLoading ? "Scanning..." : scanDone ? "✓ Complete" : "Go"}
                   </button>
                 </div>
                   );
@@ -11868,8 +11871,11 @@ Return ONLY raw JSON:
                         {productUrls.filter(u=>u.url).map((u,i)=>(
                           <div key={i} style={{fontSize:12,color:"var(--ink-0)",display:"flex",alignItems:"center",gap:6}}>
                             <span style={{color:"var(--green)",fontSize:14}}>🔗</span>
-                            <span style={{fontWeight:600,color:"var(--green)",marginRight:4}}>{u.label||"Page "+(i+1)}</span>
-                            <span style={{color:"var(--ink-2)",fontFamily:"monospace",fontSize:11}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
+                            <span style={{fontWeight:600,color:"var(--green)",marginRight:4,flex:1}}>{u.label||"Page "+(i+1)}</span>
+                            <span style={{color:"var(--ink-2)",fontFamily:"monospace",fontSize:11,flex:1}}>{u.url.replace(/^https?:\/\//,"").slice(0,50)}</span>
+                            <button onClick={(e)=>{e.stopPropagation();setProductUrls(prev=>prev.filter((_,j)=>j!==productUrls.indexOf(u)));}}
+                              style={{background:"none",border:"none",cursor:"pointer",color:"var(--ink-3)",fontSize:14,padding:"0 4px",flexShrink:0}}
+                              title="Remove this page">✕</button>
                           </div>
                         ))}
                       </div>
