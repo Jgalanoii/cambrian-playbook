@@ -5499,10 +5499,12 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         const ownerColor = ot.includes("public") ? "var(--navy)" : ot.includes("pe") ? "#6B3A3A" : ot.includes("vc") ? "var(--green)" : "var(--ink-1)";
         // Match against original member names
         const normalize = (n) => (n || "").toLowerCase().replace(/[,.]?\s*(inc|corp|llc|ltd|co|technologies|technology|group|holdings|solutions|services|platform|software)\s*\.?$/i, "").trim();
+        const stripAll = (n) => (n || "").toLowerCase().replace(/[^a-z0-9]/g, "");
         const exactMatch = batch.find(m => m.company === s.company);
         const fuzzyMatch = !exactMatch && batch.find(m =>
           m.company.toLowerCase() === s.company?.toLowerCase() ||
           normalize(m.company) === normalize(s.company) ||
+          stripAll(m.company) === stripAll(s.company) ||
           s.company?.toLowerCase().includes(m.company.toLowerCase()) ||
           m.company.toLowerCase().includes(s.company?.toLowerCase()));
         const matchedName = exactMatch?.company || fuzzyMatch?.company || s.company;
@@ -7656,17 +7658,27 @@ Return ONLY raw JSON:
   useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0 && step <= 2) celebrate("prospects_added"); },[cohorts.length]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(step===3 && Object.keys(fitScores).length > 0 && !fitScoring) celebrate("first_fit"); },[fitScoring]);
-  // Auto-trigger fit scoring when user navigates to Step 3 with unscored companies
+  // Auto-trigger fit scoring when user navigates to Step 3 via stepper
+  // with unscored companies. Only fires when coming FROM a different step
+  // (not on initial render or when goToQuickBrief/goToCohorts already handle scoring).
+  // Uses a ref to track if scoring was already triggered by the import flow.
+  const scoringTriggeredRef = useRef(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{
-    if (step === 3 && cohorts.length > 0 && !fitScoring) {
-      const allMembers = cohorts.flatMap(c => c.members);
-      const unscored = allMembers.filter(m => !fitScores[m.company]);
-      if (unscored.length > 0) {
-        console.log(`[auto-score] Step 3 with ${unscored.length} unscored — triggering fit check`);
-        scoreFit(allMembers, buildSellerCtx());
-      }
+    if (step === 3 && cohorts.length > 0 && !fitScoring && !scoringTriggeredRef.current) {
+      // Delay slightly to let goToQuickBrief/goToCohorts fire first
+      const t = setTimeout(() => {
+        if (fitScoring) return; // already started by import flow
+        const allMembers = cohorts.flatMap(c => c.members);
+        const unscored = allMembers.filter(m => !fitScores[m.company]);
+        if (unscored.length > 0) {
+          console.log(`[auto-score] Step 3 with ${unscored.length} unscored — triggering fit check`);
+          scoreFit(allMembers, buildSellerCtx());
+        }
+      }, 2000);
+      return () => clearTimeout(t);
     }
+    if (step !== 3) scoringTriggeredRef.current = false;
   },[step]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(brief?.companySnapshot && !Object.values(brief._loadingSections || {}).some(Boolean)) celebrate("brief_built"); },[brief?.companySnapshot, brief?._loadingSections]);
