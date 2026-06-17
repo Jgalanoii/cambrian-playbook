@@ -11818,9 +11818,9 @@ Return ONLY raw JSON:
                     }}
                     disabled={!sellerInput.trim() || isLoading || disambigLoading}
                     style={{padding:"8px 16px",fontSize:12,fontWeight:700,borderRadius:8,border:"none",
-                      background: buttonReady ? "var(--green)" : "var(--tan-0)",color:"white",cursor:"pointer",
+                      background:"var(--tan-0)",color:"white",cursor:"pointer",
                       opacity:(!sellerInput.trim()||isLoading)?0.5:1,whiteSpace:"nowrap",transition:"all 0.15s"}}>
-                    {disambigLoading ? "Verifying..." : isLoading ? "Scanning..." : buttonReady ? "✓ Ready" : "Go"}
+                    {disambigLoading ? "Verifying..." : isLoading ? "Scanning..." : "Go"}
                   </button>
                 </div>
                   );
