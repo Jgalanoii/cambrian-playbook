@@ -4916,7 +4916,7 @@ export default function App(){
     const am={...mapping};const n=s=>s.toLowerCase().replace(/[\s_]/g,"");
     hdrs.forEach(h=>{
       const hn=n(h);
-      if(hn.includes("company")||hn.includes("account"))am.company=h;
+      if((hn.includes("company")||hn.includes("account"))&&!hn.includes("url")&&!hn.includes("web"))am.company=h;
       if(hn.includes("industry")||hn.includes("vertical"))am.industry=h;
       if(hn.includes("acv")||hn.includes("deal")||hn.includes("amount")||hn.includes("value"))am.acv=h;
       if(hn.includes("lead")||hn.includes("source")||hn.includes("channel"))am.lead_source=h;
@@ -7705,15 +7705,91 @@ Return ONLY raw JSON:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sellerInput]);
 
-  const goToCohorts=()=>{
+  const goToCohorts=async()=>{
     const b=buildCohorts(rows,mapping);
     setCohorts(b);
     setSelectedCohort(b[0]||null);
     setStep(3);
-    const allMembers=b.flatMap(c=>c.members);
-    scoreFit(allMembers, buildSellerCtx());
+    const members=b.flatMap(c=>c.members);
     // Stage 2 RFP search — search against actual prospect names
-    fetchAccountRFPs(allMembers);
+    fetchAccountRFPs(members);
+
+    // Enrich before scoring — same pipeline as Quick Entry
+    // Phase 0: Free enrichment (SEC EDGAR + Wikidata)
+    const freeEnrichPromise = (async () => {
+      try {
+        const results = await Promise.all(members.map(async m => {
+          try {
+            const r = await fetch(`/api/enrich-free?company=${encodeURIComponent(m.company)}&domain=${encodeURIComponent(m.company_url || "")}`);
+            if (!r.ok) return [m.company, null];
+            const d = await r.json();
+            return [m.company, d.organization || null];
+          } catch { return [m.company, null]; }
+        }));
+        const freeMap = Object.fromEntries(results.filter(([, v]) => v));
+        if (Object.keys(freeMap).length) {
+          console.log(`[enrich-free] CSV: Got verified data for ${Object.keys(freeMap).length}/${members.length} companies`);
+          setCohorts(prev => prev.map(co => ({
+            ...co,
+            members: co.members.map(m => {
+              const fe = freeMap[m.company];
+              if (!fe) return m;
+              return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "", _enrichment: { organization: fe } };
+            }),
+          })));
+        }
+        return freeMap;
+      } catch (e) { console.warn("[enrich-free] CSV failed:", e.message); return {}; }
+    })();
+    const freeMap = await freeEnrichPromise;
+
+    // Phase 1: Haiku enrichment — fills gaps
+    const enrichPromise = (async () => {
+      const currentMembers = members.map(m => {
+        const fe = freeMap[m.company];
+        if (fe) return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "" };
+        return m;
+      });
+      const needsEnrich = currentMembers.filter(m => !m.ind || m.ind === "Other" || !m.employees);
+      if (!needsEnrich.length) { console.log("[enrich] CSV: All companies already enriched"); return; }
+      console.log(`[enrich] CSV: ${needsEnrich.length} companies need Haiku enrichment`);
+      try {
+        const companiesStr = needsEnrich.map(m => `${m.company}|${m.company_url || ""}`).join("\n");
+        const result = await callAI(
+          `For each company, return the primary industry vertical, estimated employee count, and ownership type.\n` +
+          `ACCURACY OVER COMPLETENESS: Return empty string for any field you are not confident about.\n` +
+          `OWNERSHIP ACCURACY: If acquired or taken private, say "Private" — NEVER include a stale ticker.\n` +
+          `EMPLOYEE COUNT: Provide your best estimate. Use approximate ranges (e.g. "~500", "~50,000").\n\n` +
+          `Companies (Name|URL):\n${companiesStr}\n\n` +
+          `Return ONLY raw JSON:\n{"companies":[{"company":"exact name","industry":"e.g. Financial Services","employees":"e.g. ~5,000","ownership":"Public or Private or PE-backed","url":"verified domain or empty"}]}`
+        );
+        if (result?.companies) {
+          const map = {};
+          result.companies.forEach(c => { if (c.company) map[c.company] = c; });
+          setCohorts(prev => prev.map(co => ({
+            ...co,
+            members: co.members.map(m => {
+              if (freeMap[m.company]) return m;
+              const e = map[m.company];
+              if (!e) return m;
+              return { ...m, ind: m.ind || e.industry || "", employees: m.employees || e.employees || "", publicPrivate: m.publicPrivate || e.ownership || "", company_url: m.company_url || e.url || "" };
+            }),
+            topInd: [...new Set([...co.topInd, ...Object.values(map).map(e => e.industry).filter(Boolean)])].slice(0, 3),
+          })));
+        }
+      } catch (e) { console.warn("[enrich] CSV failed:", e.message); }
+    })();
+
+    await enrichPromise;
+
+    // Score with enriched data
+    setCohorts(currentCohorts => {
+      const enrichedMembers = currentCohorts.flatMap(c => c.members);
+      if (enrichedMembers.length) {
+        scoreFit(enrichedMembers, buildSellerCtx());
+      }
+      return currentCohorts;
+    });
   };
 
   // ── QUICK ENTRY: enrich a single company name → suggest URL ────────────
