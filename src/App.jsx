@@ -7668,28 +7668,10 @@ Return ONLY raw JSON:
   useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0 && step <= 2) celebrate("prospects_added"); },[cohorts.length]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(step===3 && Object.keys(fitScores).length > 0 && !fitScoring) celebrate("first_fit"); },[fitScoring]);
-  // Auto-trigger fit scoring when user navigates to Step 3 via stepper
-  // with unscored companies. Only fires when coming FROM a different step
-  // (not on initial render or when goToQuickBrief/goToCohorts already handle scoring).
-  // Uses a ref to track if scoring was already triggered by the import flow.
-  const scoringTriggeredRef = useRef(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{
-    if (step === 3 && cohorts.length > 0 && !fitScoring && !scoringTriggeredRef.current) {
-      // Delay slightly to let goToQuickBrief/goToCohorts fire first
-      const t = setTimeout(() => {
-        if (fitScoring) return; // already started by import flow
-        const allMembers = cohorts.flatMap(c => c.members);
-        const unscored = allMembers.filter(m => !fitScores[m.company]);
-        if (unscored.length > 0) {
-          console.log(`[auto-score] Step 3 with ${unscored.length} unscored — triggering fit check`);
-          scoreFit(allMembers, buildSellerCtx());
-        }
-      }, 2000);
-      return () => clearTimeout(t);
-    }
-    if (step !== 3) scoringTriggeredRef.current = false;
-  },[step]);
+  // Fit scoring is triggered by the import flows (goToCohorts, goToQuickBrief,
+  // Build Target Accounts) and by the manual "Run fit check" button.
+  // No auto-trigger on step change — it races with the import flow's own
+  // scoreFit call and causes double-scoring with a confusing score flash.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(brief?.companySnapshot && !Object.values(brief._loadingSections || {}).some(Boolean)) celebrate("brief_built"); },[brief?.companySnapshot, brief?._loadingSections]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
