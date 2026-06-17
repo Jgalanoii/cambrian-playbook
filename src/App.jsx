@@ -7362,15 +7362,21 @@ Return ONLY raw JSON:
       `{"pages":[{"url":"https://full-url","label":"Page Name","type":"product","rank":1},{"url":"https://full-url","label":"Customer — Case Study","type":"case_study","rank":1}]}\n\n`+
       `Types: product | case_study | industry | partner | press | competitor`;
 
-    try{
+    const runScan = async () => {
       const d = await claudeFetch({
-        model:SONNET,
+        model:OPUS,
         max_tokens:2000,
         temperature:0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:prompt}],
       });
-      if(d.error){console.warn("Scan error:",d.error);setUrlScanStatus("none");return;}
+      if(d.error){console.warn("Scan error:",d.error);return null;}
+      return d;
+    };
+
+    try{
+      let d = await runScan();
+      if(!d){setUrlScanStatus("none");return;}
 
       // Extract text blocks (web_search returns tool results + text)
       const textBlocks = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
@@ -7394,7 +7400,26 @@ Return ONLY raw JSON:
         }
       }
 
-      const pages=(parsed?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,8);
+      let pages=(parsed?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,8);
+
+      // Auto-retry once if scan returned 0 pages — web search is non-deterministic
+      if(pages.length===0){
+        console.log("[scan] 0 pages on first attempt — retrying once");
+        d = await runScan();
+        if(d && !d.error){
+          const tb2 = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+          let p2 = null;
+          for (let i = tb2.length - 1; i >= 0 && !p2; i--) p2 = extractJsonWithKey(tb2[i], "pages");
+          if(!p2){
+            const urls2 = [...tb2.join(" ").matchAll(/https?:\/\/[^\s"'<>]+\/[^\s"'<>]{3,}/g)]
+              .map(m=>m[0]).filter(u=>!u.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|ttf)$/i))
+              .filter(u=>u.includes(url)).slice(0,5);
+            if(urls2.length>0) p2 = {pages: urls2.map(u=>({url:u,label:u.split("/").pop().replace(/-/g," ")}))};
+          }
+          pages = (p2?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,8);
+        }
+      }
+
       console.log("URL scan found pages:", pages.length, pages);
       if(pages.length>0){
         setProductUrls(pages.map(p=>({url:p.url,label:p.label||"",type:p.type||""})));
