@@ -7310,6 +7310,7 @@ Return ONLY raw JSON:
     const url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
     setUrlScanStatus("scanning");
     setUrlScanConfirmed(false);
+    setProductUrls([]); // Clear stale results from prior scan
 
     // Cache check — serve cached scan results instantly
     const scanCacheKey = `scan:v2:${url.toLowerCase()}`;
@@ -11788,6 +11789,10 @@ Return ONLY raw JSON:
                       const hasUrl = /\.(com|io|ai|org|net|app|co|dev|so|gov|edu|xyz|us|uk|de|fr|eu)($|\/)/i.test(norm);
                       if(hasUrl) {
                         // URL with TLD — go directly to scan + build
+                        // Clear stale scan state before launching new scan
+                        setProductUrls([]);
+                        setUrlScanStatus("");
+                        setUrlScanConfirmed(false);
                         setSellerUrl(norm);
                         scanSellerUrl(norm);
                         buildSellerICP(norm);
