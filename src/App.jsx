@@ -7631,6 +7631,18 @@ Return ONLY raw JSON:
   useEffect(()=>{ if(cohorts.flatMap(c=>c.members).length > 0 && step <= 2) celebrate("prospects_added"); },[cohorts.length]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(step===3 && Object.keys(fitScores).length > 0 && !fitScoring) celebrate("first_fit"); },[fitScoring]);
+  // Auto-trigger fit scoring when user navigates to Step 3 with unscored companies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{
+    if (step === 3 && cohorts.length > 0 && !fitScoring) {
+      const allMembers = cohorts.flatMap(c => c.members);
+      const unscored = allMembers.filter(m => !fitScores[m.company]);
+      if (unscored.length > 0) {
+        console.log(`[auto-score] Step 3 with ${unscored.length} unscored — triggering fit check`);
+        scoreFit(allMembers, buildSellerCtx());
+      }
+    }
+  },[step]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(brief?.companySnapshot && !Object.values(brief._loadingSections || {}).some(Boolean)) celebrate("brief_built"); },[brief?.companySnapshot, brief?._loadingSections]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -7757,7 +7769,9 @@ Return ONLY raw JSON:
                 ...m,
                 ind: m.ind || fe.industry || "",
                 employees: m.employees || fe.employeeCount || "",
-                publicPrivate: m.publicPrivate || fe.publiclyTraded || "",
+                // Don't populate publicPrivate from free enrichment — EDGAR name matching
+                // returns wrong tickers for ambiguous company names (e.g., Polymarket → ITRI).
+                // Let the scoring phase determine ownership with AI verification.
                 _enrichment: { organization: fe },
               };
             }),
@@ -7773,7 +7787,7 @@ Return ONLY raw JSON:
       // Re-read members to see what free enrichment already filled
       const currentMembers = members.map(m => {
         const fe = freeMap[m.company];
-        if (fe) return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "", publicPrivate: m.publicPrivate || fe.publiclyTraded || "" };
+        if (fe) return { ...m, ind: m.ind || fe.industry || "", employees: m.employees || fe.employeeCount || "" };
         return m;
       });
       const needsEnrich = currentMembers.filter(m => !m.ind || !m.employees);
@@ -10911,7 +10925,7 @@ Return ONLY raw JSON:
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {disambigOptions.matches.map((m, i) => (
-                <button key={i} onClick={() => selectDisambigOption(m)}
+                <button key={i} onClick={() => disambigOptions.onSelect ? disambigOptions.onSelect(m) : selectDisambigOption(m)}
                   style={{display:"flex",alignItems:"flex-start",gap:12,padding:"14px 16px",borderRadius:10,border:"2px solid var(--line-0)",
                     background:"var(--surface)",cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--green)";e.currentTarget.style.background="var(--green-bg)";}}
@@ -11729,38 +11743,84 @@ Return ONLY raw JSON:
                     onKeyDown={e=>{if(e.key==="Enter"&&sellerInput.trim()&&!sellerDocs.length){
                       const norm=sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
                       setSellerUrl(norm);
-                      if(!sellerICP||norm!==sellerUrl) buildSellerICP(norm);
-                      setStep(1);
+                      scanSellerUrl(norm);
+                      buildSellerICP(norm);
                     }}}
                     onBlur={()=>{
+                      // Only normalize the display — don't trigger scan or build.
+                      // Scan and build are triggered by Go button, Enter key, or Scan button only.
                       const input = sellerInput.trim();
                       if(!input) return;
                       const normalized = input.replace(/^https?:\/\//,"").replace(/\/$/,"");
-                      if(!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(input);
-                      // If URL changed from what we have, rebuild ICP
-                      if(normalized !== sellerUrl) {
-                        setSellerUrl(normalized);
-                        setSellerICP(null);
-                        buildSellerICP(normalized);
-                      } else if(!sellerICP&&!icpLoading) {
-                        buildSellerICP(normalized);
-                      }
+                      if(normalized !== sellerInput) setSellerInput(normalized);
                     }}
                   style={{color: icpVerified ? "var(--green)" : undefined, fontWeight: icpVerified ? 600 : undefined}}
                 />
                   <button
-                    onClick={()=>{
+                    onClick={async()=>{
                       const norm = sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
                       if(!norm) return;
-                      setSellerUrl(norm);
-                      if(!urlScanConfirmed&&urlScanStatus!=="scanning") scanSellerUrl(norm);
-                      if(!sellerICP||norm!==sellerUrl) buildSellerICP(norm);
+                      const hasUrl = /\.(com|io|ai|org|net|app|co|dev|so|gov|edu|xyz|us|uk|de|fr|eu)($|\/)/i.test(norm);
+                      if(hasUrl) {
+                        // URL with TLD — go directly to scan + build
+                        setSellerUrl(norm);
+                        scanSellerUrl(norm);
+                        buildSellerICP(norm);
+                      } else {
+                        // Name only — disambiguate to find the right domain
+                        setDisambigLoading(true);
+                        try {
+                          const result = await claudeFetch({
+                            model: activeModel(),
+                            max_tokens: 800,
+                            tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+                            messages: [{ role: "user", content:
+                              `I need to identify the exact company a user means by "${norm}". Search the web and return the top 2-3 matches.\n\n` +
+                              `RULES:\n` +
+                              `- Return at least 2 matches if any company with a similar name exists in a DIFFERENT industry.\n` +
+                              `- Each match must include the company's primary website domain.\n` +
+                              `- Include a one-line description that distinguishes it from the others.\n` +
+                              `- Only return 1 match if the name is truly unique.\n\n` +
+                              `Return ONLY raw JSON: {"matches":[{"name":"Company Name","domain":"company.com","description":"One line — what they do"}]}`
+                            }],
+                          });
+                          const textBlocks = (result?.content || []).filter(b => b.type === "text").map(b => b.text || "");
+                          let matches = null;
+                          for (let i = textBlocks.length - 1; i >= 0 && !matches; i--) {
+                            const parsed = extractJsonWithKey(textBlocks[i], "matches");
+                            if (parsed?.matches?.length) matches = parsed.matches;
+                          }
+                          if (!matches?.length) {
+                            // No matches — fall back to name.com
+                            const fb = norm + ".com";
+                            setSellerUrl(fb); setSellerInput(fb);
+                            scanSellerUrl(fb); buildSellerICP(fb);
+                          } else if (matches.length === 1) {
+                            const domain = (matches[0].domain||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
+                            setSellerUrl(domain); setSellerInput(domain);
+                            scanSellerUrl(domain); buildSellerICP(domain);
+                          } else {
+                            setDisambigOptions({ matches, input: norm, onSelect: (match) => {
+                              const domain = (match.domain||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
+                              setSellerUrl(domain); setSellerInput(domain);
+                              setDisambigOptions(null);
+                              scanSellerUrl(domain); buildSellerICP(domain);
+                            }});
+                          }
+                        } catch (e) {
+                          console.warn("[Go] Disambiguation failed:", e.message);
+                          const fb = norm + ".com";
+                          setSellerUrl(fb); setSellerInput(fb); buildSellerICP(fb);
+                        } finally {
+                          setDisambigLoading(false);
+                        }
+                      }
                     }}
-                    disabled={!sellerInput.trim() || isLoading}
+                    disabled={!sellerInput.trim() || isLoading || disambigLoading}
                     style={{padding:"8px 16px",fontSize:12,fontWeight:700,borderRadius:8,border:"none",
                       background: buttonReady ? "var(--green)" : "var(--tan-0)",color:"white",cursor:"pointer",
                       opacity:(!sellerInput.trim()||isLoading)?0.5:1,whiteSpace:"nowrap",transition:"all 0.15s"}}>
-                    {isLoading ? "Scanning..." : buttonReady ? "✓ Ready" : "Go"}
+                    {disambigLoading ? "Verifying..." : isLoading ? "Scanning..." : buttonReady ? "✓ Ready" : "Go"}
                   </button>
                 </div>
                   );
