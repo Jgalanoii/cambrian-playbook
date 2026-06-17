@@ -5497,17 +5497,27 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         const bg = s._needsReview ? "var(--bg-1)" : s.score >= 75 ? "var(--green-bg)" : s.score >= 55 ? "var(--amber-bg)" : "var(--red-bg)";
         const ot = (signals.ownershipType || s.ownershipType || "").toLowerCase().replace(/\s+/g, "-");
         const ownerColor = ot.includes("public") ? "var(--navy)" : ot.includes("pe") ? "#6B3A3A" : ot.includes("vc") ? "var(--green)" : "var(--ink-1)";
-        // Match against original member names
+        // Match against original members — URL first (deterministic), name as fallback
         const normalize = (n) => (n || "").toLowerCase().replace(/[,.]?\s*(inc|corp|llc|ltd|co|technologies|technology|group|holdings|solutions|services|platform|software)\s*\.?$/i, "").trim();
         const stripAll = (n) => (n || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        const exactMatch = batch.find(m => m.company === s.company);
-        const fuzzyMatch = !exactMatch && batch.find(m =>
+        const stripUrl = (u) => (u || "").toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
+
+        // URL match FIRST — deterministic, like matching by SSN
+        const responseUrl = stripUrl(s.url || "");
+        const urlMatch = responseUrl && batch.find(m => {
+          const memberUrl = stripUrl(m.company_url || "");
+          return memberUrl && (memberUrl === responseUrl || memberUrl.includes(responseUrl) || responseUrl.includes(memberUrl));
+        });
+
+        // Name match as fallback — for members without URLs or when URL isn't returned
+        const exactMatch = !urlMatch && batch.find(m => m.company === s.company);
+        const fuzzyMatch = !urlMatch && !exactMatch && batch.find(m =>
           m.company.toLowerCase() === s.company?.toLowerCase() ||
           normalize(m.company) === normalize(s.company) ||
           stripAll(m.company) === stripAll(s.company) ||
           s.company?.toLowerCase().includes(m.company.toLowerCase()) ||
           m.company.toLowerCase().includes(s.company?.toLowerCase()));
-        const matchedName = exactMatch?.company || fuzzyMatch?.company || s.company;
+        const matchedName = urlMatch?.company || exactMatch?.company || fuzzyMatch?.company || s.company;
         map[matchedName] = {
           ...s,
           label: computed.label,

@@ -167,5 +167,5 @@ export function buildSignalExtractionPrompt(companies, sellerCtx, sellerICP, icp
     `COMPANIES (Name|Industry|URL):\n${companies}\n\n` +
 
     `Return ONLY raw JSON:\n` +
-    `{"scores":[{"company":"exact name","signals":{...all signals above...}}]}`;
+    `{"scores":[{"company":"exact name","url":"company domain from the input above","signals":{...all signals above...}}]}`;
 }
