@@ -6729,6 +6729,30 @@ Return ONLY raw JSON:
     try { const keys = Object.keys(localStorage).filter(k => k.startsWith("rfp:")); keys.forEach(k => localStorage.removeItem(k)); if (keys.length) console.log(`[ICP rebuild] Cleared ${keys.length} RFP cache entries`); } catch {}
     setRfpData({ open: [], closed: [], signals: [], loading: false, error: null }); // Reset RFP UI
 
+    // ── SELLER CONTEXT (same pattern as brief's P3/P4) ──
+    // Declared at function scope — accessible in both Pass 1 and Pass 2. No scoping bugs.
+    const activeProductUrls = productUrls.filter(u => u.url?.trim());
+    const activeSellerDocs = sellerDocs.filter(d => d.content?.trim());
+
+    const sellerDocsCtx = activeSellerDocs.length > 0
+      ? `═══ SELLER'S OWN MATERIALS (uploaded by the seller — PRIMARY source of truth) ═══\n` +
+        activeSellerDocs.map(d =>
+          `${sanitizeForPrompt(d.label)}: ${sanitizeForPrompt(d.content.slice(0, 2000))}`
+        ).join("\n\n") +
+        `\n═══ END SELLER MATERIALS ═══\n` +
+        `These are the seller's own documents. They are the definitive source for what this ` +
+        `company sells, who they serve, and how they position. Web searches should ` +
+        `VERIFY and EXTEND — not contradict.\n\n`
+      : ``;
+
+    const productPagesCtx = activeProductUrls.length > 0
+      ? `VALIDATED PRODUCT PAGES (confirmed by the seller — these pages define what this company sells):\n` +
+        activeProductUrls.map(u => `  - ${u.label || "Page"}: ${u.url}`).join("\n") +
+        `\nThe seller confirmed these pages. Ground your understanding of their products in these pages.\n\n`
+      : ``;
+
+    const hasSellerContext = !!(sellerDocsCtx || productPagesCtx);
+
     // TWO-PASS ICP BUILD:
     // Pass 1 (Opus + web search): Deep research — products, case studies, customers, competitors
     // Pass 2 (Sonnet, no search): Format research into ICP schema
@@ -6740,6 +6764,8 @@ Return ONLY raw JSON:
     try {
       const researchPrompt =
         `Research the company at https://${url}. Use BOTH web searches.\n\n`+
+        sellerDocsCtx +
+        productPagesCtx +
         `OWNERSHIP-DRIVEN SEARCH STRATEGY:\n`+
         `First, determine: is this company PUBLIC, PE-BACKED, VC-BACKED, PRIVATE, NONPROFIT, or GOVERNMENT?\n`+
         `- If PUBLIC: also search for SEC filings, 10-K product segments, investor relations. Revenue/products are in annual reports.\n`+
@@ -6747,8 +6773,14 @@ Return ONLY raw JSON:
         `- If VC-BACKED: search Crunchbase for funding rounds, total raised, lead investors, valuation.\n`+
         `- If NONPROFIT: search for Form 990, annual report, program descriptions.\n`+
         `Use this context to ground your research in authoritative sources for this ownership type.\n\n`+
-        `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n`+
-        `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`+
+        (hasSellerContext
+          ? `You have the seller's own materials and/or validated product pages above. ` +
+            `You already know what this company sells. Use your searches for EXTERNAL validation:\n` +
+            `Search 1: site:${url} "case study" OR customers OR "powered by" OR partners OR "trusted by"\n` +
+            `Search 2: "${url.split('.')[0]}" competitors OR "vs" OR "alternative to" OR funding OR revenue\n\n`
+          : `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n` +
+            `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`
+        ) +
         `Return a structured research summary:\n`+
         `1. COMPANY: What they do (2 sentences, specific). Include ownership type, approximate revenue, and employee count if findable.\n`+
         `2. PRODUCTS/SERVICES: List each product/service found on their website with a 1-sentence description and the URL where you found it\n`+
@@ -6776,6 +6808,8 @@ Return ONLY raw JSON:
     const icpPrompt =
       `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n\n`+
       (sellerResearch ? `═══ RESEARCH RESULTS (from deep web search — use these facts) ═══\n${sellerResearch.slice(0, 6000)}\n═══ END RESEARCH ═══\n\n` : `No pre-research available. Use your training knowledge about ${url} to build the ICP.\n\n`)+
+      sellerDocsCtx +
+      productPagesCtx +
       `CUSTOMER RESEARCH IS CRITICAL: Named customers from case studies and press releases are HIGH-CONFIDENCE data. These become the anchor for scoring — "does this prospect look like companies we've already won?" A seller with 3 verified customer wins produces better scores than one with 20 guesses.\n\n`+
       `Then use your research to build the ICP below. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n\n`+
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
@@ -7404,14 +7438,20 @@ Return ONLY raw JSON:
           .map(m=>m[0])
           .filter(u=>!u.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|ttf)$/i))
           .filter(u=>!u.match(/(blog|news|careers|jobs|about|contact|login|signup|privacy|terms|press|investor)/i))
-          .filter(u=>u.includes(url))
+          .filter(u=>{ try { return new URL(u).hostname.replace(/^www\./,"").toLowerCase().includes(url.split("/")[0].replace(/^www\./,"").toLowerCase()); } catch { return false; } })
+          .filter(u=>!/sitemap\.xml|robots\.txt|\.xml$|\/feed$|\/rss/i.test(u))
           .slice(0,5);
         if(urlMatches.length>0){
           parsed = {pages: urlMatches.map(u=>({url:u,label:u.split("/").pop().replace(/-/g," ")}))};
         }
       }
 
-      let pages=(parsed?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,8);
+      let pages=(parsed?.pages||[]).filter(p=>{
+        if(!p?.url||!p.url.startsWith("http")) return false;
+        try { const h=new URL(p.url).hostname.replace(/^www\./,"").toLowerCase(); if(!h.includes(url.split("/")[0].replace(/^www\./,"").toLowerCase())) return false; } catch { return false; }
+        if(/sitemap\.xml|robots\.txt|\.xml$|\/feed$|\/rss|\/api\/|\.well-known/i.test(p.url)) return false;
+        return true;
+      }).slice(0,8);
 
       // Auto-retry once if scan returned 0 pages — web search is non-deterministic
       if(pages.length===0){
@@ -7424,10 +7464,17 @@ Return ONLY raw JSON:
           if(!p2){
             const urls2 = [...tb2.join(" ").matchAll(/https?:\/\/[^\s"'<>]+\/[^\s"'<>]{3,}/g)]
               .map(m=>m[0]).filter(u=>!u.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|ttf)$/i))
-              .filter(u=>u.includes(url)).slice(0,5);
+              .filter(u=>{ try { return new URL(u).hostname.replace(/^www\./,"").toLowerCase().includes(url.split("/")[0].replace(/^www\./,"").toLowerCase()); } catch { return false; } })
+              .filter(u=>!/sitemap\.xml|robots\.txt|\.xml$|\/feed$|\/rss/i.test(u))
+              .slice(0,5);
             if(urls2.length>0) p2 = {pages: urls2.map(u=>({url:u,label:u.split("/").pop().replace(/-/g," ")}))};
           }
-          pages = (p2?.pages||[]).filter(p=>p?.url&&p.url.startsWith("http")).slice(0,8);
+          pages = (p2?.pages||[]).filter(p=>{
+            if(!p?.url||!p.url.startsWith("http")) return false;
+            try { const h=new URL(p.url).hostname.replace(/^www\./,"").toLowerCase(); if(!h.includes(url.split("/")[0].replace(/^www\./,"").toLowerCase())) return false; } catch { return false; }
+            if(/sitemap\.xml|robots\.txt|\.xml$|\/feed$|\/rss|\/api\/|\.well-known/i.test(p.url)) return false;
+            return true;
+          }).slice(0,8);
         }
       }
 
@@ -11763,7 +11810,6 @@ Return ONLY raw JSON:
                       const norm=sellerInput.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
                       setSellerUrl(norm);
                       scanSellerUrl(norm);
-                      buildSellerICP(norm);
                     }}}
                     onBlur={()=>{
                       // Only normalize the display — don't trigger scan or build.
@@ -11788,7 +11834,6 @@ Return ONLY raw JSON:
                         setUrlScanConfirmed(false);
                         setSellerUrl(norm);
                         scanSellerUrl(norm);
-                        buildSellerICP(norm);
                       } else {
                         // Name only — disambiguate to find the right domain
                         setDisambigLoading(true);
@@ -11817,23 +11862,23 @@ Return ONLY raw JSON:
                             // No matches — fall back to name.com
                             const fb = norm + ".com";
                             setSellerUrl(fb); setSellerInput(fb);
-                            scanSellerUrl(fb); buildSellerICP(fb);
+                            scanSellerUrl(fb);
                           } else if (matches.length === 1) {
                             const domain = (matches[0].domain||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
                             setSellerUrl(domain); setSellerInput(domain);
-                            scanSellerUrl(domain); buildSellerICP(domain);
+                            scanSellerUrl(domain);
                           } else {
                             setDisambigOptions({ matches, input: norm, onSelect: (match) => {
                               const domain = (match.domain||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
                               setSellerUrl(domain); setSellerInput(domain);
                               setDisambigOptions(null);
-                              scanSellerUrl(domain); buildSellerICP(domain);
+                              scanSellerUrl(domain);
                             }});
                           }
                         } catch (e) {
                           console.warn("[Go] Disambiguation failed:", e.message);
                           const fb = norm + ".com";
-                          setSellerUrl(fb); setSellerInput(fb); buildSellerICP(fb);
+                          setSellerUrl(fb); setSellerInput(fb); scanSellerUrl(fb);
                         } finally {
                           setDisambigLoading(false);
                         }
@@ -11881,7 +11926,7 @@ Return ONLY raw JSON:
                       </div>
                       <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",marginBottom:10}}>Are these the right product pages?</div>
                       <div style={{display:"flex",gap:8}}>
-                        <button className="btn btn-green btn-sm" onClick={()=>setUrlScanConfirmed(true)}>✓ Yes, looks right</button>
+                        <button className="btn btn-green btn-sm" onClick={()=>{setUrlScanConfirmed(true); if(!sellerICP && !icpLoading) buildSellerICP(sellerUrl);}}>✓ Yes, looks right</button>
                         <button className="btn btn-secondary btn-sm" onClick={()=>{setProductUrls([{url:"",label:""}]);setUrlScanStatus("");}}>✕ Clear, I'll add manually</button>
                       </div>
                     </div>
@@ -12080,7 +12125,7 @@ Return ONLY raw JSON:
                 {/* Manual scan button — fallback when onBlur doesn't fire (mobile, etc.) */}
                 {sellerInput.trim() && urlScanStatus !== "scanning" && !urlScanConfirmed && (
                   <button className="btn btn-secondary btn-sm" style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}
-                    onClick={() => { scanSellerUrl(sellerInput.trim()); if(!sellerICP&&!icpLoading) buildSellerICP(sellerInput.trim()); }}>
+                    onClick={() => { scanSellerUrl(sellerInput.trim()); }}>
                     <span style={{fontSize:13}}>🔍</span> Scan Products, Solutions &amp; Services
                   </button>
                 )}
