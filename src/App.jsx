@@ -8273,6 +8273,11 @@ Return ONLY raw JSON:
         }
       } catch { /* non-critical — fall through to fresh build */ }
     }
+    // Clear pre-cache for Quick Briefs — stale data from prior runs causes contamination flash
+    if (_isQuickBrief) {
+      execCacheRef.current[co] = null;
+      briefPreCacheRef.current[co] = null;
+    }
     // Reject cached execs that are stubs — force fresh extraction with P1 snapshot
     const _rawCachedExecs = execCacheRef.current[co] || null;
     const _cachedIsStubs = _rawCachedExecs && !(_rawCachedExecs instanceof Promise) &&
