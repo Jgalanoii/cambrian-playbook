@@ -1720,9 +1720,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
   // IDENTITY ANCHOR: when a URL is available, use it as the primary identifier
   // to prevent cross-company contamination in briefs.
+  const verifiedDesc = member._verifiedDescription ? `\nVERIFIED IDENTITY: "${co}" at ${url} is: ${sanitizeForPrompt(member._verifiedDescription)}. This was confirmed by the user. Do NOT describe this company as anything else.\n` : ``;
   const identityAnchor = url && url !== co
     ? `IDENTITY ANCHOR (CRITICAL — CONTAMINATION PREVENTION):\n`+
       `You are researching ONLY the company at https://${url}.\n`+
+      verifiedDesc +
       `SEARCH STRATEGY: Your FIRST search MUST be: site:${url}\n`+
       `This ensures you get information from the company's OWN website. "${co}" is a common name shared by multiple unrelated companies (education, biotech, therapy, consulting, etc.). Results NOT from ${url} are about DIFFERENT companies.\n`+
       `CONTAMINATION CHECK: Before including ANY fact, ask: "Did this come from ${url} or a page specifically about the company at ${url}?" If NO → discard it. A headline about "BrightPath Bio" or "YouScience Brightpath" is NOT about ${co}.\n`+
@@ -8042,7 +8044,7 @@ Return ONLY raw JSON:
   };
 
   const selectDisambigOption = (match) => {
-    const member = { company: match.name, company_url: match.domain || "", ind: "", employees: "", publicPrivate: "" };
+    const member = { company: match.name, company_url: match.domain || "", ind: "", employees: "", publicPrivate: "", _verifiedDescription: match.description || "" };
     const overrideSellerUrl = disambigOptions?.overrideSellerUrl || "research-only";
     setDisambigOptions(null);
     if (!sellerUrl) setSellerUrl("research-only");
