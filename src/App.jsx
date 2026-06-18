@@ -8025,35 +8025,17 @@ Return ONLY raw JSON:
       }
       if (!matches?.length) {
         console.warn("[verify] No matches parsed from verification response");
-        // No matches — launch with name only, best effort
-        const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
-        if (!sellerUrl) setSellerUrl("research-only");
-        pickAccount(member, overrideSellerUrl || "research-only");
-      } else if (matches.length === 1 && matches[0].domain) {
-        // Single match — but is the name ambiguous enough to warrant confirmation?
-        // Short names and common words are high-risk for misidentification
-        const nameLen = co.replace(/\s+/g, "").length;
-        const isShortOrCommon = nameLen <= 6 || /^(apollo|mercury|compass|summit|atlas|pioneer|stripe|block|square|toast|plaid|ramp|brex|deel|gusto|ripple|circle|notion|linear|figma|vercel|clerk)$/i.test(co.trim());
-        if (isShortOrCommon) {
-          // Show disambiguation even for single match — user should confirm
-          setDisambigOptions({ matches, input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
-        } else {
-          // Confident single match with domain — launch directly
-          const m = matches[0];
-          const member = { company: m.name, company_url: m.domain, ind: "", employees: "", publicPrivate: "" };
-          if (!sellerUrl) setSellerUrl("research-only");
-          pickAccount(member, overrideSellerUrl || "research-only");
-        }
+        // No matches — show disambiguation with a fallback option so user can confirm or correct
+        setDisambigOptions({ matches: [{ name: co, domain: co.replace(/\s+/g, "").toLowerCase() + ".com", description: "No verified match found — best guess" }], input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
       } else {
-        // Multiple matches OR single match without domain — show disambiguation
+        // Always show disambiguation for name-only inputs — user must confirm the right company
+        // Never auto-launch without URL confirmation. A brief with the wrong company is worse than a 2-second confirmation click.
         setDisambigOptions({ matches, input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
       }
     } catch (e) {
-      console.warn("[verify] Company verification failed, launching with name only:", e.message);
-      const member = { company: co, company_url: "", ind: "", employees: "", publicPrivate: "" };
-      if (overrideSellerUrl === "research-only") { setSellerUrl("research-only"); setSellerICP(null); }
-      else if (!sellerUrl) setSellerUrl("research-only");
-      pickAccount(member, overrideSellerUrl || "research-only");
+      console.warn("[verify] Company verification failed:", e.message);
+      // Show fallback disambiguation — don't launch blind
+      setDisambigOptions({ matches: [{ name: co, domain: co.replace(/\s+/g, "").toLowerCase() + ".com", description: "Verification failed — confirm this is correct" }], input: co, overrideSellerUrl: overrideSellerUrl || "research-only" });
     } finally {
       setDisambigLoading(false);
     }
