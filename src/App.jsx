@@ -8115,7 +8115,9 @@ Return ONLY raw JSON:
               // Full Briefs MUST include solutionMapping — a cached brief without products is useless.
               const hasCritical = _isQuickBrief
                 ? !!(cd.companySnapshot || cd.revenue) && !!cd.watchOuts
-                : !!(cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product));
+                  && !/\bprocessing volume\b/i.test(cd.revenue || "")
+                : !!(cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product))
+                  && !/\bprocessing volume\b/i.test(cd.revenue || "");
               // Contamination check: if snapshot mentions one city but HQ has another, fix HQ
               const snapCityMatch = (cd.companySnapshot || "").match(/(?:based in|headquartered in|dual HQ:\s*|HQ:\s*|offices in)\s*([A-Za-z\s]+(?:,\s*[A-Za-z.]+)?)/i);
               const snapCity = snapCityMatch?.[1]?.split(/[&,]/)[0]?.trim().toLowerCase();
@@ -9022,7 +9024,7 @@ Return ONLY raw JSON:
               current.financialDeepDive?.capitalPriorities,
               Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
             ].filter(Boolean).join(" ");
-            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over)\s*|[(]\s*)([\d,]+)\s*(?:employees|associates|colleagues|staff|team members)/gi)];
+            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over)\s*|[(]\s*)([\d,]+)\+?\s*(?:employees|associates|colleagues|staff|team members)/gi)];
             if (empMatches.length > 0) {
               const largest = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).sort((a, b) => b - a)[0];
               if (largest > overviewEmp * 1.2 && largest > 1000) {
@@ -9079,6 +9081,67 @@ Return ONLY raw JSON:
             current.publicPrivate = "Nonprofit (501(c)(3))";
           }
 
+          // ── PUBLIC / PRIVATE VALIDATION ───────────────────────────────────
+          // Determine authoritative ownership status by triangulating across
+          // publicPrivate (P1 direct answer), fundingProfile, boardAndInvestors,
+          // and companySnapshot. A PE firm's named presence in fundingProfile or
+          // board data is high-confidence private evidence. An exchange ticker
+          // symbol in publicPrivate or snapshot is high-confidence public evidence.
+          // When evidence is conclusive, patch inconsistent fields to agree.
+          if (current.publicPrivate) {
+            const PP        = current.publicPrivate;
+            const fundText  = current.fundingProfile || "";
+            const boardText = current.boardAndInvestors?.leadInvestors || "";
+            const snapText  = current.companySnapshot || "";
+
+            // Named PE/growth-equity firms are strong private-company evidence
+            const PE_FIRMS = /\b(silver lake|kkr|blackstone|apollo global|carlyle group|bain capital|tpg|warburg pincus|advent international|francisco partners|vista equity|thoma bravo|p2 capital|gtcr|onex|permira|cinven|ardian|cvc capital|leonard green|l catterton)\b/i;
+            const confirmedPrivate =
+              /\bprivate(?:ly[\s-]held)?\b|pe[-\s]backed|took?[\s-]private|acquired by|take[-\s]private|not publicly traded/i.test(PP) ||
+              PE_FIRMS.test(fundText) ||
+              PE_FIRMS.test(boardText);
+
+            // Exchange ticker symbols are strong public-company evidence
+            const TICKER = /\b(?:NYSE|NASDAQ|AMEX|LSE|TSX|ASX):\s*[A-Z]{1,5}\b/i;
+            const confirmedPublic =
+              TICKER.test(PP) ||
+              TICKER.test(snapText) ||
+              /\bpublicly traded\b.{0,30}\b(?:NYSE|NASDAQ|AMEX)\b/i.test(snapText);
+
+            if (confirmedPrivate && !confirmedPublic) {
+              // Fix snapshot if it still says "publicly traded company" as a current-state claim
+              if (/is a publicly traded company|publicly traded company (that|which)/i.test(snapText)) {
+                console.warn(`[consistency] Ownership conflict — corroborating signals confirm private; patching snapshot (PE firms or take-private language found)`);
+                current.companySnapshot = snapText
+                  .replace(/is a publicly traded company/gi, "is a privately held company")
+                  .replace(/publicly traded company (that|which)/gi, (_, conj) => `privately held company ${conj}`);
+              }
+              // Also normalise publicPrivate if it only says "Private" without context
+              if (/^private$/i.test(PP.trim()) && PE_FIRMS.test(fundText)) {
+                // Enrich the bare "Private" label with ownership context from fundingProfile
+                const peMatch = fundText.match(PE_FIRMS)?.[0] || "";
+                if (peMatch) {
+                  current.publicPrivate = `Private (PE-backed — ${peMatch})`;
+                  console.warn(`[consistency] publicPrivate enriched: "Private" → "${current.publicPrivate}"`);
+                }
+              }
+            } else if (confirmedPublic && /private/i.test(PP) && !confirmedPrivate) {
+              // Edge case: publicPrivate says Private but ticker evidence says Public — log for review
+              console.warn(`[consistency] Ownership ambiguity — publicPrivate="${PP}" but ticker evidence suggests public. Leaving as-is; manual review recommended.`);
+            }
+          }
+
+          // ── REVENUE FIELD QUALITY GUARD ───────────────────────────────────
+          // Payment companies use "processing volume" to describe transaction
+          // throughput — not company revenue. If P1 conflated the two and put
+          // volume language into the revenue field, clear it so P9 reconciliation
+          // (below) can fill in the correct figure. Non-payment companies never
+          // have "processing volume" in a revenue value, so this is safe broadly.
+          if (current.revenue && /\bprocessing volume\b/i.test(current.revenue)) {
+            console.warn(`[consistency] Revenue field contains "processing volume" — clearing (was: "${current.revenue}")`);
+            current.revenue = "";
+          }
+
           // ── REVENUE RECONCILIATION WITH P9 — P9 is authoritative (deeper financial research) ──
           if (current.financialDeepDive?.revenueTrend) {
             const p9Rev = current.financialDeepDive.revenueTrend;
@@ -9117,7 +9180,7 @@ Return ONLY raw JSON:
               current.financialDeepDive?.segmentBreakdown,
               Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
             ].filter(Boolean).join(" ");
-            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over|employs?|employing|has)\s*|[(]\s*)([\d,]+)\s*(?:employees|people|staff|team members|workers|associates|colleagues)/gi)];
+            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over|employs?|employing|has)\s*|[(]\s*)([\d,]+)\+?\s*(?:employees|people|staff|team members|workers|associates|colleagues)/gi)];
             if (empMatches.length > 0) {
               const p1Emp = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
               const textEmps = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).filter(n => n > 0);
