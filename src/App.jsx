@@ -8232,12 +8232,24 @@ Return ONLY raw JSON:
                           current.companySnapshot ? `Company: ${current.companySnapshot.slice(0, 400)}` : "",
                           current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0, 300)}` : "",
                           current.openingAngle ? `Opening: ${current.openingAngle.slice(0, 200)}` : "",
+                          current.fundingProfile ? `Funding: ${current.fundingProfile.slice(0, 200)}` : "",
                           current.revenue ? `Revenue: ${current.revenue}` : "",
+                          current.employeeCount ? `Employees: ${current.employeeCount}` : "",
+                          (current.recentHeadlines||[]).slice(0,3).map(h => typeof h === "string" ? h : h?.headline).filter(Boolean).join("; "),
+                          (current.recentSignals||[]).filter(Boolean).slice(0,3).join("; "),
+                          Array.isArray(current.watchOuts) ? current.watchOuts.filter(Boolean).slice(0,2).join("; ") : "",
                           current.competitivePositioning?.marketPosition ? `Market: ${current.competitivePositioning.marketPosition.slice(0, 200)}` : "",
                           current.financialDeepDive?.revenueTrend ? `Trend: ${current.financialDeepDive.revenueTrend.slice(0, 200)}` : "",
                         ].filter(Boolean).join("\n");
-                        callAI(`You are a senior sales strategist. Extract a 3-part Quick Take on ${co}.\n\nINTELLIGENCE:\n${ctx}\n\nReturn ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`, { maxTokens: 600 })
-                          .then(r => { if (r?.tldr?.topFinding) { setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev); console.log("[cache] Quick Take generated"); } }).catch(() => {});
+                        callAI(
+                          `You are a senior sales strategist. Extract a 3-part Quick Take on ${co} from the intelligence below.\n\n` +
+                          `FULL COMPANY INTELLIGENCE:\n${ctx}\n\n` +
+                          `EXTRACTION RULES:\n` +
+                          `1. Only state facts that appear in the intelligence above — no outside statistics.\n` +
+                          `2. topRisk: the single biggest obstacle to selling into ${co} — extracted from the text above. If no explicit risk is stated, describe the structural challenge (e.g. "PE-backed exploring exit — deal cycles may stall" or "deep incumbent relationships require board-level access") WITHOUT fabricating numbers.\n\n` +
+                          `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
+                          { maxTokens: 600 }
+                        ).then(r => { if (r?.tldr?.topFinding) { setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev); console.log("[cache] Quick Take generated"); } }).catch(() => {});
                       }
                       if (!current.fiveQuestions) {
                         const ctx = [current.companySnapshot?.slice(0,300), current.strategicTheme?.slice(0,300), current.openingAngle].filter(Boolean).join("\n");
