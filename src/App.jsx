@@ -1735,7 +1735,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     : `IDENTITY ANCHOR: Research the company "${co}". CONTAMINATION GUARD: Do NOT mix facts from similarly-named companies. "${co}" is ONE specific entity. If your search returns results for multiple companies with similar names (e.g., "TheBancorp" vs "Columbia Bancorp" vs "Banc of California"), use ONLY results about "${co}" specifically. Every fact — revenue, employees, executives, headquarters, strategy — must be about "${co}" and no other entity. If you cannot distinguish which results belong to "${co}", return empty string rather than risk citing the wrong company. A brief with wrong-company data is worse than a brief with missing data.\n\n`;
 
   // Canonical seller name — use consistently across all sections
-  const canonicalSellerName = sellerICP?.sellerName || sellerUrl || "the seller";
+  // "research-only" is an internal sentinel, not a real seller name — substitute neutral label
+  const _rawSellerName = sellerICP?.sellerName || sellerUrl || "the seller";
+  const canonicalSellerName = /^research-only(\.com)?$/i.test(_rawSellerName) ? "your team" : _rawSellerName;
   const baseLight =
     `Sales brief about TARGET PROSPECT "${co}"${url && url !== co ? ` (${url})` : ""} for seller "${canonicalSellerName}"${sellerUrl !== canonicalSellerName ? ` (${sellerUrl})` : ""}.\n`+
     `SELLER NAME CONSISTENCY: Always refer to the selling organization as "${canonicalSellerName}" — not "${sellerUrl}" or any other variation. Use this exact name in every section.\n`+
@@ -9024,10 +9026,14 @@ Return ONLY raw JSON:
               current.financialDeepDive?.capitalPriorities,
               Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
             ].filter(Boolean).join(" ");
-            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over)\s*|[(]\s*)([\d,]+)\+?\s*(?:employees|associates|colleagues|staff|team members)/gi)];
+            // Also scan recentSignals for "X employees as of [date]" — authoritative live data
+            const recentSignalsText = Array.isArray(current.recentSignals)
+              ? current.recentSignals.map(s => typeof s === "string" ? s : (s?.signal || "")).join(" ")
+              : "";
+            const empMatches = [...(allText + " " + recentSignalsText).matchAll(/(?:(?:approximately|~|about|nearly|over)\s*|[(]\s*)([\d,]+)\+?\s*(?:employees|associates|colleagues|staff|team members)/gi)];
             if (empMatches.length > 0) {
               const largest = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).sort((a, b) => b - a)[0];
-              if (largest > overviewEmp * 1.2 && largest > 1000) {
+              if (largest > overviewEmp * 1.1 && largest > 1000) {
                 console.warn(`[consistency] Employee count reconciled: overview=${current.employeeCount} → ${largest.toLocaleString()} (from brief text)`);
                 current.employeeCount = `~${largest.toLocaleString()}`;
               }
@@ -9117,9 +9123,10 @@ Return ONLY raw JSON:
                   .replace(/publicly traded company (that|which)/gi, (_, conj) => `privately held company ${conj}`);
               }
               // Also normalise publicPrivate if it only says "Private" without context
-              if (/^private$/i.test(PP.trim()) && PE_FIRMS.test(fundText)) {
-                // Enrich the bare "Private" label with ownership context from fundingProfile
-                const peMatch = fundText.match(PE_FIRMS)?.[0] || "";
+              // Check fundText first, fall back to boardText (leadInvestors) if fundText is weak
+              const peEnrichSource = PE_FIRMS.test(fundText) ? fundText : (PE_FIRMS.test(boardText) ? boardText : "");
+              if (/^private$/i.test(PP.trim()) && peEnrichSource) {
+                const peMatch = peEnrichSource.match(PE_FIRMS)?.[0] || "";
                 if (peMatch) {
                   current.publicPrivate = `Private (PE-backed — ${peMatch})`;
                   console.warn(`[consistency] publicPrivate enriched: "Private" → "${current.publicPrivate}"`);
