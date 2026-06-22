@@ -24,9 +24,12 @@ function FitSortTh({ sortKey, sortDir, onSort, colKey, children, style }) {
 }
 
 // ── PRODUCTION CONSOLE GUARD ─────────────────────────────────────────────
-// Suppress all console output in production to prevent IP/trade secret
-// leakage via DevTools. Only keeps console.error for critical failures.
-if (import.meta.env.PROD) {
+// Suppress all console output on the production domain only — prevents
+// IP/trade secret leakage via DevTools. Staging, preview, and local dev
+// always have full logging. Keep console.error everywhere for crash debugging.
+const _isProdDomain = typeof window !== "undefined" &&
+  window.location.hostname === "cambriancatalyst.ai";
+if (_isProdDomain) {
   const noop = () => {};
   console.log = noop;
   console.warn = noop;
@@ -35,7 +38,6 @@ if (import.meta.env.PROD) {
   console.table = noop;
   console.dir = noop;
   console.trace = noop;
-  // Keep console.error for crash debugging
 }
 
 // ── KNOWLEDGE LAYER ──────────────────────────────────────────────────────
