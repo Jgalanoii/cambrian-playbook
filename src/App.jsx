@@ -8125,17 +8125,22 @@ Return ONLY raw JSON:
                 console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
                 // ── CACHE BACKFILL: serve cached data instantly, then fill gaps ──
                 // Detect which sections are missing from cached data and fire targeted calls.
-                const missingFinancial = !cd.financialDeepDive?.revenueTrend;
-                const missingCompetitive = !cd.competitivePositioning?.primaryCompetitors?.length;
-                const missingBoard = !cd.boardAndInvestors?.leadInvestors;
-                const missingTldr = !cd.tldr;
-                const missingFiveQs = !cd.fiveQuestions;
-                const missingCaseStudies = !cd.caseStudies?.some(c => c?.title);
-                const gapCount = [missingFinancial, missingCompetitive, missingBoard, missingTldr, missingFiveQs, missingCaseStudies].filter(Boolean).length;
-                if (gapCount) console.log(`[cache] ${gapCount} gaps detected — backfilling: ${[missingFinancial&&"financial", missingCompetitive&&"competitive", missingBoard&&"board", missingTldr&&"quickTake", missingFiveQs&&"5questions", missingCaseStudies&&"caseStudies"].filter(Boolean).join(", ")}`);
+                const missingFinancial    = !cd.financialDeepDive?.revenueTrend;
+                const missingCompetitive  = !cd.competitivePositioning?.primaryCompetitors?.length;
+                const missingBoard        = !cd.boardAndInvestors?.leadInvestors;
+                const missingTldr         = !cd.tldr?.topFinding; // check content, not just object existence
+                const missingFiveQs       = !cd.fiveQuestions?.length;
+                const missingCaseStudies  = !cd.caseStudies?.some(c => c?.title);
+                // Sentiment: missing entirely vs. has raw data but no synthesis paragraph
+                const missingPublicSentiment  = !cd.publicSentiment?.glassdoorRating && !cd.publicSentiment?.onlineSentiment && !cd.publicSentiment?.standoutReview?.text;
+                const missingOnlineSentiment  = !!(cd.publicSentiment?.glassdoorRating || cd.publicSentiment?.standoutReview?.text) && !cd.publicSentiment?.onlineSentiment;
+                const missingExecutives       = !cd.keyExecutives?.some(e => e?.name);
+                const missingOpenRoles        = !cd.openRoles?.roles?.length;
+                const allGaps = [missingFinancial&&"financial", missingCompetitive&&"competitive", missingBoard&&"board", missingTldr&&"quickTake", missingFiveQs&&"5questions", missingCaseStudies&&"caseStudies", missingPublicSentiment&&"sentiment", missingOnlineSentiment&&"sentimentSynth", missingExecutives&&"executives", missingOpenRoles&&"openRoles"].filter(Boolean);
+                if (allGaps.length) console.log(`[cache] ${allGaps.length} gaps detected — backfilling: ${allGaps.join(", ")}`);
 
                 // Mark missing deep intel sections as loading so UI shows spinners
-                const loadingFlags = { overview: false, executives: false, strategy: false, solutions: false, live: true, roles: false, deepIntel: missingFinancial || missingCompetitive || missingBoard };
+                const loadingFlags = { overview: false, executives: missingExecutives, strategy: false, solutions: false, live: true, roles: missingOpenRoles, deepIntel: missingFinancial || missingCompetitive || missingBoard };
                 const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: loadingFlags, _failedSections: [], _error: null };
                 setBrief(cachedBriefData);
                 setBriefLoading(false);
@@ -8147,15 +8152,49 @@ Return ONLY raw JSON:
                   : `IDENTITY: Research "${co}" ONLY.\n\n`;
 
                 (async () => {
-                  // P5: refresh headlines
+                  // P5: refresh headlines + conditionally sentiment when missing
                   try {
+                    const p5Schema = missingPublicSentiment
+                      ? `{"recentHeadlines":[{"headline":"","relevance":"","type":""}],"recentSignals":[],"growthSignals":[],"sentimentScores":{"glassdoorRating":"","g2Rating":"","trustpilotRating":"","npsSignal":"","employeeScore":"","standoutReview":{"text":"","source":"","sentiment":""},"salesAngle":""}}`
+                      : `{"recentHeadlines":[{"headline":"","relevance":"","type":""}],"recentSignals":[],"growthSignals":[]}`;
+                    const p5Search2 = missingPublicSentiment
+                      ? `Search 2 (SENTIMENT): "${co}" Glassdoor OR G2 OR Trustpilot OR Indeed OR BBB OR "net promoter" employer rating reviews customer satisfaction`
+                      : `Search 2: "${co}" Glassdoor rating reviews`;
                     const p5Result = await streamAIWithSearch(
-                      `Search for recent information about "${co}". Use at least one search for press releases.\n` +
-                      `Search 1: "${co}" news OR press release 2025 OR 2026\nSearch 2: "${co}" Glassdoor rating reviews\n` +
-                      `Return ONLY raw JSON: {"recentHeadlines":[{"headline":"","relevance":"","type":""}],"recentSignals":[],"growthSignals":[]}`,
+                      `Search for recent information about "${co}". Use BOTH searches.\n` +
+                      `Search 1: "${co}" news OR press release 2025 OR 2026\n${p5Search2}\n` +
+                      `SOURCE ATTRIBUTION: for sentimentScores fields, only populate from explicitly named sources — never estimate.\n` +
+                      `Return ONLY raw JSON: ${p5Schema}`,
                       null, 1800, { maxSearches: 2 }
                     );
-                    if (p5Result) setBrief(prev => prev ? { ...prev, ...(p5Result.recentHeadlines ? { recentHeadlines: p5Result.recentHeadlines } : {}), ...(p5Result.growthSignals ? { growthSignals: p5Result.growthSignals } : {}), ...(p5Result.recentSignals ? { recentSignals: p5Result.recentSignals } : {}), _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev);
+                    if (p5Result) {
+                      setBrief(prev => {
+                        if (!prev) return prev;
+                        const patch = {
+                          ...(p5Result.recentHeadlines ? { recentHeadlines: p5Result.recentHeadlines } : {}),
+                          ...(p5Result.growthSignals   ? { growthSignals:   p5Result.growthSignals   } : {}),
+                          ...(p5Result.recentSignals   ? { recentSignals:   p5Result.recentSignals   } : {}),
+                          _loadingSections: { ...(prev._loadingSections || {}), live: false },
+                        };
+                        // Merge sentiment scores into publicSentiment when we fetched them
+                        if (p5Result.sentimentScores && missingPublicSentiment) {
+                          const ss = p5Result.sentimentScores;
+                          patch.publicSentiment = {
+                            ...(prev.publicSentiment || {}),
+                            ...(ss.glassdoorRating  ? { glassdoorRating:  ss.glassdoorRating  } : {}),
+                            ...(ss.g2Rating         ? { g2Rating:         ss.g2Rating         } : {}),
+                            ...(ss.trustpilotRating ? { trustpilotRating: ss.trustpilotRating } : {}),
+                            ...(ss.npsSignal        ? { npsSignal:        ss.npsSignal        } : {}),
+                            ...(ss.employeeScore    ? { employeeScore:    ss.employeeScore    } : {}),
+                            ...(ss.salesAngle       ? { salesAngle:       ss.salesAngle       } : {}),
+                            ...(ss.standoutReview?.text ? { standoutReview: ss.standoutReview } : {}),
+                          };
+                        }
+                        return { ...prev, ...patch };
+                      });
+                    } else {
+                      setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev);
+                    }
                   } catch { setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), live: false } } : prev); }
 
                   // Backfill missing deep intel sections
@@ -8220,6 +8259,36 @@ Return ONLY raw JSON:
                       }
                     } catch (e) { console.warn("[cache] Case studies backfill failed:", e?.message); }
                   }
+                  // Backfill missing executives
+                  if (missingExecutives) {
+                    try {
+                      const d = await claudeFetch({ model: SONNET, max_tokens: 1500, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+                        messages: [{ role: "user", content: deepIntelIdentityCache + `Find the current C-suite executives and key leaders of ${co}${url ? ` (${url})` : ""}.\nSearch for "${co} CEO executive team" and "${co} leadership".\nReturn raw JSON: {"keyExecutives":[{"name":"Full Name","title":"Exact Title","initials":"XX","angle":"1-2 sentences on how to approach this person as a seller — their mandate, first-90-day priorities, what resonates","background":"Prior roles, education, notable career facts"}]}` }] });
+                      const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+                      const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
+                      const parsed = extractJsonWithKey(raw, "keyExecutives") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+                      if (parsed?.keyExecutives?.some(e => e?.name)) {
+                        setBrief(prev => prev ? { ...prev, keyExecutives: parsed.keyExecutives } : prev);
+                        console.log("[cache] Executives backfilled");
+                      }
+                    } catch (e) { console.warn("[cache] Executives backfill failed:", e?.message); }
+                  }
+                  // Backfill missing open roles
+                  if (missingOpenRoles) {
+                    try {
+                      const d = await claudeFetch({ model: SONNET, max_tokens: 1200, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+                        messages: [{ role: "user", content: deepIntelIdentityCache + `Find current open job postings for ${co}${url ? ` (${url})` : ""}.\nSearch for "${co} jobs" and "${co} careers hiring".\nReturn raw JSON: {"openRoles":{"roles":[{"dept":"Department","title":"Job Title","signal":"What this hire signals about company direction or priorities"}],"summary":"2-sentence summary of hiring patterns and what they reveal about company priorities"}}` }] });
+                      const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
+                      const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
+                      const parsed = extractJsonWithKey(raw, "openRoles") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
+                      if (parsed?.openRoles?.roles?.length) {
+                        setBrief(prev => prev ? { ...prev, openRoles: parsed.openRoles, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
+                        console.log("[cache] Open roles backfilled");
+                      } else {
+                        setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
+                      }
+                    } catch (e) { console.warn("[cache] Open roles backfill failed:", e?.message); setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev); }
+                  }
                   // Clear deepIntel loading flag
                   setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), deepIntel: false } } : prev);
 
@@ -8227,7 +8296,7 @@ Return ONLY raw JSON:
                   setTimeout(() => {
                     setBrief(current => {
                       if (!current?.companySnapshot) return current;
-                      if (!current.tldr) {
+                      if (!current.tldr?.topFinding) {
                         const ctx = [
                           current.companySnapshot ? `Company: ${current.companySnapshot.slice(0, 400)}` : "",
                           current.strategicTheme ? `Strategy: ${current.strategicTheme.slice(0, 300)}` : "",
@@ -8251,11 +8320,31 @@ Return ONLY raw JSON:
                           { maxTokens: 600 }
                         ).then(r => { if (r?.tldr?.topFinding) { setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev); console.log("[cache] Quick Take generated"); } }).catch(() => {});
                       }
-                      if (!current.fiveQuestions) {
+                      if (!current.fiveQuestions?.length) {
                         const ctx = [current.companySnapshot?.slice(0,300), current.strategicTheme?.slice(0,300), current.openingAngle].filter(Boolean).join("\n");
                         const sellerCtx = sellerUrl && sellerUrl !== "research-only" ? `\nSELLER: ${sellerICP?.sellerDescription || sellerUrl}\n` : "";
                         callAI(`Generate 5 discovery questions about ${co}.\n\nRESEARCH:\n${ctx}\n${sellerCtx}\nReturn ONLY raw JSON: {"fiveQuestions":[{"question":"...","rationale":"...","source":"..."}]}`, { maxTokens: 1200 })
                           .then(r => { if (r?.fiveQuestions?.length) { setBrief(prev => prev ? { ...prev, fiveQuestions: r.fiveQuestions } : prev); console.log("[cache] 5 Questions generated"); } }).catch(() => {});
+                      }
+                      // Synthesize onlineSentiment when we have rating/review data but no synthesis paragraph
+                      if (!current.publicSentiment?.onlineSentiment && (current.publicSentiment?.glassdoorRating || current.publicSentiment?.standoutReview?.text)) {
+                        const ps = current.publicSentiment;
+                        const sentCtx = [
+                          ps.glassdoorRating ? `Glassdoor: ${ps.glassdoorRating}/5` : "",
+                          ps.npsSignal ? `NPS/Recommend: ${ps.npsSignal}` : "",
+                          ps.standoutReview?.text ? `Review (${ps.standoutReview.source || "Glassdoor"}): "${ps.standoutReview.text}"` : "",
+                          ps.salesAngle ? `Sales angle: ${ps.salesAngle}` : "",
+                          current.companySnapshot ? `Company context: ${current.companySnapshot.slice(0, 300)}` : "",
+                        ].filter(Boolean).join("\n");
+                        callAI(
+                          `Write a 2-3 sentence onlineSentiment paragraph for ${co} — what employees, press, and the market say about this company AS A PLACE TO SELL INTO (not product quality).\n\nDATA:\n${sentCtx}\n\nFocus on: employee morale, leadership reputation, culture signals, brand health. Use only what is in the data above.\nReturn ONLY raw JSON: {"onlineSentiment":"..."}`,
+                          { maxTokens: 300 }
+                        ).then(r => {
+                          if (r?.onlineSentiment) {
+                            setBrief(prev => prev ? { ...prev, publicSentiment: { ...(prev.publicSentiment || {}), onlineSentiment: r.onlineSentiment } } : prev);
+                            console.log("[cache] onlineSentiment synthesized");
+                          }
+                        }).catch(() => {});
                       }
                       if (!discoveryQs && current.solutionMapping?.some(s=>s?.product)) {
                         Promise.resolve().then(() => generateDiscoveryQs(current, member));
