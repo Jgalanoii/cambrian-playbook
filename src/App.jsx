@@ -8091,7 +8091,7 @@ Return ONLY raw JSON:
 
     // ── Brief caching: RE-ENABLED June 3 — saves all 35+ fields, validates completeness ──
     const _isQuickBrief = (overrideSellerUrl === "research-only") || (sellerUrl === "research-only");
-    if (!forceRebuild && !_isQuickBrief && sbToken && sbUser) {
+    if (!forceRebuild && sbToken && sbUser) {
       try {
         const SB_URL_BC = import.meta.env.VITE_SUPABASE_URL;
         const SB_KEY_BC = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -8106,9 +8106,11 @@ Return ONLY raw JSON:
               const ageDays = Math.floor(age / 86400000);
               const cd = cached[0].data;
               // Validate cache has critical sections — skip stale/incomplete briefs
-              // MUST include solutionMapping — a cached brief without products is useless
-              // MUST NOT have cross-company contamination (e.g. wrong HQ from a same-name entity)
-              const hasCritical = cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product);
+              // Quick Briefs (research-only) don't populate seller fields — use a different check.
+              // Full Briefs MUST include solutionMapping — a cached brief without products is useless.
+              const hasCritical = _isQuickBrief
+                ? !!(cd.companySnapshot || cd.revenue) && !!cd.watchOuts
+                : !!(cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product));
               // Contamination check: if snapshot mentions one city but HQ has another, fix HQ
               const snapCityMatch = (cd.companySnapshot || "").match(/(?:based in|headquartered in|dual HQ:\s*|HQ:\s*|offices in)\s*([A-Za-z\s]+(?:,\s*[A-Za-z.]+)?)/i);
               const snapCity = snapCityMatch?.[1]?.split(/[&,]/)[0]?.trim().toLowerCase();
@@ -8277,11 +8279,9 @@ Return ONLY raw JSON:
         }
       } catch { /* non-critical — fall through to fresh build */ }
     }
-    // Clear pre-cache for Quick Briefs — stale data from prior runs causes contamination flash
-    if (_isQuickBrief) {
-      execCacheRef.current[co] = null;
-      briefPreCacheRef.current[co] = null;
-    }
+    // briefPreCacheRef (P5 live search) has no seller context — reusable for both modes.
+    // execCacheRef pre-fetch is already skipped for research-only (line ~5686).
+    // Neither needs to be cleared here.
     // Reject cached execs that are stubs — force fresh extraction with P1 snapshot
     const _rawCachedExecs = execCacheRef.current[co] || null;
     const _cachedIsStubs = _rawCachedExecs && !(_rawCachedExecs instanceof Promise) &&
