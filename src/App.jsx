@@ -2475,7 +2475,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), roles:false}};
     if (!r6) { next._failedSections = [...(prev._failedSections||[]), "roles"]; return next; }
-    if (rolesHaveData(r6) || rolesSummaryOk(r6)) next.openRoles = r6.openRoles;
+    const newHasRoles = rolesHaveData(r6);
+    const existingHasRoles = prev?.openRoles?.roles?.some(r => r?.title);
+    // Only overwrite existing good roles data if new data also has roles.
+    // This prevents P6 Phase 3 (no-roles-found fallback) from clobbering
+    // good data that was already in state from a prior run or cache.
+    if (newHasRoles || (rolesSummaryOk(r6) && !existingHasRoles)) next.openRoles = r6.openRoles;
     return next;
   };
 
@@ -8135,7 +8140,8 @@ Return ONLY raw JSON:
                 const missingPublicSentiment  = !cd.publicSentiment?.glassdoorRating && !cd.publicSentiment?.onlineSentiment && !cd.publicSentiment?.standoutReview?.text;
                 const missingOnlineSentiment  = !!(cd.publicSentiment?.glassdoorRating || cd.publicSentiment?.standoutReview?.text) && !cd.publicSentiment?.onlineSentiment;
                 const missingExecutives       = !cd.keyExecutives?.some(e => e?.name);
-                const missingOpenRoles        = !cd.openRoles?.roles?.length;
+                const missingOpenRoles        = !cd.openRoles?.roles?.length ||
+                  /data not fully available|no open positions found|no specific open positions|no results found/i.test(cd.openRoles?.summary || "");
                 const allGaps = [missingFinancial&&"financial", missingCompetitive&&"competitive", missingBoard&&"board", missingTldr&&"quickTake", missingFiveQs&&"5questions", missingCaseStudies&&"caseStudies", missingPublicSentiment&&"sentiment", missingOnlineSentiment&&"sentimentSynth", missingExecutives&&"executives", missingOpenRoles&&"openRoles"].filter(Boolean);
                 if (allGaps.length) console.log(`[cache] ${allGaps.length} gaps detected — backfilling: ${allGaps.join(", ")}`);
 
@@ -8289,9 +8295,20 @@ Return ONLY raw JSON:
                       const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
                       const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
                       const parsed = extractJsonWithKey(raw, "openRoles") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
-                      if (parsed?.openRoles?.roles?.length) {
-                        setBrief(prev => prev ? { ...prev, openRoles: parsed.openRoles, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
-                        console.log("[cache] Open roles backfilled");
+                      if (parsed?.openRoles) {
+                        // Write result even when roles is empty — replaces stale "Data not fully available" summary.
+                        // But don't downgrade: if existing state already has real roles, keep them.
+                        setBrief(prev => {
+                          if (!prev) return prev;
+                          const newHasRoles = parsed.openRoles?.roles?.some(r => r?.title);
+                          const existingHasRoles = prev.openRoles?.roles?.some(r => r?.title);
+                          if (existingHasRoles && !newHasRoles) {
+                            console.log("[cache] Open roles: new result has no roles — keeping existing");
+                            return { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } };
+                          }
+                          console.log(`[cache] Open roles backfilled (${parsed.openRoles?.roles?.length || 0} roles)`);
+                          return { ...prev, openRoles: parsed.openRoles, _loadingSections: { ...(prev._loadingSections || {}), roles: false } };
+                        });
                       } else {
                         setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
                       }
@@ -8616,6 +8633,32 @@ Return ONLY raw JSON:
             setBrief(prev => prev ? { ...prev, tldr: cleaned } : prev);
           }
         }).catch(() => {});
+
+        // ── onlineSentiment synthesis (fresh build) ──
+        // P3 is skipped for Quick Brief (research-only), so onlineSentiment is never
+        // generated during the build. Fire synthesis here, after allDone, when we
+        // have glassdoorRating/standoutReview from P5 but no synthesis paragraph.
+        if (!current.publicSentiment?.onlineSentiment &&
+            (current.publicSentiment?.glassdoorRating || current.publicSentiment?.standoutReview?.text)) {
+          const ps = current.publicSentiment;
+          const sentCtx = [
+            ps.glassdoorRating ? `Glassdoor: ${ps.glassdoorRating}/5` : "",
+            ps.npsSignal ? `NPS/Recommend: ${ps.npsSignal}` : "",
+            ps.standoutReview?.text ? `Employee review (${ps.standoutReview.source || "Glassdoor"}): "${ps.standoutReview.text}"` : "",
+            ps.salesAngle ? `Sales angle: ${ps.salesAngle}` : "",
+            current.companySnapshot ? `Company context: ${current.companySnapshot.slice(0, 300)}` : "",
+          ].filter(Boolean).join("\n");
+          callAI(
+            `Write a 2-3 sentence onlineSentiment paragraph for ${member.company} — what employees, press, and the market say about this company AS A PLACE TO SELL INTO (not product quality).\n\nDATA:\n${sentCtx}\n\nFocus on: employee morale, leadership reputation, culture signals, brand health. Use only facts from the DATA section above — no outside knowledge.\nReturn ONLY raw JSON: {"onlineSentiment":"..."}`,
+            { maxTokens: 300 }
+          ).then(r => {
+            if (r?.onlineSentiment) {
+              setBrief(prev => prev ? { ...prev, publicSentiment: { ...(prev.publicSentiment || {}), onlineSentiment: r.onlineSentiment } } : prev);
+              console.log("[allDone] onlineSentiment synthesized");
+            }
+          }).catch(() => {});
+        }
+
         return current;
       });
     }, 800));
@@ -8979,7 +9022,7 @@ Return ONLY raw JSON:
               current.financialDeepDive?.capitalPriorities,
               Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
             ].filter(Boolean).join(" ");
-            const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over)\s*([\d,]+)\s*(?:employees|associates|colleagues|staff|team members)/gi)];
+            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over)\s*|[(]\s*)([\d,]+)\s*(?:employees|associates|colleagues|staff|team members)/gi)];
             if (empMatches.length > 0) {
               const largest = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).sort((a, b) => b - a)[0];
               if (largest > overviewEmp * 1.2 && largest > 1000) {
@@ -9074,7 +9117,7 @@ Return ONLY raw JSON:
               current.financialDeepDive?.segmentBreakdown,
               Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
             ].filter(Boolean).join(" ");
-            const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over|employs?|employing|has)\s*([\d,]+)\s*(?:employees|people|staff|team members|workers)/gi)];
+            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over|employs?|employing|has)\s*|[(]\s*)([\d,]+)\s*(?:employees|people|staff|team members|workers|associates|colleagues)/gi)];
             if (empMatches.length > 0) {
               const p1Emp = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
               const textEmps = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).filter(n => n > 0);
