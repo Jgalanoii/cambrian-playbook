@@ -8160,10 +8160,18 @@ Return ONLY raw JSON:
                     const p5Search2 = missingPublicSentiment
                       ? `Search 2 (SENTIMENT): "${co}" Glassdoor OR G2 OR Trustpilot OR Indeed OR BBB OR "net promoter" employer rating reviews customer satisfaction`
                       : `Search 2: "${co}" Glassdoor rating reviews`;
+                    const p5SentimentRules = missingPublicSentiment
+                      ? `SOURCE ATTRIBUTION RULES — critical:\n` +
+                        `- glassdoorRating: number only, e.g. "3.8" — from Glassdoor exclusively. Empty string if not found.\n` +
+                        `- trustpilotRating: formatted score, e.g. "4.2/5 (Trustpilot)" or "2.1/5 (Trustpilot)" — never a description like "mixed". Empty if no explicit score found.\n` +
+                        `- npsSignal: any explicit NPS, satisfaction %, or "would recommend" metric with source.\n` +
+                        `- standoutReview: STRONGLY PREFER an employee review (Glassdoor/Indeed) over a customer review — employee insight is more valuable for sellers. Only use a customer review if no employee review was found.\n` +
+                        `- NEVER estimate or blend ratings. Empty string if the exact value was not in your search results.\n\n`
+                      : ``;
                     const p5Result = await streamAIWithSearch(
                       `Search for recent information about "${co}". Use BOTH searches.\n` +
                       `Search 1: "${co}" news OR press release 2025 OR 2026\n${p5Search2}\n` +
-                      `SOURCE ATTRIBUTION: for sentimentScores fields, only populate from explicitly named sources — never estimate.\n` +
+                      p5SentimentRules +
                       `Return ONLY raw JSON: ${p5Schema}`,
                       null, 1800, { maxSearches: 2 }
                     );
@@ -8974,7 +8982,7 @@ Return ONLY raw JSON:
             const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over)\s*([\d,]+)\s*(?:employees|associates|colleagues|staff|team members)/gi)];
             if (empMatches.length > 0) {
               const largest = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).sort((a, b) => b - a)[0];
-              if (largest > overviewEmp * 1.5 && largest > 1000) {
+              if (largest > overviewEmp * 1.2 && largest > 1000) {
                 console.warn(`[consistency] Employee count reconciled: overview=${current.employeeCount} → ${largest.toLocaleString()} (from brief text)`);
                 current.employeeCount = `~${largest.toLocaleString()}`;
               }
@@ -9072,7 +9080,7 @@ Return ONLY raw JSON:
               const textEmps = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).filter(n => n > 0);
               const largest = Math.max(...textEmps);
               // If snapshot mentions a significantly larger count, it's likely more authoritative
-              if (largest > p1Emp * 2 && largest > 20) {
+              if (largest > p1Emp * 1.2 && largest > 20) {
                 console.warn(`[consistency] Employee count override: P1="${current.employeeCount}" → ${largest} (from brief text, ${(largest/p1Emp).toFixed(1)}x larger)`);
                 current.employeeCount = `~${largest.toLocaleString()}`;
               }
