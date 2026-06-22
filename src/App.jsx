@@ -2048,9 +2048,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `"onlineSentiment":"2-3 sentences synthesizing what employees, press, and the market say about ${co} as a COMPANY TO SELL INTO. Focus on: employee morale (Glassdoor themes), leadership reputation, workplace culture signals, press narrative, and brand health. This is NOT about their product quality vs competitors — it's about what a seller needs to know before calling.",`+
     `"glassdoorRating":"Glassdoor employer rating as a number e.g. '3.8'. Use ONLY a rating found in your web search results. If search did not return a Glassdoor rating, return empty string. Do NOT guess or estimate from training knowledge. NEVER 'Not found'.",`+
     `"g2Rating":"G2 rating as number e.g. 4.2 — only for software/SaaS companies, empty string otherwise. Use ONLY ratings from search results.",`+
-    `"npsSignal":"Consumer brand health signals when relevant (brand loyalty, market share trajectory, customer satisfaction trends). Useful context for understanding the company's position, not for comparing their products to competitors. Empty string if not found in search.",`+
-    `"trustpilotRating":"Trustpilot or BBB score if relevant — empty string if not found in search results",`+
-    `"employeeScore":"Glassdoor CEO approval % or Indeed/Comparably employer rating — use ONLY data from search results. CRITICAL: do NOT invent or guess CEO/executive names in this field. If you are not certain of the current CEO's name, write the metric without naming anyone. A fabricated executive name destroys credibility instantly. Empty string if not found.",`+
+    `"npsSignal":"Net Promoter Score or customer satisfaction metric found in search — e.g. '72 NPS', '4.8/5 customer satisfaction', or '54% would recommend to a friend'. Use the exact figure and source. Empty string if not found in search.",`+
+    `"trustpilotRating":"Trustpilot score or BBB rating — e.g. '4.2/5 (Trustpilot)' or 'A+ (BBB)'. Empty string if not found in search results.",`+
+    `"employeeScore":"Alternative employer rating — populate ONLY when glassdoorRating is empty. Use Indeed star rating, Comparably employer score, or similar employer reputation source. Format: '4.1/5 (Indeed)' or '78% recommend (Comparably)'. Leave empty if glassdoorRating is already populated.",`+
     `"standoutReview":{"text":"Most revealing quote from an EMPLOYEE review (Glassdoor/Indeed) or a press piece about the company found in your search results — something that tells a seller what it's like to work with or sell into this organization. Empty string if search found nothing.","source":"Glassdoor / Indeed / press / analyst — name the actual source from search","sentiment":"positive or negative"},`+
     `"salesAngle":"1 sentence: how to USE this sentiment in a discovery call — a specific talk-track pivot, not just 'mention their pain'"},`+
     `"outreachEmails":[{"style":"curious","subject":"Something you'd actually open — a question, not a statement. Lowercase, casual, under 40 chars. 'dumb question about your risk team' or 'am I reading your q1 wrong?'","body":"2 sentences. Lead with a genuine question about ${co} — something from your research that you're actually curious about. MUST use a fact NOT already mentioned in the elevator pitch or opening angle. No product mention. No pitch. Close with 'Am I way off base?' or similar. If you cite a specific statistic or percentage, you MUST be able to source it — if not, use qualitative language instead. Sign off with '[Your name here]' — do NOT invent a sender name."},{"style":"insight","subject":"Reference a DIFFERENT specific finding about ${co} than email 1 — lowercase, specific, under 40 chars.","body":"2 sentences. Lead with ONE specific observation about ${co} NOT used anywhere else in this brief — a different data point, a different initiative, a different signal. Connect it to a pattern you've seen at similar companies. Hint at relevance without pitching. If you cite a specific statistic, it MUST be from your research — do NOT fabricate numbers. Close with 'Worth a quick chat or should I go away?' Sign off with '[Your name here]' — do NOT invent a sender name."}]}`,
@@ -8859,10 +8859,17 @@ Return ONLY raw JSON:
           // ── EMPLOYEE COUNT RECONCILIATION ──────────────────────────────
           // P9 or P1's companySnapshot may have a different employee count than
           // the overview field. For public companies, the largest verified count wins.
-          if (current.employeeCount && current.financialDeepDive?.revenueTrend) {
+          // Runs for ALL brief types (including Quick Brief) — does not require financialDeepDive.
+          if (current.employeeCount) {
             const overviewEmp = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
-            // Check if P9 or companySnapshot mentions a significantly larger employee count
-            const allText = (current.companySnapshot || "") + " " + (current.financialDeepDive.revenueTrend || "") + " " + (current.financialDeepDive.segmentBreakdown || "");
+            // Search all text-bearing fields — companySnapshot is populated even in Quick Brief mode
+            const allText = [
+              current.companySnapshot,
+              current.financialDeepDive?.revenueTrend,
+              current.financialDeepDive?.segmentBreakdown,
+              current.financialDeepDive?.capitalPriorities,
+              Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
+            ].filter(Boolean).join(" ");
             const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over)\s*([\d,]+)\s*(?:employees|associates|colleagues|staff|team members)/gi)];
             if (empMatches.length > 0) {
               const largest = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).sort((a, b) => b - a)[0];
@@ -8949,14 +8956,21 @@ Return ONLY raw JSON:
           }
 
           // ── EMPLOYEE COUNT RECONCILIATION WITH P9/P2 TEXT ──
-          if (current.employeeCount && current.financialDeepDive) {
-            const allText = [current.companySnapshot, current.financialDeepDive.revenueTrend, current.financialDeepDive.capitalPriorities, current.financialDeepDive.segmentBreakdown].filter(Boolean).join(" ");
+          // Runs for ALL brief types — does not require financialDeepDive.
+          if (current.employeeCount) {
+            const allText = [
+              current.companySnapshot,
+              current.financialDeepDive?.revenueTrend,
+              current.financialDeepDive?.capitalPriorities,
+              current.financialDeepDive?.segmentBreakdown,
+              Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
+            ].filter(Boolean).join(" ");
             const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over|employs?|employing|has)\s*([\d,]+)\s*(?:employees|people|staff|team members|workers)/gi)];
             if (empMatches.length > 0) {
               const p1Emp = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
               const textEmps = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).filter(n => n > 0);
               const largest = Math.max(...textEmps);
-              // If P9/snapshot mentions a significantly larger count, it's likely more authoritative
+              // If snapshot mentions a significantly larger count, it's likely more authoritative
               if (largest > p1Emp * 2 && largest > 20) {
                 console.warn(`[consistency] Employee count override: P1="${current.employeeCount}" → ${largest} (from brief text, ${(largest/p1Emp).toFixed(1)}x larger)`);
                 current.employeeCount = `~${largest.toLocaleString()}`;
@@ -10523,15 +10537,16 @@ Return ONLY raw JSON:
           `Search for recent information about "${co}". Use BOTH searches — each covers different territory.\n\n` +
           `SEARCH STRATEGY:\n` +
           `- Search 1 (NEWS + PR): "${co}" news OR press release OR announcement OR "prnewswire" OR "businesswire" OR "globenewswire" 2025 OR 2026\n` +
-          `- Search 2 (SENTIMENT + REVIEWS): "${co}" Glassdoor OR G2 OR Trustpilot OR Indeed OR Comparably employer rating OR employee reviews\n` +
+          `- Search 2 (SENTIMENT + REVIEWS): "${co}" Glassdoor OR G2 OR Trustpilot OR Indeed OR Comparably OR "BBB" OR "Better Business Bureau" OR NPS OR "net promoter" employer rating OR employee reviews OR customer satisfaction\n` +
           `  For large employers (1,000+ employees): review platform data should be findable. If sparse, try the parent company or legal name.\n` +
           `  For small companies (<100 employees): review data may genuinely not exist — leave fields empty.\n\n` +
           `SOURCE ATTRIBUTION RULES — critical:\n` +
           `- glassdoorRating: populate ONLY with a rating explicitly found on Glassdoor (e.g. "3.8"). Empty string if Glassdoor was not in your results.\n` +
-          `- g2Rating: populate ONLY with a rating explicitly from G2. Only relevant for software/SaaS companies. Empty string otherwise.\n` +
-          `- trustpilotRating: populate ONLY with a score explicitly from Trustpilot. Empty string if not found.\n` +
-          `- employeeScore: Glassdoor CEO approval % or Indeed/Comparably employer rating — name the exact source in the value (e.g. "82% CEO approval (Glassdoor)").\n` +
-          `- standoutReview.source: must be the exact platform name — "Glassdoor", "G2", "Indeed", "Trustpilot", "Comparably", or a named press outlet. Never "review site" or generic.\n` +
+          `- g2Rating: populate ONLY with a rating explicitly from G2 (software/SaaS companies only). Empty string otherwise.\n` +
+          `- trustpilotRating: populate ONLY with a score explicitly from Trustpilot OR a BBB rating — format: "4.2/5 (Trustpilot)" or "A+ (BBB)". Empty string if neither found.\n` +
+          `- npsSignal: any explicit NPS figure, customer satisfaction score, or "% would recommend" metric found in search — include the exact figure and source.\n` +
+          `- employeeScore: populate ONLY when glassdoorRating is empty — use Indeed employer rating or Comparably score as a fallback. Format: "4.1/5 (Indeed)". Leave empty if glassdoorRating is already populated.\n` +
+          `- standoutReview.source: must be the exact platform name — "Glassdoor", "G2", "Indeed", "Trustpilot", "Comparably", "BBB", or a named press outlet. Never "review site" or generic.\n` +
           `- salesAngle: must reference the specific data you found. If ratings were not found, leave empty — do not generate a generic observation.\n` +
           `- NEVER blend ratings across platforms or estimate a rating not explicitly in your search results.\n\n` +
           `WHAT TO EXTRACT:\n` +
