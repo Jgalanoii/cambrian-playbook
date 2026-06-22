@@ -10520,18 +10520,20 @@ Return ONLY raw JSON:
     const livePromise = (async () => {
       try {
         const prompt =
-          `Search for recent information about "${co}". Use at least one search specifically for press releases.\n\n` +
+          `Search for recent information about "${co}". Use BOTH searches.\n\n` +
           `SEARCH STRATEGY:\n` +
           `- Search 1: "${co}" news OR press release OR announcement last 12 months\n` +
-          `- Search 2: "${co}" site:prnewswire.com OR site:businesswire.com OR site:globenewswire.com 2025 OR 2026\n\n` +
-          `PRIORITY ORDER:\n` +
+          `- Search 2 (MANDATORY): "${co}" Glassdoor rating employer reviews site:glassdoor.com\n` +
+          `  For large employers (1,000+ employees): Glassdoor data MUST be found. If first attempt returns nothing, try the parent company or legal name.\n` +
+          `  For small companies (<100 employees): Glassdoor data may not exist — acknowledge honestly.\n\n` +
+          `WHAT TO EXTRACT:\n` +
           `1. Press releases and company announcements from the last 12 months\n` +
           `2. News coverage: M&A, leadership changes, funding\n` +
-          `3. Ratings and sentiment: Glassdoor, G2, Trustpilot\n` +
+          `3. From Search 2: Glassdoor employer rating (a number like 3.8), CEO approval %, employee sentiment themes. Also G2 rating if software company.\n` +
           `4. Growth signals or buying indicators\n` +
           `5. Workforce and culture profile\n` +
           `Return ONLY raw JSON (start with {):\n` +
-          `{"recentHeadlines":[{"headline":"","relevance":"","type":"press_release or news"},{"headline":"","relevance":"","type":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","remotePolicy":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":""},"incumbentVendors":{"hrSystem":"","crmSystem":""},"sentimentScores":{"glassdoorRating":""},"companySnapshot":""}`;
+          `{"recentHeadlines":[{"headline":"","relevance":"","type":"press_release or news"},{"headline":"","relevance":"","type":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","unionizedPct":"","remotePolicy":"","avgTenure":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":"","sellerLanguageHint":""},"incumbentVendors":{"hrSystem":"","financeSystem":"","crmSystem":"","cardProvider":""},"sentimentScores":{"glassdoorRating":"","g2Rating":"","trustpilotRating":"","npsSignal":"","employeeScore":"","standoutReview":{"text":"","source":"","sentiment":""},"salesAngle":""},"companySnapshot":""}`;
         const d = await claudeFetch({
           model: activeModel(),
           max_tokens: 1800, temperature: 0,
