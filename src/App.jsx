@@ -10523,17 +10523,23 @@ Return ONLY raw JSON:
           `Search for recent information about "${co}". Use BOTH searches — each covers different territory.\n\n` +
           `SEARCH STRATEGY:\n` +
           `- Search 1 (NEWS + PR): "${co}" news OR press release OR announcement OR "prnewswire" OR "businesswire" OR "globenewswire" 2025 OR 2026\n` +
-          `  Extract: M&A, leadership changes, funding rounds, product launches, strategic partnerships, earnings.\n\n` +
-          `- Search 2 (SENTIMENT + REVIEWS): "${co}" Glassdoor OR G2 OR Trustpilot OR Indeed OR Comparably employer rating OR employee reviews OR customer reviews\n` +
-          `  Extract: Glassdoor employer rating (number like 3.8), CEO approval %, G2 product rating if software, Trustpilot score, employee sentiment themes, standout review quotes.\n` +
-          `  For large employers (1,000+ employees): employer review data MUST be found. If initial results are sparse, also try the parent company or legal name.\n` +
-          `  For small companies (<100 employees): review data may not exist — acknowledge honestly rather than guessing.\n\n` +
+          `- Search 2 (SENTIMENT + REVIEWS): "${co}" Glassdoor OR G2 OR Trustpilot OR Indeed OR Comparably employer rating OR employee reviews\n` +
+          `  For large employers (1,000+ employees): review platform data should be findable. If sparse, try the parent company or legal name.\n` +
+          `  For small companies (<100 employees): review data may genuinely not exist — leave fields empty.\n\n` +
+          `SOURCE ATTRIBUTION RULES — critical:\n` +
+          `- glassdoorRating: populate ONLY with a rating explicitly found on Glassdoor (e.g. "3.8"). Empty string if Glassdoor was not in your results.\n` +
+          `- g2Rating: populate ONLY with a rating explicitly from G2. Only relevant for software/SaaS companies. Empty string otherwise.\n` +
+          `- trustpilotRating: populate ONLY with a score explicitly from Trustpilot. Empty string if not found.\n` +
+          `- employeeScore: Glassdoor CEO approval % or Indeed/Comparably employer rating — name the exact source in the value (e.g. "82% CEO approval (Glassdoor)").\n` +
+          `- standoutReview.source: must be the exact platform name — "Glassdoor", "G2", "Indeed", "Trustpilot", "Comparably", or a named press outlet. Never "review site" or generic.\n` +
+          `- salesAngle: must reference the specific data you found. If ratings were not found, leave empty — do not generate a generic observation.\n` +
+          `- NEVER blend ratings across platforms or estimate a rating not explicitly in your search results.\n\n` +
           `WHAT TO EXTRACT:\n` +
-          `1. Press releases and company announcements from the last 12 months (from Search 1)\n` +
-          `2. News coverage: M&A, leadership changes, funding (from Search 1)\n` +
-          `3. Employer and product ratings: Glassdoor, G2, Trustpilot, Indeed, Comparably (from Search 2)\n` +
-          `4. Growth signals and buying indicators (from either search)\n` +
-          `5. Workforce culture profile — remote policy, tenure, values (from either search)\n` +
+          `1. Press releases and company announcements from the last 12 months (Search 1)\n` +
+          `2. News: M&A, leadership changes, funding, strategic moves (Search 1)\n` +
+          `3. Employer/product ratings with exact source platform (Search 2)\n` +
+          `4. Growth signals and buying indicators (either search)\n` +
+          `5. Workforce and culture profile — remote policy, tenure, values (either search)\n` +
           `Return ONLY raw JSON (start with {):\n` +
           `{"recentHeadlines":[{"headline":"","relevance":"","type":"press_release or news"},{"headline":"","relevance":"","type":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","unionizedPct":"","remotePolicy":"","avgTenure":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":"","sellerLanguageHint":""},"incumbentVendors":{"hrSystem":"","financeSystem":"","crmSystem":"","cardProvider":""},"sentimentScores":{"glassdoorRating":"","g2Rating":"","trustpilotRating":"","npsSignal":"","employeeScore":"","standoutReview":{"text":"","source":"","sentiment":""},"salesAngle":""},"companySnapshot":""}`;
         const d = await claudeFetch({
