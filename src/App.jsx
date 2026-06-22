@@ -10520,18 +10520,20 @@ Return ONLY raw JSON:
     const livePromise = (async () => {
       try {
         const prompt =
-          `Search for recent information about "${co}". Use BOTH searches.\n\n` +
+          `Search for recent information about "${co}". Use BOTH searches — each covers different territory.\n\n` +
           `SEARCH STRATEGY:\n` +
-          `- Search 1: "${co}" news OR press release OR announcement last 12 months\n` +
-          `- Search 2 (MANDATORY): "${co}" Glassdoor rating employer reviews site:glassdoor.com\n` +
-          `  For large employers (1,000+ employees): Glassdoor data MUST be found. If first attempt returns nothing, try the parent company or legal name.\n` +
-          `  For small companies (<100 employees): Glassdoor data may not exist — acknowledge honestly.\n\n` +
+          `- Search 1 (NEWS + PR): "${co}" news OR press release OR announcement OR "prnewswire" OR "businesswire" OR "globenewswire" 2025 OR 2026\n` +
+          `  Extract: M&A, leadership changes, funding rounds, product launches, strategic partnerships, earnings.\n\n` +
+          `- Search 2 (SENTIMENT + REVIEWS): "${co}" Glassdoor OR G2 OR Trustpilot OR Indeed OR Comparably employer rating OR employee reviews OR customer reviews\n` +
+          `  Extract: Glassdoor employer rating (number like 3.8), CEO approval %, G2 product rating if software, Trustpilot score, employee sentiment themes, standout review quotes.\n` +
+          `  For large employers (1,000+ employees): employer review data MUST be found. If initial results are sparse, also try the parent company or legal name.\n` +
+          `  For small companies (<100 employees): review data may not exist — acknowledge honestly rather than guessing.\n\n` +
           `WHAT TO EXTRACT:\n` +
-          `1. Press releases and company announcements from the last 12 months\n` +
-          `2. News coverage: M&A, leadership changes, funding\n` +
-          `3. From Search 2: Glassdoor employer rating (a number like 3.8), CEO approval %, employee sentiment themes. Also G2 rating if software company.\n` +
-          `4. Growth signals or buying indicators\n` +
-          `5. Workforce and culture profile\n` +
+          `1. Press releases and company announcements from the last 12 months (from Search 1)\n` +
+          `2. News coverage: M&A, leadership changes, funding (from Search 1)\n` +
+          `3. Employer and product ratings: Glassdoor, G2, Trustpilot, Indeed, Comparably (from Search 2)\n` +
+          `4. Growth signals and buying indicators (from either search)\n` +
+          `5. Workforce culture profile — remote policy, tenure, values (from either search)\n` +
           `Return ONLY raw JSON (start with {):\n` +
           `{"recentHeadlines":[{"headline":"","relevance":"","type":"press_release or news"},{"headline":"","relevance":"","type":""}],"recentSignals":["",""],"growthSignals":["",""],"workforceProfile":{"knowledgeWorkerPct":"","unionizedPct":"","remotePolicy":"","avgTenure":""},"cultureProfile":{"coreValues":"","communicationStyle":"","decisionMaking":"","sellerLanguageHint":""},"incumbentVendors":{"hrSystem":"","financeSystem":"","crmSystem":"","cardProvider":""},"sentimentScores":{"glassdoorRating":"","g2Rating":"","trustpilotRating":"","npsSignal":"","employeeScore":"","standoutReview":{"text":"","source":"","sentiment":""},"salesAngle":""},"companySnapshot":""}`;
         const d = await claudeFetch({
