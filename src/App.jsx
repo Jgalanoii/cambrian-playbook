@@ -1184,26 +1184,33 @@ ANTI-HALLUCINATION RULES (apply to EVERY response):
 - A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.
 - NEVER disparage or undermine the selling organization. You are building tools FOR the seller. Do not editorialize about their product quality, pricing, viability, or market position.`;
 
-async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
+async function streamAI(prompt, onChunk, maxTok=2000, { model = null, signal = null } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Wrap the initial fetch in retry. Once the stream is open we let it run
   // through; mid-stream failures surface as a null parse result and the
   // caller already handles that case.
   let response = null;
   for (let attempt = 0; attempt < 3; attempt++) {
-    response = await fetch('/api/claude-stream', {
-      method: 'POST',
-      headers: { ...authHeaders(), ..._trackingCtx },
-      body: JSON.stringify({
-        model: model || activeModel(),
-        max_tokens: maxTok,
-        temperature: 0,
-        system: ANTI_HALLUCINATION_SYSTEM,
-        messages: [
-          { role: 'user', content: prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.' },
-        ],
-      }),
-    });
+    if (signal?.aborted) return null;
+    try {
+      response = await fetch('/api/claude-stream', {
+        method: 'POST',
+        signal: signal || undefined,
+        headers: { ...authHeaders(), ..._trackingCtx },
+        body: JSON.stringify({
+          model: model || activeModel(),
+          max_tokens: maxTok,
+          temperature: 0,
+          system: ANTI_HALLUCINATION_SYSTEM,
+          messages: [
+            { role: 'user', content: prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.' },
+          ],
+        }),
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return null;
+      throw e;
+    }
     if (response.status !== 529 && response.status !== 429 && response.status !== 500 && response.status !== 502 && response.status !== 503) break;
     const wait = response.status >= 500 ? [3000, 6000, 12000][attempt] : response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
     console.warn(`[claude-stream] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
@@ -1226,31 +1233,42 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
   const decoder = new TextDecoder();
   let buffer = '';
   let fullText = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const event = JSON.parse(data);
-        if (event.type === 'content_block_delta' && event.delta?.text) {
-          fullText += event.delta.text;
-          onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
-        }
-      } catch { /* non-critical */ }
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          if (event.type === 'content_block_delta' && event.delta?.text) {
+            fullText += event.delta.text;
+            onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
+          }
+        } catch { /* non-critical */ }
+      }
     }
+  } catch (e) {
+    if (e.name === 'AbortError') return null;
+    throw e;
   }
   try {
     let cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, "").trim();
     const fb = cleaned.indexOf("{");
     const lb = cleaned.lastIndexOf("}");
-    if (fb >= 0 && lb > fb) cleaned = cleaned.slice(fb, lb + 1);
-    return stripCitations(JSON.parse(cleaned));
+    if (fb >= 0 && lb > fb) {
+      const candidate = cleaned.slice(fb, lb + 1);
+      try { return stripCitations(JSON.parse(candidate)); } catch { /* try repair */ }
+      const san = candidate.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"").replace(/,\s*([}\]])/g,"$1");
+      try { return stripCitations(JSON.parse(san)); } catch { /* try repair */ }
+      try { return stripCitations(JSON.parse(repairJSON(san))); } catch { return null; }
+    }
+    return null;
   } catch { return null; }
 }
 
@@ -1261,25 +1279,32 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
 //   - Track content block types — only feed TEXT blocks to onChunk
 //   - Use extractJsonWithKey for final parse (handles preamble text)
 // anchorKey: the expected top-level JSON key to find (e.g. "elevatorPitch")
-async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null, model=null } = {}) {
+async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null, model=null, signal=null } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let response = null;
   for (let attempt = 0; attempt < 3; attempt++) {
-    response = await fetch('/api/claude-stream', {
-      method: 'POST',
-      headers: { ...authHeaders(), ..._trackingCtx },
-      body: JSON.stringify({
-        model: model || activeModel(),
-        max_tokens: maxTok,
-        temperature: 0,
-        system: ANTI_HALLUCINATION_SYSTEM,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: maxSearches }],
-        messages: [
-          { role: 'user', content: prompt },
-          // No assistant prefill — model must decide whether to search first
-        ],
-      }),
-    });
+    if (signal?.aborted) return null;
+    try {
+      response = await fetch('/api/claude-stream', {
+        method: 'POST',
+        signal: signal || undefined,
+        headers: { ...authHeaders(), ..._trackingCtx },
+        body: JSON.stringify({
+          model: model || activeModel(),
+          max_tokens: maxTok,
+          temperature: 0,
+          system: ANTI_HALLUCINATION_SYSTEM,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: maxSearches }],
+          messages: [
+            { role: 'user', content: prompt },
+            // No assistant prefill — model must decide whether to search first
+          ],
+        }),
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return null;
+      throw e;
+    }
     if (response.status !== 529 && response.status !== 429 && response.status !== 500 && response.status !== 502 && response.status !== 503) break;
     const wait = response.status >= 500 ? [3000, 6000, 12000][attempt] : response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
     console.warn(`[claude-stream-search] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
@@ -1304,37 +1329,42 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
   let fullText = '';           // All text from text-type content blocks
   let currentBlockType = null; // Track what kind of block we're in
   let searchFired = false;     // Did the model use web_search?
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const event = JSON.parse(data);
-        // Track block starts to know when we're in text vs tool_use vs tool_result
-        if (event.type === 'content_block_start') {
-          currentBlockType = event.content_block?.type || null;
-          if (currentBlockType === 'web_search_tool_result' || currentBlockType === 'tool_use') {
-            if (!searchFired && onStatus) { onStatus("Searching..."); searchFired = true; }
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          // Track block starts to know when we're in text vs tool_use vs tool_result
+          if (event.type === 'content_block_start') {
+            currentBlockType = event.content_block?.type || null;
+            if (currentBlockType === 'web_search_tool_result' || currentBlockType === 'tool_use') {
+              if (!searchFired && onStatus) { onStatus("Searching..."); searchFired = true; }
+            }
           }
-        }
-        if (event.type === 'content_block_stop') {
-          currentBlockType = null;
-        }
-        // Only accumulate text deltas from text blocks (not tool_use/tool_result)
-        if (event.type === 'content_block_delta' && event.delta?.text && currentBlockType === 'text') {
-          fullText += event.delta.text;
-          if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
-        }
-      } catch { /* non-critical */ }
+          if (event.type === 'content_block_stop') {
+            currentBlockType = null;
+          }
+          // Only accumulate text deltas from text blocks (not tool_use/tool_result)
+          if (event.type === 'content_block_delta' && event.delta?.text && currentBlockType === 'text') {
+            fullText += event.delta.text;
+            if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
+          }
+        } catch { /* non-critical */ }
+      }
     }
+  } catch (e) {
+    if (e.name === 'AbortError') return null;
+    throw e;
   }
-  // Parse: use extractJsonWithKey if anchor provided, else try direct parse
+  // Parse: use extractJsonWithKey if anchor provided, else try with repair fallback
   try {
     const cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").replace(/<\/?thinking>/g, "").trim();
     if (anchorKey) {
@@ -1342,16 +1372,22 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
       if (result) return stripCitations(result);
       console.warn(`[streamAIWithSearch] anchorKey "${anchorKey}" not found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 300));
     }
-    // Fallback: try to find JSON object in the text
+    // Fallback: try to find JSON object in the text, with multi-step repair
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
     if (firstBrace >= 0 && lastBrace > firstBrace) {
-      return stripCitations(JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)));
+      const candidate = cleaned.slice(firstBrace, lastBrace + 1);
+      try { return stripCitations(JSON.parse(candidate)); } catch { /* try repair */ }
+      const san = candidate.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"").replace(/,\s*([}\]])/g,"$1");
+      try { return stripCitations(JSON.parse(san)); } catch { /* try repair */ }
+      try { return stripCitations(JSON.parse(repairJSON(san))); } catch(e2) {
+        console.warn(`[streamAIWithSearch] repairJSON failed (${candidate.length} chars):`, e2.message);
+      }
     }
-    console.warn(`[streamAIWithSearch] No JSON found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 200));
+    console.warn(`[streamAIWithSearch] No parseable JSON found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 200));
     return null;
   } catch(e) {
-    console.warn(`[streamAIWithSearch] Parse failed for anchorKey="${anchorKey}":`, e.message);
+    console.warn(`[streamAIWithSearch] Parse error for anchorKey="${anchorKey}":`, e.message);
     return null;
   }
 }
@@ -6769,49 +6805,79 @@ Return ONLY raw JSON:
     // Pass 2 (Sonnet, no search): Format research into ICP schema
     // Opus does the expensive critical work, Sonnet does the cheap formatting.
 
+    // ── RESEARCH CACHE (Option 3) ──
+    // Key: url + ISO week number + context flag (docs/pages present or not).
+    // Context flag prevents using "no docs" research when docs are added mid-week.
+    // forceRefresh bypasses cache so the Regenerate button always gets fresh research.
+    // TTL is natural: week bucket rolls over every 7 days, old keys are never read.
+    const _researchWeek = Math.floor(Date.now() / (7 * 24 * 3600 * 1000));
+    const _researchCtx = hasSellerContext ? "1" : "0";
+    const _researchCacheKey = `research:v1:${url}:${_researchWeek}:${_researchCtx}`;
+
     // ── PASS 1: Opus Research ──
     setIcpStatus("Researching your products and customers...");
     let sellerResearch = "";
-    try {
-      const researchPrompt =
-        `Research the company at https://${url}. Use BOTH web searches.\n\n`+
-        sellerDocsCtx +
-        productPagesCtx +
-        `OWNERSHIP-DRIVEN SEARCH STRATEGY:\n`+
-        `First, determine: is this company PUBLIC, PE-BACKED, VC-BACKED, PRIVATE, NONPROFIT, or GOVERNMENT?\n`+
-        `- If PUBLIC: also search for SEC filings, 10-K product segments, investor relations. Revenue/products are in annual reports.\n`+
-        `- If PE-BACKED: search for acquisition press releases, PE firm portfolio page, deal details, add-on acquisitions.\n`+
-        `- If VC-BACKED: search Crunchbase for funding rounds, total raised, lead investors, valuation.\n`+
-        `- If NONPROFIT: search for Form 990, annual report, program descriptions.\n`+
-        `Use this context to ground your research in authoritative sources for this ownership type.\n\n`+
-        (hasSellerContext
-          ? `You have the seller's own materials and/or validated product pages above. ` +
-            `You already know what this company sells. Use your searches for EXTERNAL validation:\n` +
-            `Search 1: site:${url} "case study" OR customers OR "powered by" OR partners OR "trusted by"\n` +
-            `Search 2: "${url.split('.')[0]}" competitors OR "vs" OR "alternative to" OR funding OR revenue\n\n`
-          : `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n` +
-            `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`
-        ) +
-        `Return a structured research summary:\n`+
-        `1. COMPANY: What they do (2 sentences, specific). Include ownership type, approximate revenue, and employee count if findable.\n`+
-        `2. PRODUCTS/SERVICES: List each product/service found on their website with a 1-sentence description and the URL where you found it\n`+
-        `3. NAMED CUSTOMERS: Every customer name found in case studies, press releases, partner pages, or logo walls — with the source URL for each\n`+
-        `4. COMPETITORS: Named competitors found in the research, with any evidence of their customers\n`+
-        `5. DIFFERENTIATORS: What makes this company different from competitors (specific, not generic)\n`+
-        `6. FINANCIAL CONTEXT: Revenue, funding, ownership details. For PUBLIC companies: total revenue from most recent annual report. For PE: deal details. For VC: funding rounds and total raised.\n\n`+
-        `Be thorough. This research determines the quality of everything downstream. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable.`;
-      const researchTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 45000));
-      const researchCall = streamAIWithSearch(researchPrompt, (partial) => {
-        if (partial.length > 50 && partial.length < 200) setIcpStatus("Found the company...");
-        if (partial.includes("PRODUCTS") || partial.includes("products")) setIcpStatus("Analyzing products and services...");
-        if (partial.includes("CUSTOMERS") || partial.includes("customers")) setIcpStatus("Identifying customers and case studies...");
-        if (partial.includes("COMPETITORS") || partial.includes("competitors")) setIcpStatus("Mapping competitive landscape...");
-      }, 2000, { maxSearches: 2, anchorKey: null, model: OPUS });
-      const research = await Promise.race([researchCall, researchTimeout]);
-      sellerResearch = typeof research === "string" ? research : JSON.stringify(research);
-      console.log(`[ICP] Opus research complete: ${sellerResearch.length} chars`);
-    } catch (e) {
-      console.warn("[ICP] Opus research failed/timed out:", e.message, "— proceeding with Sonnet-only");
+
+    // Check research cache first (skip if forceRefresh — user wants fresh data)
+    if (!forceRefresh) {
+      try {
+        const _cachedResearch = localStorage.getItem(_researchCacheKey);
+        if (_cachedResearch && _cachedResearch.length > 100) {
+          sellerResearch = _cachedResearch;
+          setIcpStatus("Using recent research...");
+          console.log(`[ICP] Research cache hit for "${url}" (${_cachedResearch.length} chars) — skipping Opus Pass 1`);
+        }
+      } catch { /* localStorage unavailable — proceed to live research */ }
+    }
+
+    if (!sellerResearch) {
+      // No cache (or forceRefresh) — run Opus research live
+      try {
+        const researchPrompt =
+          `Research the company at https://${url}. Use BOTH web searches.\n\n`+
+          sellerDocsCtx +
+          productPagesCtx +
+          `OWNERSHIP-DRIVEN SEARCH STRATEGY:\n`+
+          `First, determine: is this company PUBLIC, PE-BACKED, VC-BACKED, PRIVATE, NONPROFIT, or GOVERNMENT?\n`+
+          `- If PUBLIC: also search for SEC filings, 10-K product segments, investor relations. Revenue/products are in annual reports.\n`+
+          `- If PE-BACKED: search for acquisition press releases, PE firm portfolio page, deal details, add-on acquisitions.\n`+
+          `- If VC-BACKED: search Crunchbase for funding rounds, total raised, lead investors, valuation.\n`+
+          `- If NONPROFIT: search for Form 990, annual report, program descriptions.\n`+
+          `Use this context to ground your research in authoritative sources for this ownership type.\n\n`+
+          (hasSellerContext
+            ? `You have the seller's own materials and/or validated product pages above. ` +
+              `You already know what this company sells. Use your searches for EXTERNAL validation:\n` +
+              `Search 1: site:${url} "case study" OR customers OR "powered by" OR partners OR "trusted by"\n` +
+              `Search 2: "${url.split('.')[0]}" competitors OR "vs" OR "alternative to" OR funding OR revenue\n\n`
+            : `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n` +
+              `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`
+          ) +
+          `Return a structured research summary:\n`+
+          `1. COMPANY: What they do (2 sentences, specific). Include ownership type, approximate revenue, and employee count if findable.\n`+
+          `2. PRODUCTS/SERVICES: List each product/service found on their website with a 1-sentence description and the URL where you found it\n`+
+          `3. NAMED CUSTOMERS: Every customer name found in case studies, press releases, partner pages, or logo walls — with the source URL for each\n`+
+          `4. COMPETITORS: Named competitors found in the research, with any evidence of their customers\n`+
+          `5. DIFFERENTIATORS: What makes this company different from competitors (specific, not generic)\n`+
+          `6. FINANCIAL CONTEXT: Revenue, funding, ownership details. For PUBLIC companies: total revenue from most recent annual report. For PE: deal details. For VC: funding rounds and total raised.\n\n`+
+          `Be thorough. This research determines the quality of everything downstream. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable.`;
+        const researchAbort = new AbortController();
+        const researchTimeout = new Promise((_, reject) => setTimeout(() => { researchAbort.abort(); reject(new Error("timeout")); }, 100000));
+        const researchCall = streamAIWithSearch(researchPrompt, (partial) => {
+          if (partial.length > 50 && partial.length < 200) setIcpStatus("Found the company...");
+          if (partial.includes("PRODUCTS") || partial.includes("products")) setIcpStatus("Analyzing products and services...");
+          if (partial.includes("CUSTOMERS") || partial.includes("customers")) setIcpStatus("Identifying customers and case studies...");
+          if (partial.includes("COMPETITORS") || partial.includes("competitors")) setIcpStatus("Mapping competitive landscape...");
+        }, 2000, { maxSearches: 2, anchorKey: null, model: OPUS, signal: researchAbort.signal });
+        const research = await Promise.race([researchCall, researchTimeout]);
+        sellerResearch = typeof research === "string" ? research : JSON.stringify(research);
+        // Store in research cache for same-week rebuilds (targeting changes, etc.)
+        if (sellerResearch.length > 100) {
+          try { localStorage.setItem(_researchCacheKey, sellerResearch); } catch { /* quota exceeded — non-fatal */ }
+        }
+        console.log(`[ICP] Opus research complete: ${sellerResearch.length} chars — cached`);
+      } catch (e) {
+        console.warn("[ICP] Opus research failed/timed out:", e.message, "— proceeding with Sonnet-only");
+      }
     }
 
     // ── PASS 2: Sonnet ICP Build (uses research from Pass 1) ──
@@ -6914,12 +6980,13 @@ Return ONLY raw JSON:
       const icpFullPrompt = icpPrompt + '\n\nReturn ONLY raw JSON starting with {. No prose, no markdown, no explanation.';
 
       // Sonnet ICP build (no web search needed — research already done by Opus)
-      const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 45000));
+      const icpAbort = new AbortController();
+      const icpTimeout = new Promise((_, reject) => setTimeout(() => { icpAbort.abort(); reject(new Error("timeout")); }, 75000));
       let raw;
       try {
         const icpCall = sellerResearch
-          ? streamAI(icpFullPrompt, onIcpPartial, 5000)  // No search — research already done
-          : streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET }); // Fallback: search if Opus research failed
+          ? streamAI(icpFullPrompt, onIcpPartial, 5000, { signal: icpAbort.signal })  // No search — research already done
+          : streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal }); // Fallback: search if Opus research failed
         raw = await Promise.race([icpCall, icpTimeout]);
       } catch (e) {
         if (e.message === "timeout" || e.message?.includes("overloaded")) {
@@ -6930,7 +6997,7 @@ Return ONLY raw JSON:
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
-        console.warn("ICP phase 2 error:", err);
+        console.warn("[ICP] Phase 2 error:", err ?? "(null response — model returned nothing)");
         if (err?.type === "usage_limit_exceeded" || err?.type === "max_limit_exceeded") {
           setSellerICP(prev => prev || ({ _error: "You've reached your plan limit. Upgrade to continue building ICPs." }));
           setIcpLoading(false); setIcpStatus(""); return;
@@ -8162,6 +8229,12 @@ Return ONLY raw JSON:
                   : `IDENTITY: Research "${co}" ONLY.\n\n`;
 
                 (async () => {
+                  // Don't compete with ICP build — Anthropic can't handle both well
+                  if (icpLoading) {
+                    console.log(`[cache] Skipping backfill — ICP is building`);
+                    setBrief(prev => prev ? { ...prev, _loadingSections: { overview: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false } } : prev);
+                    return;
+                  }
                   // P5: refresh headlines + conditionally sentiment when missing
                   try {
                     const p5Schema = missingPublicSentiment
