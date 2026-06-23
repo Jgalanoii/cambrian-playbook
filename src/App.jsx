@@ -1279,7 +1279,7 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null, signal = n
 //   - Track content block types — only feed TEXT blocks to onChunk
 //   - Use extractJsonWithKey for final parse (handles preamble text)
 // anchorKey: the expected top-level JSON key to find (e.g. "elevatorPitch")
-async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null, model=null, signal=null } = {}) {
+async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null, model=null, signal=null, returnRawOnFailure=false } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let response = null;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -1383,6 +1383,11 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
       try { return stripCitations(JSON.parse(repairJSON(san))); } catch(e2) {
         console.warn(`[streamAIWithSearch] repairJSON failed (${candidate.length} chars):`, e2.message);
       }
+    }
+    // returnRawOnFailure: caller wants raw text when JSON parsing fails (e.g. ICP Pass 1 research)
+    if (returnRawOnFailure) {
+      const rawFallback = cleaned.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
+      if (rawFallback.length > 100) return rawFallback;
     }
     console.warn(`[streamAIWithSearch] No parseable JSON found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 200));
     return null;
@@ -6712,6 +6717,8 @@ Return ONLY raw JSON:
   };
 
   const buildSellerICP = async(rawUrl, {forceRefresh=false, cacheOnly=false}={}) => {
+    // Catch both "research-only" and "research-only.com" before any processing
+    if (/^research-only(\.com)?$/i.test((rawUrl || "").trim())) return;
     let url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"").replace(/^www\./,"");
     // Auto-add .com if no TLD present — "meritincentives" → "meritincentives.com"
     if (url && !url.includes(".")) url = url + ".com";
@@ -6867,9 +6874,9 @@ Return ONLY raw JSON:
           if (partial.includes("PRODUCTS") || partial.includes("products")) setIcpStatus("Analyzing products and services...");
           if (partial.includes("CUSTOMERS") || partial.includes("customers")) setIcpStatus("Identifying customers and case studies...");
           if (partial.includes("COMPETITORS") || partial.includes("competitors")) setIcpStatus("Mapping competitive landscape...");
-        }, 2000, { maxSearches: 2, anchorKey: null, model: OPUS, signal: researchAbort.signal });
+        }, 4000, { maxSearches: 2, anchorKey: null, model: OPUS, returnRawOnFailure: true, signal: researchAbort.signal });
         const research = await Promise.race([researchCall, researchTimeout]);
-        sellerResearch = typeof research === "string" ? research : JSON.stringify(research);
+        sellerResearch = !research ? "" : (typeof research === "string" ? research : JSON.stringify(research));
         // Store in research cache for same-week rebuilds (targeting changes, etc.)
         if (sellerResearch.length > 100) {
           try { localStorage.setItem(_researchCacheKey, sellerResearch); } catch { /* quota exceeded — non-fatal */ }
@@ -8481,6 +8488,88 @@ Return ONLY raw JSON:
           }
         }
       } catch { /* non-critical — fall through to fresh build */ }
+    }
+    // ── QB Seeding ─────────────────────────────────────────────────────────────
+    // When a full brief is requested for a company that was previously Quick Briefed,
+    // seed company-facts sections (P1, P2, P5) from the QB Supabase cache.
+    // Seeds empty slots only — never overwrites an in-flight pre-cache Promise.
+    // Excluded: P6 open roles (too volatile; always run fresh).
+    // Excluded: seller-specific fields (P3 pitch/emails, P4 solutionMapping).
+    if (!_isQuickBrief && !forceRebuild && sbToken && sbUser) {
+      try {
+        const SB_URL_QB = import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY_QB = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (SB_URL_QB && SB_KEY_QB) {
+          const qbLookup = await fetch(
+            `${SB_URL_QB}/rest/v1/account_outputs?output_type=eq.brief` +
+            `&target_company=eq.${encodeURIComponent(co)}` +
+            `&seller_url=eq.research-only&is_latest=eq.true` +
+            `&select=data,created_at&limit=1`,
+            { headers: { apikey: SB_KEY_QB, Authorization: `Bearer ${sbToken}` } }
+          );
+          if (qbLookup.ok) {
+            const qbRows = await qbLookup.json();
+            if (qbRows.length > 0 && qbRows[0].data) {
+              const qbAge = Date.now() - new Date(qbRows[0].created_at).getTime();
+              const qbd = qbRows[0].data;
+              const qbValid = qbAge < 7 * 86400000
+                && !!(qbd.companySnapshot || qbd.revenue)
+                && !!qbd.watchOuts;
+              if (qbValid) {
+                const existing = briefPreCacheRef.current[co] || {};
+                // Seed P1 (overview) — only if pre-cache slot is empty
+                const seedOverview = !existing.overview ? {
+                  companySnapshot: qbd.companySnapshot, revenue: qbd.revenue,
+                  publicPrivate: qbd.publicPrivate, employeeCount: qbd.employeeCount,
+                  headquarters: qbd.headquarters, founded: qbd.founded,
+                  website: qbd.website, linkedIn: qbd.linkedIn,
+                  fundingProfile: qbd.fundingProfile, competitors: qbd.competitors,
+                  watchOuts: qbd.watchOuts,
+                } : null;
+                // Seed P5 (live/news/sentiment) — only if pre-cache slot is empty.
+                // Remap publicSentiment → sentimentScores (shape mergeLive expects from raw API).
+                const ps = qbd.publicSentiment;
+                const seedLive = !existing.live && (qbd.recentHeadlines?.length || qbd.recentSignals?.length)
+                  ? { recentHeadlines: qbd.recentHeadlines,
+                      recentSignals: qbd.recentSignals,
+                      growthSignals: qbd.growthSignals,
+                      workforceProfile: qbd.workforceProfile,
+                      cultureProfile: qbd.cultureProfile,
+                      incumbentVendors: qbd.incumbentVendors,
+                      ...(ps ? { sentimentScores: {
+                        glassdoorRating: ps.glassdoorRating || "",
+                        g2Rating: ps.g2Rating || "",
+                        trustpilotRating: ps.trustpilotRating || "",
+                        npsSignal: ps.npsSignal || "",
+                        employeeScore: ps.employeeScore || "",
+                        standoutReview: ps.standoutReview || {},
+                        salesAngle: ps.salesAngle || "",
+                      }} : {}),
+                    }
+                  : null;
+                if (seedOverview || seedLive) {
+                  briefPreCacheRef.current[co] = {
+                    ...existing,
+                    ...(seedOverview ? { overview: seedOverview } : {}),
+                    ...(seedLive    ? { live: seedLive }         : {}),
+                  };
+                }
+                // Seed P2 (execs) — only if exec pre-cache slot is empty.
+                // sellerSnapshot intentionally blank: QB has no seller context.
+                const existingExecs = execCacheRef.current[co];
+                const qbHasRealExecs = qbd.keyExecutives?.some(e =>
+                  e?.name && !/^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name)
+                );
+                if (!existingExecs && qbHasRealExecs) {
+                  execCacheRef.current[co] = { keyExecutives: qbd.keyExecutives, sellerSnapshot: "" };
+                }
+                const seededSections = [seedOverview && "P1", seedLive && "P5", (!existingExecs && qbHasRealExecs) && "P2"].filter(Boolean);
+                if (seededSections.length) console.log(`[brief] QB seed (${Math.floor(qbAge / 86400000)}d old): ${seededSections.join(", ")}`);
+              }
+            }
+          }
+        }
+      } catch(e) { console.warn("[brief] QB seed lookup failed:", e.message); }
     }
     // briefPreCacheRef (P5 live search) has no seller context — reusable for both modes.
     // execCacheRef pre-fetch is already skipped for research-only (line ~5686).
