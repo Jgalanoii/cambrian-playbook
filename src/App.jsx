@@ -8792,6 +8792,68 @@ Return ONLY raw JSON:
             }
           }
 
+          // ── HEADLINE-BASED EXECUTIVE VALIDATION ──────────────────────────────
+          // Appointment headlines ("X Named CFO") are the highest-confidence signal
+          // that a named person holds a title RIGHT NOW. If recentHeadlines says
+          // "David McLaughlin Named CFO" but keyExecutives lists someone else as CFO,
+          // the headline wins — remove the stale exec before it reaches the UI.
+          // Uses last-name comparison to handle middle initials / name variants.
+          if (Array.isArray(current.recentHeadlines) && Array.isArray(current.keyExecutives) && current.keyExecutives.length > 0) {
+            const hlText = current.recentHeadlines
+              .map(h => typeof h === "string" ? h : (h?.headline || ""))
+              .join(" | ");
+
+            const normRole = (t) => {
+              const s = (t || "").toLowerCase();
+              if (/chief financial|(?<!\w)cfo(?!\w)/.test(s)) return "cfo";
+              if (/chief technolog|chief technical|(?<!\w)cto(?!\w)/.test(s)) return "cto";
+              if (/chief operating|(?<!\w)coo(?!\w)/.test(s)) return "coo";
+              if (/chief executive|(?<!\w)ceo(?!\w)/.test(s)) return "ceo";
+              if (/chief revenue|(?<!\w)cro(?!\w)/.test(s)) return "cro";
+              if (/chief marketing|(?<!\w)cmo(?!\w)/.test(s)) return "cmo";
+              if (/chief product|(?<!\w)cpo(?!\w)/.test(s)) return "cpo";
+              if (/chief people|chief human resources|(?<!\w)chro(?!\w)/.test(s)) return "chro";
+              return null;
+            };
+
+            const NP = "[A-Z][a-zA-Z'\\-]+(?:\\s+[A-Z][a-zA-Z'\\-]+)+";
+            const appointments = {};
+
+            // "[Name] Named/Appointed/Joins as [Title]"
+            const re1 = new RegExp(`(${NP})\\s+(?:named|appointed|joins? as|named as|appointed as)\\s+([A-Za-z &/]+?)(?=\\s+(?:at|of|for)|\\s*[|.]|$)`, "gi");
+            let rm;
+            while ((rm = re1.exec(hlText)) !== null) {
+              const role = normRole(rm[2]);
+              if (role) appointments[role] = rm[1].trim();
+            }
+
+            // "[Company] Names/Appoints [Name] as [Title]"
+            const re2 = new RegExp(`(?:names?|appoints?|hires?)\\s+(${NP})\\s+(?:as\\s+)?([A-Za-z &/]+?)(?=\\s+(?:at|of|for)|\\s*[|.]|$)`, "gi");
+            while ((rm = re2.exec(hlText)) !== null) {
+              const role = normRole(rm[2]);
+              if (role && rm[1].includes(" ")) appointments[role] = rm[1].trim();
+            }
+
+            if (Object.keys(appointments).length > 0) {
+              const filtered = current.keyExecutives.filter(e => {
+                if (!e?.name) return true;
+                const role = normRole(e.title);
+                if (!role || !appointments[role]) return true;
+                const incumbentLast = e.name.trim().split(/\s+/).pop().toLowerCase();
+                const appointedLast = appointments[role].trim().split(/\s+/).pop().toLowerCase();
+                if (incumbentLast !== appointedLast) {
+                  console.warn(`[consistency] Stale exec removed — headline appoints "${appointments[role]}" as ${role.toUpperCase()}, brief had "${e.name}"`);
+                  return false;
+                }
+                return true;
+              });
+              if (filtered.length < current.keyExecutives.length) {
+                current.keyExecutives = filtered;
+                current._consistencyFixed = true;
+              }
+            }
+          }
+
           // Revenue reconciliation: P9 financials are web-searched and higher trust than P1 overview.
           // For PUBLIC companies, P9 uses SEC filings (10-K) — authoritative source.
           // If P1 shows a sub-metric (net fee revenue, subscription revenue) and P9 shows total, P9 wins.
