@@ -322,8 +322,12 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
     throw { status: 400, message: `model "${body.model}" not permitted` };
   }
 
-  // Cap total input size (~150KB) to prevent billing abuse
-  const inputSize = JSON.stringify(body.messages).length + (body.system?.length || 0);
+  // Cap total input size (~150KB) to prevent billing abuse.
+  // body.system may be a string or an array of content blocks — handle both.
+  const systemSize = Array.isArray(body.system)
+    ? body.system.reduce((s, b) => s + (b.text?.length || 0), 0)
+    : (body.system?.length || 0);
+  const inputSize = JSON.stringify(body.messages).length + systemSize;
   if (inputSize > 250_000) { // 250KB — baseFull with 31+ knowledge layers can reach 150-200KB
     throw { status: 400, message: "input too large" };
   }
@@ -336,7 +340,28 @@ export function buildAnthropicBody(body, { stream = false } = {}) {
     messages: body.messages,
   };
   if (typeof body.system === "string" && body.system.length && body.system.length <= 30_000) {
+    // Plain string system — prepend SERVER_PREAMBLE and sanitize (existing behavior)
     clean.system = sanitizeSystemPrompt(body.system);
+  } else if (Array.isArray(body.system) && body.system.length) {
+    // Array of content blocks — used for prompt caching (cache_control: { type: "ephemeral" })
+    // Sanitize each block's text through injection filter; SERVER_PREAMBLE is prepended as first block.
+    const sanitizedBlocks = body.system
+      .filter(b => b?.type === "text" && typeof b.text === "string" && b.text.length <= 30_000)
+      .map(b => {
+        let text = b.text;
+        for (const pattern of INJECTION_PATTERNS) {
+          text = text.replace(pattern, "[filtered]");
+        }
+        const block = { type: "text", text };
+        if (b.cache_control?.type === "ephemeral") block.cache_control = { type: "ephemeral" };
+        return block;
+      });
+    if (sanitizedBlocks.length) {
+      clean.system = [
+        { type: "text", text: SERVER_PREAMBLE.trim() }, // Always first — injection defense
+        ...sanitizedBlocks,
+      ];
+    }
   }
   const tools = sanitizeTools(body.tools);
   if (tools) clean.tools = tools;

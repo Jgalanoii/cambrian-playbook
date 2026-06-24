@@ -1184,7 +1184,7 @@ ANTI-HALLUCINATION RULES (apply to EVERY response):
 - A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.
 - NEVER disparage or undermine the selling organization. You are building tools FOR the seller. Do not editorialize about their product quality, pricing, viability, or market position.`;
 
-async function streamAI(prompt, onChunk, maxTok=2000, { model = null, signal = null } = {}) {
+async function streamAI(prompt, onChunk, maxTok=2000, { model = null, signal = null, system = null } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Wrap the initial fetch in retry. Once the stream is open we let it run
   // through; mid-stream failures surface as a null parse result and the
@@ -1201,7 +1201,7 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null, signal = n
           model: model || activeModel(),
           max_tokens: maxTok,
           temperature: 0,
-          system: ANTI_HALLUCINATION_SYSTEM,
+          system: system || ANTI_HALLUCINATION_SYSTEM,
           messages: [
             { role: 'user', content: prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.' },
           ],
@@ -6889,18 +6889,12 @@ Return ONLY raw JSON:
 
     // ── PASS 2: Sonnet ICP Build (uses research from Pass 1) ──
     setIcpStatus("Building your ICP...");
-    const icpPrompt =
-      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n\n`+
-      (sellerResearch ? `═══ RESEARCH RESULTS (from deep web search — use these facts) ═══\n${sellerResearch.slice(0, 6000)}\n═══ END RESEARCH ═══\n\n` : `No pre-research available. Use your training knowledge about ${url} to build the ICP.\n\n`)+
-      sellerDocsCtx +
-      productPagesCtx +
-      `CUSTOMER RESEARCH IS CRITICAL: Named customers from case studies and press releases are HIGH-CONFIDENCE data. These become the anchor for scoring — "does this prospect look like companies we've already won?" A seller with 3 verified customer wins produces better scores than one with 20 guesses.\n\n`+
-      `Then use your research to build the ICP below. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n\n`+
+
+    // Static ICP instructions — schema, rules, KL. Same for every build and every seller.
+    // Cached in Anthropic's KV store (5-min TTL) via prompt-caching-2024-07-31 beta.
+    // ~2,500 tokens — well above Sonnet's 1,024-token cache minimum.
+    const _icpStaticInstructions =
       (KL_ICP_KNOWLEDGE ? KL_ICP_KNOWLEDGE + "\n" : "") +
-      getVerticalInjection({ marketCategory: sellerICP?.marketCategory || "", sellerDescription: url }) +
-      `Seller stage: ${sellerStage||"unknown"}.\n`+
-      (buildTargetingText() ? `\nSELLER TARGETING PREFERENCES (MUST RESPECT — these override any conflicting inference from the website):\n${buildTargetingText()}\n\n` : "\n")+
-      (priorEdits.length ? `\nUSER CORRECTIONS (the user manually edited these fields — RESPECT these changes in the rebuild):\n${priorEdits.map(e=>`  • ${e.field}: changed to "${e.newValue}"`).join("\n")}\nThese are intentional overrides. Do NOT revert them to what the website says.\n\n` : "")+
       `CRITICAL — CONSISTENCY & ACCURACY RULES:\n`+
       `- For "PICK ONE" fields: return ONLY the exact value from the list. No extra words, no custom ranges, no parentheticals.\n`+
       `- For "PICK FROM" fields: choose from the canonical list provided. Do NOT invent your own labels.\n`+
@@ -6944,6 +6938,32 @@ Return ONLY raw JSON:
       `"productCatalog":[{"name":"from website","description":"specific","targetBuyer":"","painSolved":"","industries":[],"evidence":"URL"}],`+
       `"verifiedCustomers":[{"name":"from case study/press","industry":"","useCase":"","source":"case_study|press_release|partner_page|website_logo","sourceUrl":""}]}`+
       `\n\nRULES: productCatalog 2-6 from website (NOT training knowledge). verifiedCustomers 3-10 from research. competitiveAlternatives with evidence URLs. customerExamples from research only. Empty array if not found. relevantEvents leave empty.`;
+
+    // Cached system block: ANTI_HALLUCINATION + static instructions.
+    // Sent as array for prompt-caching. Guard prepends SERVER_PREAMBLE as block[0].
+    const _icpSystemArray = [{
+      type: "text",
+      text: ANTI_HALLUCINATION_SYSTEM + "\n\n" + _icpStaticInstructions,
+      cache_control: { type: "ephemeral" },
+    }];
+
+    // Dynamic user message — seller-specific context only (research, docs, vertical, targeting).
+    // NOT cached. Changes every build and between sellers.
+    const _icpDynamic =
+      `You are a senior ICP strategist. Build the Ideal Customer Profile for the seller at: https://${url}.\n\n`+
+      (sellerResearch ? `═══ RESEARCH RESULTS (from deep web search — use these facts) ═══\n${sellerResearch.slice(0, 6000)}\n═══ END RESEARCH ═══\n\n` : `No pre-research available. Use your training knowledge about ${url} to build the ICP.\n\n`)+
+      sellerDocsCtx +
+      productPagesCtx +
+      `CUSTOMER RESEARCH IS CRITICAL: Named customers from case studies and press releases are HIGH-CONFIDENCE data. These become the anchor for scoring — "does this prospect look like companies we've already won?" A seller with 3 verified customer wins produces better scores than one with 20 guesses.\n\n`+
+      `Then use your research to build the ICP below. Adapt for their actual market model — B2B, B2C, B2B2C, B2G, marketplace, or hybrid.\n\n`+
+      getVerticalInjection({ marketCategory: sellerICP?.marketCategory || "", sellerDescription: url }) +
+      `Seller stage: ${sellerStage||"unknown"}.\n`+
+      (buildTargetingText() ? `\nSELLER TARGETING PREFERENCES (MUST RESPECT — these override any conflicting inference from the website):\n${buildTargetingText()}\n\n` : "\n")+
+      (priorEdits.length ? `\nUSER CORRECTIONS (the user manually edited these fields — RESPECT these changes in the rebuild):\n${priorEdits.map(e=>`  • ${e.field}: changed to "${e.newValue}"`).join("\n")}\nThese are intentional overrides. Do NOT revert them to what the website says.\n\n` : "");
+
+    // Full prompt for fallback paths (streamAIWithSearch, Haiku fallback) — no caching,
+    // everything in user message, identical quality to the previous implementation.
+    const icpPrompt = _icpDynamic + _icpStaticInstructions;
 
     try{
       // Single-pass ICP — Opus streaming with web search, Sonnet fallback on timeout
@@ -6991,11 +7011,14 @@ Return ONLY raw JSON:
       // resolves icpCall with null before icpTimeout rejects, swallowing the Haiku fallback.
       const icpAbort = new AbortController();
       let icpTimedOut = false;
-      const icpTimeoutId = setTimeout(() => { icpTimedOut = true; icpAbort.abort(); }, 120000);
+      const icpTimeoutId = setTimeout(() => { icpTimedOut = true; icpAbort.abort(); }, 180000);
 
       const icpCall = sellerResearch
-        ? streamAI(icpFullPrompt, onIcpPartial, 8000, { model: SONNET, signal: icpAbort.signal })  // Sonnet — research already done, no search needed
-        : streamAIWithSearch(icpFullPrompt, onIcpPartial, 8000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal }); // Fallback: search if Opus research failed
+        // Primary path: cached system (ANTI_HALLUCINATION + KL + schema) + dynamic user message.
+        // Prompt caching cuts ~2,500 tokens from Sonnet's KV recompute on every rebuild.
+        ? streamAI(_icpDynamic, onIcpPartial, 6500, { model: SONNET, signal: icpAbort.signal, system: _icpSystemArray })
+        // Fallback (no Opus research): full prompt in user message, no caching. Same quality as before.
+        : streamAIWithSearch(icpFullPrompt, onIcpPartial, 6500, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal });
 
       let raw = await icpCall;
       clearTimeout(icpTimeoutId);
@@ -7004,7 +7027,7 @@ Return ONLY raw JSON:
       if (!raw && icpTimedOut) {
         console.warn("[ICP] Sonnet timed out — falling back to Haiku");
         setIcpStatus("Retrying with faster model...");
-        raw = await streamAI(icpFullPrompt, onIcpPartial, 8000);
+        raw = await streamAI(icpFullPrompt, onIcpPartial, 6500);
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
