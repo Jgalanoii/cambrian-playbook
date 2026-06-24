@@ -585,7 +585,7 @@ function authHeaders() {
 // Principle: accuracy first. Opus for high-judgment calls (seller research, sales angle).
 // Sonnet for structured reasoning (solutions, financials, competitive). Haiku for extraction only.
 const HAIKU  = "claude-haiku-4-5-20251001";
-const SONNET = "claude-sonnet-4-5-20250929";
+const SONNET = "claude-sonnet-4-6";
 const OPUS   = "claude-opus-4-6";
 
 // Default model for calls that don't specify — Haiku (cheapest)

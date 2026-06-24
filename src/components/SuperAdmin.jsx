@@ -470,7 +470,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                 const weekAgo = new Date(now - 7*86400000).toISOString();
                 const monthAgo = new Date(now - 30*86400000).toISOString();
                 const costPerToken = (model, input, output) => {
-                  const rates = { "claude-opus-4-6": [15,75], "claude-sonnet-4-5-20250929": [3,15], "claude-sonnet-4-5": [3,15], "claude-haiku-4-5-20251001": [0.8,4] };
+                  const rates = { "claude-opus-4-6": [15,75], "claude-sonnet-4-6": [3,15], "claude-sonnet-4-5-20250929": [3,15], "claude-sonnet-4-5": [3,15], "claude-haiku-4-5-20251001": [0.8,4] };
                   const [iRate, oRate] = rates[model] || [1,5];
                   return (input/1e6)*iRate + (output/1e6)*oRate;
                 };

@@ -17,18 +17,20 @@ import { createHmac, timingSafeEqual, createVerify, createPublicKey } from "cryp
 
 const ALLOWED_MODELS = new Set([
   "claude-haiku-4-5-20251001",
-  "claude-sonnet-4-5",
-  "claude-sonnet-4-5-20250929",
+  "claude-sonnet-4-6",            // Sonnet 4.6 — current
+  "claude-sonnet-4-5",            // Undated alias — backward compat
+  "claude-sonnet-4-5-20250929",   // Old dated alias — backward compat
   "claude-opus-4-6",              // Opus 4.6 — ICP + P3 strategy
   "claude-opus-4-20250514",       // Dated alias (also works)
 ]);
 
 export const MODEL_FALLBACK = {
-  "claude-haiku-4-5-20251001": "claude-sonnet-4-5",
-  "claude-sonnet-4-5-20250929": "claude-haiku-4-5-20251001", // Sonnet overload → Haiku (degrade rather than fail)
-  "claude-sonnet-4-5": "claude-haiku-4-5-20251001",          // Undated Sonnet → Haiku
-  "claude-opus-4-6": "claude-sonnet-4-5",                    // Opus overload → Sonnet (preserve quality)
-  "claude-opus-4-20250514": "claude-sonnet-4-5",
+  "claude-haiku-4-5-20251001": "claude-sonnet-4-6",          // Haiku overload → current Sonnet
+  "claude-sonnet-4-6": "claude-haiku-4-5-20251001",           // Sonnet 4.6 overload → Haiku
+  "claude-sonnet-4-5-20250929": "claude-haiku-4-5-20251001",  // Old Sonnet → Haiku
+  "claude-sonnet-4-5": "claude-haiku-4-5-20251001",           // Undated Sonnet → Haiku
+  "claude-opus-4-6": "claude-sonnet-4-6",                     // Opus overload → current Sonnet
+  "claude-opus-4-20250514": "claude-sonnet-4-6",              // Old Opus alias → current Sonnet
 };
 
 const ALLOWED_TOOL_TYPES = new Set([
