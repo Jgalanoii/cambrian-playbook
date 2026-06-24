@@ -1,7 +1,7 @@
 import { guard, MODEL_FALLBACK, checkGuestLimit, incrementGuestUsage, getGuestRemaining } from "./_guard.js";
 import { extractUserId, checkOrgUsage, incrementUsage, incrementMaxUsage, logTokenUsage, extractTrackingContext } from "./_usage.js";
 
-export const config = { maxDuration: 120 };
+export const config = { maxDuration: 300 };
 
 const ANTHROPIC_HEADERS = {
   "Content-Type": "application/json",

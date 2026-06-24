@@ -1184,26 +1184,33 @@ ANTI-HALLUCINATION RULES (apply to EVERY response):
 - A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.
 - NEVER disparage or undermine the selling organization. You are building tools FOR the seller. Do not editorialize about their product quality, pricing, viability, or market position.`;
 
-async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
+async function streamAI(prompt, onChunk, maxTok=2000, { model = null, signal = null } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Wrap the initial fetch in retry. Once the stream is open we let it run
   // through; mid-stream failures surface as a null parse result and the
   // caller already handles that case.
   let response = null;
   for (let attempt = 0; attempt < 3; attempt++) {
-    response = await fetch('/api/claude-stream', {
-      method: 'POST',
-      headers: { ...authHeaders(), ..._trackingCtx },
-      body: JSON.stringify({
-        model: model || activeModel(),
-        max_tokens: maxTok,
-        temperature: 0,
-        system: ANTI_HALLUCINATION_SYSTEM,
-        messages: [
-          { role: 'user', content: prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.' },
-        ],
-      }),
-    });
+    if (signal?.aborted) return null;
+    try {
+      response = await fetch('/api/claude-stream', {
+        method: 'POST',
+        signal: signal || undefined,
+        headers: { ...authHeaders(), ..._trackingCtx },
+        body: JSON.stringify({
+          model: model || activeModel(),
+          max_tokens: maxTok,
+          temperature: 0,
+          system: ANTI_HALLUCINATION_SYSTEM,
+          messages: [
+            { role: 'user', content: prompt + '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.' },
+          ],
+        }),
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return null;
+      throw e;
+    }
     if (response.status !== 529 && response.status !== 429 && response.status !== 500 && response.status !== 502 && response.status !== 503) break;
     const wait = response.status >= 500 ? [3000, 6000, 12000][attempt] : response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
     console.warn(`[claude-stream] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
@@ -1226,31 +1233,42 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
   const decoder = new TextDecoder();
   let buffer = '';
   let fullText = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const event = JSON.parse(data);
-        if (event.type === 'content_block_delta' && event.delta?.text) {
-          fullText += event.delta.text;
-          onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
-        }
-      } catch { /* non-critical */ }
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          if (event.type === 'content_block_delta' && event.delta?.text) {
+            fullText += event.delta.text;
+            onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
+          }
+        } catch { /* non-critical */ }
+      }
     }
+  } catch (e) {
+    if (e.name === 'AbortError') return null;
+    throw e;
   }
   try {
     let cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, "").trim();
     const fb = cleaned.indexOf("{");
     const lb = cleaned.lastIndexOf("}");
-    if (fb >= 0 && lb > fb) cleaned = cleaned.slice(fb, lb + 1);
-    return stripCitations(JSON.parse(cleaned));
+    if (fb >= 0 && lb > fb) {
+      const candidate = cleaned.slice(fb, lb + 1);
+      try { return stripCitations(JSON.parse(candidate)); } catch { /* try repair */ }
+      const san = candidate.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"").replace(/,\s*([}\]])/g,"$1");
+      try { return stripCitations(JSON.parse(san)); } catch { /* try repair */ }
+      try { return stripCitations(JSON.parse(repairJSON(san))); } catch { return null; }
+    }
+    return null;
   } catch { return null; }
 }
 
@@ -1261,25 +1279,32 @@ async function streamAI(prompt, onChunk, maxTok=2000, { model = null } = {}) {
 //   - Track content block types — only feed TEXT blocks to onChunk
 //   - Use extractJsonWithKey for final parse (handles preamble text)
 // anchorKey: the expected top-level JSON key to find (e.g. "elevatorPitch")
-async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null, model=null } = {}) {
+async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1, anchorKey=null, onStatus=null, model=null, signal=null, returnRawOnFailure=false } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let response = null;
   for (let attempt = 0; attempt < 3; attempt++) {
-    response = await fetch('/api/claude-stream', {
-      method: 'POST',
-      headers: { ...authHeaders(), ..._trackingCtx },
-      body: JSON.stringify({
-        model: model || activeModel(),
-        max_tokens: maxTok,
-        temperature: 0,
-        system: ANTI_HALLUCINATION_SYSTEM,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: maxSearches }],
-        messages: [
-          { role: 'user', content: prompt },
-          // No assistant prefill — model must decide whether to search first
-        ],
-      }),
-    });
+    if (signal?.aborted) return null;
+    try {
+      response = await fetch('/api/claude-stream', {
+        method: 'POST',
+        signal: signal || undefined,
+        headers: { ...authHeaders(), ..._trackingCtx },
+        body: JSON.stringify({
+          model: model || activeModel(),
+          max_tokens: maxTok,
+          temperature: 0,
+          system: ANTI_HALLUCINATION_SYSTEM,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: maxSearches }],
+          messages: [
+            { role: 'user', content: prompt },
+            // No assistant prefill — model must decide whether to search first
+          ],
+        }),
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return null;
+      throw e;
+    }
     if (response.status !== 529 && response.status !== 429 && response.status !== 500 && response.status !== 502 && response.status !== 503) break;
     const wait = response.status >= 500 ? [3000, 6000, 12000][attempt] : response.status === 529 ? [2000, 5000, 10000][attempt] : 15000;
     console.warn(`[claude-stream-search] HTTP ${response.status}, retry ${attempt+1}/3 in ${wait/1000}s`);
@@ -1304,37 +1329,42 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
   let fullText = '';           // All text from text-type content blocks
   let currentBlockType = null; // Track what kind of block we're in
   let searchFired = false;     // Did the model use web_search?
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const event = JSON.parse(data);
-        // Track block starts to know when we're in text vs tool_use vs tool_result
-        if (event.type === 'content_block_start') {
-          currentBlockType = event.content_block?.type || null;
-          if (currentBlockType === 'web_search_tool_result' || currentBlockType === 'tool_use') {
-            if (!searchFired && onStatus) { onStatus("Searching..."); searchFired = true; }
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          // Track block starts to know when we're in text vs tool_use vs tool_result
+          if (event.type === 'content_block_start') {
+            currentBlockType = event.content_block?.type || null;
+            if (currentBlockType === 'web_search_tool_result' || currentBlockType === 'tool_use') {
+              if (!searchFired && onStatus) { onStatus("Searching..."); searchFired = true; }
+            }
           }
-        }
-        if (event.type === 'content_block_stop') {
-          currentBlockType = null;
-        }
-        // Only accumulate text deltas from text blocks (not tool_use/tool_result)
-        if (event.type === 'content_block_delta' && event.delta?.text && currentBlockType === 'text') {
-          fullText += event.delta.text;
-          if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
-        }
-      } catch { /* non-critical */ }
+          if (event.type === 'content_block_stop') {
+            currentBlockType = null;
+          }
+          // Only accumulate text deltas from text blocks (not tool_use/tool_result)
+          if (event.type === 'content_block_delta' && event.delta?.text && currentBlockType === 'text') {
+            fullText += event.delta.text;
+            if (onChunk) onChunk(fullText.replace(/<\/?cite[^>]*>/g, "").replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").replace(/<\/?thinking>/g, ""));
+          }
+        } catch { /* non-critical */ }
+      }
     }
+  } catch (e) {
+    if (e.name === 'AbortError') return null;
+    throw e;
   }
-  // Parse: use extractJsonWithKey if anchor provided, else try direct parse
+  // Parse: use extractJsonWithKey if anchor provided, else try with repair fallback
   try {
     const cleaned = fullText.replace(/<\/?cite[^>]*>/g, "").replace(/<\/?thinking>/g, "").trim();
     if (anchorKey) {
@@ -1342,16 +1372,27 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
       if (result) return stripCitations(result);
       console.warn(`[streamAIWithSearch] anchorKey "${anchorKey}" not found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 300));
     }
-    // Fallback: try to find JSON object in the text
+    // Fallback: try to find JSON object in the text, with multi-step repair
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
     if (firstBrace >= 0 && lastBrace > firstBrace) {
-      return stripCitations(JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)));
+      const candidate = cleaned.slice(firstBrace, lastBrace + 1);
+      try { return stripCitations(JSON.parse(candidate)); } catch { /* try repair */ }
+      const san = candidate.replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/[\u2026]/g,"...").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"").replace(/,\s*([}\]])/g,"$1");
+      try { return stripCitations(JSON.parse(san)); } catch { /* try repair */ }
+      try { return stripCitations(JSON.parse(repairJSON(san))); } catch(e2) {
+        console.warn(`[streamAIWithSearch] repairJSON failed (${candidate.length} chars):`, e2.message);
+      }
     }
-    console.warn(`[streamAIWithSearch] No JSON found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 200));
+    // returnRawOnFailure: caller wants raw text when JSON parsing fails (e.g. ICP Pass 1 research)
+    if (returnRawOnFailure) {
+      const rawFallback = cleaned.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
+      if (rawFallback.length > 100) return rawFallback;
+    }
+    console.warn(`[streamAIWithSearch] No parseable JSON found in response (${cleaned.length} chars). Preview:`, cleaned.slice(0, 200));
     return null;
   } catch(e) {
-    console.warn(`[streamAIWithSearch] Parse failed for anchorKey="${anchorKey}":`, e.message);
+    console.warn(`[streamAIWithSearch] Parse error for anchorKey="${anchorKey}":`, e.message);
     return null;
   }
 }
@@ -1735,7 +1776,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     : `IDENTITY ANCHOR: Research the company "${co}". CONTAMINATION GUARD: Do NOT mix facts from similarly-named companies. "${co}" is ONE specific entity. If your search returns results for multiple companies with similar names (e.g., "TheBancorp" vs "Columbia Bancorp" vs "Banc of California"), use ONLY results about "${co}" specifically. Every fact — revenue, employees, executives, headquarters, strategy — must be about "${co}" and no other entity. If you cannot distinguish which results belong to "${co}", return empty string rather than risk citing the wrong company. A brief with wrong-company data is worse than a brief with missing data.\n\n`;
 
   // Canonical seller name — use consistently across all sections
-  const canonicalSellerName = sellerICP?.sellerName || sellerUrl || "the seller";
+  // "research-only" is an internal sentinel, not a real seller name — substitute neutral label
+  const _rawSellerName = sellerICP?.sellerName || sellerUrl || "the seller";
+  const canonicalSellerName = /^research-only(\.com)?$/i.test(_rawSellerName) ? "your team" : _rawSellerName;
   const baseLight =
     `Sales brief about TARGET PROSPECT "${co}"${url && url !== co ? ` (${url})` : ""} for seller "${canonicalSellerName}"${sellerUrl !== canonicalSellerName ? ` (${sellerUrl})` : ""}.\n`+
     `SELLER NAME CONSISTENCY: Always refer to the selling organization as "${canonicalSellerName}" — not "${sellerUrl}" or any other variation. Use this exact name in every section.\n`+
@@ -2475,7 +2518,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (!prev) return prev;
     const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), roles:false}};
     if (!r6) { next._failedSections = [...(prev._failedSections||[]), "roles"]; return next; }
-    if (rolesHaveData(r6) || rolesSummaryOk(r6)) next.openRoles = r6.openRoles;
+    const newHasRoles = rolesHaveData(r6);
+    const existingHasRoles = prev?.openRoles?.roles?.some(r => r?.title);
+    // Only overwrite existing good roles data if new data also has roles.
+    // This prevents P6 Phase 3 (no-roles-found fallback) from clobbering
+    // good data that was already in state from a prior run or cache.
+    if (newHasRoles || (rolesSummaryOk(r6) && !existingHasRoles)) next.openRoles = r6.openRoles;
     return next;
   };
 
@@ -6669,6 +6717,8 @@ Return ONLY raw JSON:
   };
 
   const buildSellerICP = async(rawUrl, {forceRefresh=false, cacheOnly=false}={}) => {
+    // Catch both "research-only" and "research-only.com" before any processing
+    if (/^research-only(\.com)?$/i.test((rawUrl || "").trim())) return;
     let url = rawUrl.trim().replace(/^https?:\/\//,"").replace(/\/$/,"").replace(/^www\./,"");
     // Auto-add .com if no TLD present — "meritincentives" → "meritincentives.com"
     if (url && !url.includes(".")) url = url + ".com";
@@ -6762,49 +6812,79 @@ Return ONLY raw JSON:
     // Pass 2 (Sonnet, no search): Format research into ICP schema
     // Opus does the expensive critical work, Sonnet does the cheap formatting.
 
+    // ── RESEARCH CACHE (Option 3) ──
+    // Key: url + ISO week number + context flag (docs/pages present or not).
+    // Context flag prevents using "no docs" research when docs are added mid-week.
+    // forceRefresh bypasses cache so the Regenerate button always gets fresh research.
+    // TTL is natural: week bucket rolls over every 7 days, old keys are never read.
+    const _researchWeek = Math.floor(Date.now() / (7 * 24 * 3600 * 1000));
+    const _researchCtx = hasSellerContext ? "1" : "0";
+    const _researchCacheKey = `research:v1:${url}:${_researchWeek}:${_researchCtx}`;
+
     // ── PASS 1: Opus Research ──
     setIcpStatus("Researching your products and customers...");
     let sellerResearch = "";
-    try {
-      const researchPrompt =
-        `Research the company at https://${url}. Use BOTH web searches.\n\n`+
-        sellerDocsCtx +
-        productPagesCtx +
-        `OWNERSHIP-DRIVEN SEARCH STRATEGY:\n`+
-        `First, determine: is this company PUBLIC, PE-BACKED, VC-BACKED, PRIVATE, NONPROFIT, or GOVERNMENT?\n`+
-        `- If PUBLIC: also search for SEC filings, 10-K product segments, investor relations. Revenue/products are in annual reports.\n`+
-        `- If PE-BACKED: search for acquisition press releases, PE firm portfolio page, deal details, add-on acquisitions.\n`+
-        `- If VC-BACKED: search Crunchbase for funding rounds, total raised, lead investors, valuation.\n`+
-        `- If NONPROFIT: search for Form 990, annual report, program descriptions.\n`+
-        `Use this context to ground your research in authoritative sources for this ownership type.\n\n`+
-        (hasSellerContext
-          ? `You have the seller's own materials and/or validated product pages above. ` +
-            `You already know what this company sells. Use your searches for EXTERNAL validation:\n` +
-            `Search 1: site:${url} "case study" OR customers OR "powered by" OR partners OR "trusted by"\n` +
-            `Search 2: "${url.split('.')[0]}" competitors OR "vs" OR "alternative to" OR funding OR revenue\n\n`
-          : `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n` +
-            `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`
-        ) +
-        `Return a structured research summary:\n`+
-        `1. COMPANY: What they do (2 sentences, specific). Include ownership type, approximate revenue, and employee count if findable.\n`+
-        `2. PRODUCTS/SERVICES: List each product/service found on their website with a 1-sentence description and the URL where you found it\n`+
-        `3. NAMED CUSTOMERS: Every customer name found in case studies, press releases, partner pages, or logo walls — with the source URL for each\n`+
-        `4. COMPETITORS: Named competitors found in the research, with any evidence of their customers\n`+
-        `5. DIFFERENTIATORS: What makes this company different from competitors (specific, not generic)\n`+
-        `6. FINANCIAL CONTEXT: Revenue, funding, ownership details. For PUBLIC companies: total revenue from most recent annual report. For PE: deal details. For VC: funding rounds and total raised.\n\n`+
-        `Be thorough. This research determines the quality of everything downstream. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable.`;
-      const researchTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 45000));
-      const researchCall = streamAIWithSearch(researchPrompt, (partial) => {
-        if (partial.length > 50 && partial.length < 200) setIcpStatus("Found the company...");
-        if (partial.includes("PRODUCTS") || partial.includes("products")) setIcpStatus("Analyzing products and services...");
-        if (partial.includes("CUSTOMERS") || partial.includes("customers")) setIcpStatus("Identifying customers and case studies...");
-        if (partial.includes("COMPETITORS") || partial.includes("competitors")) setIcpStatus("Mapping competitive landscape...");
-      }, 2000, { maxSearches: 2, anchorKey: null, model: OPUS });
-      const research = await Promise.race([researchCall, researchTimeout]);
-      sellerResearch = typeof research === "string" ? research : JSON.stringify(research);
-      console.log(`[ICP] Opus research complete: ${sellerResearch.length} chars`);
-    } catch (e) {
-      console.warn("[ICP] Opus research failed/timed out:", e.message, "— proceeding with Sonnet-only");
+
+    // Check research cache first (skip if forceRefresh — user wants fresh data)
+    if (!forceRefresh) {
+      try {
+        const _cachedResearch = localStorage.getItem(_researchCacheKey);
+        if (_cachedResearch && _cachedResearch.length > 100) {
+          sellerResearch = _cachedResearch;
+          setIcpStatus("Using recent research...");
+          console.log(`[ICP] Research cache hit for "${url}" (${_cachedResearch.length} chars) — skipping Opus Pass 1`);
+        }
+      } catch { /* localStorage unavailable — proceed to live research */ }
+    }
+
+    if (!sellerResearch) {
+      // No cache (or forceRefresh) — run Opus research live
+      try {
+        const researchPrompt =
+          `Research the company at https://${url}. Use BOTH web searches.\n\n`+
+          sellerDocsCtx +
+          productPagesCtx +
+          `OWNERSHIP-DRIVEN SEARCH STRATEGY:\n`+
+          `First, determine: is this company PUBLIC, PE-BACKED, VC-BACKED, PRIVATE, NONPROFIT, or GOVERNMENT?\n`+
+          `- If PUBLIC: also search for SEC filings, 10-K product segments, investor relations. Revenue/products are in annual reports.\n`+
+          `- If PE-BACKED: search for acquisition press releases, PE firm portfolio page, deal details, add-on acquisitions.\n`+
+          `- If VC-BACKED: search Crunchbase for funding rounds, total raised, lead investors, valuation.\n`+
+          `- If NONPROFIT: search for Form 990, annual report, program descriptions.\n`+
+          `Use this context to ground your research in authoritative sources for this ownership type.\n\n`+
+          (hasSellerContext
+            ? `You have the seller's own materials and/or validated product pages above. ` +
+              `You already know what this company sells. Use your searches for EXTERNAL validation:\n` +
+              `Search 1: site:${url} "case study" OR customers OR "powered by" OR partners OR "trusted by"\n` +
+              `Search 2: "${url.split('.')[0]}" competitors OR "vs" OR "alternative to" OR funding OR revenue\n\n`
+            : `Search 1: site:${url} products OR solutions OR services OR "case study" OR "customer story" OR "powered by"\n` +
+              `Search 2: "${url.split('.')[0]}" customers OR "selected by" OR "case study" OR "works with" press release\n\n`
+          ) +
+          `Return a structured research summary:\n`+
+          `1. COMPANY: What they do (2 sentences, specific). Include ownership type, approximate revenue, and employee count if findable.\n`+
+          `2. PRODUCTS/SERVICES: List each product/service found on their website with a 1-sentence description and the URL where you found it\n`+
+          `3. NAMED CUSTOMERS: Every customer name found in case studies, press releases, partner pages, or logo walls — with the source URL for each\n`+
+          `4. COMPETITORS: Named competitors found in the research, with any evidence of their customers\n`+
+          `5. DIFFERENTIATORS: What makes this company different from competitors (specific, not generic)\n`+
+          `6. FINANCIAL CONTEXT: Revenue, funding, ownership details. For PUBLIC companies: total revenue from most recent annual report. For PE: deal details. For VC: funding rounds and total raised.\n\n`+
+          `Be thorough. This research determines the quality of everything downstream. "AI platform" is useless — "AI for fraud detection and ACH return reduction in banking" is actionable.`;
+        const researchAbort = new AbortController();
+        const researchTimeout = new Promise((_, reject) => setTimeout(() => { researchAbort.abort(); reject(new Error("timeout")); }, 100000));
+        const researchCall = streamAIWithSearch(researchPrompt, (partial) => {
+          if (partial.length > 50 && partial.length < 200) setIcpStatus("Found the company...");
+          if (partial.includes("PRODUCTS") || partial.includes("products")) setIcpStatus("Analyzing products and services...");
+          if (partial.includes("CUSTOMERS") || partial.includes("customers")) setIcpStatus("Identifying customers and case studies...");
+          if (partial.includes("COMPETITORS") || partial.includes("competitors")) setIcpStatus("Mapping competitive landscape...");
+        }, 4000, { maxSearches: 2, anchorKey: null, model: OPUS, returnRawOnFailure: true, signal: researchAbort.signal });
+        const research = await Promise.race([researchCall, researchTimeout]);
+        sellerResearch = !research ? "" : (typeof research === "string" ? research : JSON.stringify(research));
+        // Store in research cache for same-week rebuilds (targeting changes, etc.)
+        if (sellerResearch.length > 100) {
+          try { localStorage.setItem(_researchCacheKey, sellerResearch); } catch { /* quota exceeded — non-fatal */ }
+        }
+        console.log(`[ICP] Opus research complete: ${sellerResearch.length} chars — cached`);
+      } catch (e) {
+        console.warn("[ICP] Opus research failed/timed out:", e.message, "— proceeding with Sonnet-only");
+      }
     }
 
     // ── PASS 2: Sonnet ICP Build (uses research from Pass 1) ──
@@ -6907,23 +6987,28 @@ Return ONLY raw JSON:
       const icpFullPrompt = icpPrompt + '\n\nReturn ONLY raw JSON starting with {. No prose, no markdown, no explanation.';
 
       // Sonnet ICP build (no web search needed — research already done by Opus)
-      const icpTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 45000));
-      let raw;
-      try {
-        const icpCall = sellerResearch
-          ? streamAI(icpFullPrompt, onIcpPartial, 5000)  // No search — research already done
-          : streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET }); // Fallback: search if Opus research failed
-        raw = await Promise.race([icpCall, icpTimeout]);
-      } catch (e) {
-        if (e.message === "timeout" || e.message?.includes("overloaded")) {
-          console.warn("[ICP] Sonnet timed out — falling back to Haiku");
-          setIcpStatus("Retrying with faster model...");
-          raw = await streamAI(icpFullPrompt, onIcpPartial, 5000);
-        } else throw e;
+      // Flag-based timeout — avoids Promise.race race condition where AbortError
+      // resolves icpCall with null before icpTimeout rejects, swallowing the Haiku fallback.
+      const icpAbort = new AbortController();
+      let icpTimedOut = false;
+      const icpTimeoutId = setTimeout(() => { icpTimedOut = true; icpAbort.abort(); }, 120000);
+
+      const icpCall = sellerResearch
+        ? streamAI(icpFullPrompt, onIcpPartial, 8000, { model: SONNET, signal: icpAbort.signal })  // Sonnet — research already done, no search needed
+        : streamAIWithSearch(icpFullPrompt, onIcpPartial, 8000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal }); // Fallback: search if Opus research failed
+
+      let raw = await icpCall;
+      clearTimeout(icpTimeoutId);
+      console.log("[ICP Pass 2] raw type:", typeof raw, raw === null ? "(null)" : typeof raw === "string" ? `string(${raw.length})` : `object keys=[${Object.keys(raw||{}).slice(0,5)}]`);
+
+      if (!raw && icpTimedOut) {
+        console.warn("[ICP] Sonnet timed out — falling back to Haiku");
+        setIcpStatus("Retrying with faster model...");
+        raw = await streamAI(icpFullPrompt, onIcpPartial, 8000);
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
-        console.warn("ICP phase 2 error:", err);
+        console.warn("[ICP] Phase 2 error:", err ?? "(null response — model returned nothing)");
         if (err?.type === "usage_limit_exceeded" || err?.type === "max_limit_exceeded") {
           setSellerICP(prev => prev || ({ _error: "You've reached your plan limit. Upgrade to continue building ICPs." }));
           setIcpLoading(false); setIcpStatus(""); return;
@@ -8110,7 +8195,9 @@ Return ONLY raw JSON:
               // Full Briefs MUST include solutionMapping — a cached brief without products is useless.
               const hasCritical = _isQuickBrief
                 ? !!(cd.companySnapshot || cd.revenue) && !!cd.watchOuts
-                : !!(cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product));
+                  && !/\bprocessing volume\b/i.test(cd.revenue || "")
+                : !!(cd.revenue && cd.elevatorPitch && cd.outreachEmails?.length && cd.watchOuts && cd.solutionMapping?.some(s => s?.product))
+                  && !/\bprocessing volume\b/i.test(cd.revenue || "");
               // Contamination check: if snapshot mentions one city but HQ has another, fix HQ
               const snapCityMatch = (cd.companySnapshot || "").match(/(?:based in|headquartered in|dual HQ:\s*|HQ:\s*|offices in)\s*([A-Za-z\s]+(?:,\s*[A-Za-z.]+)?)/i);
               const snapCity = snapCityMatch?.[1]?.split(/[&,]/)[0]?.trim().toLowerCase();
@@ -8135,7 +8222,8 @@ Return ONLY raw JSON:
                 const missingPublicSentiment  = !cd.publicSentiment?.glassdoorRating && !cd.publicSentiment?.onlineSentiment && !cd.publicSentiment?.standoutReview?.text;
                 const missingOnlineSentiment  = !!(cd.publicSentiment?.glassdoorRating || cd.publicSentiment?.standoutReview?.text) && !cd.publicSentiment?.onlineSentiment;
                 const missingExecutives       = !cd.keyExecutives?.some(e => e?.name);
-                const missingOpenRoles        = !cd.openRoles?.roles?.length;
+                const missingOpenRoles        = !cd.openRoles?.roles?.length ||
+                  /data not fully available|no open positions found|no specific open positions|no results found/i.test(cd.openRoles?.summary || "");
                 const allGaps = [missingFinancial&&"financial", missingCompetitive&&"competitive", missingBoard&&"board", missingTldr&&"quickTake", missingFiveQs&&"5questions", missingCaseStudies&&"caseStudies", missingPublicSentiment&&"sentiment", missingOnlineSentiment&&"sentimentSynth", missingExecutives&&"executives", missingOpenRoles&&"openRoles"].filter(Boolean);
                 if (allGaps.length) console.log(`[cache] ${allGaps.length} gaps detected — backfilling: ${allGaps.join(", ")}`);
 
@@ -8152,6 +8240,12 @@ Return ONLY raw JSON:
                   : `IDENTITY: Research "${co}" ONLY.\n\n`;
 
                 (async () => {
+                  // Don't compete with ICP build — Anthropic can't handle both well
+                  if (icpLoading) {
+                    console.log(`[cache] Skipping backfill — ICP is building`);
+                    setBrief(prev => prev ? { ...prev, _loadingSections: { overview: false, strategy: false, solutions: false, live: false, roles: false, deepIntel: false } } : prev);
+                    return;
+                  }
                   // P5: refresh headlines + conditionally sentiment when missing
                   try {
                     const p5Schema = missingPublicSentiment
@@ -8289,9 +8383,20 @@ Return ONLY raw JSON:
                       const tb = (d?.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
                       const raw = tb.join("").replace(/```(?:json)?\s*/gi,"").replace(/```/g,"").trim();
                       const parsed = extractJsonWithKey(raw, "openRoles") || safeParseJSON(raw.startsWith("{")?raw:"{"+raw);
-                      if (parsed?.openRoles?.roles?.length) {
-                        setBrief(prev => prev ? { ...prev, openRoles: parsed.openRoles, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
-                        console.log("[cache] Open roles backfilled");
+                      if (parsed?.openRoles) {
+                        // Write result even when roles is empty — replaces stale "Data not fully available" summary.
+                        // But don't downgrade: if existing state already has real roles, keep them.
+                        setBrief(prev => {
+                          if (!prev) return prev;
+                          const newHasRoles = parsed.openRoles?.roles?.some(r => r?.title);
+                          const existingHasRoles = prev.openRoles?.roles?.some(r => r?.title);
+                          if (existingHasRoles && !newHasRoles) {
+                            console.log("[cache] Open roles: new result has no roles — keeping existing");
+                            return { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } };
+                          }
+                          console.log(`[cache] Open roles backfilled (${parsed.openRoles?.roles?.length || 0} roles)`);
+                          return { ...prev, openRoles: parsed.openRoles, _loadingSections: { ...(prev._loadingSections || {}), roles: false } };
+                        });
                       } else {
                         setBrief(prev => prev ? { ...prev, _loadingSections: { ...(prev._loadingSections || {}), roles: false } } : prev);
                       }
@@ -8387,6 +8492,88 @@ Return ONLY raw JSON:
           }
         }
       } catch { /* non-critical — fall through to fresh build */ }
+    }
+    // ── QB Seeding ─────────────────────────────────────────────────────────────
+    // When a full brief is requested for a company that was previously Quick Briefed,
+    // seed company-facts sections (P1, P2, P5) from the QB Supabase cache.
+    // Seeds empty slots only — never overwrites an in-flight pre-cache Promise.
+    // Excluded: P6 open roles (too volatile; always run fresh).
+    // Excluded: seller-specific fields (P3 pitch/emails, P4 solutionMapping).
+    if (!_isQuickBrief && !forceRebuild && sbToken && sbUser) {
+      try {
+        const SB_URL_QB = import.meta.env.VITE_SUPABASE_URL;
+        const SB_KEY_QB = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (SB_URL_QB && SB_KEY_QB) {
+          const qbLookup = await fetch(
+            `${SB_URL_QB}/rest/v1/account_outputs?output_type=eq.brief` +
+            `&target_company=eq.${encodeURIComponent(co)}` +
+            `&seller_url=eq.research-only&is_latest=eq.true` +
+            `&select=data,created_at&limit=1`,
+            { headers: { apikey: SB_KEY_QB, Authorization: `Bearer ${sbToken}` } }
+          );
+          if (qbLookup.ok) {
+            const qbRows = await qbLookup.json();
+            if (qbRows.length > 0 && qbRows[0].data) {
+              const qbAge = Date.now() - new Date(qbRows[0].created_at).getTime();
+              const qbd = qbRows[0].data;
+              const qbValid = qbAge < 7 * 86400000
+                && !!(qbd.companySnapshot || qbd.revenue)
+                && !!qbd.watchOuts;
+              if (qbValid) {
+                const existing = briefPreCacheRef.current[co] || {};
+                // Seed P1 (overview) — only if pre-cache slot is empty
+                const seedOverview = !existing.overview ? {
+                  companySnapshot: qbd.companySnapshot, revenue: qbd.revenue,
+                  publicPrivate: qbd.publicPrivate, employeeCount: qbd.employeeCount,
+                  headquarters: qbd.headquarters, founded: qbd.founded,
+                  website: qbd.website, linkedIn: qbd.linkedIn,
+                  fundingProfile: qbd.fundingProfile, competitors: qbd.competitors,
+                  watchOuts: qbd.watchOuts,
+                } : null;
+                // Seed P5 (live/news/sentiment) — only if pre-cache slot is empty.
+                // Remap publicSentiment → sentimentScores (shape mergeLive expects from raw API).
+                const ps = qbd.publicSentiment;
+                const seedLive = !existing.live && (qbd.recentHeadlines?.length || qbd.recentSignals?.length)
+                  ? { recentHeadlines: qbd.recentHeadlines,
+                      recentSignals: qbd.recentSignals,
+                      growthSignals: qbd.growthSignals,
+                      workforceProfile: qbd.workforceProfile,
+                      cultureProfile: qbd.cultureProfile,
+                      incumbentVendors: qbd.incumbentVendors,
+                      ...(ps ? { sentimentScores: {
+                        glassdoorRating: ps.glassdoorRating || "",
+                        g2Rating: ps.g2Rating || "",
+                        trustpilotRating: ps.trustpilotRating || "",
+                        npsSignal: ps.npsSignal || "",
+                        employeeScore: ps.employeeScore || "",
+                        standoutReview: ps.standoutReview || {},
+                        salesAngle: ps.salesAngle || "",
+                      }} : {}),
+                    }
+                  : null;
+                if (seedOverview || seedLive) {
+                  briefPreCacheRef.current[co] = {
+                    ...existing,
+                    ...(seedOverview ? { overview: seedOverview } : {}),
+                    ...(seedLive    ? { live: seedLive }         : {}),
+                  };
+                }
+                // Seed P2 (execs) — only if exec pre-cache slot is empty.
+                // sellerSnapshot intentionally blank: QB has no seller context.
+                const existingExecs = execCacheRef.current[co];
+                const qbHasRealExecs = qbd.keyExecutives?.some(e =>
+                  e?.name && !/^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e.name)
+                );
+                if (!existingExecs && qbHasRealExecs) {
+                  execCacheRef.current[co] = { keyExecutives: qbd.keyExecutives, sellerSnapshot: "" };
+                }
+                const seededSections = [seedOverview && "P1", seedLive && "P5", (!existingExecs && qbHasRealExecs) && "P2"].filter(Boolean);
+                if (seededSections.length) console.log(`[brief] QB seed (${Math.floor(qbAge / 86400000)}d old): ${seededSections.join(", ")}`);
+              }
+            }
+          }
+        }
+      } catch(e) { console.warn("[brief] QB seed lookup failed:", e.message); }
     }
     // briefPreCacheRef (P5 live search) has no seller context — reusable for both modes.
     // execCacheRef pre-fetch is already skipped for research-only (line ~5686).
@@ -8616,6 +8803,32 @@ Return ONLY raw JSON:
             setBrief(prev => prev ? { ...prev, tldr: cleaned } : prev);
           }
         }).catch(() => {});
+
+        // ── onlineSentiment synthesis (fresh build) ──
+        // P3 is skipped for Quick Brief (research-only), so onlineSentiment is never
+        // generated during the build. Fire synthesis here, after allDone, when we
+        // have glassdoorRating/standoutReview from P5 but no synthesis paragraph.
+        if (!current.publicSentiment?.onlineSentiment &&
+            (current.publicSentiment?.glassdoorRating || current.publicSentiment?.standoutReview?.text)) {
+          const ps = current.publicSentiment;
+          const sentCtx = [
+            ps.glassdoorRating ? `Glassdoor: ${ps.glassdoorRating}/5` : "",
+            ps.npsSignal ? `NPS/Recommend: ${ps.npsSignal}` : "",
+            ps.standoutReview?.text ? `Employee review (${ps.standoutReview.source || "Glassdoor"}): "${ps.standoutReview.text}"` : "",
+            ps.salesAngle ? `Sales angle: ${ps.salesAngle}` : "",
+            current.companySnapshot ? `Company context: ${current.companySnapshot.slice(0, 300)}` : "",
+          ].filter(Boolean).join("\n");
+          callAI(
+            `Write a 2-3 sentence onlineSentiment paragraph for ${member.company} — what employees, press, and the market say about this company AS A PLACE TO SELL INTO (not product quality).\n\nDATA:\n${sentCtx}\n\nFocus on: employee morale, leadership reputation, culture signals, brand health. Use only facts from the DATA section above — no outside knowledge.\nReturn ONLY raw JSON: {"onlineSentiment":"..."}`,
+            { maxTokens: 300 }
+          ).then(r => {
+            if (r?.onlineSentiment) {
+              setBrief(prev => prev ? { ...prev, publicSentiment: { ...(prev.publicSentiment || {}), onlineSentiment: r.onlineSentiment } } : prev);
+              console.log("[allDone] onlineSentiment synthesized");
+            }
+          }).catch(() => {});
+        }
+
         return current;
       });
     }, 800));
@@ -8742,6 +8955,68 @@ Return ONLY raw JSON:
               };
               stripPlaceholders(cleaned);
               return cleaned;
+            }
+          }
+
+          // ── HEADLINE-BASED EXECUTIVE VALIDATION ──────────────────────────────
+          // Appointment headlines ("X Named CFO") are the highest-confidence signal
+          // that a named person holds a title RIGHT NOW. If recentHeadlines says
+          // "David McLaughlin Named CFO" but keyExecutives lists someone else as CFO,
+          // the headline wins — remove the stale exec before it reaches the UI.
+          // Uses last-name comparison to handle middle initials / name variants.
+          if (Array.isArray(current.recentHeadlines) && Array.isArray(current.keyExecutives) && current.keyExecutives.length > 0) {
+            const hlText = current.recentHeadlines
+              .map(h => typeof h === "string" ? h : (h?.headline || ""))
+              .join(" | ");
+
+            const normRole = (t) => {
+              const s = (t || "").toLowerCase();
+              if (/chief financial|(?<!\w)cfo(?!\w)/.test(s)) return "cfo";
+              if (/chief technolog|chief technical|(?<!\w)cto(?!\w)/.test(s)) return "cto";
+              if (/chief operating|(?<!\w)coo(?!\w)/.test(s)) return "coo";
+              if (/chief executive|(?<!\w)ceo(?!\w)/.test(s)) return "ceo";
+              if (/chief revenue|(?<!\w)cro(?!\w)/.test(s)) return "cro";
+              if (/chief marketing|(?<!\w)cmo(?!\w)/.test(s)) return "cmo";
+              if (/chief product|(?<!\w)cpo(?!\w)/.test(s)) return "cpo";
+              if (/chief people|chief human resources|(?<!\w)chro(?!\w)/.test(s)) return "chro";
+              return null;
+            };
+
+            const NP = "[A-Z][a-zA-Z'\\-]+(?:\\s+[A-Z][a-zA-Z'\\-]+)+";
+            const appointments = {};
+
+            // "[Name] Named/Appointed/Joins as [Title]"
+            const re1 = new RegExp(`(${NP})\\s+(?:named|appointed|joins? as|named as|appointed as)\\s+([A-Za-z &/]+?)(?=\\s+(?:at|of|for)|\\s*[|.]|$)`, "gi");
+            let rm;
+            while ((rm = re1.exec(hlText)) !== null) {
+              const role = normRole(rm[2]);
+              if (role) appointments[role] = rm[1].trim();
+            }
+
+            // "[Company] Names/Appoints [Name] as [Title]"
+            const re2 = new RegExp(`(?:names?|appoints?|hires?)\\s+(${NP})\\s+(?:as\\s+)?([A-Za-z &/]+?)(?=\\s+(?:at|of|for)|\\s*[|.]|$)`, "gi");
+            while ((rm = re2.exec(hlText)) !== null) {
+              const role = normRole(rm[2]);
+              if (role && rm[1].includes(" ")) appointments[role] = rm[1].trim();
+            }
+
+            if (Object.keys(appointments).length > 0) {
+              const filtered = current.keyExecutives.filter(e => {
+                if (!e?.name) return true;
+                const role = normRole(e.title);
+                if (!role || !appointments[role]) return true;
+                const incumbentLast = e.name.trim().split(/\s+/).pop().toLowerCase();
+                const appointedLast = appointments[role].trim().split(/\s+/).pop().toLowerCase();
+                if (incumbentLast !== appointedLast) {
+                  console.warn(`[consistency] Stale exec removed — headline appoints "${appointments[role]}" as ${role.toUpperCase()}, brief had "${e.name}"`);
+                  return false;
+                }
+                return true;
+              });
+              if (filtered.length < current.keyExecutives.length) {
+                current.keyExecutives = filtered;
+                current._consistencyFixed = true;
+              }
             }
           }
 
@@ -8979,10 +9254,14 @@ Return ONLY raw JSON:
               current.financialDeepDive?.capitalPriorities,
               Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
             ].filter(Boolean).join(" ");
-            const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over)\s*([\d,]+)\s*(?:employees|associates|colleagues|staff|team members)/gi)];
+            // Also scan recentSignals for "X employees as of [date]" — authoritative live data
+            const recentSignalsText = Array.isArray(current.recentSignals)
+              ? current.recentSignals.map(s => typeof s === "string" ? s : (s?.signal || "")).join(" ")
+              : "";
+            const empMatches = [...(allText + " " + recentSignalsText).matchAll(/(?:(?:approximately|~|about|nearly|over)\s*|[(]\s*)([\d,]+)\+?\s*(?:employees|associates|colleagues|staff|team members)/gi)];
             if (empMatches.length > 0) {
               const largest = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).sort((a, b) => b - a)[0];
-              if (largest > overviewEmp * 1.2 && largest > 1000) {
+              if (largest > overviewEmp * 1.1 && largest > 1000) {
                 console.warn(`[consistency] Employee count reconciled: overview=${current.employeeCount} → ${largest.toLocaleString()} (from brief text)`);
                 current.employeeCount = `~${largest.toLocaleString()}`;
               }
@@ -9036,6 +9315,68 @@ Return ONLY raw JSON:
             current.publicPrivate = "Nonprofit (501(c)(3))";
           }
 
+          // ── PUBLIC / PRIVATE VALIDATION ───────────────────────────────────
+          // Determine authoritative ownership status by triangulating across
+          // publicPrivate (P1 direct answer), fundingProfile, boardAndInvestors,
+          // and companySnapshot. A PE firm's named presence in fundingProfile or
+          // board data is high-confidence private evidence. An exchange ticker
+          // symbol in publicPrivate or snapshot is high-confidence public evidence.
+          // When evidence is conclusive, patch inconsistent fields to agree.
+          if (current.publicPrivate) {
+            const PP        = current.publicPrivate;
+            const fundText  = current.fundingProfile || "";
+            const boardText = current.boardAndInvestors?.leadInvestors || "";
+            const snapText  = current.companySnapshot || "";
+
+            // Named PE/growth-equity firms are strong private-company evidence
+            const PE_FIRMS = /\b(silver lake|kkr|blackstone|apollo global|carlyle group|bain capital|tpg|warburg pincus|advent international|francisco partners|vista equity|thoma bravo|p2 capital|gtcr|onex|permira|cinven|ardian|cvc capital|leonard green|l catterton)\b/i;
+            const confirmedPrivate =
+              /\bprivate(?:ly[\s-]held)?\b|pe[-\s]backed|took?[\s-]private|acquired by|take[-\s]private|not publicly traded/i.test(PP) ||
+              PE_FIRMS.test(fundText) ||
+              PE_FIRMS.test(boardText);
+
+            // Exchange ticker symbols are strong public-company evidence
+            const TICKER = /\b(?:NYSE|NASDAQ|AMEX|LSE|TSX|ASX):\s*[A-Z]{1,5}\b/i;
+            const confirmedPublic =
+              TICKER.test(PP) ||
+              TICKER.test(snapText) ||
+              /\bpublicly traded\b.{0,30}\b(?:NYSE|NASDAQ|AMEX)\b/i.test(snapText);
+
+            if (confirmedPrivate && !confirmedPublic) {
+              // Fix snapshot if it still says "publicly traded company" as a current-state claim
+              if (/is a publicly traded company|publicly traded company (that|which)/i.test(snapText)) {
+                console.warn(`[consistency] Ownership conflict — corroborating signals confirm private; patching snapshot (PE firms or take-private language found)`);
+                current.companySnapshot = snapText
+                  .replace(/is a publicly traded company/gi, "is a privately held company")
+                  .replace(/publicly traded company (that|which)/gi, (_, conj) => `privately held company ${conj}`);
+              }
+              // Also normalise publicPrivate if it only says "Private" without context
+              // Check fundText first, fall back to boardText (leadInvestors) if fundText is weak
+              const peEnrichSource = PE_FIRMS.test(fundText) ? fundText : (PE_FIRMS.test(boardText) ? boardText : "");
+              if (/^private$/i.test(PP.trim()) && peEnrichSource) {
+                const peMatch = peEnrichSource.match(PE_FIRMS)?.[0] || "";
+                if (peMatch) {
+                  current.publicPrivate = `Private (PE-backed — ${peMatch})`;
+                  console.warn(`[consistency] publicPrivate enriched: "Private" → "${current.publicPrivate}"`);
+                }
+              }
+            } else if (confirmedPublic && /private/i.test(PP) && !confirmedPrivate) {
+              // Edge case: publicPrivate says Private but ticker evidence says Public — log for review
+              console.warn(`[consistency] Ownership ambiguity — publicPrivate="${PP}" but ticker evidence suggests public. Leaving as-is; manual review recommended.`);
+            }
+          }
+
+          // ── REVENUE FIELD QUALITY GUARD ───────────────────────────────────
+          // Payment companies use "processing volume" to describe transaction
+          // throughput — not company revenue. If P1 conflated the two and put
+          // volume language into the revenue field, clear it so P9 reconciliation
+          // (below) can fill in the correct figure. Non-payment companies never
+          // have "processing volume" in a revenue value, so this is safe broadly.
+          if (current.revenue && /\bprocessing volume\b/i.test(current.revenue)) {
+            console.warn(`[consistency] Revenue field contains "processing volume" — clearing (was: "${current.revenue}")`);
+            current.revenue = "";
+          }
+
           // ── REVENUE RECONCILIATION WITH P9 — P9 is authoritative (deeper financial research) ──
           if (current.financialDeepDive?.revenueTrend) {
             const p9Rev = current.financialDeepDive.revenueTrend;
@@ -9074,7 +9415,7 @@ Return ONLY raw JSON:
               current.financialDeepDive?.segmentBreakdown,
               Array.isArray(current.watchOuts) ? current.watchOuts.join(" ") : (current.watchOuts || ""),
             ].filter(Boolean).join(" ");
-            const empMatches = [...allText.matchAll(/(?:approximately|~|about|nearly|over|employs?|employing|has)\s*([\d,]+)\s*(?:employees|people|staff|team members|workers)/gi)];
+            const empMatches = [...allText.matchAll(/(?:(?:approximately|~|about|nearly|over|employs?|employing|has)\s*|[(]\s*)([\d,]+)\+?\s*(?:employees|people|staff|team members|workers|associates|colleagues)/gi)];
             if (empMatches.length > 0) {
               const p1Emp = parseInt(String(current.employeeCount).replace(/[^0-9]/g, ""), 10) || 0;
               const textEmps = empMatches.map(m => parseInt(m[1].replace(/,/g, ""), 10)).filter(n => n > 0);
