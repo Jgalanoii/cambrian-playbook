@@ -6987,20 +6987,23 @@ Return ONLY raw JSON:
       const icpFullPrompt = icpPrompt + '\n\nReturn ONLY raw JSON starting with {. No prose, no markdown, no explanation.';
 
       // Sonnet ICP build (no web search needed — research already done by Opus)
+      // Flag-based timeout — avoids Promise.race race condition where AbortError
+      // resolves icpCall with null before icpTimeout rejects, swallowing the Haiku fallback.
       const icpAbort = new AbortController();
-      const icpTimeout = new Promise((_, reject) => setTimeout(() => { icpAbort.abort(); reject(new Error("timeout")); }, 75000));
-      let raw;
-      try {
-        const icpCall = sellerResearch
-          ? streamAI(icpFullPrompt, onIcpPartial, 5000, { signal: icpAbort.signal })  // No search — research already done
-          : streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal }); // Fallback: search if Opus research failed
-        raw = await Promise.race([icpCall, icpTimeout]);
-      } catch (e) {
-        if (e.message === "timeout" || e.message?.includes("overloaded")) {
-          console.warn("[ICP] Sonnet timed out — falling back to Haiku");
-          setIcpStatus("Retrying with faster model...");
-          raw = await streamAI(icpFullPrompt, onIcpPartial, 5000);
-        } else throw e;
+      let icpTimedOut = false;
+      const icpTimeoutId = setTimeout(() => { icpTimedOut = true; icpAbort.abort(); }, 120000);
+
+      const icpCall = sellerResearch
+        ? streamAI(icpFullPrompt, onIcpPartial, 5000, { signal: icpAbort.signal })  // No search — research already done
+        : streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal }); // Fallback: search if Opus research failed
+
+      let raw = await icpCall;
+      clearTimeout(icpTimeoutId);
+
+      if (!raw && icpTimedOut) {
+        console.warn("[ICP] Sonnet timed out — falling back to Haiku");
+        setIcpStatus("Retrying with faster model...");
+        raw = await streamAI(icpFullPrompt, onIcpPartial, 5000);
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
