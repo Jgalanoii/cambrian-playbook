@@ -6994,16 +6994,17 @@ Return ONLY raw JSON:
       const icpTimeoutId = setTimeout(() => { icpTimedOut = true; icpAbort.abort(); }, 120000);
 
       const icpCall = sellerResearch
-        ? streamAI(icpFullPrompt, onIcpPartial, 5000, { signal: icpAbort.signal })  // No search — research already done
-        : streamAIWithSearch(icpFullPrompt, onIcpPartial, 5000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal }); // Fallback: search if Opus research failed
+        ? streamAI(icpFullPrompt, onIcpPartial, 8000, { model: SONNET, signal: icpAbort.signal })  // Sonnet — research already done, no search needed
+        : streamAIWithSearch(icpFullPrompt, onIcpPartial, 8000, { maxSearches: 2, anchorKey: "sellerName", model: SONNET, signal: icpAbort.signal }); // Fallback: search if Opus research failed
 
       let raw = await icpCall;
       clearTimeout(icpTimeoutId);
+      console.log("[ICP Pass 2] raw type:", typeof raw, raw === null ? "(null)" : typeof raw === "string" ? `string(${raw.length})` : `object keys=[${Object.keys(raw||{}).slice(0,5)}]`);
 
       if (!raw && icpTimedOut) {
         console.warn("[ICP] Sonnet timed out — falling back to Haiku");
         setIcpStatus("Retrying with faster model...");
-        raw = await streamAI(icpFullPrompt, onIcpPartial, 5000);
+        raw = await streamAI(icpFullPrompt, onIcpPartial, 8000);
       }
       if (!raw || (typeof raw === "object" && raw.error)) {
         const err = raw?.error;
