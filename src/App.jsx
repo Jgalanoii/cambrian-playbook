@@ -7,7 +7,7 @@ import { fetchOrgContext, sbPatch } from "./lib/org.js";
 import SuperAdmin from "./components/SuperAdmin.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
-import { computeFitScore, buildSignalExtractionPrompt } from "./lib/fitScoring.js";
+import { computeFitScore, buildSignalExtractionPrompt, labelForScore } from "./lib/fitScoring.js";
 
 // ── Sortable column header for Fit Check table ──
 function FitSortTh({ sortKey, sortDir, onSort, colKey, children, style }) {
@@ -5240,8 +5240,6 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     // (existing) + named customer analogues + differentiators (so a
     // company very similar to a known win scores higher).
     const icp = sellerICP?.icp || {};
-    // CAPTURE — remove after Step 1 golden-set run
-    console.log('[capture:icp]', JSON.stringify(sellerICP));
     const lobProfiles = icp.linesOfBusiness?.filter(l => l?.name) || [];
     const customerProfiles = icp.namedCustomerProfiles?.filter(c => c?.name) || [];
     const winPatterns = icp.winPatterns || {};
@@ -5583,8 +5581,6 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           adoptionProfile: s.adoptionProfile || "",
         };
         memberUpdates[matchedName] = { orgSize: signals.orgSize || s.orgSize || "", ownership: signals.ownership || s.ownership || "", ownershipType: signals.ownershipType || s.ownershipType || "" };
-        // CAPTURE — remove after Step 1 golden-set run
-        console.log('[capture]', JSON.stringify({ account: matchedName, signals, score: computed.score, label: computed.label, rawDim1: computed.rawDim1, rawDim2: computed.rawDim2, rawDim3: computed.rawDim3 }));
       });
 
       // ── Known customer override — client-side catch for fuzzy name matches ──
@@ -5598,7 +5594,7 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           if (isKnown && (s.rawDim2 !== undefined ? s.rawDim2 : (s.dim2 ?? 0)) < 30) {
             s.rawDim2 = 30; s.dim2 = 30;
             s.score = (s.rawDim1 || s.dim1 || 0) + 30 + (s.rawDim3 || s.dim3 || 0);
-            s.label = canonicalLabel(s.score);
+            s.label = labelForScore(s.score, { isCompetitor: s.isCompetitor });
             const sc = s.score; s.color = sc>=75?"var(--green)":sc>=55?"var(--amber)":"var(--red)"; s.bg = sc>=75?"var(--green-bg)":sc>=55?"var(--amber-bg)":"var(--red-bg)";
             s.customerSimilarity = "Known customer — already in the seller's customer base.";
             console.log(`[scoreFit] Known customer override: ${co} dim2 forced to 30, total=${s.score}`);

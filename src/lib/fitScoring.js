@@ -79,6 +79,15 @@ export function computeDim3(signals) {
   return 12;
 }
 
+// ── LABEL HELPER (single source of truth for all callers) ───────────────
+// Used by computeFitScore and by any client-side override that re-labels
+// after mutating a score (e.g. the known-customer dim2 boost in App.jsx).
+// Accepts the full signals object OR a plain { isCompetitor } object.
+export function labelForScore(score, signals = {}) {
+  if (signals.isCompetitor) return "Competitor";
+  return score >= 75 ? "Strong Fit" : score >= 55 ? "Potential Fit" : "Poor Fit";
+}
+
 // ── TOTAL SCORE ─────────────────────────────────────────────────────────
 export function computeFitScore(signals, sellerICP, fitWeights = { dim1: 45, dim2: 30, dim3: 25 }) {
   if (signals.isCompetitor) {
@@ -95,7 +104,7 @@ export function computeFitScore(signals, sellerICP, fitWeights = { dim1: 45, dim
   const d3 = (rawDim3 / 25) * fitWeights.dim3;
 
   const score = Math.max(0, Math.min(100, Math.round(d1 + d2 + d3)));
-  const label = score >= 75 ? "Strong Fit" : score >= 55 ? "Potential Fit" : "Poor Fit";
+  const label = labelForScore(score, signals);
 
   return { score, label, rawDim1, rawDim2, rawDim3 };
 }

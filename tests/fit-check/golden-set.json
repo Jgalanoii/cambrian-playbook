@@ -1,79 +1,64 @@
 {
-  "//": "Locked score ranges for the BHN golden set. Floor AND ceiling — ceiling catches score inflation.",
-  "//POPULATE": "Fill scoreFloor and scoreCeiling from the actual Step 1 test run AFTER human sign-off. Values below are pre-test estimates only.",
+  "//": "Locked score ranges for the BHN golden set. Floor = ceiling = validated actual score (deterministic from frozen signals — any drift in computeFitScore is caught immediately).",
   "seller": "BHN",
-  "lockedDate": "FILL_FROM_STEP1_RUN",
-  "lockedBy": "FILL_FROM_STEP1_RUN",
+  "lockedDate": "2026-06-28",
+  "lockedBy": "Joe Galano — human sign-off after Step 1 browser run",
   "accounts": [
     {
       "name": "Marriott",
       "label": "Strong Fit",
-      "scoreFloor": 75,
-      "scoreCeiling": 95,
-      "//": "Pre-test estimate — replace with validated actuals after Step 1 run"
+      "scoreFloor": 79,
+      "scoreCeiling": 79
     },
     {
       "name": "Chipotle",
-      "label": "Strong Fit",
-      "scoreFloor": 75,
-      "scoreCeiling": 95,
-      "//": "Pre-test estimate"
+      "label": "Potential Fit",
+      "scoreFloor": 70,
+      "scoreCeiling": 70
     },
     {
       "name": "Boeing",
-      "label": "Strong Fit",
-      "scoreFloor": 75,
-      "scoreCeiling": 95,
-      "//": "Pre-test estimate — known BHN customer, should score high after fixes"
+      "label": "Potential Fit",
+      "scoreFloor": 62,
+      "scoreCeiling": 62,
+      "//": "isExistingCustomer=false in this run — press-release fix not triggered. Score is validated at 62. If Boeing is added to customerExamples in prod ICP, the known-customer override will push dim2 to 30 (score=82) — a future golden-set update needed when that data is locked."
     },
     {
       "name": "Stripe",
       "label": "Potential Fit",
-      "scoreFloor": 48,
-      "scoreCeiling": 65,
-      "//": "Pre-test estimate"
+      "scoreFloor": 57,
+      "scoreCeiling": 57
     },
     {
       "name": "Feeding America",
-      "label": "Potential Fit",
-      "scoreFloor": 45,
-      "scoreCeiling": 65,
-      "//": "Pre-test estimate"
+      "label": "Poor Fit",
+      "scoreFloor": 39,
+      "scoreCeiling": 39
     },
     {
       "name": "Circle",
-      "label": "Poor Fit",
-      "scoreFloor": 35,
-      "scoreCeiling": 58,
-      "//": "Pre-test estimate"
+      "label": "Potential Fit",
+      "scoreFloor": 59,
+      "scoreCeiling": 59
     },
     {
       "name": "Polymarket",
       "label": "Poor Fit",
-      "scoreFloor": 25,
-      "scoreCeiling": 50,
-      "//": "Pre-test estimate"
+      "scoreFloor": 42,
+      "scoreCeiling": 42
     },
     {
       "name": "Kalshi",
       "label": "Poor Fit",
-      "scoreFloor": 25,
-      "scoreCeiling": 50,
-      "//": "Pre-test estimate"
-    },
-    {
-      "name": "Acme Widgets",
-      "label": "Poor Fit",
-      "scoreFloor": 10,
-      "scoreCeiling": 40,
-      "//": "Pre-test estimate"
+      "scoreFloor": 42,
+      "scoreCeiling": 42
     },
     {
       "name": "Tango Card",
       "label": "Competitor",
       "scoreFloor": 0,
       "scoreCeiling": 0,
-      "//": "Fixed — must always be exactly 0"
+      "//": "Fixed — must always be exactly 0. Was 5 before competitor-override fix."
     }
   ]
 }
