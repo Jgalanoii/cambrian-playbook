@@ -5591,9 +5591,9 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
         for (const [co, s] of Object.entries(map)) {
           const coLower = co.toLowerCase();
           const isKnown = knownCustomers.some(kc => coLower.includes(kc) || kc.includes(coLower));
-          if (isKnown && s.dim2 < 30) {
-            s.dim2 = 30;
-            s.score = (s.dim1 || 0) + 30 + (s.dim3 || 0);
+          if (isKnown && (s.rawDim2 !== undefined ? s.rawDim2 : (s.dim2 ?? 0)) < 30) {
+            s.rawDim2 = 30; s.dim2 = 30;
+            s.score = (s.rawDim1 || s.dim1 || 0) + 30 + (s.rawDim3 || s.dim3 || 0);
             s.label = canonicalLabel(s.score);
             const sc = s.score; s.color = sc>=75?"var(--green)":sc>=55?"var(--amber)":"var(--red)"; s.bg = sc>=75?"var(--green-bg)":sc>=55?"var(--amber-bg)":"var(--red-bg)";
             s.customerSimilarity = "Known customer — already in the seller's customer base.";
@@ -5613,14 +5613,15 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           const isCompetitor = competitorNames.some(cn => coNorm.includes(cn) || cn.includes(coNorm));
           if (isCompetitor) {
             s.dim1 = 0; s.dim2 = 0; s.dim3 = 0;
-            s.score = 5;
+            s.rawDim1 = 0; s.rawDim2 = 0; s.rawDim3 = 0;
+            s.score = 0;
             s.label = "Competitor";
             s.color = "var(--red)"; s.bg = "var(--red-bg)";
             s.reason = `${co} is a direct competitor of ${sellerICP?.sellerName || sellerUrl}. Not a prospect — they sell the same thing you do.`;
             s.customerSimilarity = "N/A — this is a competitor, not a prospect.";
             s.incumbentRisk = "N/A — this is a competitor.";
             s._isCompetitor = true;
-            console.log(`[scoreFit] Competitor override: ${co} → score=5, label=Competitor`);
+            console.log(`[scoreFit] Competitor override: ${co} → score=0, label=Competitor`);
           }
         }
       }
