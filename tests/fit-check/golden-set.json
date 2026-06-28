@@ -59,6 +59,13 @@
       "//": "Was 42 before sellerIdx bug fix"
     },
     {
+      "name": "Verizon",
+      "label": "Strong Fit",
+      "scoreFloor": 82,
+      "scoreCeiling": 82,
+      "//": "Real BHN customer — exercises dim2=30 existing-customer path. isExistingCustomer=true → computeDim2 returns 30 directly."
+    },
+    {
       "name": "Tango Card",
       "label": "Competitor",
       "scoreFloor": 0,

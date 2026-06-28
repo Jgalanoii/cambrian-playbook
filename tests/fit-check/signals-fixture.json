@@ -14,7 +14,7 @@
     "icp": {
       "companySize": "500-4999|5000-49999|50000+",
       "industries": ["Banking", "Fintech", "Telecom", "Hospitality", "Healthcare", "Government", "Technology/SaaS"],
-      "customerExamples": ["Travel & Hospitality Company", "Specialty Beverage Maker"],
+      "customerExamples": ["Travel & Hospitality Company", "Specialty Beverage Maker", "Verizon"],
       "competitiveAlternatives": [],
       "revenueRange": "$100M-$1B|$1B-$10B|$10B+",
       "ownershipTypes": ["Public", "PE-backed"],
@@ -183,6 +183,26 @@
       "employeeBracket": "50-499",
       "orgSize": "~150",
       "ownership": "Private (VC-backed)"
+    },
+
+    "Verizon": {
+      "//": "82% Strong Fit — slot 10, dim2=30 path. isExistingCustomer=true fires the existing-customer shortcut in computeDim2, returning 30 regardless of closestCustomerName. dim1=40 (direct, 50000+ → distance=2 from sellerIdx=2, stepB=0). dim3=12 (no competitor intel).",
+      "industryMatch": "direct",
+      "industryInSellerTargetList": true,
+      "specificProductMapping": "Employee recognition and loyalty reward distribution; digital gift card fulfillment for Verizon employee programs via Tango Rewards platform",
+      "isExistingCustomer": true,
+      "closestCustomerName": "",
+      "closestCustomerIndustry": "",
+      "customerIndustryMatch": "same",
+      "customerUseCaseMatch": "same",
+      "isCompetitor": false,
+      "competitorCustomerEvidence": "",
+      "hasVerifiedCompetitorRelationship": false,
+      "hasDeepPlatformLockin": "",
+      "ownershipType": "public",
+      "employeeBracket": "50000+",
+      "orgSize": "~105000",
+      "ownership": "Public (NASDAQ: VZ)"
     },
 
     "Tango Card": {
