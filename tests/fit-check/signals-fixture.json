@@ -1,0 +1,68 @@
+{
+  "//": "Full per-account signals fixture. Read-only after sign-off. Changing requires an explicit decision.",
+  "//POPULATE": "Fill ALL fields from the Step 1 [scoreFit] console run. Until populated, both tests exit 2 (PENDING).",
+  "seller": "BHN",
+  "lockedDate": "FILL_FROM_STEP1_RUN",
+  "lockedBy": "FILL_FROM_STEP1_RUN",
+
+  "//fitWeights": "Tests pin the default — do not capture user-tuned weights here.",
+
+  "sellerICP": {
+    "//": "Minimal ICP fields read by computeFitScore: icp.companySize (→ Dim1) and icp.customerExamples (→ Dim2).",
+    "//POPULATE": "Copy from the BHN sellerICP React state at the time of the Step 1 run (console.log(sellerICP) or React DevTools).",
+    "sellerName": "FILL_FROM_STEP1_RUN",
+    "icp": {
+      "companySize": "FILL_FROM_STEP1_RUN",
+      "customerExamples": ["FILL_FROM_STEP1_RUN"],
+      "competitiveAlternatives": ["FILL_FROM_STEP1_RUN"],
+      "industries": ["FILL_FROM_STEP1_RUN"]
+    }
+  },
+
+  "accounts": {
+    "//POPULATE": "For each account, copy the full signals object from the [scoreFit] console output during the Step 1 run. Every field the scorer reads must be present — a missing field changes which branch runs.",
+    "//SHAPE": "Required fields: industryMatch, industryInSellerTargetList, specificProductMapping, isExistingCustomer, closestCustomerName, closestCustomerIndustry, customerIndustryMatch, customerUseCaseMatch, isCompetitor, competitorCustomerEvidence, hasVerifiedCompetitorRelationship, hasDeepPlatformLockin, ownershipType, employeeBracket",
+
+    "Marriott": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Chipotle": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Boeing": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Stripe": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Feeding America": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Circle": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Polymarket": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Kalshi": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Acme Widgets": {
+      "//": "FILL_FROM_STEP1_RUN",
+      "industryMatch": null
+    },
+    "Tango Card": {
+      "//": "FILL_FROM_STEP1_RUN — will have isCompetitor: true",
+      "industryMatch": null,
+      "isCompetitor": true
+    }
+  }
+}

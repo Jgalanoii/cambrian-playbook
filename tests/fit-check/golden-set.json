@@ -1,0 +1,79 @@
+{
+  "//": "Locked score ranges for the BHN golden set. Floor AND ceiling — ceiling catches score inflation.",
+  "//POPULATE": "Fill scoreFloor and scoreCeiling from the actual Step 1 test run AFTER human sign-off. Values below are pre-test estimates only.",
+  "seller": "BHN",
+  "lockedDate": "FILL_FROM_STEP1_RUN",
+  "lockedBy": "FILL_FROM_STEP1_RUN",
+  "accounts": [
+    {
+      "name": "Marriott",
+      "label": "Strong Fit",
+      "scoreFloor": 75,
+      "scoreCeiling": 95,
+      "//": "Pre-test estimate — replace with validated actuals after Step 1 run"
+    },
+    {
+      "name": "Chipotle",
+      "label": "Strong Fit",
+      "scoreFloor": 75,
+      "scoreCeiling": 95,
+      "//": "Pre-test estimate"
+    },
+    {
+      "name": "Boeing",
+      "label": "Strong Fit",
+      "scoreFloor": 75,
+      "scoreCeiling": 95,
+      "//": "Pre-test estimate — known BHN customer, should score high after fixes"
+    },
+    {
+      "name": "Stripe",
+      "label": "Potential Fit",
+      "scoreFloor": 48,
+      "scoreCeiling": 65,
+      "//": "Pre-test estimate"
+    },
+    {
+      "name": "Feeding America",
+      "label": "Potential Fit",
+      "scoreFloor": 45,
+      "scoreCeiling": 65,
+      "//": "Pre-test estimate"
+    },
+    {
+      "name": "Circle",
+      "label": "Poor Fit",
+      "scoreFloor": 35,
+      "scoreCeiling": 58,
+      "//": "Pre-test estimate"
+    },
+    {
+      "name": "Polymarket",
+      "label": "Poor Fit",
+      "scoreFloor": 25,
+      "scoreCeiling": 50,
+      "//": "Pre-test estimate"
+    },
+    {
+      "name": "Kalshi",
+      "label": "Poor Fit",
+      "scoreFloor": 25,
+      "scoreCeiling": 50,
+      "//": "Pre-test estimate"
+    },
+    {
+      "name": "Acme Widgets",
+      "label": "Poor Fit",
+      "scoreFloor": 10,
+      "scoreCeiling": 40,
+      "//": "Pre-test estimate"
+    },
+    {
+      "name": "Tango Card",
+      "label": "Competitor",
+      "scoreFloor": 0,
+      "scoreCeiling": 0,
+      "//": "Fixed — must always be exactly 0"
+    }
+  ]
+}

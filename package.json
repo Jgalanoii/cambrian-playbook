@@ -12,6 +12,9 @@
     "test:golden": "node tests/golden-set/run.js",
     "test:golden:full": "node tests/golden-set/run.js --full",
     "test:backtest": "node tests/icp-backtest/backtest.js --self-test",
+    "test:noop": "node tests/fit-check/noop.js",
+    "test:fitscores": "node tests/fit-check/golden-scores.js",
+    "test:fitcheck": "npm run test:noop && npm run test:fitscores",
     "test": "npm run test:lint && npm run test:backtest && npm run test:golden"
   },
   "dependencies": {
