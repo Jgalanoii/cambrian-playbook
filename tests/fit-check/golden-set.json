@@ -26,32 +26,37 @@
     {
       "name": "Stripe",
       "label": "Potential Fit",
-      "scoreFloor": 57,
-      "scoreCeiling": 57
+      "scoreFloor": 59,
+      "scoreCeiling": 59,
+      "//": "Was 57 before sellerIdx bug fix (String(low) matched '50' in every bracket above 50-499)"
     },
     {
       "name": "Feeding America",
       "label": "Poor Fit",
-      "scoreFloor": 39,
-      "scoreCeiling": 39
+      "scoreFloor": 40,
+      "scoreCeiling": 40,
+      "//": "Was 39 before sellerIdx bug fix"
     },
     {
       "name": "Circle",
       "label": "Potential Fit",
-      "scoreFloor": 59,
-      "scoreCeiling": 59
+      "scoreFloor": 60,
+      "scoreCeiling": 60,
+      "//": "Was 59 before sellerIdx bug fix"
     },
     {
       "name": "Polymarket",
       "label": "Poor Fit",
-      "scoreFloor": 42,
-      "scoreCeiling": 42
+      "scoreFloor": 41,
+      "scoreCeiling": 41,
+      "//": "Was 42 before sellerIdx bug fix"
     },
     {
       "name": "Kalshi",
       "label": "Poor Fit",
-      "scoreFloor": 42,
-      "scoreCeiling": 42
+      "scoreFloor": 41,
+      "scoreCeiling": 41,
+      "//": "Was 42 before sellerIdx bug fix"
     },
     {
       "name": "Tango Card",

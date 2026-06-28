@@ -14,7 +14,8 @@
     "test:backtest": "node tests/icp-backtest/backtest.js --self-test",
     "test:noop": "node tests/fit-check/noop.js",
     "test:fitscores": "node tests/fit-check/golden-scores.js",
-    "test:fitcheck": "npm run test:noop && npm run test:fitscores",
+    "test:properties": "node tests/fit-check/properties.js",
+    "test:fitcheck": "npm run test:noop && npm run test:fitscores && npm run test:properties",
     "test": "npm run test:lint && npm run test:backtest && npm run test:golden"
   },
   "dependencies": {

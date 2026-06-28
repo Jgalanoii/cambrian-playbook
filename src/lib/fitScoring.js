@@ -27,10 +27,10 @@ export function computeDim1(signals, sellerICP) {
   // Step B: Size (tiebreaker only)
   const brackets = ["1-49", "50-499", "500-4999", "5000-49999", "50000+"];
   const sellerTarget = (sellerICP?.icp?.companySize || "").toLowerCase();
-  const sellerIdx = brackets.findIndex(b => {
-    const low = parseInt(b.split("-")[0]);
-    return sellerTarget.includes(String(low)) || sellerTarget.includes(b);
-  });
+  // Find the lowest bracket in the seller's target range. Use exact bracket string
+  // match only — the old String(low) form matched "50" in "50000+", making every
+  // seller with a target above 50 employees look identical to a "50-499" target.
+  const sellerIdx = brackets.findIndex(b => sellerTarget.includes(b));
   const targetIdx = brackets.indexOf(signals.employeeBracket);
   const distance = (sellerIdx >= 0 && targetIdx >= 0) ? Math.abs(sellerIdx - targetIdx) : 2;
   const stepB = distance === 0 ? 3 : distance === 1 ? 2 : 0;

@@ -86,7 +86,7 @@
     },
 
     "Stripe": {
-      "//": "57% Potential Fit — validated. dim1=42 (direct+productMapping+vc-backed stepC), dim2=3 (no closest customer), dim3=12.",
+      "//": "59% Potential Fit — validated. dim1=44 (direct, stepB=2 distance-1 from sellerIdx=2, vc-backed stepC=2), dim2=3 (no closest customer), dim3=12.",
       "industryMatch": "direct",
       "industryInSellerTargetList": true,
       "specificProductMapping": "Hawk Marketplace white-label reward catalog and API for fintech/payment processor partners; Fintech & Payment Processor Partnerships LOB with revenue-share model for embedded rewards",
@@ -126,7 +126,7 @@
     },
 
     "Circle": {
-      "//": "59% Potential Fit — validated. dim1=44 (direct+productMapping+vc-backed+500-4999 → distance=1), dim2=3 (no closest customer), dim3=12.",
+      "//": "60% Potential Fit — validated. dim1=45 (direct, stepB=3 distance-0 from sellerIdx=2, vc-backed stepC=2), dim2=3 (no closest customer), dim3=12.",
       "industryMatch": "direct",
       "industryInSellerTargetList": true,
       "specificProductMapping": "Hawk Marketplace white-label reward catalog and API for fintech/crypto payment processor partners; embedded rewards for stablecoin and blockchain payment use cases",
