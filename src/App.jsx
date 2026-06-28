@@ -5240,6 +5240,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
     // (existing) + named customer analogues + differentiators (so a
     // company very similar to a known win scores higher).
     const icp = sellerICP?.icp || {};
+    // CAPTURE — remove after Step 1 golden-set run
+    console.log('[capture:icp]', JSON.stringify(sellerICP));
     const lobProfiles = icp.linesOfBusiness?.filter(l => l?.name) || [];
     const customerProfiles = icp.namedCustomerProfiles?.filter(c => c?.name) || [];
     const winPatterns = icp.winPatterns || {};
@@ -5581,6 +5583,8 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           adoptionProfile: s.adoptionProfile || "",
         };
         memberUpdates[matchedName] = { orgSize: signals.orgSize || s.orgSize || "", ownership: signals.ownership || s.ownership || "", ownershipType: signals.ownershipType || s.ownershipType || "" };
+        // CAPTURE — remove after Step 1 golden-set run
+        console.log('[capture]', JSON.stringify({ account: matchedName, signals, score: computed.score, label: computed.label, rawDim1: computed.rawDim1, rawDim2: computed.rawDim2, rawDim3: computed.rawDim3 }));
       });
 
       // ── Known customer override — client-side catch for fuzzy name matches ──
