@@ -7063,6 +7063,18 @@ Return ONLY raw JSON:
             // High = 3+ core fields (normal). Medium = 1-2 (partial). Low = 0 (total failure).
             parsed._confidence = populatedCount >= 3 ? "high" : populatedCount >= 1 ? "medium" : "low";
             parsed._researchChars = 0;
+            // Re-apply manual customerExamples override — survives AI rebuilds
+            try {
+              const override = localStorage.getItem(`manualCustomers:${url}`);
+              if (override) {
+                const customers = JSON.parse(override);
+                if (Array.isArray(customers) && customers.length) {
+                  if (!parsed.icp) parsed.icp = {};
+                  parsed.icp.customerExamples = customers;
+                  console.log(`[ICP] Manual customerExamples override applied: ${customers.length} customers`);
+                }
+              }
+            } catch {}
             setSellerICP(parsed);
             lastGenSig.current.icp = getIcpSig();
 
@@ -7419,13 +7431,25 @@ Return ONLY raw JSON:
 
   // ── PERSIST ICP TO CACHE ─────────────────────────────────────────────────
   // Writes current sellerICP state to localStorage (demo-critical) and best-effort
-  // to Supabase orgs.icp (cross-device durability). localStorage key is built with
-  // icpCacheKey() — identical to the key the cache-read at line 6731 checks, so a
-  // reload will find the patched ICP immediately. Supabase failure is silent.
+  // to Supabase orgs.icp (cross-device durability). Also stores customerExamples
+  // under a separate manualCustomers:${url} key so rebuilds can re-apply them.
   const persistICPToCache = () => {
     if (!sellerUrl || !sellerICP) return;
     const url = sellerUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").replace(/^www\./, "");
+    // Write main ICP cache (same key buildSellerICP reads at cache-check time)
     try { localStorage.setItem(icpCacheKey(url), JSON.stringify(sellerICP)); } catch {}
+    // Write manual customer override — survives AI rebuilds
+    const customers = (sellerICP.icp?.customerExamples || []).filter(Boolean);
+    try {
+      if (customers.length > 0) {
+        localStorage.setItem(`manualCustomers:${url}`, JSON.stringify(customers));
+      } else {
+        localStorage.removeItem(`manualCustomers:${url}`);
+      }
+    } catch {}
+    // Keep orgCtx in sync — without this, the next buildSellerICP orgCtx-cache check
+    // would still see the old ICP (orgCtx is only updated by refreshOrgCtx(), not sbPatch)
+    setOrgCtx(prev => prev ? { ...prev, icp: sellerICP } : prev);
     if (orgCtx?.id && sbToken) {
       sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { icp: sellerICP })
         .then(() => { setEditToast("ICP saved — changes will persist on reload"); setTimeout(() => setEditToast(""), 4000); })
@@ -13818,13 +13842,15 @@ Return ONLY raw JSON:
                               <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0}}>✕</button>
                             </span>
                           ))}
-                          <span style={{background:"var(--bg-0)",border:"1px dashed var(--line-1)",borderRadius:20,padding:"3px 10px",fontSize:12,display:"flex",alignItems:"center"}}>
-                            <input
-                              placeholder="+ Add customer"
-                              style={{border:"none",outline:"none",background:"transparent",fontSize:12,color:"var(--ink-2)",width:110,fontFamily:"inherit"}}
-                              onKeyDown={e=>{if(e.key==="Enter"){const v=e.target.value.trim();if(v){setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:[...(p.icp.customerExamples||[]),v]}}));e.target.value="";}}}
-                            }/>
-                          </span>
+                        </div>
+                        <div style={{display:"flex",gap:6,marginTop:8,alignItems:"center"}}>
+                          <input id="add-customer-input"
+                            placeholder="Add existing customer"
+                            style={{flex:1,fontSize:12,padding:"4px 10px",borderRadius:20,border:"1px solid var(--line-1)",outline:"none",background:"var(--bg-0)",color:"var(--ink-1)",fontFamily:"inherit"}}
+                            onKeyDown={e=>{if(e.key==="Enter"){const el=document.getElementById("add-customer-input");const v=(el?.value||"").trim();if(v){setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:[...(p.icp.customerExamples||[]),v]}}));el.value="";el.focus();}}}}
+                          />
+                          <button onClick={()=>{const el=document.getElementById("add-customer-input");const v=(el?.value||"").trim();if(v){setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:[...(p.icp.customerExamples||[]),v]}}));el.value="";el.focus();}}}
+                            style={{fontSize:11,padding:"4px 12px",borderRadius:20,border:"1px solid var(--navy, #0044aa)44",background:"var(--navy-bg)",color:"var(--navy)",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}>Add</button>
                         </div>
                         <button
                           onClick={persistICPToCache}
