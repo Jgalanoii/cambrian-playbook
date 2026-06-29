@@ -7337,6 +7337,7 @@ Return ONLY raw JSON:
   // from true to false). Only tracks changes after the ICP is built.
   const prevICPRef = useRef(null);
   const icpBuiltRef = useRef(false);
+  const persistDebounceRef = useRef(null);
   useEffect(() => {
     if (icpLoading) { icpBuiltRef.current = false; return; }
     if (!sellerICP?.icp) { prevICPRef.current = null; return; }
@@ -7415,6 +7416,34 @@ Return ONLY raw JSON:
     }
     prevICPRef.current = JSON.parse(JSON.stringify(sellerICP));
   }, [sellerICP, icpLoading]);
+
+  // ── PERSIST ICP TO CACHE ─────────────────────────────────────────────────
+  // Writes current sellerICP state to localStorage (demo-critical) and best-effort
+  // to Supabase orgs.icp (cross-device durability). localStorage key is built with
+  // icpCacheKey() — identical to the key the cache-read at line 6731 checks, so a
+  // reload will find the patched ICP immediately. Supabase failure is silent.
+  const persistICPToCache = () => {
+    if (!sellerUrl || !sellerICP) return;
+    const url = sellerUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").replace(/^www\./, "");
+    try { localStorage.setItem(icpCacheKey(url), JSON.stringify(sellerICP)); } catch {}
+    if (orgCtx?.id && sbToken) {
+      sbPatch(`orgs?id=eq.${orgCtx.id}`, sbToken, { icp: sellerICP })
+        .then(() => { setEditToast("ICP saved — changes will persist on reload"); setTimeout(() => setEditToast(""), 4000); })
+        .catch(() => { setEditToast("ICP saved locally (cloud sync failed)"); setTimeout(() => setEditToast(""), 4000); });
+    } else {
+      setEditToast("ICP saved locally");
+      setTimeout(() => setEditToast(""), 3000);
+    }
+  };
+
+  // Auto-persist when customerExamples changes (add/remove), debounced 1500ms.
+  // icpBuiltRef guard prevents firing on initial load; icpLoading guard prevents
+  // firing during a fresh Opus build.
+  useEffect(() => {
+    if (!icpBuiltRef.current || icpLoading || !sellerICP?.icp) return;
+    clearTimeout(persistDebounceRef.current);
+    persistDebounceRef.current = setTimeout(persistICPToCache, 1500);
+  }, [JSON.stringify(sellerICP?.icp?.customerExamples)]);
 
   // ── ICP DELTA ANALYSIS — compare seller's internal ICP vs public signals ─
   // Shows where the seller's self-reported ICP diverges from what the market
@@ -13778,8 +13807,7 @@ Return ONLY raw JSON:
                         ))}
                       </div>
                     </div>
-                    {(sellerICP.icp.customerExamples||[]).filter(Boolean).length>0&&(
-                      <div>
+                    <div>
                         <div className="field-label" style={{marginBottom:4}}>Known Customers</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                           {(sellerICP.icp.customerExamples||[]).filter(Boolean).map((c,i)=>(
@@ -13790,9 +13818,20 @@ Return ONLY raw JSON:
                               <button onClick={()=>setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:p.icp.customerExamples.filter((_,j)=>j!==i)}}))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--ink-3)",padding:0}}>✕</button>
                             </span>
                           ))}
+                          <span style={{background:"var(--bg-0)",border:"1px dashed var(--line-1)",borderRadius:20,padding:"3px 10px",fontSize:12,display:"flex",alignItems:"center"}}>
+                            <input
+                              placeholder="+ Add customer"
+                              style={{border:"none",outline:"none",background:"transparent",fontSize:12,color:"var(--ink-2)",width:110,fontFamily:"inherit"}}
+                              onKeyDown={e=>{if(e.key==="Enter"){const v=e.target.value.trim();if(v){setSellerICP(p=>({...p,icp:{...p.icp,customerExamples:[...(p.icp.customerExamples||[]),v]}}));e.target.value="";}}}
+                            }/>
+                          </span>
                         </div>
+                        <button
+                          onClick={persistICPToCache}
+                          style={{marginTop:8,fontSize:11,padding:"3px 10px",background:"var(--navy-bg)",color:"var(--navy)",border:"1px solid #0044aa44",borderRadius:10,cursor:"pointer",fontWeight:600}}>
+                          Save ICP to cache
+                        </button>
                       </div>
-                    )}
                     {(()=>{
                       // Filter out past events — safety net in case the model returns old dates
                       const now = new Date();
