@@ -4878,6 +4878,16 @@ export default function App(){
   const[thePlay,setThePlay]=useState(null);
   const[playState,setPlayState]=useState("idle");
   const playBuiltRef=useRef(false); // prevents double-fire per account
+  // ── SOLUTION CONSOLIDATION FEATURE FLAG ─────────────────────────────────────
+  // cc_sol_consolidation: "on" | "off" (default "off")
+  // When "on": Step 6 = merged "Solution Architecture & Strategy" stage
+  //   (architecture-forward: SA cards → RIVER hypothesis, one scroll).
+  //   Step 7 "End Call →" routes back to Step 6.
+  //   Step 8 remains accessible for the full detailed view.
+  //   Renumbering 10→8 is deferred to build step 7 of HANDOFF_02.
+  // Canonical Solution Thesis = { riverHypo, solutionFit } — both already
+  //   persisted in getSessionSnap(); no new state needed.
+  const solConEnabled = (() => { try { return localStorage.getItem("cc_sol_consolidation") === "on"; } catch { return false; } })();
   const[briefStatus,setBriefStatus]=useState("");
   const[briefError,setBriefError]=useState("");
   const[riverHypo,setRiverHypo]=useState(null);
@@ -11460,8 +11470,12 @@ Return ONLY raw JSON:
   }, [selectedAccount?.company]);
 
   // ── CHAT ASSISTANT — send handler ──────────────────────────────────────────
-  const STEPS=["Start","ICP & RFPs","Import","Fit Scores","Accounts","Brief","Prep","Live Call","Solution Fit","Post-Call & Next Steps"];
-  const STEP_TIPS=["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Solution architecture review, stakeholder mapping, and fit assessment","Deal routing, CRM note, follow-up email, and next steps"];
+  const STEPS=solConEnabled
+    ?["Start","ICP & RFPs","Import","Fit Scores","Accounts","Brief","Strategy","Live Call","Solution Fit","Post-Call & Next Steps"]
+    :["Start","ICP & RFPs","Import","Fit Scores","Accounts","Brief","Prep","Live Call","Solution Fit","Post-Call & Next Steps"];
+  const STEP_TIPS=solConEnabled
+    ?["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Recommended solution + RIVER strategy — the single canonical thesis for this deal","Real-time coaching and structured note capture","Full solution architecture review, stakeholder mapping, and fit assessment","Deal routing, CRM note, follow-up email, and next steps"]
+    :["Set up your selling org","Build your ICP and discover who you should be calling","Upload accounts or let AI generate matched targets","See which prospects actually fit — scored on 3 dimensions","Select a prospect and set the deal context","Full company intelligence — every field is editable","Conversation hypothesis, discovery questions, and coaching","Real-time coaching and structured note capture","Solution architecture review, stakeholder mapping, and fit assessment","Deal routing, CRM note, follow-up email, and next steps"];
   const chatContextLabel = selectedAccount?.company
     ? `${STEPS[step]} · ${selectedAccount.company}`
     : STEPS[step];
