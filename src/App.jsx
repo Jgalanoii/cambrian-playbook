@@ -4630,13 +4630,14 @@ export default function App(){
     setCohorts([]); setRows([]); setSelectedAccount(null); setPostCall(null);
     setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
     setIcpEdits([]); setUserEdits([]);
+    playBuiltRef.current = false; solutionFitBuiltRef.current = false;
     setStep(0);
   };
   const clearAccount = () => {
     setSelectedAccount(null); setBrief(null); setRiverHypo(null); setPostCall(null);
     setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
     setContactRole(''); setSelectedOutcomes([]);
-    setThePlay(null); setPlayState("idle"); playBuiltRef.current = false;
+    setThePlay(null); setPlayState("idle"); playBuiltRef.current = false; solutionFitBuiltRef.current = false;
     setStep(3);
   };
   const lastSaved = () => null; // reserved for future use
@@ -4878,6 +4879,7 @@ export default function App(){
   const[thePlay,setThePlay]=useState(null);
   const[playState,setPlayState]=useState("idle");
   const playBuiltRef=useRef(false); // prevents double-fire per account
+  const solutionFitBuiltRef=useRef(false); // prevents double-fire of pre-call SA (solConEnabled path only)
   // ── SOLUTION CONSOLIDATION FEATURE FLAG ─────────────────────────────────────
   // cc_sol_consolidation: "on" | "off" (default "off")
   // When "on": Step 6 = merged "Solution Architecture & Strategy" stage
@@ -8185,7 +8187,10 @@ Return ONLY raw JSON:
     const hasExecs     = !!(brief?.keyExecutives?.length || brief?.keyContacts?.length);
     const hasSolutions = !!(brief?.solutionMapping?.some(s => s?.product));
     const hasSignals   = !!(brief?.recentSignals?.some(s => s?.trim()) || brief?.recentHeadlines);
-    if (hasOverview && hasExecs && hasSolutions && hasSignals) {
+    // Under solConEnabled: Play also waits for pre-call SA recommendation before firing.
+    // Amendment B: no "unavailable" — building/full/weak-inputs only. Hold in building until ready.
+    const hasSARecommendation = !solConEnabled || !!solutionFit?.saRecommendation;
+    if (hasOverview && hasExecs && hasSolutions && hasSignals && hasSARecommendation) {
       console.log("[ThePlay] Data quorum met — firing build");
       buildThePlay();
     }
@@ -8194,6 +8199,7 @@ Return ONLY raw JSON:
     brief?.companySnapshot,
     brief?.keyExecutives?.length, brief?.keyContacts?.length,
     brief?.solutionMapping?.length, brief?.recentSignals?.length, brief?.recentHeadlines,
+    solutionFit?.saRecommendation, // NEW: Play waits for pre-call SA under solConEnabled
     playState,
   ]);
 
@@ -8247,6 +8253,28 @@ Return ONLY raw JSON:
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playState]);
+
+  // ── PRE-CALL AUTO-RUN (Amendment E, Step 2) ─────────────────────────────
+  // When cc_sol_consolidation is on: fires buildSolutionFit({preCall:true}) + buildRiverHypo
+  // automatically once the brief's required sections have real data (_completedSections quorum).
+  // Gate: all four sections — overview, executives, solutions, live — must have fired their
+  // real merge callbacks (NOT the 90s hard timeout). Idempotent: solutionFitBuiltRef prevents
+  // double-fire. Play holds in "building" until saRecommendation is present (Phase 2 gate above).
+  useEffect(() => {
+    if (!solConEnabled) return;
+    if (solutionFitBuiltRef.current) return;
+    if (!brief || !selectedAccount || !sellerICP) return;
+    if (!(sellerICP?.icp?.productCatalog||[]).length) return;
+    const completed = new Set(brief?._completedSections || []);
+    const allRequired = completed.has("overview") && completed.has("executives") &&
+                        completed.has("solutions") && completed.has("live");
+    if (!allRequired) return;
+    solutionFitBuiltRef.current = true;
+    console.log("[sol-con] Brief quorum met — firing pre-call SA + hypothesis in parallel");
+    buildSolutionFit({ preCall: true });
+    if (!riverHypo && !riverHypoLoading) buildRiverHypo(brief, selectedAccount);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brief?._completedSections, !!brief, !!selectedAccount, !!sellerICP]);
 
   // Load cached ICP when sellerUrl is set but ICP not loaded.
   // Uses cacheOnly — only serves from cache, never starts expensive fresh builds.
@@ -8598,7 +8626,7 @@ Return ONLY raw JSON:
     setBriefError("");
     setBriefStatus("Researching " + member.company + "...");
     setBrief(null);
-    setThePlay(null); setPlayState("idle"); playBuiltRef.current = false;
+    setThePlay(null); setPlayState("idle"); playBuiltRef.current = false; solutionFitBuiltRef.current = false;
     setGateAnswers({}); setGateNotes({}); setRiverData({}); setDiscoveryQs(null);
     setRiverHypo(null); setSolutionFit(null); setActiveRiver(0);
     setDealValue(""); setDealClassification(""); setNotes(""); setPostCall(null);
@@ -10448,40 +10476,53 @@ Return ONLY raw JSON:
   // with SA rigor: business requirements → architecture → fit mapping.
   // Frameworks: Rajput (biz→digital), McSweeney (stakeholder alignment),
   // Richards/Ford (architecture attributes), Fowler (integration patterns)
-  const buildSolutionFit = async() => {
+  const buildSolutionFit = async({preCall=false}={}) => {
+    // isPreCall: flag on AND caller passed preCall:true. Flag off OR preCall=false → byte-identical post-call path.
+    const isPreCall = preCall && solConEnabled;
     if(!brief) {
       console.warn("[solutionFit] No brief — cannot generate SA review");
       setSolutionFit({ saRecommendation: "No brief available. Generate a brief first, then run the SA review." });
       return;
     }
-    if(!postCall) {
+    if(!isPreCall && !postCall) {
       console.warn("[solutionFit] No post-call data — running with available data");
       // Don't block — proceed with whatever data we have (brief, notes, gate answers, discovery)
     }
     setSolutionFitLoading(true);
+    const tStart = isPreCall ? Date.now() : 0;
 
-    // Check what discovery data is missing and warn the user
+    // Check what discovery data is missing and warn the user (post-call only — not applicable pre-call)
     const missingItems = [];
-    const totalGates = RIVER_STAGES.flatMap(s => s.gates);
-    const answeredGates = totalGates.filter(g => gateAnswers[g.id]);
-    const totalDisc = RIVER_STAGES.flatMap(s => s.discovery);
-    const capturedDisc = totalDisc.filter(p => riverData[p.id]);
+    if (!isPreCall) {
+      const totalGates = RIVER_STAGES.flatMap(s => s.gates);
+      const answeredGates = totalGates.filter(g => gateAnswers[g.id]);
+      const totalDisc = RIVER_STAGES.flatMap(s => s.discovery);
+      const capturedDisc = totalDisc.filter(p => riverData[p.id]);
 
-    if (answeredGates.length < totalGates.length * 0.5) missingItems.push(`Gate questions: only ${answeredGates.length}/${totalGates.length} answered — the more gates you answer during the call, the more accurate the SA review`);
-    if (capturedDisc.length < totalDisc.length * 0.3) missingItems.push(`Discovery notes: only ${capturedDisc.length}/${totalDisc.length} captured — pain points, budget signals, and technical requirements drive the architecture assessment`);
-    if (!notes?.trim()) missingItems.push("Call notes: no free-form notes entered — capture what you heard in the prospect's own words");
-    RIVER_STAGES.forEach(s => {
-      const stageGates = s.gates.filter(g => gateAnswers[g.id]);
-      const stageDisc = s.discovery.filter(p => riverData[p.id]);
-      if (stageGates.length === 0 && stageDisc.length === 0) missingItems.push(`${s.letter} — ${s.label}: no data captured for this RIVER stage`);
-    });
+      if (answeredGates.length < totalGates.length * 0.5) missingItems.push(`Gate questions: only ${answeredGates.length}/${totalGates.length} answered — the more gates you answer during the call, the more accurate the SA review`);
+      if (capturedDisc.length < totalDisc.length * 0.3) missingItems.push(`Discovery notes: only ${capturedDisc.length}/${totalDisc.length} captured — pain points, budget signals, and technical requirements drive the architecture assessment`);
+      if (!notes?.trim()) missingItems.push("Call notes: no free-form notes entered — capture what you heard in the prospect's own words");
+      RIVER_STAGES.forEach(s => {
+        const stageGates = s.gates.filter(g => gateAnswers[g.id]);
+        const stageDisc = s.discovery.filter(p => riverData[p.id]);
+        if (stageGates.length === 0 && stageDisc.length === 0) missingItems.push(`${s.letter} — ${s.label}: no data captured for this RIVER stage`);
+      });
+    }
 
     const solutions = (brief.solutionMapping||[]).filter(s=>s?.product).map(s=>s.product+": "+s.fit).join("\n");
-    const riverCapture = RIVER_STAGES.map(s=>{
+    // riverCapture: post-call only — no discovery data exists pre-call
+    const riverCapture = !isPreCall ? RIVER_STAGES.map(s=>{
       const gates = s.gates.map(g=>`${g.q}: ${gateAnswers[g.id]||"Not answered"}`).join("; ");
       const disc  = s.discovery.map(p=>`${p.label}: ${riverData[p.id]||"Not captured"}`).join("; ");
       return `${s.label}: ${gates} | ${disc}`;
-    }).join("\n");
+    }).join("\n") : "";
+    // Pre-call: surface brief signals to ground the recommendation
+    const fitSignals = isPreCall ? [
+      ...(brief.recentSignals||[]).filter(s=>s?.trim()).slice(0,5),
+      brief.recentHeadlines||"",
+      brief.fitRationale||"",
+      brief.icpFitScore != null ? `ICP Fit Score: ${brief.icpFitScore}%` : "",
+    ].filter(Boolean).join("\n") : "";
 
     // Same proof pack the brief and hypothesis used. SA review should
     // ground its "confirmedSolutions" + "saRecommendation" in the
@@ -10494,52 +10535,96 @@ Return ONLY raw JSON:
     const saApprovalGates = KL_APPROVAL_GATES ? KL_APPROVAL_GATES.slice(0, 300) : "";
     const saExecPerspectives = KL_EXEC_PERSPECTIVES ? KL_EXEC_PERSPECTIVES.slice(0, 300) : "";
 
-    const prompt =
-      proofPack +
-      `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call. Your recommendations MUST cite specific differentiators from the proof pack above and name analogous customers from the seller's customer list when justifying why a solution will succeed.\n\n`+
-      KL_GRAHAM + `\n`+
-      (saVertical ? `\nINDUSTRY ARCHITECTURE CONTEXT:\n${saVertical}\nUse this to assess integration complexity and tech maturity for this vertical.\n` : "") +
-      (saApprovalGates ? `\nAPPROVAL GATE INTELLIGENCE:\n${saApprovalGates}\nFactor gate complexity into implementation phasing.\n` : "") +
-      (saExecPerspectives ? `\nEXECUTIVE BUYING CONTEXT:\n${saExecPerspectives}\nAlign PMF assessment with how this company's C-suite evaluates vendors.\n` : "") +
-      ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `\nCOMPETITIVE POSITIONING: Seller competes against ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. If discovery revealed the prospect uses any of these, assess displacement feasibility and switching costs in your SA recommendation.\n` : "") +
-      `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
-      `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
-      `BRIEFING COMPLETENESS: ${confidence}%\n`+
-      `DEAL ROUTE: ${postCall?.dealRoute||"Unknown"}\n\n`+
-      `BRIEF NARRATIVE (hypothesis and solution fit MUST align with these):\n`+
-      (brief.elevatorPitch ? `Elevator Pitch: ${brief.elevatorPitch.slice(0,300)}\n` : "") +
-      (brief.strategicTheme ? `Strategic Theme: ${brief.strategicTheme.slice(0,250)}\n` : "") +
-      (brief.sellerOpportunity ? `Seller Opportunity: ${brief.sellerOpportunity.slice(0,200)}\n` : "") +
-      `\nSELLER SOLUTIONS MAPPED PRE-CALL:\n${solutions}\n\n`+
-      `DISCOVERY CAPTURE (what we actually heard):\n${riverCapture}\n\n`+
-      `CALL NOTES:\n${sanitizeForPrompt(notes||"None")}\n\n`+
-      `POST-CALL SUMMARY: ${postCall?.callSummary||""}\n\n`+
-      (missingItems.length ? `═══ MISSING DISCOVERY DATA ═══\nThe following inputs are missing or light. Acknowledge these gaps in your assessment — do NOT fill them with assumptions. For each gap, note what it means for the SA review quality and what the rep should capture on the next call:\n${missingItems.map(m => `- ${m}`).join("\n")}\n\nInclude a "discoveryGaps" array in your output listing what specific information the rep needs to go back and capture.\n\n` : "") +
-      `ACCURACY: NEVER invent facts. Every confirmed solution, architecture note, gap, and metric must be grounded in the discovery capture or proof pack above. If something was not discussed or verified, do not assert it — say "[Not confirmed in discovery]". Do not fabricate integration requirements, tech stack details, or implementation timelines that were not surfaced in the call.\n\n`+
-      `Apply Solution Architecture principles:\n`+
-      `- Business alignment: does what we sell map to what they need to BUILD?\n`+
-      `- Stakeholder alignment: do the right people see the value?\n`+
-      `- Architecture quality: evaluate scalability, reliability, maintainability, security fit\n`+
-      `- Integration complexity: what patterns does connecting to their stack require?\n`+
-      `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n`+
-      `Apply PMF qualification signals from research data:\n`+
-      `- Sean Ellis 40% Rule: would >40% of this team say "very disappointed" if the solution went away? Score overallPMFSignal accordingly\n`+
-      `- Churn risk flags: single stakeholder champion, evaluation team >7 without named owner, no dedicated use case owner = flag in architectureGaps\n`+
-      `- Must-have test: if the problem they described would persist without a solution, that is Strong PMF; if it is a nice-to-have workflow improvement, that is Weak PMF\n`+
-      `Apply Graham Margin of Safety: only confirm solutions where value delivered is 3-5x the price.\n\n`+
-      `Return ONLY raw JSON, start with {:\n`+
-      `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"adoptionProfile":"Innovator or Early Adopter or Early Majority or Late Majority",`+`"adoptionImplication":"1 sentence: what their adoption profile means for messaging, proof points, and sales approach",`+`"pmfAssessment":{"targetCustomerFit":"Strong/Partial/Weak — is this genuinely the ICP?","underservedNeedFit":"Strong/Partial/Weak — is the need real and unmet?","valuePropositionFit":"Strong/Partial/Weak — does our value prop land clearly?","overallPMFSignal":"Strong/Emerging/Weak — overall PMF signal from this discovery"},`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
-      `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
-      `"architectureGaps":[{"gap":"What the customer needs that we didn't fully address","recommendation":"How to bridge it — our product, partnership, or configuration"}],`+
-      `"implementationRoadmap":"2-3 sentence recommended phasing based ONLY on what was discussed in discovery. Do NOT invent timelines or milestones — if no implementation details were discussed, say 'Implementation phasing to be determined based on discovery.'",`+
-      `"integrationComplexity":"Low / Medium / High with 1-sentence explanation",`+
-      `"successMetrics":["Outcome tied to a goal the prospect ACTUALLY STATED in discovery — do NOT invent metrics they didn't mention","Metric 2 from discovery","Metric 3 or empty if not discussed"],`+
-      `"discoveryGaps":["Specific info the rep needs to capture on the next call to strengthen this assessment"],`+
-      // cc_sol_consolidation flag: enrich saRecommendation with explicit lead-with recommendation.
-      // Flag off = byte-identical to the original prompt (zero demo risk — buildSolutionFit is shared).
-      (solConEnabled
-        ? `"saRecommendation":"Two parts. PART 1 — RECOMMENDED SOLUTION (explicit, evidence-anchored): Lead with [exact product/solution name from confirmedSolutions] because [specific buyer-fit signals from discovery + ICP match evidence + brief that support this product for this buyer — cite the actual signal, not a generic statement]. What the evidence reasonably and defensibly supports, not an absolute claim. Max 2 sentences, fact-anchored. PART 2 — CRITICAL WIN FACTOR: The single most important thing to get right in the proposal to win this deal — specific and concrete."}`
-        : `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`);
+    // ── PROMPT: pre-call (from brief+signals+ICP) vs post-call (from discovery) ──
+    // isPreCall=true  → pre-call mode, always solConEnabled here
+    // isPreCall=false → post-call path, byte-identical to original when !solConEnabled
+    const prompt = isPreCall
+      ? /* PRE-CALL: recommend best solution to lead with from brief + signals + ICP, no discovery data */
+        proofPack +
+        `You are a senior Solution Architect recommending the best solution to LEAD WITH before a discovery call. Analyze the company brief, buyer-fit signals, and the seller's product catalog to identify which solution is most likely to land — and why. No discovery call data exists yet; ground your recommendation in what we know from research.\n\n`+
+        KL_GRAHAM + `\n`+
+        (saVertical ? `\nINDUSTRY ARCHITECTURE CONTEXT:\n${saVertical}\nUse this to assess likely integration complexity and tech maturity for this vertical.\n` : "") +
+        (saApprovalGates ? `\nAPPROVAL GATE INTELLIGENCE:\n${saApprovalGates}\nFactor gate complexity into your recommended entry strategy.\n` : "") +
+        (saExecPerspectives ? `\nEXECUTIVE BUYING CONTEXT:\n${saExecPerspectives}\nAlign your recommendation with how this company's C-suite evaluates vendors.\n` : "") +
+        ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `\nCOMPETITIVE CONTEXT: Seller competes against ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. Consider which of these the prospect may already use when assessing lead-with solution.\n` : "") +
+        `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
+        `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
+        `BRIEFING COMPLETENESS: ${confidence}%\n\n`+
+        `BRIEF NARRATIVE:\n`+
+        (brief.elevatorPitch ? `Elevator Pitch: ${brief.elevatorPitch.slice(0,300)}\n` : "") +
+        (brief.strategicTheme ? `Strategic Theme: ${brief.strategicTheme.slice(0,250)}\n` : "") +
+        (brief.sellerOpportunity ? `Seller Opportunity: ${brief.sellerOpportunity.slice(0,200)}\n` : "") +
+        (brief.companySnapshot ? `Company Snapshot: ${brief.companySnapshot.slice(0,300)}\n` : "") +
+        `\nSELLER SOLUTIONS (ranked by pre-call fit):\n${solutions}\n\n`+
+        (fitSignals ? `PRE-CALL BUYER-FIT SIGNALS (from research — anchor your recommendation here):\n${fitSignals}\n\n` : "") +
+        `MODE: PRE-CALL — no discovery call has happened yet. Recommend the solution most likely to resonate given what we know. "confirmedSolutions" = recommended lead solutions (not post-discovery confirmed). "discoveryGaps" = critical questions to validate on the call.\n\n`+
+        `ACCURACY: Ground every claim in the proof pack, signals, and brief above. Do NOT invent discovery data or call notes. Flag where confidence is limited by lack of call data with "[Pre-call estimate — validate on call]".\n\n`+
+        `Apply Solution Architecture principles:\n`+
+        `- Business alignment: does what we sell map to what they need to BUILD?\n`+
+        `- Stakeholder alignment: do the right people see the value?\n`+
+        `- Architecture quality: assess scalability, reliability, maintainability, security fit from signals\n`+
+        `- Integration complexity: what patterns does connecting to their stack likely require?\n`+
+        `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n`+
+        `Apply PMF qualification signals from research data:\n`+
+        `- Sean Ellis 40% Rule: based on signals, would >40% say "very disappointed" if the solution went away? Score overallPMFSignal accordingly\n`+
+        `- Must-have test: if the signals indicate the problem persists without a solution, that is Strong PMF; nice-to-have = Weak PMF\n`+
+        `Apply Graham Margin of Safety: only recommend solutions where value delivered is 3-5x the price.\n\n`+
+        `Return ONLY raw JSON, start with {:\n`+
+        `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"adoptionProfile":"Innovator or Early Adopter or Early Majority or Late Majority",`+`"adoptionImplication":"1 sentence: what their likely adoption profile means for messaging and sales approach pre-call",`+`"pmfAssessment":{"targetCustomerFit":"Strong/Partial/Weak — is this genuinely the ICP?","underservedNeedFit":"Strong/Partial/Weak — is the need real and unmet based on signals?","valuePropositionFit":"Strong/Partial/Weak — does our value prop align with their signals?","overallPMFSignal":"Strong/Emerging/Weak — overall PMF signal from brief and research"},`+`"dmiacRationale":"Why this stage, based on what we know from research and signals",`+`"entryStrategy":"Given their DMAIC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale — and why, based on signals",`+`"confirmedSolutions":[{"product":"solution to lead with (from product catalog)","fitScore":85,"fitLabel":"Strong Fit / Likely Fit / Potential Fit","businessAlignment":"How it maps to their stated need and buyer-fit signals","architectureNotes":"What we know about their likely stack/scale from research — note pre-call estimates as such","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Key risks to validate on the call"}],`+
+        `"revisedSolutions":[{"product":"solution that is less likely to land pre-call","change":"Downgraded/Removed","reason":"Why, based on signals and brief"}],`+
+        `"architectureGaps":[{"gap":"What we don't know yet that could affect fit","recommendation":"How to surface this on the discovery call"}],`+
+        `"implementationRoadmap":"Recommended initial approach based on signals. Keep tentative — no discovery yet. Do NOT invent timelines.",`+
+        `"integrationComplexity":"Low / Medium / High with 1-sentence explanation based on what we know from research",`+
+        `"successMetrics":["Metric tied to an outcome this company has stated or signalled","Metric 2","Metric 3 or empty if not evidenced"],`+
+        `"discoveryGaps":["Critical question to validate on the call — not answered by research alone"],`+
+        // Pre-call always runs under solConEnabled — enriched saRecommendation is always appropriate here
+        `"saRecommendation":"Two parts. PART 1 — RECOMMENDED SOLUTION (explicit, evidence-anchored): Lead with [exact product/solution name from confirmedSolutions] because [specific buyer-fit signals from brief + ICP match evidence that support this product for this buyer — cite the actual signal]. What the evidence reasonably and defensibly supports pre-call, not an absolute claim. Max 2 sentences, fact-anchored. PART 2 — CRITICAL WIN FACTOR: The single most important thing to establish in the first conversation to open this deal — specific and concrete."}`
+      : /* POST-CALL: byte-identical to original when !solConEnabled, enriched saRecommendation when solConEnabled */
+        proofPack +
+        `You are a senior Solution Architect evaluating product-to-customer fit after a discovery call. Your recommendations MUST cite specific differentiators from the proof pack above and name analogous customers from the seller's customer list when justifying why a solution will succeed.\n\n`+
+        KL_GRAHAM + `\n`+
+        (saVertical ? `\nINDUSTRY ARCHITECTURE CONTEXT:\n${saVertical}\nUse this to assess integration complexity and tech maturity for this vertical.\n` : "") +
+        (saApprovalGates ? `\nAPPROVAL GATE INTELLIGENCE:\n${saApprovalGates}\nFactor gate complexity into implementation phasing.\n` : "") +
+        (saExecPerspectives ? `\nEXECUTIVE BUYING CONTEXT:\n${saExecPerspectives}\nAlign PMF assessment with how this company's C-suite evaluates vendors.\n` : "") +
+        ((sellerICP?.icp?.competitiveAlternatives||[]).length ? `\nCOMPETITIVE POSITIONING: Seller competes against ${(sellerICP.icp.competitiveAlternatives||[]).map(c=>typeof c==="object"?c.name:c).filter(Boolean).join(", ")}. If discovery revealed the prospect uses any of these, assess displacement feasibility and switching costs in your SA recommendation.\n` : "") +
+        `COMPANY: ${selectedAccount?.company} | Industry: ${selectedAccount?.ind||"Unknown"}\n`+
+        `OUTCOMES SOUGHT: ${selectedOutcomes.join(", ")||"Not defined"}\n`+
+        `BRIEFING COMPLETENESS: ${confidence}%\n`+
+        `DEAL ROUTE: ${postCall?.dealRoute||"Unknown"}\n\n`+
+        `BRIEF NARRATIVE (hypothesis and solution fit MUST align with these):\n`+
+        (brief.elevatorPitch ? `Elevator Pitch: ${brief.elevatorPitch.slice(0,300)}\n` : "") +
+        (brief.strategicTheme ? `Strategic Theme: ${brief.strategicTheme.slice(0,250)}\n` : "") +
+        (brief.sellerOpportunity ? `Seller Opportunity: ${brief.sellerOpportunity.slice(0,200)}\n` : "") +
+        `\nSELLER SOLUTIONS MAPPED PRE-CALL:\n${solutions}\n\n`+
+        `DISCOVERY CAPTURE (what we actually heard):\n${riverCapture}\n\n`+
+        `CALL NOTES:\n${sanitizeForPrompt(notes||"None")}\n\n`+
+        `POST-CALL SUMMARY: ${postCall?.callSummary||""}\n\n`+
+        (missingItems.length ? `═══ MISSING DISCOVERY DATA ═══\nThe following inputs are missing or light. Acknowledge these gaps in your assessment — do NOT fill them with assumptions. For each gap, note what it means for the SA review quality and what the rep should capture on the next call:\n${missingItems.map(m => `- ${m}`).join("\n")}\n\nInclude a "discoveryGaps" array in your output listing what specific information the rep needs to go back and capture.\n\n` : "") +
+        `ACCURACY: NEVER invent facts. Every confirmed solution, architecture note, gap, and metric must be grounded in the discovery capture or proof pack above. If something was not discussed or verified, do not assert it — say "[Not confirmed in discovery]". Do not fabricate integration requirements, tech stack details, or implementation timelines that were not surfaced in the call.\n\n`+
+        `Apply Solution Architecture principles:\n`+
+        `- Business alignment: does what we sell map to what they need to BUILD?\n`+
+        `- Stakeholder alignment: do the right people see the value?\n`+
+        `- Architecture quality: evaluate scalability, reliability, maintainability, security fit\n`+
+        `- Integration complexity: what patterns does connecting to their stack require?\n`+
+        `- Shrivastav: identify AI/ML, cloud-native, or legacy modernization signals — which products fit best?\n`+
+        `Apply PMF qualification signals from research data:\n`+
+        `- Sean Ellis 40% Rule: would >40% of this team say "very disappointed" if the solution went away? Score overallPMFSignal accordingly\n`+
+        `- Churn risk flags: single stakeholder champion, evaluation team >7 without named owner, no dedicated use case owner = flag in architectureGaps\n`+
+        `- Must-have test: if the problem they described would persist without a solution, that is Strong PMF; if it is a nice-to-have workflow improvement, that is Weak PMF\n`+
+        `Apply Graham Margin of Safety: only confirm solutions where value delivered is 3-5x the price.\n\n`+
+        `Return ONLY raw JSON, start with {:\n`+
+        `{"dmiacStage":"Define or Measure or Analyze or Improve or Control",`+`"adoptionProfile":"Innovator or Early Adopter or Early Majority or Late Majority",`+`"adoptionImplication":"1 sentence: what their adoption profile means for messaging, proof points, and sales approach",`+`"pmfAssessment":{"targetCustomerFit":"Strong/Partial/Weak — is this genuinely the ICP?","underservedNeedFit":"Strong/Partial/Weak — is the need real and unmet?","valuePropositionFit":"Strong/Partial/Weak — does our value prop land clearly?","overallPMFSignal":"Strong/Emerging/Weak — overall PMF signal from this discovery"},`+`"dmiacRationale":"Why this stage, and what it means for the selling approach and timing",`+`"entryStrategy":"Given their DMIAC stage: Quick Win Pilot, Diagnostic Workshop, Full Deployment, or Expansion and Scale - and why",`+`"confirmedSolutions":[{"product":"solution name","fitScore":85,"fitLabel":"Strong Fit","businessAlignment":"How it maps to their stated business need","architectureNotes":"Integration complexity, scale requirements, tech stack considerations","implementationPhase":"Phase 1 (Immediate) or Phase 2 (3-6mo) or Phase 3 (6-12mo)","risks":"Specific technical or organizational risks"}],`+
+        `"revisedSolutions":[{"product":"solution that needs re-evaluation","change":"Upgraded/Downgraded/Removed","reason":"Why it changed based on what we learned"}],`+
+        `"architectureGaps":[{"gap":"What the customer needs that we didn't fully address","recommendation":"How to bridge it — our product, partnership, or configuration"}],`+
+        `"implementationRoadmap":"2-3 sentence recommended phasing based ONLY on what was discussed in discovery. Do NOT invent timelines or milestones — if no implementation details were discussed, say 'Implementation phasing to be determined based on discovery.'",`+
+        `"integrationComplexity":"Low / Medium / High with 1-sentence explanation",`+
+        `"successMetrics":["Outcome tied to a goal the prospect ACTUALLY STATED in discovery — do NOT invent metrics they didn't mention","Metric 2 from discovery","Metric 3 or empty if not discussed"],`+
+        `"discoveryGaps":["Specific info the rep needs to capture on the next call to strengthen this assessment"],`+
+        // cc_sol_consolidation flag: enrich saRecommendation with explicit lead-with recommendation.
+        // Flag off = byte-identical to the original prompt (zero demo risk — buildSolutionFit is shared).
+        (solConEnabled
+          ? `"saRecommendation":"Two parts. PART 1 — RECOMMENDED SOLUTION (explicit, evidence-anchored): Lead with [exact product/solution name from confirmedSolutions] because [specific buyer-fit signals from discovery + ICP match evidence + brief that support this product for this buyer — cite the actual signal, not a generic statement]. What the evidence reasonably and defensibly supports, not an absolute claim. Max 2 sentences, fact-anchored. PART 2 — CRITICAL WIN FACTOR: The single most important thing to get right in the proposal to win this deal — specific and concrete."}`
+          : `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`);
 
     // Stream solution fit for progressive rendering — increased token budget for complex JSON
     const result = await streamAI(prompt, (partial) => {
@@ -10553,6 +10638,7 @@ Return ONLY raw JSON:
     }, 4500);
 
     if (result) {
+      if (isPreCall) console.log(`[PerformanceWatch K] pre-call SA: ${Date.now()-tStart}ms target:${selectedAccount?.company}`);
       console.log("[solutionFit] Generated:", Object.keys(result).length, "fields");
       setSolutionFit(result);
     } else {
@@ -17291,7 +17377,7 @@ Return ONLY raw JSON:
             onExport={doExport}
             onCSV={()=>csvExport("Solution-Fit", solutionFit)}
             onNext={()=>{runPostCall();setStep(9);}}
-            onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}
+            onNextAccount={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");playBuiltRef.current=false;solutionFitBuiltRef.current=false;}}
           />
         )}
 
@@ -17453,7 +17539,7 @@ Return ONLY raw JSON:
                   {(postLoading || postCall?.dealRoute==="Unknown" || postCall?.callSummary?.includes("failed")) && (
                   <button className="btn btn-gold" disabled={postLoading} onClick={()=>{const go=()=>{setPostCall(null);setPostLoading(true);setTimeout(runPostCall,100);};if(!checkNoChange("postCall",getPostCallSig,go))go();}}>{postLoading ? "⏳ Regenerating..." : "↻ Regenerate"}</button>
                   )}
-                  <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");}}>New Account</button>
+                  <button className="btn btn-primary" onClick={()=>{setStep(3);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setContactRole("");playBuiltRef.current=false;solutionFitBuiltRef.current=false;}}>New Account</button>
                   <button className="btn btn-secondary" onClick={()=>{setStep(2);setCohorts([]);setSelectedCohort(null);setSelectedOutcomes([]);setSelectedAccount(null);setGateAnswers({});setRiverData({});setPostCall(null);setSolutionFit(null);setBrief(null);setNotes("");setRows([]);setHeaders([]);setFileName("");clearSession();}}>New Dataset</button>
                 </div>
               </>
