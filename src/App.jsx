@@ -1184,6 +1184,15 @@ ANTI-HALLUCINATION RULES (apply to EVERY response):
 - A sales rep who cites a wrong fact in a meeting loses credibility permanently. Your job is to be RIGHT, not to be complete.
 - NEVER disparage or undermine the selling organization. You are building tools FOR the seller. Do not editorialize about their product quality, pricing, viability, or market position.`;
 
+// ── THE PLAY — synthesis system prompt ──────────────────────────────────────
+// Prepended to ANTI_HALLUCINATION_SYSTEM for buildThePlay(). Establishes the
+// extractive rule and identity anchor for the synthesis pass.
+const PLAY_SYSTEM = `You are building a sales play for ONE specific session. Output valid JSON only.
+EXTRACTIVE RULE: You may only assert facts that appear in the SOURCE SECTIONS provided.
+Do not introduce any claim, name, number, or title not present in the source. If a fact
+is not in the source, omit it — never infer, estimate, or approximate. Every sentence you
+write must be traceable to a labeled source section.`;
+
 async function streamAI(prompt, onChunk, maxTok=2000, { model = null, signal = null, system = null } = {}) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Wrap the initial fetch in retry. Once the stream is open we let it run
@@ -1399,12 +1408,12 @@ async function streamAIWithSearch(prompt, onChunk, maxTok=2000, { maxSearches=1,
 
 // callAI: JSON-specific wrapper around claudeFetch. Delegates all HTTP/retry
 // logic to claudeFetch, then extracts + repairs JSON from the response.
-async function callAI(prompt, { maxTokens = 5500, skipJsonSuffix = false } = {}){
+async function callAI(prompt, { maxTokens = 5500, skipJsonSuffix = false, model: modelOverride = null, system: systemOverride = null } = {}){
   const d = await claudeFetch({
-    model:activeModel(),
+    model: modelOverride || activeModel(),
     max_tokens:maxTokens,
     temperature:0,
-    system:ANTI_HALLUCINATION_SYSTEM,
+    system: systemOverride || ANTI_HALLUCINATION_SYSTEM,
     messages:[
       {role:"user",content:prompt + (skipJsonSuffix ? '' : '\n\nRespond with ONLY raw JSON starting with {. No prose, no markdown, no explanation.')},
     ],
@@ -1464,6 +1473,124 @@ function repairJSON(s) {
     }
   }
   return out;
+}
+
+// ── THE PLAY — pure helper functions (v2-staging) ────────────────────────────
+
+// buildPlayPrompt: assembles the identity-anchored, extractive synthesis prompt.
+// Pure function — no side effects, unit-testable.
+function buildPlayPrompt(targetCompany, targetDomain, sellerICP, brief, fitScore) {
+  const trunc = (v, n) => (typeof v === "string" ? v : (JSON.stringify(v) || "")).slice(0, n);
+  const sf = (s) => sanitizeForPrompt(s || "");
+  const seller    = sf(sellerICP?.sellerName || sellerICP?.sellerUrl || "");
+  const sellerDesc= sf(sellerICP?.sellerDescription || "");
+  const catalog   = (sellerICP?.icp?.productCatalog || []).slice(0, 3).map(p => sf(typeof p === "string" ? p : p?.name || "")).filter(Boolean).join(", ");
+  const customers = (sellerICP?.icp?.verifiedCustomers || sellerICP?.icp?.customerExamples || []).slice(0, 3).map(sf).join(", ");
+  const p1 = `${trunc(brief?.companySnapshot, 2000)} · revenue:${brief?.revenue||""} · employees:${brief?.employeeCount||""} · HQ:${brief?.headquarters||""} · ${brief?.fundingProfile||""}`.slice(0, 3000);
+  const p2 = trunc(JSON.stringify([...(brief?.keyExecutives || []), ...(brief?.keyContacts || [])]), 2000);
+  const p4 = trunc(JSON.stringify(brief?.solutionMapping || []), 2000);
+  const p5 = `${(brief?.recentSignals || []).join(" · ")} · ${brief?.recentHeadlines||""} · ${brief?.growthSignals||""} · sentiment:${brief?.publicSentiment?.sentimentSummary||""}`.slice(0, 2000);
+  const p3 = brief?.strategicTheme ? `${brief.strategicTheme} · ${brief.openingAngle||""} · ${brief.sellerOpportunity||""}`.slice(0, 1500) : null;
+  const fitLabel  = fitScore ? `${fitScore.label} · ${fitScore.score}%` : "Not scored";
+  const bar = "═".repeat(55);
+  return `${bar}
+You are building a sales play for ONE specific session.
+SELLER: ${seller} (selling ${sellerDesc})
+TARGET COMPANY: ${sf(targetCompany)} (${sf(targetDomain)})
+DIRECTION OF SALE: ${seller} → ${sf(targetCompany)}
+Every sentence must be about ${sf(targetCompany)} specifically. If you find yourself writing
+about a different company, stop. This is a play for ${sf(targetCompany)} only.
+FIT SCORE: ${fitLabel}
+${bar}
+
+SOURCE SECTIONS (carry labels through to output):
+[P1: COMPANY OVERVIEW]
+${p1}
+[P2: EXECUTIVES]
+${p2}
+[P4: SOLUTIONS MATCH]
+${p4}
+[P5: LIVE SIGNALS]
+${p5}
+${p3 ? `[P3: STRATEGY]\n${p3}\n` : ""}[ICP: SELLER CONTEXT]
+${sellerDesc} · products:${catalog} · customers:${customers}
+
+TASK: Build The Play for ${seller} selling into ${sf(targetCompany)}. Output valid JSON only.
+
+OUTPUT SCHEMA:
+{
+  "situation": "2-3 sentences. What's happening at ${sf(targetCompany)} now, relevant to ${seller}. Ground in [P1]/[P5]. Name the signal.",
+  "whyNow": "1-2 sentences. Which ${seller} product fits + the [P5] signal making it timely. Reference a named product.",
+  "yourMove": "2-3 sentences. Who to contact (name+title from [P2] ONLY), channel, opening angle. Directive.",
+  "primaryContact": { "name": "from [P2] only", "title": "from [P2] only", "rationale": "1 sentence from [P2]" },
+  "elevatorPitch": "3-4 sentences tailored to ${sf(targetCompany)}. May cite a verified customer from [ICP]. No capabilities not in [ICP].",
+  "draftEmailSubject": "One line, specific to ${sf(targetCompany)}.",
+  "draftEmailBody": "4-6 sentences: credibility → ${sf(targetCompany)} pain → low-friction ask.",
+  "topProduct": "Product name from [P4 solutionMapping] / [ICP] only — exact match.",
+  "keySignal": "Single most important [P5] signal making this timely — one sentence.",
+  "sectionSources": { "situation": ["P1","P5"], "whyNow": ["P4","P5"], "yourMove": ["P2"], "elevatorPitch": ["P4","ICP"], "primaryContact": ["P2"] }
+}`;
+}
+
+// validatePlay: run 6 post-generation checks. Returns { play, playState }.
+// Mutates play inline to strip bad clauses. Never throws.
+function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
+  if (!play || typeof play !== "object") return { play: null, playState: "unavailable" };
+  let state = "full";
+  const targetLower = (targetCompany || "").toLowerCase();
+  const domainLower  = (targetDomain || "").toLowerCase();
+  const sellerLower  = (sellerICP?.sellerName || "").toLowerCase();
+
+  // Check 1 — target company present
+  const playStr = JSON.stringify(play).toLowerCase();
+  if (!playStr.includes(targetLower) && (!domainLower || !playStr.includes(domainLower))) {
+    console.warn("[ThePlay] Check 1 FAIL: target not found in play output");
+    return { play: null, playState: "unavailable" };
+  }
+
+  // Check 2 — no competitor names in generative fields
+  const competitors = (brief?.competitors || [])
+    .map(c => (typeof c === "string" ? c : c?.name || "").toLowerCase())
+    .filter(c => c && c !== targetLower && c !== sellerLower);
+  const strFields = ["situation", "whyNow", "yourMove", "elevatorPitch", "draftEmailBody"];
+  for (const field of strFields) {
+    if (typeof play[field] !== "string") continue;
+    for (const comp of competitors) {
+      if (play[field].toLowerCase().includes(comp)) {
+        const sentences = play[field].split(/(?<=[.!?])\s+/);
+        play[field] = sentences.filter(s => !s.toLowerCase().includes(comp)).join(" ").trim();
+        console.warn(`[ThePlay] Check 2: stripped competitor ref "${comp}" from ${field}`);
+      }
+    }
+  }
+
+  // Check 3 — primaryContact name in P2 source
+  const p2Str = JSON.stringify([...(brief?.keyExecutives || []), ...(brief?.keyContacts || [])]).toLowerCase();
+  const contactName = (play?.primaryContact?.name || "").toLowerCase().trim();
+  if (contactName && !p2Str.includes(contactName)) {
+    console.warn("[ThePlay] Check 3 FAIL: primaryContact not found in P2");
+    play.primaryContact = null;
+    if (state === "full") state = "contactUnconfirmed";
+  }
+
+  // Check 4 — topProduct in solutionMapping (preferred) or ICP catalog
+  const smProducts  = (brief?.solutionMapping || []).map(s => (s?.product || "").toLowerCase());
+  const catProducts = (sellerICP?.icp?.productCatalog || []).map(p => (typeof p === "string" ? p : p?.name || "").toLowerCase());
+  const topProd = (play?.topProduct || "").toLowerCase().trim();
+  if (topProd && !smProducts.some(p => p && (p.includes(topProd) || topProd.includes(p))) &&
+                 !catProducts.some(p => p && (p.includes(topProd) || topProd.includes(p)))) {
+    console.warn("[ThePlay] Check 4 FAIL: topProduct not in solutionMapping/ICP");
+    play.topProduct = null;
+  }
+
+  // Check 5 — sectionSources populated
+  if (!play.sectionSources || typeof play.sectionSources !== "object" || !Object.keys(play.sectionSources).length) {
+    console.warn("[ThePlay] Check 5: sectionSources missing — provenance unverified");
+  }
+
+  // Check 6 implicit: we only reach here if JSON.parse succeeded in callAI
+
+  return { play, playState: state };
 }
 
 // ── SANITIZE WEB SEARCH RESULTS ──────────────────────────────────────────
@@ -4442,6 +4569,7 @@ export default function App(){
     setSelectedAccount(null); setBrief(null); setRiverHypo(null); setPostCall(null);
     setSolutionFit(null); setNotes(''); setGateAnswers({}); setRiverData({});
     setContactRole(''); setSelectedOutcomes([]);
+    setThePlay(null); setPlayState("idle"); playBuiltRef.current = false;
     setStep(3);
   };
   const lastSaved = () => null; // reserved for future use
@@ -4679,6 +4807,10 @@ export default function App(){
   // Brief state — always an object or null; never undefined
   const[brief,setBrief]=useState(null);
   const[briefLoading,setBriefLoading]=useState(false);
+  // The Play synthesis state (v2-staging) — playState ∈ {idle,building,full,reduced,contactUnconfirmed,unavailable}
+  const[thePlay,setThePlay]=useState(null);
+  const[playState,setPlayState]=useState("idle");
+  const playBuiltRef=useRef(false); // prevents double-fire per account
   const[briefStatus,setBriefStatus]=useState("");
   const[briefError,setBriefError]=useState("");
   const[riverHypo,setRiverHypo]=useState(null);
@@ -7871,6 +8003,64 @@ Return ONLY raw JSON:
     setStageKey(k => k + 1);
   }, [step]);
 
+  // ── THE PLAY — synthesis pass (v2-staging) ───────────────────────────────
+  // Runs after brief quorum met; produces the extractive play card at top of Step 5.
+  // Feature flag: localStorage "cc_play_synthesis" = "on" (default) | "off" | "shadow"
+  const buildThePlay = async () => {
+    const flagVal = (() => { try { return localStorage.getItem("cc_play_synthesis") || "on"; } catch { return "on"; } })();
+    if (flagVal === "off") return;
+    // Full Session only — Quick Brief has no seller context
+    if (!sellerUrl || sellerUrl === "research-only") return;
+    // Quorum — required sections
+    const ls = brief?._loadingSections || {};
+    const requiredDone = ls.overview === false && ls.executives === false && ls.solutions === false && ls.live === false;
+    const requiredInputs = !!(selectedAccount?.company && selectedAccount?.company_url && sellerICP && (sellerICP?.icp?.productCatalog || []).length > 0);
+    if (!requiredDone || !requiredInputs) {
+      if (flagVal !== "shadow") setPlayState("unavailable");
+      return;
+    }
+    // Double-fire guard
+    if (playBuiltRef.current) return;
+    playBuiltRef.current = true;
+    const targetCompany = selectedAccount.company;
+    const targetDomain  = selectedAccount.company_url;
+    const fitScore      = fitScores[targetCompany] || null;
+    const preferredDone = ls.strategy === false && !!fitScore?.score;
+    if (flagVal !== "shadow") setPlayState("building");
+    setTrackingContext(targetCompany, sellerUrl, "play-synthesis");
+    try {
+      const prompt = buildPlayPrompt(targetCompany, targetDomain, sellerICP, brief, fitScore);
+      const playSystem = PLAY_SYSTEM + "\n" + ANTI_HALLUCINATION_SYSTEM;
+      let parsed = await callAI(prompt, { maxTokens: 1200, model: SONNET, system: playSystem });
+      if (!parsed) {
+        console.warn("[ThePlay] Parse failed — retrying once");
+        parsed = await callAI(prompt, { maxTokens: 1200, model: SONNET, system: playSystem });
+      }
+      if (!parsed) {
+        console.warn("[ThePlay] Parse failed after retry → unavailable");
+        if (flagVal !== "shadow") setPlayState("unavailable");
+        return;
+      }
+      const { play: validated, playState: vs } = validatePlay(parsed, targetCompany, targetDomain, brief, sellerICP);
+      if (!validated) {
+        console.warn("[ThePlay] Validation → unavailable");
+        if (flagVal !== "shadow") setPlayState("unavailable");
+        return;
+      }
+      const finalState = !preferredDone ? "reduced" : vs;
+      if (flagVal === "shadow") {
+        console.log(`[ThePlay] Shadow — state:${finalState} target:${targetCompany}`, JSON.stringify(validated).slice(0, 300));
+        return;
+      }
+      setThePlay(validated);
+      setPlayState(finalState);
+      console.log(`[ThePlay] Built — state:${finalState} target:${targetCompany}`);
+    } catch (e) {
+      console.warn("[ThePlay] Build error:", e.message);
+      if (flagVal !== "shadow") setPlayState("unavailable");
+    }
+  };
+
   // ── Milestone celebration triggers — watch state transitions ────────────
   // These must be AFTER all useState declarations to avoid temporal dead zone
   // in production builds (minifier renames variables, TDZ becomes a runtime crash).
@@ -7892,6 +8082,17 @@ Return ONLY raw JSON:
   useEffect(()=>{ if(step===7) celebrate("call_started"); },[step]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
+
+  // The Play quorum trigger — fires when required brief sections complete
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const ls = brief?._loadingSections;
+    if (!ls) return;
+    const requiredDone = ls.overview === false && ls.executives === false && ls.solutions === false && ls.live === false;
+    if (requiredDone && brief?.companySnapshot && thePlay === null && playState !== "building" && sellerUrl && sellerUrl !== "research-only") {
+      buildThePlay();
+    }
+  }, [brief?._loadingSections, brief?.companySnapshot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load cached ICP when sellerUrl is set but ICP not loaded.
   // Uses cacheOnly — only serves from cache, never starts expensive fresh builds.
@@ -8243,6 +8444,7 @@ Return ONLY raw JSON:
     setBriefError("");
     setBriefStatus("Researching " + member.company + "...");
     setBrief(null);
+    setThePlay(null); setPlayState("idle"); playBuiltRef.current = false;
     setGateAnswers({}); setGateNotes({}); setRiverData({}); setDiscoveryQs(null);
     setRiverHypo(null); setSolutionFit(null); setActiveRiver(0);
     setDealValue(""); setDealClassification(""); setNotes(""); setPostCall(null);
@@ -14904,6 +15106,105 @@ Return ONLY raw JSON:
             {/* Brief content — renders as soon as brief is set (not null) */}
             {brief&&(
               <>
+                {/* ── THE PLAY card — v2-staging synthesis pass ──────────── */}
+                {playState !== "idle" && sellerUrl !== "research-only" && (()=>{
+                  const V = {
+                    panel1:"rgba(22,28,46,.92)", panel2:"rgba(12,16,28,.92)",
+                    lineL:"rgba(122,140,176,.30)", txt:"#eef2f8", mut:"#8b97ad",
+                    coral:"#ff6a3d", mint:"#5eead4", amber:"#f4b740",
+                    mono:"ui-monospace,SFMono-Regular,Menlo,Consolas,monospace",
+                  };
+                  const cardStyle = {
+                    background:`linear-gradient(180deg,${V.panel1},${V.panel2})`,
+                    border:`1px solid ${V.lineL}`, borderLeft:`3px solid ${V.coral}`,
+                    borderRadius:14, backdropFilter:"blur(6px)", padding:"20px 24px",
+                    marginBottom:20, color:V.txt,
+                    boxShadow:"0 18px 50px rgba(0,0,0,.45),0 0 50px rgba(94,234,212,.05)",
+                  };
+                  const labStyle = {
+                    fontFamily:V.mono, fontSize:10, fontWeight:700, color:V.mint,
+                    letterSpacing:1.5, minWidth:74, textTransform:"uppercase", flexShrink:0, paddingTop:2,
+                  };
+                  const rowStyle = {display:"flex",gap:12,alignItems:"flex-start",marginBottom:12,lineHeight:1.6};
+                  const coralBtn = {
+                    background:V.coral, color:"#1a0c06", fontWeight:800, border:"none",
+                    borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer",
+                    boxShadow:"0 0 22px rgba(255,106,61,.45)",
+                  };
+                  const eyebrow = (
+                    <div style={{fontFamily:V.mono,fontSize:11,color:V.coral,letterSpacing:2,textTransform:"uppercase",marginBottom:playState==="building"?12:4}}>
+                      THE PLAY
+                    </div>
+                  );
+                  if (playState === "building") return (
+                    <div style={cardStyle}>
+                      {eyebrow}
+                      <div style={{color:V.mut,fontSize:13,marginBottom:16}}>Building your play…</div>
+                      {[0,1,2].map(i=>(
+                        <div key={i} style={{...rowStyle,marginBottom:10}}>
+                          <div style={{...labStyle,background:"rgba(122,140,176,.12)",borderRadius:3,height:10,width:56}}/>
+                          <div style={{background:"rgba(122,140,176,.10)",borderRadius:3,height:10,flex:1}}/>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                  if (playState === "unavailable" || !thePlay) return (
+                    <div style={{...cardStyle,borderLeft:`3px solid ${V.mut}`}}>
+                      {eyebrow}
+                      <div style={{color:V.mut,fontSize:13}}>Couldn't build a confident play for this account. Full research is available below.</div>
+                    </div>
+                  );
+                  const play = thePlay;
+                  const fitScore = fitScores[selectedAccount?.company];
+                  return (
+                    <div style={cardStyle}>
+                      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
+                        <div>
+                          {eyebrow}
+                          <div style={{fontSize:18,fontWeight:800,color:V.txt}}>{selectedAccount?.company}</div>
+                        </div>
+                        {fitScore && (
+                          <div style={{fontFamily:V.mono,fontSize:12,background:"rgba(94,234,212,.12)",color:V.mint,border:`1px solid ${V.mint}44`,borderRadius:20,padding:"4px 12px",fontWeight:700,whiteSpace:"nowrap",marginTop:4}}>
+                            {(fitScore.label||"").replace(" Fit","").toUpperCase()} · {fitScore.score}
+                          </div>
+                        )}
+                      </div>
+                      {playState==="reduced"&&(
+                        <div style={{background:`rgba(244,183,64,.12)`,border:`1px solid ${V.amber}44`,borderRadius:8,padding:"6px 12px",marginBottom:14,fontSize:12,color:V.amber}}>
+                          Built on partial brief — strategic context incomplete
+                        </div>
+                      )}
+                      {play.situation&&<div style={rowStyle}><span style={labStyle}>Situation</span><span style={{fontSize:13,color:V.txt}}>{play.situation}</span></div>}
+                      {play.whyNow&&<div style={rowStyle}><span style={labStyle}>Why Now</span><span style={{fontSize:13,color:V.txt}}>{play.whyNow}</span></div>}
+                      {play.yourMove&&(
+                        <div style={rowStyle}>
+                          <span style={labStyle}>Your Move</span>
+                          <span style={{fontSize:13,color:V.txt}}>
+                            {playState==="contactUnconfirmed"&&<span style={{color:V.amber,display:"block",marginBottom:4,fontSize:12}}>Contact not confirmed — verify in full brief.</span>}
+                            {play.yourMove}
+                          </span>
+                        </div>
+                      )}
+                      {play.keySignal&&<div style={rowStyle}><span style={labStyle}>Signal</span><span style={{fontSize:13,color:V.mut,fontStyle:"italic"}}>{play.keySignal}</span></div>}
+                      <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap",alignItems:"center"}}>
+                        {play.elevatorPitch&&(
+                          <button style={coralBtn} onClick={()=>copyText(play.elevatorPitch,"play_pitch")}>
+                            {copied==="play_pitch"?"Copied ✓":"Copy Pitch"}
+                          </button>
+                        )}
+                        {play.draftEmailBody&&(
+                          <button style={{...coralBtn,background:"transparent",color:V.coral,border:`1px solid ${V.coral}55`,boxShadow:"none"}}
+                            onClick={()=>copyText(`Subject: ${play.draftEmailSubject||""}\n\n${play.draftEmailBody}`,"play_email")}>
+                            {copied==="play_email"?"Copied ✓":"Copy Email"}
+                          </button>
+                        )}
+                        {play.topProduct&&<span style={{fontFamily:V.mono,fontSize:11,color:V.mut,marginLeft:4}}>→ {play.topProduct}</span>}
+                      </div>
+                    </div>
+                  );
+                })()}
+                {/* ── END THE PLAY card ─────────────────────────────────── */}
+
                 {(briefError || brief._error || brief._failedSections?.length > 0) && (
                   <div style={{background:"var(--amber-bg)",border:"1.5px solid var(--amber)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--amber)",marginBottom:8}}>
