@@ -15806,7 +15806,7 @@ Return ONLY raw JSON:
                     <div className="bb-icon">↑</div>
                     <div>
                       <div className="bb-title">How You Help</div>
-                      <div className="bb-sub">{brief.sellerSnapshot||`Your products mapped to ${selectedAccount?.company}`}</div>
+                      <div className="bb-sub">{solConEnabled?`Solutions ranked by fit — refine in your Strategy stage`:(brief.sellerSnapshot||`Your products mapped to ${selectedAccount?.company}`)}</div>
                     </div>
                     {bbChevron("solutions")}
                   </div>
@@ -15828,7 +15828,9 @@ Return ONLY raw JSON:
                             </div>
                           )}
                         </div>
-                        <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})} placeholder="Why this fits..."/>
+                        {solConEnabled
+                          ? <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{item.fit}</div>
+                          : <EF value={item.fit||""} onChange={v=>patchBrief(b=>{b.solutionMapping[i]={...b.solutionMapping[i],fit:v};})} placeholder="Why this fits..."/>}
                         {(item.jobToBeDone||item.painRelieved||item.gainCreated)&&(
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10}}>
                             {item.jobToBeDone&&(<div style={{background:"var(--bg-0)",borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:700,color:"var(--tan-0)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:3}}>Job-to-be-Done</div><div style={{fontSize:12,color:"var(--ink-0)",lineHeight:1.5}}>{item.jobToBeDone}</div></div>)}
