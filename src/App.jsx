@@ -1570,7 +1570,7 @@ function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
   if (contactName && !p2Str.includes(contactName)) {
     console.warn("[ThePlay] Check 3 FAIL: primaryContact not found in P2");
     play.primaryContact = null;
-    if (state === "full") state = "contactUnconfirmed";
+    play._contactCleared = true; // rendered as an informational note; not a separate play state
   }
 
   // Check 4 — topProduct in solutionMapping (preferred) or ICP catalog
@@ -1623,20 +1623,25 @@ function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
     const v = toCanonical(cm[1]);
     if (v !== null && v >= 10) corpusNums.add(v);
   }
-  const numRe = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb])?)\b/gi;
+  // Only check "factual" statistics — numbers with explicit scale/unit context.
+  // Group 1: scale-suffixed or percentage (14M, 2B, 450K, 21%, 14 million, 35 percent)
+  // Group 2: bare number immediately before a factual unit word (220 countries, 14k employees)
+  // Deliberately excludes: "30 days", "20 minutes", "48 hours" (temporal/rhetorical) and bare ordinals.
+  const FACTUAL_NUM_RE = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb]|%|percent))\b|\b(\d[\d,.]+(?:,\d{3})*)\s+(?=(?:employees?|customers?|countries|brands?|users?|locations?|markets?|languages?|members?|partners?|clients?|accounts?|stores?|sites?|offices?|cities|people|recipients?|companies|businesses|organizations?)\b)/gi;
   for (const field of strFields) {
     if (typeof play[field] !== "string") continue;
-    const matches = [...play[field].matchAll(numRe)].map(m => m[1].trim());
-    for (const num of matches) {
-      const v = toCanonical(num);
+    for (const m of [...play[field].matchAll(FACTUAL_NUM_RE)]) {
+      const numStr = (m[1] || m[2] || "").trim();
+      if (!numStr) continue;
+      const v = toCanonical(numStr);
       if (v === null || v < 10) continue;
       if (!corpusNums.has(v)) {
-        const escaped = num.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const escaped = numStr.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const sentences = play[field].split(/(?<=[.!?])\s+/);
         const filtered = sentences.filter(s => !new RegExp(`\\b${escaped}\\b`, "i").test(s));
         if (filtered.length < sentences.length) {
           play[field] = filtered.join(" ").trim();
-          console.warn(`[ThePlay] Check 7: stripped unsourced stat "${num}" (${v}) from ${field}`);
+          console.warn(`[ThePlay] Check 7: stripped unsourced factual stat "${numStr}" (${v}) from ${field}`);
         }
       }
     }
@@ -2413,6 +2418,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     ...BLANK_BRIEF,
     companySnapshot: `Researching ${co}...`,
     _loadingSections: {overview:true, executives:true, strategy:true, solutions:true, live:true, roles:true, deepIntel:true},
+    _completedSections: [], // populated only by actual merge callbacks, NOT by the 90s hard timeout
     _klVersions: _klActiveVersions, // which knowledge layers were injected for this brief
     _generatedAt: Date.now(),
   };
@@ -2427,9 +2433,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (!prev) return prev;
     if (!r1 || typeof r1 !== "object") {
       return {...prev, _error: (prev._error || "Brief generation partial — Overview failed. Try Regenerate."),
-              _loadingSections: {...(prev._loadingSections||{}), overview:false}};
+              _loadingSections: {...(prev._loadingSections||{}), overview:false},
+              _completedSections: [...new Set([...(prev._completedSections||[]), "overview"])]};
     }
-    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), overview:false}};
+    const next = {...prev,
+      _loadingSections: {...(prev._loadingSections||{}), overview:false},
+      _completedSections: [...new Set([...(prev._completedSections||[]), "overview"])]};
     P1_FIELDS.forEach(f => { if (r1[f] !== undefined) next[f] = r1[f]; });
 
     // Post-process: contamination detector
@@ -2503,7 +2512,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   };
   const mergeExecs = (r2) => (prev) => {
     if (!prev) return prev;
-    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), executives:false}};
+    const next = {...prev,
+      _loadingSections: {...(prev._loadingSections||{}), executives:false},
+      _completedSections: [...new Set([...(prev._completedSections||[]), "executives"])]};
     if (r2?.keyExecutives?.length) next.keyExecutives = sanitizeWebResult(r2.keyExecutives);
     else { next._failedSections = [...(prev._failedSections||[]), "executives"]; }
     if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
@@ -2534,7 +2545,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   };
   const mergeSolutions = (r4) => (prev) => {
     if (!prev) return prev;
-    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), solutions:false}};
+    const next = {...prev,
+      _loadingSections: {...(prev._loadingSections||{}), solutions:false},
+      _completedSections: [...new Set([...(prev._completedSections||[]), "solutions"])]};
     console.log("[p4-merge] r4:", r4 ? `keys=[${Object.keys(r4).join(",")}] products=${(r4.solutionMapping||[]).filter(s=>s?.product).length} contacts=${(r4.keyContacts||[]).length} mobilizer=${!!r4.mobilizer?.description}` : "NULL");
     if (!r4) { next._failedSections = [...(prev._failedSections||[]), "solutions"]; }
     if (r4?.solutionMapping?.some(s=>s?.product)) next.solutionMapping = r4.solutionMapping;
@@ -2546,7 +2559,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   };
   const mergeLive = (r5raw) => (prev) => {
     if (!prev) return prev;
-    const next = {...prev, _loadingSections: {...(prev._loadingSections||{}), live:false}};
+    const next = {...prev,
+      _loadingSections: {...(prev._loadingSections||{}), live:false},
+      _completedSections: [...new Set([...(prev._completedSections||[]), "live"])]};
     if (!r5raw) { next._failedSections = [...(prev._failedSections||[]), "live"]; return next; }
     const r5 = sanitizeWebResult(r5raw); // Sanitize web search results
     const errorWords = ["unable","cannot","search failed","not available","web search"];
@@ -4859,7 +4874,7 @@ export default function App(){
   // Brief state — always an object or null; never undefined
   const[brief,setBrief]=useState(null);
   const[briefLoading,setBriefLoading]=useState(false);
-  // The Play synthesis state (v2-staging) — playState ∈ {idle,building,full,reduced,contactUnconfirmed,unavailable}
+  // The Play synthesis state (v2-staging) — playState ∈ {idle,building,full,weak-inputs,unavailable}
   const[thePlay,setThePlay]=useState(null);
   const[playState,setPlayState]=useState("idle");
   const playBuiltRef=useRef(false); // prevents double-fire per account
@@ -8056,48 +8071,23 @@ Return ONLY raw JSON:
   }, [step]);
 
   // ── THE PLAY — synthesis pass (v2-staging) ───────────────────────────────
-  // Runs after brief quorum met; produces the extractive play card at top of Step 5.
+  // Fires only after Phase 2 trigger confirms all required data is present.
+  // Two terminal states: "full" (play shown) or "unavailable" (silent — no card shown).
+  // "building" is set by Phase 1 trigger; "weak-inputs" by the 150s timeout.
   // Feature flag: localStorage "cc_play_synthesis" = "on" (default) | "off" | "shadow"
   const buildThePlay = async () => {
     const flagVal = (() => { try { return localStorage.getItem("cc_play_synthesis") || "on"; } catch { return "on"; } })();
     if (flagVal === "off") return;
-    // Full Session only — Quick Brief has no seller context
     if (!sellerUrl || sellerUrl === "research-only") return;
-    // Quorum — required sections
-    const ls = brief?._loadingSections || {};
-    const requiredDone = ls.overview === false && ls.executives === false && ls.solutions === false && ls.live === false;
-    const requiredInputs = !!(selectedAccount?.company && selectedAccount?.company_url && sellerICP && (sellerICP?.icp?.productCatalog || []).length > 0);
-    if (!requiredDone || !requiredInputs) {
-      if (flagVal !== "shadow") setPlayState("unavailable");
-      return;
-    }
-    // Data-aware quorum — flag-only check is insufficient because the 90s hard timeout forces
-    // _loadingSections all-false even when sections never loaded data. Check actual brief content.
-    const LOADING_STUB = /^Researching /i;
-    const sectionHasData = {
-      overview:   !!brief.companySnapshot && !LOADING_STUB.test(brief.companySnapshot),
-      executives: !!(brief.keyExecutives?.length || brief.keyContacts?.length),
-      solutions:  !!(brief.solutionMapping?.some(s => s?.product)),
-      live:       !!(brief.recentSignals?.some(s => s?.trim()) || brief.recentHeadlines),
-    };
-    const hasAnyData = Object.values(sectionHasData).some(Boolean);
-    if (!hasAnyData) {
-      console.warn("[ThePlay] Quorum: no data in any required section (all timed out?) — skipping");
-      if (flagVal !== "shadow") setPlayState("unavailable");
-      return;
-    }
-    const timedOutSections = !Object.values(sectionHasData).every(Boolean);
-    if (timedOutSections) {
-      console.warn("[ThePlay] Quorum: some sections timed out without data — will cap finalState at 'reduced'");
-    }
+    // Safety guard (Phase 1 + Phase 2 check these too; defense in depth)
+    if (!selectedAccount?.company || !selectedAccount?.company_url) return;
+    if (!sellerICP || !(sellerICP?.icp?.productCatalog || []).length) return;
     // Double-fire guard
     if (playBuiltRef.current) return;
     playBuiltRef.current = true;
     const targetCompany = selectedAccount.company;
     const targetDomain  = selectedAccount.company_url;
     const fitScore      = fitScores[targetCompany] || null;
-    const preferredDone = ls.strategy === false && !!fitScore?.score;
-    if (flagVal !== "shadow") setPlayState("building");
     setTrackingContext(targetCompany, sellerUrl, "play-synthesis");
     try {
       const prompt = buildPlayPrompt(targetCompany, targetDomain, sellerICP, brief, fitScore);
@@ -8108,27 +8098,25 @@ Return ONLY raw JSON:
         parsed = await callAI(prompt, { maxTokens: 1200, model: SONNET, system: playSystem });
       }
       if (!parsed) {
-        console.warn("[ThePlay] Parse failed after retry → unavailable");
+        console.warn("[ThePlay] Parse failed after retry — no card shown");
         if (flagVal !== "shadow") setPlayState("unavailable");
         return;
       }
-      const { play: validated, playState: vs } = validatePlay(parsed, targetCompany, targetDomain, brief, sellerICP);
+      const { play: validated } = validatePlay(parsed, targetCompany, targetDomain, brief, sellerICP);
       if (!validated) {
-        console.warn("[ThePlay] Validation → unavailable");
+        console.warn("[ThePlay] Validation failed — no card shown");
         if (flagVal !== "shadow") setPlayState("unavailable");
         return;
       }
-      // Check 8 — fit-score consistency stamp: record the score used at build time so
-      // the render can detect drift if scoring re-runs after the play is built.
+      // Check 8: stamp score used at build time for drift detection in render
       validated._fitScore = fitScore?.score ?? null;
-      const finalState = timedOutSections || !preferredDone ? "reduced" : vs;
       if (flagVal === "shadow") {
-        console.log(`[ThePlay] Shadow — state:${finalState} target:${targetCompany}`, JSON.stringify(validated).slice(0, 300));
+        console.log(`[ThePlay] Shadow — state:full target:${targetCompany}`, JSON.stringify(validated).slice(0, 300));
         return;
       }
       setThePlay(validated);
-      setPlayState(finalState);
-      console.log(`[ThePlay] Built — state:${finalState} target:${targetCompany}`);
+      setPlayState("full");
+      console.log(`[ThePlay] Built — state:full target:${targetCompany}`);
     } catch (e) {
       console.warn("[ThePlay] Build error:", e.message);
       if (flagVal !== "shadow") setPlayState("unavailable");
@@ -8157,16 +8145,98 @@ Return ONLY raw JSON:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(postCall?.dealRoute) celebrate("post_call"); },[postCall?.dealRoute]);
 
-  // The Play quorum trigger — fires when required brief sections complete
+  // ── THE PLAY — 3-phase trigger system ──────────────────────────────────────
+  //
+  // Phase 1: Set "building" spinner as soon as brief loading begins (or brief is ready from cache).
+  //          Decoupled from when the AI call fires — spinner appears immediately.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const ls = brief?._loadingSections;
-    if (!ls) return;
-    const requiredDone = ls.overview === false && ls.executives === false && ls.solutions === false && ls.live === false;
-    if (requiredDone && brief?.companySnapshot && thePlay === null && playState !== "building" && sellerUrl && sellerUrl !== "research-only") {
+    if (playState !== "idle") return;
+    if (!sellerUrl || sellerUrl === "research-only") return;
+    if (!sellerICP || !(sellerICP?.icp?.productCatalog || []).length) return;
+    if (!selectedAccount?.company || !selectedAccount?.company_url) return;
+    const flagVal = (() => { try { return localStorage.getItem("cc_play_synthesis") || "on"; } catch { return "on"; } })();
+    if (flagVal === "off") return;
+    if (briefLoading || brief) {
+      if (flagVal !== "shadow") setPlayState("building");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [briefLoading, !!brief, sellerUrl, !!sellerICP, selectedAccount?.company]);
+
+  // Phase 2: Fire buildThePlay() when ALL required sections have real data.
+  //          Watches actual brief fields — not _loadingSections flags — so it correctly
+  //          waits for solutions which reliably arrives at ~110-120s (after the brief's 90s timeout).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (playBuiltRef.current || thePlay !== null || playState !== "building") return;
+    if (!sellerUrl || sellerUrl === "research-only") return;
+    const LOADING_STUB = /^Researching /i;
+    const hasOverview  = !!brief?.companySnapshot && !LOADING_STUB.test(brief.companySnapshot);
+    const hasExecs     = !!(brief?.keyExecutives?.length || brief?.keyContacts?.length);
+    const hasSolutions = !!(brief?.solutionMapping?.some(s => s?.product));
+    const hasSignals   = !!(brief?.recentSignals?.some(s => s?.trim()) || brief?.recentHeadlines);
+    if (hasOverview && hasExecs && hasSolutions && hasSignals) {
+      console.log("[ThePlay] Data quorum met — firing build");
       buildThePlay();
     }
-  }, [brief?._loadingSections, brief?.companySnapshot]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    brief?.companySnapshot,
+    brief?.keyExecutives?.length, brief?.keyContacts?.length,
+    brief?.solutionMapping?.length, brief?.recentSignals?.length, brief?.recentHeadlines,
+    playState,
+  ]);
+
+  // Weak-inputs detector — data-driven, NOT time-driven.
+  // Fires when all required sections have genuinely resolved (via their merge callbacks) AND
+  // the required data fields are still empty/sparse. Sections timeout-cleared by the brief's
+  // 90s hard timeout are NOT counted as "settled" here — they may still deliver data (e.g.
+  // solutions at ~120s). Only _completedSections (written by actual merge callbacks) counts.
+  // Last-resort 5-minute failsafe handles truly hung calls.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (playBuiltRef.current || playState !== "building") return;
+    const LOADING_STUB = /^Researching /i;
+    const completed  = new Set(brief?._completedSections || []);
+    const failed     = brief?._failedSections || [];
+    // A section is "settled" only when its actual merge callback ran (data or error)
+    const settled = {
+      overview:   completed.has("overview")   || failed.includes("overview"),
+      executives: completed.has("executives") || failed.includes("executives"),
+      solutions:  completed.has("solutions")  || failed.includes("solutions"),
+      live:       completed.has("live")       || failed.includes("live"),
+    };
+    const allSettled  = Object.values(settled).every(Boolean);
+    const hasOverview = !!brief?.companySnapshot && !LOADING_STUB.test(brief.companySnapshot);
+    const hasExecs    = !!(brief?.keyExecutives?.length || brief?.keyContacts?.length);
+    const hasSolutions= !!(brief?.solutionMapping?.some(s => s?.product));
+    const hasSignals  = !!(brief?.recentSignals?.some(s => s?.trim()) || brief?.recentHeadlines);
+    const missingData = !hasOverview || !hasExecs || !hasSolutions || !hasSignals;
+    if (allSettled && missingData) {
+      const flagVal = (() => { try { return localStorage.getItem("cc_play_synthesis") || "on"; } catch { return "on"; } })();
+      console.warn("[ThePlay] Weak inputs: all sections settled, required data missing", settled);
+      if (flagVal !== "shadow") setPlayState("weak-inputs");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brief?._completedSections, brief?._failedSections, brief?.companySnapshot,
+      brief?.keyExecutives?.length, brief?.keyContacts?.length,
+      brief?.solutionMapping?.length, brief?.recentSignals?.length, brief?.recentHeadlines,
+      playState]);
+
+  // Last-resort failsafe: 5-minute hard cap for a truly hung API call that never resolves
+  // or errors. Keeps the spinner from running indefinitely on network failures.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (playState !== "building" || playBuiltRef.current) return;
+    const t = setTimeout(() => {
+      if (playBuiltRef.current) return;
+      const flagVal = (() => { try { return localStorage.getItem("cc_play_synthesis") || "on"; } catch { return "on"; } })();
+      console.warn("[ThePlay] 5-min last-resort failsafe — API call may be hung");
+      if (flagVal !== "shadow") setPlayState("weak-inputs");
+    }, 300_000);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playState]);
 
   // Load cached ICP when sellerUrl is set but ICP not loaded.
   // Uses cacheOnly — only serves from cache, never starts expensive fresh builds.
@@ -8582,7 +8652,7 @@ Return ONLY raw JSON:
 
                 // Mark missing deep intel sections as loading so UI shows spinners
                 const loadingFlags = { overview: false, executives: missingExecutives, strategy: false, solutions: false, live: true, roles: missingOpenRoles, deepIntel: missingFinancial || missingCompetitive || missingBoard };
-                const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: loadingFlags, _failedSections: [], _error: null };
+                const cachedBriefData = { ...cd, _generatedAt: new Date(cached[0].created_at).getTime(), _cached: true, _loadingSections: loadingFlags, _failedSections: [], _error: null, _completedSections: ["overview","executives","solutions","live"] };
                 setBrief(cachedBriefData);
                 setBriefLoading(false);
                 setBriefStatus("");
@@ -15222,12 +15292,14 @@ Return ONLY raw JSON:
                       ))}
                     </div>
                   );
-                  if (playState === "unavailable" || !thePlay) return (
+                  if (playState === "weak-inputs") return (
                     <div style={{...cardStyle,borderLeft:`3px solid ${V.mut}`}}>
                       {eyebrow}
-                      <div style={{color:V.mut,fontSize:13}}>Couldn't build a confident play for this account. Full research is available below.</div>
+                      <div style={{color:V.txt,fontSize:14,fontWeight:700,marginBottom:8}}>Limited public information on {selectedAccount?.company}</div>
+                      <div style={{color:V.mut,fontSize:13,lineHeight:1.6}}>Not enough public data to build a complete play right now. This can happen with companies that have a smaller digital footprint. The research brief below has everything we found.</div>
                     </div>
                   );
+                  if (playState === "unavailable" || !thePlay) return null;
                   const play = thePlay;
                   const fitScore = fitScores[selectedAccount?.company];
                   // Check 8: detect fit-score drift (play built with old score, re-scored since)
@@ -15248,18 +15320,13 @@ Return ONLY raw JSON:
                           </div>
                         )}
                       </div>
-                      {playState==="reduced"&&(
-                        <div style={{background:`rgba(244,183,64,.12)`,border:`1px solid ${V.amber}44`,borderRadius:8,padding:"6px 12px",marginBottom:14,fontSize:12,color:V.amber}}>
-                          Built on partial brief — strategic context incomplete
-                        </div>
-                      )}
                       {play.situation&&<div style={rowStyle}><span style={labStyle}>Situation</span><span style={{fontSize:13,color:V.txt}}>{play.situation}</span></div>}
                       {play.whyNow&&<div style={rowStyle}><span style={labStyle}>Why Now</span><span style={{fontSize:13,color:V.txt}}>{play.whyNow}</span></div>}
                       {play.yourMove&&(
                         <div style={rowStyle}>
                           <span style={labStyle}>Your Move</span>
                           <span style={{fontSize:13,color:V.txt}}>
-                            {playState==="contactUnconfirmed"&&<span style={{color:V.amber,display:"block",marginBottom:4,fontSize:12}}>Contact not confirmed — verify in full brief.</span>}
+                            {play._contactCleared&&<span style={{color:V.amber,display:"block",marginBottom:4,fontSize:12}}>Contact not confirmed in brief data — verify before reaching out.</span>}
                             {play.yourMove}
                           </span>
                         </div>

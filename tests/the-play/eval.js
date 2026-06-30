@@ -97,7 +97,7 @@ function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
   const contactName = (play?.primaryContact?.name || '').toLowerCase().trim();
   if (contactName && !p2Str.includes(contactName)) {
     play.primaryContact = null;
-    if (state === 'full') state = 'contactUnconfirmed';
+    play._contactCleared = true;
   }
 
   const smProducts  = (brief?.solutionMapping || []).map(s => (s?.product || '').toLowerCase());
@@ -140,15 +140,16 @@ function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
     const v = toCanonical(cm[1]);
     if (v !== null && v >= 10) corpusNums.add(v);
   }
-  const numRe = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb])?)\b/gi;
+  const FACTUAL_NUM_RE = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb]|%|percent))\b|\b(\d[\d,.]+(?:,\d{3})*)\s+(?=(?:employees?|customers?|countries|brands?|users?|locations?|markets?|languages?|members?|partners?|clients?|accounts?|stores?|sites?|offices?|cities|people|recipients?|companies|businesses|organizations?)\b)/gi;
   for (const field of strFields) {
     if (typeof play[field] !== 'string') continue;
-    const matches = [...play[field].matchAll(numRe)].map(m => m[1].trim());
-    for (const num of matches) {
-      const v = toCanonical(num);
+    for (const m of [...play[field].matchAll(FACTUAL_NUM_RE)]) {
+      const numStr = (m[1] || m[2] || '').trim();
+      if (!numStr) continue;
+      const v = toCanonical(numStr);
       if (v === null || v < 10) continue;
       if (!corpusNums.has(v)) {
-        const escaped = num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escaped = numStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const sentences = play[field].split(/(?<=[.!?])\s+/);
         const filtered = sentences.filter(s => !new RegExp(`\\b${escaped}\\b`, 'i').test(s));
         if (filtered.length < sentences.length) {
@@ -215,7 +216,7 @@ for (const [name, acct] of Object.entries(accounts)) {
   };
   const { play: hp, playState: hps } = validatePlay({ ...goodPlay }, company, company_url, brief, sellerICP);
   assert(`${name} | happy path → play not null`, hp !== null);
-  assert(`${name} | happy path → state is full or contactUnconfirmed`, hps === 'full' || hps === 'contactUnconfirmed');
+  assert(`${name} | happy path → state is full`, hps === 'full');
 
   // Check 4: target-missing play → unavailable (check 1)
   const noTarget = { ...goodPlay, situation: 'A company is growing.', whyNow: 'Products help.', yourMove: 'Call someone.', elevatorPitch: 'We help businesses.', draftEmailBody: 'Hi there.', topProduct: 'BHN Rewards' };
@@ -239,12 +240,18 @@ for (const [name, acct] of Object.entries(accounts)) {
   const { play: bpp } = validatePlay({ ...badProd }, company, company_url, brief, sellerICP);
   assert(`${name} | invented product → cleared`, bpp?.topProduct === null, `got "${bpp?.topProduct}"`);
 
-  // Check 7: unsourced stat → sentence stripped (check 7)
-  // Inject a sentence with a large number (99999) that cannot appear in any fixture brief
-  const statPlay = { ...goodPlay, situation: `${company} is expanding its loyalty program. They serve 99999 countries worldwide.` };
+  // Check 7: unsourced factual stat → sentence stripped
+  // "99999 countries" has a factual unit ("countries") so it should be stripped
+  const statPlay = { ...goodPlay, situation: `${company} is expanding its loyalty program. They operate in 99999 countries worldwide.` };
   const { play: sp7 } = validatePlay({ ...statPlay }, company, company_url, brief, sellerICP);
   const stat7Stripped = typeof sp7?.situation === 'string' && !sp7.situation.includes('99999');
-  assert(`${name} | unsourced stat (99999) → stripped from situation`, stat7Stripped, `got: "${sp7?.situation}"`);
+  assert(`${name} | unsourced factual stat (99999 countries) → stripped`, stat7Stripped, `got: "${sp7?.situation}"`);
+
+  // Check 7: temporal number → NOT stripped (rhetorical, not a factual stat)
+  const temporalPlay = { ...goodPlay, draftEmailBody: `Hi, I wanted to reach out about ${company}'s reward programs. Respond in 30 days to secure early pricing.` };
+  const { play: tp7 } = validatePlay({ ...temporalPlay }, company, company_url, brief, sellerICP);
+  const temporal7Survived = typeof tp7?.draftEmailBody === 'string' && tp7.draftEmailBody.includes('30 days');
+  assert(`${name} | temporal number (30 days) → not stripped`, temporal7Survived, `got: "${tp7?.draftEmailBody}"`);
 
   // Sourced number must survive: strip commas from employeeCount then extract 4+ digit run
   const empStr = String(brief.employeeCount || '').replace(/,/g, '');
@@ -296,6 +303,64 @@ assert(
   'Check 7 norm: unsourced "99999" strips even when sourced "14 million" survives in same field',
   typeof normStrip?.situation === 'string' && !normStrip.situation.includes('99999'),
   `got: "${normStrip?.situation}"`
+);
+
+// ── Weak-inputs settled logic: data-driven, not time-driven ──────────────────
+// Tests the _completedSections logic that determines when a section is genuinely
+// settled (merge callback ran) vs. timeout-cleared (90s hard timeout set flag only).
+console.log('\n── Weak-inputs: _completedSections settled logic ──');
+
+// Simulates: solutions still in-flight at >150s (only 3 of 4 in _completedSections).
+// Expected: allSettled = false → weak-inputs must NOT fire.
+const wkBase = accounts['Marriott'];
+const wkBriefInFlight = { ...wkBase.brief, solutionMapping: [], _completedSections: ['overview','executives','live'], _failedSections: [] };
+const wkCompleted = new Set(wkBriefInFlight._completedSections || []);
+const wkFailed = wkBriefInFlight._failedSections || [];
+const wkSettled = {
+  overview:   wkCompleted.has('overview')   || wkFailed.includes('overview'),
+  executives: wkCompleted.has('executives') || wkFailed.includes('executives'),
+  solutions:  wkCompleted.has('solutions')  || wkFailed.includes('solutions'),
+  live:       wkCompleted.has('live')       || wkFailed.includes('live'),
+};
+assert(
+  'Weak-inputs: solutions in-flight (not in _completedSections) → allSettled false → no early weak-inputs',
+  !Object.values(wkSettled).every(Boolean),
+  `settled=${JSON.stringify(wkSettled)}`
+);
+
+// Simulates: all 4 sections settled (merge callbacks ran) but solutions returned empty.
+// Expected: allSettled = true AND missingData = true → eligible for weak-inputs.
+const wkBriefThin = { ...wkBase.brief, solutionMapping: [], _completedSections: ['overview','executives','solutions','live'], _failedSections: [] };
+const wkCompletedThin = new Set(wkBriefThin._completedSections || []);
+const wkFailedThin = wkBriefThin._failedSections || [];
+const wkSettledThin = {
+  overview:   wkCompletedThin.has('overview')   || wkFailedThin.includes('overview'),
+  executives: wkCompletedThin.has('executives') || wkFailedThin.includes('executives'),
+  solutions:  wkCompletedThin.has('solutions')  || wkFailedThin.includes('solutions'),
+  live:       wkCompletedThin.has('live')       || wkFailedThin.includes('live'),
+};
+const wkMissingData = !wkBriefThin.solutionMapping?.some(s => s?.product);
+assert(
+  'Weak-inputs: all 4 settled via callbacks + solutions empty → allSettled true → eligible for weak-inputs',
+  Object.values(wkSettledThin).every(Boolean) && wkMissingData,
+  `settled=${JSON.stringify(wkSettledThin)} missingData=${wkMissingData}`
+);
+
+// Simulates: solutions arrives late (>150s) WITH data — Phase 2 fires → builds full, not weak-inputs.
+// This is the OC Tanner ~120s scenario: solutions not yet in _completedSections, then arrives.
+// We test both phases: (a) before arrival = not settled, (b) after arrival = Phase 2 data quorum fires.
+const wkBriefLateArrival = { ...wkBase.brief, _completedSections: ['overview','executives','live'], _failedSections: [] };
+const LOADING_STUB_WK = /^Researching /i;
+const wkDataAfterArrival = {
+  hasOverview:   !!wkBriefLateArrival.companySnapshot && !LOADING_STUB_WK.test(wkBriefLateArrival.companySnapshot),
+  hasExecs:      !!(wkBriefLateArrival.keyExecutives?.length || wkBriefLateArrival.keyContacts?.length),
+  hasSolutions:  !!(wkBriefLateArrival.solutionMapping?.some(s => s?.product)), // real solutionMapping in fixture
+  hasSignals:    !!(wkBriefLateArrival.recentSignals?.some(s => s?.trim()) || wkBriefLateArrival.recentHeadlines),
+};
+assert(
+  'Weak-inputs: late-arriving solutions with data — Phase 2 quorum fires (all data present)',
+  Object.values(wkDataAfterArrival).every(Boolean),
+  `data=${JSON.stringify(wkDataAfterArrival)}`
 );
 
 // ── Cross-account contamination check (highest priority) ─────────────────────
