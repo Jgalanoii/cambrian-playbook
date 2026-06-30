@@ -1590,6 +1590,58 @@ function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
 
   // Check 6 implicit: we only reach here if JSON.parse succeeded in callAI
 
+  // Check 7 — strip sentences containing specific numbers not present in the brief source corpus.
+  // Prevents hallucinated stats ("58 countries, 14M users") from appearing without a source anchor.
+  // Normalizes number formats before comparing: 14M ↔ 14 million ↔ 14,000,000 (all → 14000000).
+  const toCanonical = (s) => {
+    const n = (s || "").replace(/,/g, "").toLowerCase().trim();
+    const m = n.match(/^([\d.]+)\s*(k|thousand|m|million|b|billion)?/);
+    if (!m) return null;
+    let v = parseFloat(m[1]);
+    if (!isFinite(v)) return null;
+    const suf = m[2] || "";
+    if (suf === "k" || suf === "thousand") v *= 1e3;
+    else if (suf === "m" || suf === "million") v *= 1e6;
+    else if (suf === "b" || suf === "billion") v *= 1e9;
+    return v;
+  };
+  const sourceCorpusRaw = [
+    brief?.companySnapshot, brief?.revenue, brief?.employeeCount, brief?.headquarters, brief?.fundingProfile,
+    JSON.stringify(brief?.keyExecutives||[]), JSON.stringify(brief?.keyContacts||[]),
+    JSON.stringify(brief?.solutionMapping||[]),
+    (brief?.recentSignals||[]).join(" "), brief?.recentHeadlines, brief?.growthSignals,
+    brief?.publicSentiment?.sentimentSummary,
+    // Seller ICP — seller capability stats must not be stripped as "unsourced"
+    sellerICP?.sellerDescription, sellerICP?.marketCategory,
+    JSON.stringify(sellerICP?.icp?.productCatalog||[]),
+    JSON.stringify(sellerICP?.icp?.verifiedCustomers||[]),
+  ].filter(Boolean).join(" ");
+  // Build canonical numeric value set from corpus (suffix-normalized)
+  const corpusNumRe = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb])?)\b/gi;
+  const corpusNums = new Set();
+  for (const cm of sourceCorpusRaw.matchAll(corpusNumRe)) {
+    const v = toCanonical(cm[1]);
+    if (v !== null && v >= 10) corpusNums.add(v);
+  }
+  const numRe = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb])?)\b/gi;
+  for (const field of strFields) {
+    if (typeof play[field] !== "string") continue;
+    const matches = [...play[field].matchAll(numRe)].map(m => m[1].trim());
+    for (const num of matches) {
+      const v = toCanonical(num);
+      if (v === null || v < 10) continue;
+      if (!corpusNums.has(v)) {
+        const escaped = num.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const sentences = play[field].split(/(?<=[.!?])\s+/);
+        const filtered = sentences.filter(s => !new RegExp(`\\b${escaped}\\b`, "i").test(s));
+        if (filtered.length < sentences.length) {
+          play[field] = filtered.join(" ").trim();
+          console.warn(`[ThePlay] Check 7: stripped unsourced stat "${num}" (${v}) from ${field}`);
+        }
+      }
+    }
+  }
+
   return { play, playState: state };
 }
 
@@ -8019,6 +8071,25 @@ Return ONLY raw JSON:
       if (flagVal !== "shadow") setPlayState("unavailable");
       return;
     }
+    // Data-aware quorum — flag-only check is insufficient because the 90s hard timeout forces
+    // _loadingSections all-false even when sections never loaded data. Check actual brief content.
+    const LOADING_STUB = /^Researching /i;
+    const sectionHasData = {
+      overview:   !!brief.companySnapshot && !LOADING_STUB.test(brief.companySnapshot),
+      executives: !!(brief.keyExecutives?.length || brief.keyContacts?.length),
+      solutions:  !!(brief.solutionMapping?.some(s => s?.product)),
+      live:       !!(brief.recentSignals?.some(s => s?.trim()) || brief.recentHeadlines),
+    };
+    const hasAnyData = Object.values(sectionHasData).some(Boolean);
+    if (!hasAnyData) {
+      console.warn("[ThePlay] Quorum: no data in any required section (all timed out?) — skipping");
+      if (flagVal !== "shadow") setPlayState("unavailable");
+      return;
+    }
+    const timedOutSections = !Object.values(sectionHasData).every(Boolean);
+    if (timedOutSections) {
+      console.warn("[ThePlay] Quorum: some sections timed out without data — will cap finalState at 'reduced'");
+    }
     // Double-fire guard
     if (playBuiltRef.current) return;
     playBuiltRef.current = true;
@@ -8047,7 +8118,10 @@ Return ONLY raw JSON:
         if (flagVal !== "shadow") setPlayState("unavailable");
         return;
       }
-      const finalState = !preferredDone ? "reduced" : vs;
+      // Check 8 — fit-score consistency stamp: record the score used at build time so
+      // the render can detect drift if scoring re-runs after the play is built.
+      validated._fitScore = fitScore?.score ?? null;
+      const finalState = timedOutSections || !preferredDone ? "reduced" : vs;
       if (flagVal === "shadow") {
         console.log(`[ThePlay] Shadow — state:${finalState} target:${targetCompany}`, JSON.stringify(validated).slice(0, 300));
         return;
@@ -15156,6 +15230,10 @@ Return ONLY raw JSON:
                   );
                   const play = thePlay;
                   const fitScore = fitScores[selectedAccount?.company];
+                  // Check 8: detect fit-score drift (play built with old score, re-scored since)
+                  const fitDrift = play._fitScore !== null && play._fitScore !== undefined &&
+                    fitScore?.score !== undefined && Math.abs(fitScore.score - play._fitScore) > 5;
+                  if (fitDrift) console.warn(`[ThePlay] Check 8: fit score drift — built at ${play._fitScore}%, now ${fitScore?.score}%`);
                   return (
                     <div style={cardStyle}>
                       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
@@ -15164,8 +15242,9 @@ Return ONLY raw JSON:
                           <div style={{fontSize:18,fontWeight:800,color:V.txt}}>{selectedAccount?.company}</div>
                         </div>
                         {fitScore && (
-                          <div style={{fontFamily:V.mono,fontSize:12,background:"rgba(94,234,212,.12)",color:V.mint,border:`1px solid ${V.mint}44`,borderRadius:20,padding:"4px 12px",fontWeight:700,whiteSpace:"nowrap",marginTop:4}}>
+                          <div style={{fontFamily:V.mono,fontSize:12,background:"rgba(94,234,212,.12)",color:V.mint,border:`1px solid ${V.mint}44`,borderRadius:20,padding:"4px 12px",fontWeight:700,whiteSpace:"nowrap",marginTop:4,display:"flex",alignItems:"center",gap:6}}>
                             {(fitScore.label||"").replace(" Fit","").toUpperCase()} · {fitScore.score}
+                            {fitDrift && <span style={{fontSize:9,color:V.amber,letterSpacing:0.5}}>(updated)</span>}
                           </div>
                         )}
                       </div>

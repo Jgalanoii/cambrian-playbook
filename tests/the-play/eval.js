@@ -109,6 +109,55 @@ function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
   }
 
   if (!play.sectionSources || !Object.keys(play.sectionSources || {}).length) { /* log only */ }
+
+  // Check 7 — strip sentences containing specific numbers not present in the brief source corpus.
+  // Normalizes number formats: 14M ↔ 14 million ↔ 14,000,000 (all → 14000000).
+  const toCanonical = (s) => {
+    const n = (s || '').replace(/,/g, '').toLowerCase().trim();
+    const m = n.match(/^([\d.]+)\s*(k|thousand|m|million|b|billion)?/);
+    if (!m) return null;
+    let v = parseFloat(m[1]);
+    if (!isFinite(v)) return null;
+    const suf = m[2] || '';
+    if (suf === 'k' || suf === 'thousand') v *= 1e3;
+    else if (suf === 'm' || suf === 'million') v *= 1e6;
+    else if (suf === 'b' || suf === 'billion') v *= 1e9;
+    return v;
+  };
+  const sourceCorpusRaw = [
+    brief?.companySnapshot, brief?.revenue, brief?.employeeCount, brief?.headquarters, brief?.fundingProfile,
+    JSON.stringify(brief?.keyExecutives||[]), JSON.stringify(brief?.keyContacts||[]),
+    JSON.stringify(brief?.solutionMapping||[]),
+    (brief?.recentSignals||[]).join(' '), brief?.recentHeadlines, brief?.growthSignals,
+    brief?.publicSentiment?.sentimentSummary,
+    sellerICP?.sellerDescription, sellerICP?.marketCategory,
+    JSON.stringify(sellerICP?.icp?.productCatalog||[]),
+    JSON.stringify(sellerICP?.icp?.verifiedCustomers||[]),
+  ].filter(Boolean).join(' ');
+  const corpusNumRe = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb])?)\b/gi;
+  const corpusNums = new Set();
+  for (const cm of sourceCorpusRaw.matchAll(corpusNumRe)) {
+    const v = toCanonical(cm[1]);
+    if (v !== null && v >= 10) corpusNums.add(v);
+  }
+  const numRe = /\b(\d[\d,.]*\s*(?:million|billion|thousand|[KMBkmb])?)\b/gi;
+  for (const field of strFields) {
+    if (typeof play[field] !== 'string') continue;
+    const matches = [...play[field].matchAll(numRe)].map(m => m[1].trim());
+    for (const num of matches) {
+      const v = toCanonical(num);
+      if (v === null || v < 10) continue;
+      if (!corpusNums.has(v)) {
+        const escaped = num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const sentences = play[field].split(/(?<=[.!?])\s+/);
+        const filtered = sentences.filter(s => !new RegExp(`\\b${escaped}\\b`, 'i').test(s));
+        if (filtered.length < sentences.length) {
+          play[field] = filtered.join(' ').trim();
+        }
+      }
+    }
+  }
+
   return { play, playState: state };
 }
 
@@ -189,7 +238,65 @@ for (const [name, acct] of Object.entries(accounts)) {
   const badProd = { ...goodPlay, topProduct: 'FakeProduct XYZ 9000' };
   const { play: bpp } = validatePlay({ ...badProd }, company, company_url, brief, sellerICP);
   assert(`${name} | invented product → cleared`, bpp?.topProduct === null, `got "${bpp?.topProduct}"`);
+
+  // Check 7: unsourced stat → sentence stripped (check 7)
+  // Inject a sentence with a large number (99999) that cannot appear in any fixture brief
+  const statPlay = { ...goodPlay, situation: `${company} is expanding its loyalty program. They serve 99999 countries worldwide.` };
+  const { play: sp7 } = validatePlay({ ...statPlay }, company, company_url, brief, sellerICP);
+  const stat7Stripped = typeof sp7?.situation === 'string' && !sp7.situation.includes('99999');
+  assert(`${name} | unsourced stat (99999) → stripped from situation`, stat7Stripped, `got: "${sp7?.situation}"`);
+
+  // Sourced number must survive: strip commas from employeeCount then extract 4+ digit run
+  const empStr = String(brief.employeeCount || '').replace(/,/g, '');
+  const empNum = typeof brief.employeeCount === 'number'
+    ? String(brief.employeeCount)
+    : empStr.match(/\d{4,}/)?.[0];
+  if (empNum && parseInt(empNum) >= 10) {
+    const sourcedPlay = { ...goodPlay, situation: `${company} employs ${empNum} people and is expanding.` };
+    const { play: sp7s } = validatePlay({ ...sourcedPlay }, company, company_url, brief, sellerICP);
+    const sourcedSurvived = typeof sp7s?.situation === 'string' && sp7s.situation.includes(empNum);
+    assert(`${name} | sourced stat (${empNum} from employeeCount) → survives`, sourcedSurvived, `got: "${sp7s?.situation}"`);
+  }
 }
+
+// ── Check 7 normalization regression: 14M (corpus) ↔ 14 million (play) ──────
+// Regression guard: verifies that suffix-expanded forms match the corpus so
+// sourced stats phrased differently than the brief still survive.
+console.log('\n── Check 7 normalization regression (14M ↔ 14 million) ──');
+const normBrief = { ...accounts['Marriott'].brief, recentSignals: ['BHN has 14M active users.'] };
+const normSellerICP = sellerICP; // uses fixtures sellerICP (same seller context)
+const normTarget    = accounts['Marriott'].company;
+const normUrl       = accounts['Marriott'].company_url;
+const normPlay = {
+  situation:        `${normTarget} is a key account. We serve 14 million clients globally.`,
+  whyNow:           `BHN helps ${normTarget} drive loyalty.`,
+  yourMove:         `Contact the CHRO at ${normTarget}.`,
+  elevatorPitch:    `BHN delivers to 14 million reward recipients across ${normTarget}'s program.`,
+  draftEmailSubject:`${normTarget} + BHN: instant reward delivery`,
+  draftEmailBody:   `Hi, reaching out about ${normTarget}'s programs.`,
+  topProduct:       accounts['Marriott'].brief.solutionMapping?.[0]?.product || 'BHN Rewards',
+  keySignal:        'Recent expansion signals.',
+  sectionSources:   { situation:['P5'], whyNow:['P4','P5'], yourMove:['P2'], elevatorPitch:['P4','ICP'], primaryContact:['P2'] },
+};
+const { play: normResult } = validatePlay({ ...normPlay }, normTarget, normUrl, normBrief, normSellerICP);
+assert(
+  'Check 7 norm: "14 million" (play) survives when corpus has "14M" (brief signal)',
+  typeof normResult?.situation === 'string' && normResult.situation.includes('14 million'),
+  `got: "${normResult?.situation}"`
+);
+assert(
+  'Check 7 norm: "14 million" in elevatorPitch survives when corpus has "14M"',
+  typeof normResult?.elevatorPitch === 'string' && normResult.elevatorPitch.includes('14 million'),
+  `got: "${normResult?.elevatorPitch}"`
+);
+// Also verify 99999 still strips in the same brief (regression on strip path)
+const normStripPlay = { ...normPlay, situation: `${normTarget} has 14 million users. They serve 99999 countries worldwide.` };
+const { play: normStrip } = validatePlay({ ...normStripPlay }, normTarget, normUrl, normBrief, normSellerICP);
+assert(
+  'Check 7 norm: unsourced "99999" strips even when sourced "14 million" survives in same field',
+  typeof normStrip?.situation === 'string' && !normStrip.situation.includes('99999'),
+  `got: "${normStrip?.situation}"`
+);
 
 // ── Cross-account contamination check (highest priority) ─────────────────────
 console.log('\n── Contamination check: Marriott prompt ↔ Stripe prompt ──');
