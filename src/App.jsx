@@ -10535,7 +10535,11 @@ Return ONLY raw JSON:
       `"integrationComplexity":"Low / Medium / High with 1-sentence explanation",`+
       `"successMetrics":["Outcome tied to a goal the prospect ACTUALLY STATED in discovery — do NOT invent metrics they didn't mention","Metric 2 from discovery","Metric 3 or empty if not discussed"],`+
       `"discoveryGaps":["Specific info the rep needs to capture on the next call to strengthen this assessment"],`+
-      `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`;
+      // cc_sol_consolidation flag: enrich saRecommendation with explicit lead-with recommendation.
+      // Flag off = byte-identical to the original prompt (zero demo risk — buildSolutionFit is shared).
+      (solConEnabled
+        ? `"saRecommendation":"Two parts. PART 1 — RECOMMENDED SOLUTION (explicit, evidence-anchored): Lead with [exact product/solution name from confirmedSolutions] because [specific buyer-fit signals from discovery + ICP match evidence + brief that support this product for this buyer — cite the actual signal, not a generic statement]. What the evidence reasonably and defensibly supports, not an absolute claim. Max 2 sentences, fact-anchored. PART 2 — CRITICAL WIN FACTOR: The single most important thing to get right in the proposal to win this deal — specific and concrete."}`
+        : `"saRecommendation":"Senior SA perspective: given everything we know, what is the single most important thing to get right in the proposal to win this deal?"}`);
 
     // Stream solution fit for progressive rendering — increased token budget for complex JSON
     const result = await streamAI(prompt, (partial) => {
@@ -12193,6 +12197,8 @@ Return ONLY raw JSON:
             {STEPS.map((s,i)=>{
               // In Quick Brief mode (research-only), only show step 0 and step 5 (brief)
               if (sellerUrl === "research-only" && i !== 0 && i !== 5) return null;
+              // When solution consolidation is on, Step 8 is absorbed into Step 6 — hide it
+              if (solConEnabled && i === 8) return null;
               const canNav = (()=>{
                 if(i===step) return false;
                 if(i===0) return true;
@@ -16774,21 +16780,73 @@ Return ONLY raw JSON:
           <ErrorBoundary><div className="page">
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
               <CompanyLogo domain={selectedAccount?.company_url} name={selectedAccount?.company} size={36}/>
-              <div className="page-title" style={{margin:0}}>RIVER Hypothesis — {selectedAccount?.company||"Account"}</div>
+              <div className="page-title" style={{margin:0}}>{solConEnabled?"Solution Architecture & Strategy":"RIVER Hypothesis"} — {selectedAccount?.company||"Account"}</div>
             </div>
             <div className="page-sub">
-              {riverHypoLoading
-                ? "Building your hypothesis — usually finishes before you're done reading the brief. Good problem to have."
-                : riverHypo
-                  ? `Your pre-call hypothesis is ready. This isn't a script — it's a strategy built on what you actually know about ${selectedAccount?.company||"this account"}. Edit anything before you go live.`
-                  : "Generate your RIVER hypothesis below."}
+              {solConEnabled
+                ? (solutionFit
+                    ? `Solution architecture and RIVER strategy for ${selectedAccount?.company||"this account"}. Architecture confirmed by discovery.`
+                    : solutionFitLoading
+                      ? "Building solution architecture from your discovery capture..."
+                      : `Pre-call strategy for ${selectedAccount?.company||"this account"}. Solution architecture will appear after your call.`)
+                : (riverHypoLoading
+                    ? "Building your hypothesis — usually finishes before you're done reading the brief. Good problem to have."
+                    : riverHypo
+                      ? `Your pre-call hypothesis is ready. This isn't a script — it's a strategy built on what you actually know about ${selectedAccount?.company||"this account"}. Edit anything before you go live.`
+                      : "Generate your RIVER hypothesis below.")}
             </div>
 
-            {/* Recommended Solutions — surface at top so rep is anchored.
-                Uses the standard .bb + .sol-badge pattern so this card matches
-                the Solution Mapping card on the Brief page (visual continuity
-                as the rep moves from Brief -> Hypothesis). */}
-            {(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
+            {/* ── ARCHITECTURE SECTION (top, cc_sol_consolidation flag only) ─────
+                Full S9SolutionFit content embedded here; Step 8 hidden from nav.
+                Pre-call (no solutionFit): brief solutions summary + placeholder.
+                Post-call: complete SA review (PMF, confirmed solutions, gaps,
+                roadmap, metrics, recommendation) — all in one scroll with RIVER
+                below. No "View Full Architecture" link — this IS the architecture.
+            ── */}
+            {solConEnabled&&(
+              <>
+                {/* Pre-call brief solutions summary (read-only) — shown until SA built */}
+                {!solutionFit&&!solutionFitLoading&&(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
+                  <div className="bb" style={{marginBottom:14}}>
+                    <div className="bb-hdr">
+                      <div className="bb-icon" style={{fontSize:14}}>🎯</div>
+                      <div>
+                        <div className="bb-title">Solutions for {selectedAccount?.company}</div>
+                        <div className="bb-sub">From your brief — confirmed or revised post-call</div>
+                      </div>
+                    </div>
+                    <div className="bb-body" style={{display:"flex",flexDirection:"column",gap:10}}>
+                      {(brief.solutionMapping||[]).filter(s=>s?.product).map((s,i)=>(
+                        <div key={i} className="solution-item">
+                          <div className="sol-badge">{s.product}</div>
+                          <div style={{fontSize:13,color:"var(--ink-1)",lineHeight:1.6}}>{s.fit}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Full SA architecture — embedded (no wrapper/action bar; owns all SA content) */}
+                <S9SolutionFit
+                  embedded
+                  solutionFit={solutionFit}
+                  solutionFitLoading={solutionFitLoading}
+                  selectedAccount={selectedAccount}
+                  onRun={buildSolutionFit}
+                  onRegenerate={()=>{setSolutionFit(null);setSolutionFitLoading(true);setTimeout(buildSolutionFit,100);}}
+                />
+
+                {/* Divider before RIVER section */}
+                <div style={{display:"flex",alignItems:"center",gap:12,margin:"20px 0 14px"}}>
+                  <div style={{flex:1,height:1,background:"var(--line-0)"}}/>
+                  <div style={{fontSize:11,fontWeight:700,color:"var(--ink-3)",textTransform:"uppercase",letterSpacing:"0.6px"}}>RIVER Strategy</div>
+                  <div style={{flex:1,height:1,background:"var(--line-0)"}}/>
+                </div>
+              </>
+            )}
+
+            {/* Recommended Solutions — flag OFF only (original behavior) */}
+            {!solConEnabled&&(brief?.solutionMapping||[]).filter(s=>s?.product).length>0&&(
               <div className="bb" style={{marginBottom:16}}>
                 <div className="bb-hdr">
                   <div className="bb-icon" style={{fontSize:14}}>🎯</div>
@@ -16973,7 +17031,7 @@ Return ONLY raw JSON:
                 <div style={{fontSize:12,color:"var(--ink-3)"}}>confidence</div>
                 <button className="btn btn-secondary btn-sm" onClick={()=>setStep(6)}>← Hypothesis</button>
                 <ExportMenu locked={exportLocked} onPDF={doExport} onCSV={()=>csvExport("In-Call", {gateAnswers,riverData,gateNotes,notes,confidence})} />
-                <button className="btn btn-green btn-sm" onClick={()=>{buildSolutionFit();setStep(8);}} disabled={solutionFitLoading}>
+                <button className="btn btn-green btn-sm" onClick={()=>{buildSolutionFit();setStep(solConEnabled?6:8);}} disabled={solutionFitLoading}>
                   {solutionFitLoading?"Analyzing...":"End Call →"}
                 </button>
               </div>

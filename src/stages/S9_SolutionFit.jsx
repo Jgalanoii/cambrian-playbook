@@ -22,11 +22,15 @@ export default function S9SolutionFit({
   onCSV,           // "📊 CSV" — CSV export
   onNext,          // "Route Deal →" — fires runPostCall + advances
   onNextAccount,   // "Next Account"
+  embedded,        // true = skip outer <div className="page">, title/sub, and action bar
+                   //   (Step 6 merged stage owns the wrapper; parent provides the action bar)
 }) {
-  return (
-    <div className="page">
-      <div className="page-title">Solution Architecture Review</div>
-      <div className="page-sub">Solution fit evaluation for <strong>{selectedAccount?.company}</strong> — aligned to what you actually heard, not just what you assumed.</div>
+  const inner = (
+    <>
+      {!embedded && (
+        <><div className="page-title">Solution Architecture Review</div>
+        <div className="page-sub">Solution fit evaluation for <strong>{selectedAccount?.company}</strong> — aligned to what you actually heard, not just what you assumed.</div></>
+      )}
 
       {solutionFitLoading && (
         <div className="card">
@@ -256,14 +260,16 @@ export default function S9SolutionFit({
             </div>
           )}
 
-          <div className="actions-row">
-            <button className="btn btn-secondary" onClick={onBack}>← Live Call</button>
-            <button className="btn btn-secondary" onClick={onRegenerate}>↻ Regenerate</button>
-            <button className="btn btn-navy" onClick={onExport}>Save as PDF</button>
-            {(onCSV||onDownloadData) && <button className="btn btn-secondary" onClick={onCSV||onDownloadData}>CSV</button>}
-            {onNext && <button className="btn btn-green btn-lg" onClick={onNext}>Route Deal →</button>}
-            <button className="btn btn-primary" onClick={onNextAccount}>Next Account</button>
-          </div>
+          {!embedded && (
+            <div className="actions-row">
+              <button className="btn btn-secondary" onClick={onBack}>← Live Call</button>
+              <button className="btn btn-secondary" onClick={onRegenerate}>↻ Regenerate</button>
+              <button className="btn btn-navy" onClick={onExport}>Save as PDF</button>
+              {(onCSV||onDownloadData) && <button className="btn btn-secondary" onClick={onCSV||onDownloadData}>CSV</button>}
+              {onNext && <button className="btn btn-green btn-lg" onClick={onNext}>Route Deal →</button>}
+              <button className="btn btn-primary" onClick={onNextAccount}>Next Account</button>
+            </div>
+          )}
         </>
       )}
 
@@ -272,9 +278,12 @@ export default function S9SolutionFit({
           <div style={{fontSize:28,marginBottom:12}}>🏗</div>
           <div style={{fontSize:15,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>Solution Architecture Review</div>
           <div style={{fontSize:13,color:"var(--ink-2)",marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>Evaluate solution fit against what you heard in the call. Maps customer needs to your solutions using SA principles.</div>
-          <button className="btn btn-primary btn-lg" onClick={onRun}>Run Solution Fit Review →</button>
+          {!embedded && <button className="btn btn-primary btn-lg" onClick={onRun}>Run Solution Fit Review →</button>}
+          {embedded && <div style={{fontSize:13,color:"var(--ink-3)"}}>Architecture review will appear after your call.</div>}
         </div>
       )}
-    </div>
+    </>
   );
+  if (embedded) return inner;
+  return <div className="page">{inner}</div>;
 }
