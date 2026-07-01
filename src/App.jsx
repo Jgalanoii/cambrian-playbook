@@ -1875,6 +1875,13 @@ function buildUserEditContext(edits, userEdits) {
 //          code-verified present in returned text (Gate A) + currency-checked (Gate B).
 const EXEC_CACHE_VERSION = 2;
 
+// ── BRIEF CACHE VERSION ──────────────────────────────────────────────────────
+// Increment to invalidate Supabase-cached briefs when narrative/financial/board
+// prompts change. Stale briefs served from cache will NOT reflect prompt fixes.
+// v1 → v2: P1 NAMES IN NARRATIVE, anti-bootstrapped vocabulary across P1/P9/QuickTake,
+//           P8 board NAMES IN NARRATIVE block.
+const BRIEF_CACHE_VERSION = 2;
+
 // generateBrief is NON-ASYNC so it returns skeleton + raw promises
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
@@ -2140,8 +2147,11 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `- Examples: Blackhawk Network went private (acquired 2018), Dell went private then re-IPO'd, Worldpay was acquired by FIS then spun out.\n`+
     `- The publicPrivate field and fundingProfile field MUST agree.\n`+
     `- Only include a stock ticker if you are 100% certain the company is CURRENTLY publicly traded.\n\n`+
+    `NAMES IN NARRATIVE (non-negotiable): companySnapshot and fundingProfile are narrative fields — use ROLE/RELATIONSHIP language for current individuals, never specific person names for active roles.\n`+
+    `Say "the founding family," "the board chair," "the current CEO," "majority family shareholders" — NOT "Stephen Tanner Irish is currently chair" or "John Smith leads as CEO."\n`+
+    `Historical founders may be cited by name ONLY when clearly historical (e.g. "founded by Obert Tanner in 1927" — past tense, clearly not in an active role). NEVER name a currently-active individual in narrative prose.\n\n`+
     `Return ONLY raw JSON (start with {) for the company overview:\n`+
-    `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
+    `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific. Do NOT name any current individual — describe roles only.",`+
     `"revenue":"TOTAL consolidated revenue from most recent annual report (e.g. '$25.1B (FY2024)'). For PUBLIC companies: use the TOTAL revenue line from their income statement — NOT a segment, NOT net fee revenue, NOT subscription-only. For PRIVATE companies: provide a reasoned estimate with cited reasoning. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, 'Nonprofit (501(c)(3))' for tax-exempt charities/foundations, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'. For nonprofits: check if they file Form 990 or are registered as a 501(c)(3).","employeeCount":"For PUBLIC companies: use exact figure from annual report (e.g. '418,000'). For PRIVATE: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide exact figure for public companies, estimate for private. NEVER return empty string or 'Not found'.",`+
     `"headquarters":"Denver, CO OR best estimate from website/LinkedIn. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — check website footer, contact page, LinkedIn. MUST provide a value. Kennesaw, GA if that's what the website says.","founded":"2023 OR best estimate. MUST provide a value.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
     `"fundingProfile":"Ownership structure — MUST match publicPrivate field AND companySnapshot. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year. For established private companies with no VC/PE history (especially family-owned or long-standing): use 'Privately held, family-owned' or 'Privately held, organically grown' — NEVER 'bootstrapped' ('bootstrapped' is startup terminology and factually wrong for multi-decade established businesses). ANTI-HALLUCINATION: ONLY state acquisition or funding facts that appeared in your web search results. If companySnapshot mentions an acquirer, use THAT name — do NOT contradict it with a different acquirer from training knowledge. A wrong acquirer name (e.g. naming a medical device company as the acquirer of a rewards platform) destroys credibility instantly. Empty string if no verified funding data found.",`+
@@ -3118,12 +3128,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
               `- VC-BACKED: Search "${co}" funding round Series Crunchbase. Total raised and valuation are often in press releases. Revenue is rarely disclosed — estimate from stage + employee count.\n`+
               `- NONPROFIT: Search "${co}" Form 990 OR annual report. Total revenue, program spend, and executive compensation are public record for US nonprofits.\n`+
               `- GOVERNMENT: Search "${co}" budget allocation. Use fiscal year budget, not revenue.\n`+
-              `- PRIVATE/BOOTSTRAPPED: Search for funding rounds, growth metrics, valuation signals.\n`+
+              `- PRIVATE / OWNER-OPERATED: Search for funding rounds, growth metrics, valuation signals. VOCABULARY: Do NOT write "bootstrapped" for companies >20 years old or >300 employees — use "privately held," "founder-led," or "family-owned" instead.\n`+
               `For NONPROFITS: search for annual reports, grant funding, program spending.\n`+
               `CRITICAL FOR PRIVATE COMPANIES: If no public financial data exists, provide REASONED ESTIMATES based on company size, industry, funding stage, and comparable companies. Format: "No published data. Based on [evidence], estimated [metric] is [range]. Comparable companies like [name] in [industry] typically [benchmark]." NEVER leave fields empty — always provide your best estimate with cited reasoning. NEVER state estimates as facts — always disclose they are estimates.\n\n`) +
           `Return raw JSON:\n`+
           `{"financialDeepDive":{`+
-          `"revenueTrend":"${isPublicCompany ? "2-3 sentences: revenue trajectory over 2-3 years. Cite specific numbers from 10-K filings (e.g. '$4.2B FY2024, up 12% from $3.75B FY2023')." : "2-3 sentences. If public data exists, cite it. If not, provide a reasoned estimate: 'No published revenue data. Based on [employee count/funding stage/industry], estimated annual revenue is $X-$Y. Companies like [comparable] at similar stage typically generate [range].'"}",`+
+          `"revenueTrend":"${isPublicCompany ? "2-3 sentences: revenue trajectory over 2-3 years. Cite specific numbers from 10-K filings (e.g. '$4.2B FY2024, up 12% from $3.75B FY2023')." : "2-3 sentences. If public data exists, cite it. If not, provide a reasoned estimate: 'No published revenue data. Based on [employee count/funding stage/industry], estimated annual revenue is $X-$Y. Companies like [comparable] at similar stage typically generate [range].' VOCABULARY: Do NOT use the word 'bootstrapped' — for established private companies use 'privately held,' 'family-owned,' 'founder-led,' or 'organically grown' instead."}",`+
           `"marginTrend":"${isPublicCompany ? "1-2 sentences: Reference specific 10-K data (e.g. 'Operating margin expanded 200bps to 18.3% per 10-K filed 3/1/2025')." : "1-2 sentences. If no data, estimate based on business model: 'SaaS companies at this stage typically operate at [X-Y%] gross margin with [negative/breakeven] EBITDA.'"}",`+
           `"segmentBreakdown":"Which business segments or product lines drive the most revenue? ${isPublicCompany ? "Use 10-K segment reporting." : "Describe their product lines and estimate which drives the most revenue based on pricing and market signals."}",`+
           `"earningsInsight":"${isPublicCompany ? "1-2 sentences: the most revealing quote from the latest earnings call with speaker name, title, and call date." : "1-2 sentences: most revealing public statement from leadership (press release, interview, LinkedIn). If none found, describe what their product launches and hiring patterns suggest about priorities."}",`+
@@ -8954,8 +8964,9 @@ Return ONLY raw JSON:
                 cd.headquarters = snapCityMatch[1].split("&")[0].trim();
                 // HQ is now fixed — proceed with serving the cache
               }
-              if (ageDays < 7 && hasCritical) {
-                console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old) — loading`);
+              const cachePromptVersion = cd._briefPromptVersion || 1;
+              if (ageDays < 7 && hasCritical && cachePromptVersion >= BRIEF_CACHE_VERSION) {
+                console.log(`[brief-cache] Found complete cached brief for ${co} (${ageDays}d old, v${cachePromptVersion}) — loading`);
                 // ── CACHE BACKFILL: serve cached data instantly, then fill gaps ──
                 // Detect which sections are missing from cached data and fire targeted calls.
                 const missingFinancial    = !cd.financialDeepDive?.revenueTrend;
@@ -9174,7 +9185,8 @@ Return ONLY raw JSON:
                           `FULL COMPANY INTELLIGENCE:\n${ctx}\n\n` +
                           `EXTRACTION RULES:\n` +
                           `1. Only state facts that appear in the intelligence above — no outside statistics.\n` +
-                          `2. topRisk: the single biggest obstacle to selling into ${co} — extracted from the text above. If no explicit risk is stated, describe the structural challenge (e.g. "PE-backed exploring exit — deal cycles may stall" or "deep incumbent relationships require board-level access") WITHOUT fabricating numbers.\n\n` +
+                          `2. topRisk: the single biggest obstacle to selling into ${co} — extracted from the text above. If no explicit risk is stated, describe the structural challenge (e.g. "PE-backed exploring exit — deal cycles may stall" or "deep incumbent relationships require board-level access") WITHOUT fabricating numbers.\n` +
+                          `3. VOCABULARY: Do NOT describe any company as "bootstrapped." For privately held companies use "privately held," "family-owned," "founder-led," or "organically grown" — "bootstrapped" is startup terminology and factually wrong for established businesses.\n\n` +
                           `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
                           { maxTokens: 600 }
                         ).then(r => { if (r?.tldr?.topFinding) { setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev); console.log("[cache] Quick Take generated"); } }).catch(() => {});
@@ -9515,7 +9527,8 @@ Return ONLY raw JSON:
           `1. You may ONLY state facts that appear in the FULL COMPANY INTELLIGENCE section above. If a fact, number, percentage, or claim is not written above, you CANNOT use it.\n` +
           `2. Do NOT add any statistics, market share figures, revenue numbers, competitor counts, or percentages from your own knowledge. ZERO. Only numbers that appear verbatim in the intelligence above.\n` +
           `3. Do NOT cite G2 rankings, review-site metrics, or product-listing counts as market share or competitive position. These are review-platform artifacts, not market economics.\n` +
-          `4. If the intelligence above lacks a clear risk, state the structural challenge (e.g. "private company with limited public data" or "highly fragmented market with switching costs") WITHOUT inventing specific numbers.\n\n` +
+          `4. If the intelligence above lacks a clear risk, state the structural challenge (e.g. "private company with limited public data" or "highly fragmented market with switching costs") WITHOUT inventing specific numbers.\n` +
+          `5. VOCABULARY: Do NOT describe any company as "bootstrapped." For privately held companies use "privately held," "family-owned," "founder-led," or "organically grown" — "bootstrapped" is startup terminology and factually wrong for established businesses.\n\n` +
           `FORMAT:\n` +
           `- topFinding: the single most important fact FROM THE TEXT ABOVE that changes how a seller approaches ${co}.\n` +
           `- topOpportunity: the single biggest reason to engage ${co} RIGHT NOW — extracted FROM THE TEXT ABOVE.\n` +
@@ -10356,6 +10369,7 @@ Return ONLY raw JSON:
             gateMap: current.gateMap,
             tldr: current.tldr,
             fiveQuestions: current.fiveQuestions,
+            _briefPromptVersion: BRIEF_CACHE_VERSION,
           };
           // Mark old "latest" as superseded before inserting new one (prevents 409 conflict)
           const aoSeller = encodeURIComponent((sellerUrl || "").slice(0, 200));
