@@ -2150,8 +2150,13 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
       `You are a RETRIEVAL AND EXTRACTION ENGINE for ${co}'s current named leadership. You do NOT generate names from training knowledge — you extract names that appear verbatim in your web search results.\n\n`+
       `SEARCH STRATEGY — run BOTH searches:\n`+
-      `Search 1: site:${url || co.toLowerCase().replace(/\s+/g,"")+ ".com"} leadership OR team OR about OR "our-people" OR founders\n`+
-      `Search 2: "${co}" CEO OR founder OR "chief executive" site:linkedin.com\n\n`+
+      // Bug 2: Search 1 changed from site-restricted to unrestricted.
+      // Site-restricted queries return near-zero page_content from JS-rendered corporate pages.
+      // Unrestricted query surfaces news/press releases/bios that name current execs directly.
+      // Search 2 anchors to the company site for confirmation. EXTRACTION RULES still apply —
+      // model must extract verbatim from returned text, never from training knowledge.
+      `Search 1: "${co}" CEO OR president OR "chief executive" OR COO OR "chief operating" OR founder OR leadership\n`+
+      `Search 2: site:${url || co.toLowerCase().replace(/\s+/g,"")+ ".com"} leadership OR team OR "about us" OR "our-people"\n\n`+
       `EXTRACTION RULES (non-negotiable):\n`+
       `1. ONLY include a person whose name appears verbatim in a returned search result snippet or page text. Training knowledge is NOT a source. If you cannot point to exactly where in the search results you read their name, omit them entirely.\n`+
       `2. ROLE-EVIDENCED SEATS ONLY: Only include a seat for a role that your search results actually show someone holding. Do NOT include an empty seat (name="") "because every company has a CFO" — only show a seat if a source evidences that specific role exists and someone fills it.\n`+
@@ -2196,46 +2201,132 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:execPrompt}],
       }, { extraHeaders: { "x-billable-run": "1" } });
-      // Gate A — raw corpus extraction from web_search_tool_result blocks.
+      // Gate A — structured per-item extraction from web_search_tool_result blocks.
       // These come directly from Anthropic's search API — the model cannot fabricate them.
-      // Verifying names against this corpus is fundamentally different from verifying against
-      // the model-supplied snippet: the model could co-fabricate name + snippet; it cannot
-      // co-fabricate name + actual search tool output.
-      // Structure: d.content has blocks of type "web_search_tool_result"; each has a content
-      // array of {type:"web_search_result", url, title, page_content} items.
-      // We collect ALL page_content + title text into a single lowercase corpus.
+      // Bug 2: keep items SEPARATE (not flat-joined) so proximity + recency checks can
+      // operate within item boundaries. A name that appears in a different item than its
+      // role keyword is NOT evidence it holds that role today.
       const _rawToolBlocks = (d.content || []).filter(b => b.type === "web_search_tool_result");
-      const rawSearchCorpus = _rawToolBlocks.flatMap(block => {
+      const _rawItems = _rawToolBlocks.flatMap(block => {
         const items = Array.isArray(block.content) ? block.content : [];
-        return items.map(r => [r.page_content || "", r.title || "", r.text || ""].join(" "));
-      }).join(" ").toLowerCase();
+        return items.map(r => ({
+          text: [r.page_content || "", r.title || "", r.text || "", r.description || "", r.snippet || ""].join(" "),
+          url: r.url || "",
+        }));
+      });
+      // Flat corpus still needed by mergeExecs snippet check; keep in sync with _rawItems
+      const rawSearchCorpus = _rawItems.map(r => r.text).join(" ").toLowerCase();
       const hasRawCorpus = rawSearchCorpus.length > 50;
-      if (hasRawCorpus) {
-        console.log(`[p2-gateA] Raw search corpus: ${rawSearchCorpus.length} chars from ${_rawToolBlocks.length} tool result block(s) for "${co}"`);
-      } else {
-        console.log(`[p2-gateA] No raw corpus available for "${co}" (${_rawToolBlocks.length} tool blocks) — snippet-only Gate A in mergeExecs`);
+      // Per-item diagnostic logging
+      console.log(`[p2-gateA] ${_rawItems.length} items from ${_rawToolBlocks.length} block(s) for "${co}" — total ${rawSearchCorpus.length} chars`);
+      _rawItems.slice(0, 5).forEach((item, i) => {
+        console.log(`[p2-gateA]   item[${i}]: ${item.text.length} chars | ${(item.url || "").slice(0, 80)}`);
+      });
+      if (!hasRawCorpus) {
+        console.log(`[p2-gateA] No raw corpus — snippet-only Gate A in mergeExecs`);
       }
 
 
       const result = parseExecResponse(d);
       if(result?.keyExecutives?.length) {
         if (hasRawCorpus) {
-          // Code-level Gate A: verify each name against the raw tool output, NOT just the model's snippet.
-          // The model cannot fabricate what the search engine returned.
+          // Code-level Gate A: proximity + recency + fail-closed (Bug 2 balances, Jul 2026).
+          // Three required guarantees:
+          // 1. Name + exec-role keyword must co-occur within ±400 chars in the SAME item,
+          //    with NO departure/historical signals in that window → not bare corpus presence.
+          // 2. Recency/newest-wins: if both passing and departure matches exist, newer wins.
+          // 3. Fail-closed on conflict: if dates unavailable or unresolvable → withhold.
+          // OC Tanner stale-test: Dave Petersen (former CEO) + Obert C. Tanner (deceased founder)
+          // must NOT pass; Scott Sperry (current CEO) + Scott Archibald (current COO) must PASS.
+
+          // Role keywords confirming someone holds an exec seat today
+          const _EXEC_ROLE_RE = /\b(ceo|coo|cfo|cto|cro|chro|cmo|president|founder|co-?founder|chief\s+executive|chief\s+operating|chief\s+financial|chief\s+technology|chief\s+revenue|chief\s+human\s+resources|chief\s+marketing|chief\s+people|chief\s+product|vice\s+president|vp\s+of|managing\s+director|executive\s+director)\b/i;
+
+          // Departure/historical signals: presence in proximity window → person is former/deceased
+          const _DEPART_RE = /\b(former|formerly|departed|stepped\s+down|resigns|resigned|has\s+left|will\s+leave|succeeded\s+by|replaces|deceased|died|passed\s+away|obituary|in\s+memoriam|retired|emeritus)\b/i;
+
+          // Extract a sortable timestamp from item text; returns 0 if no date found
+          const _parseDate = (text) => {
+            const M = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+            const m1 = text.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(?:(\d{1,2}),?\s+)?(\d{4})\b/i);
+            if (m1) { const mo = M[m1[1].slice(0,3).toLowerCase()]??0; return new Date(parseInt(m1[3]),mo,parseInt(m1[2]||"1")).getTime(); }
+            const m2 = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+            if (m2) return new Date(parseInt(m2[1]),parseInt(m2[2])-1,parseInt(m2[3])).getTime();
+            const m3 = text.match(/\b(20\d{2}|19\d{2})\b/); // year-only fallback
+            if (m3) return new Date(parseInt(m3[1]),0,1).getTime();
+            return 0;
+          };
+
+          // Scan a single item for all occurrences of searchTerm near a role keyword.
+          // Returns [{pass, hasDepart, date}] — one entry per role-keyword hit found.
+          const _scanItem = (item, searchTerm, WINDOW) => {
+            const lower = item.text.toLowerCase();
+            const hits = [];
+            let idx = lower.indexOf(searchTerm);
+            while (idx !== -1) {
+              const ws = Math.max(0, idx - WINDOW);
+              const we = Math.min(lower.length, idx + searchTerm.length + WINDOW);
+              const win = lower.slice(ws, we);
+              if (_EXEC_ROLE_RE.test(win)) {
+                const hasDepart = _DEPART_RE.test(win);
+                hits.push({ pass: !hasDepart, hasDepart, date: _parseDate(item.text) });
+              }
+              idx = lower.indexOf(searchTerm, idx + 1);
+            }
+            return hits;
+          };
+
           result.keyExecutives = result.keyExecutives.map(e => {
             if (!e.name) return e; // already title-only — pass through
-            const nameParts = e.name.trim().split(/\s+/);
-            // Check full name first (strongest signal), then last name as fallback
-            const fullNameLower = e.name.toLowerCase().trim();
-            const lastNameLower = nameParts[nameParts.length - 1].toLowerCase();
-            const firstLastLower = nameParts.length >= 2
-              ? `${nameParts[0].toLowerCase()} ${lastNameLower}` : fullNameLower;
-            const inCorpus = rawSearchCorpus.includes(firstLastLower) ||
-              (lastNameLower.length >= 5 && rawSearchCorpus.includes(lastNameLower));
-            if (!inCorpus) {
-              console.warn(`[p2-gateA] CORPUS FAIL: "${e.name}" not found in raw search tool output — withholding. (Corpus length: ${rawSearchCorpus.length})`);
+
+            const nameLower = e.name.toLowerCase().trim();
+            const nameParts = nameLower.split(/\s+/);
+            const lastName = nameParts[nameParts.length - 1];
+            // Try full name first; fall back to last name (≥5 chars) only if no full-name hits
+            const searchTerms = [nameLower];
+            if (lastName.length >= 5 && lastName !== nameLower) searchTerms.push(lastName);
+
+            const WINDOW = 400;
+            let allHits = [];
+            for (const term of searchTerms) {
+              for (const item of _rawItems) allHits = allHits.concat(_scanItem(item, term, WINDOW));
+              if (allHits.length) break; // full name matched — don't fall back to last name
+            }
+
+            if (allHits.length === 0) {
+              // Name never appears near a role keyword in any item
+              console.warn(`[p2-gateA] PROXIMITY FAIL: "${e.name}" (${e.title}) — name+role not co-occurring within ±${WINDOW} chars in any item. Corpus: ${rawSearchCorpus.length} chars. Withholding.`);
               return { ...e, name: "", initials: "" };
             }
+
+            const passing  = allHits.filter(h => h.pass);
+            const departing = allHits.filter(h => h.hasDepart);
+
+            if (passing.length === 0) {
+              // Every role-vicinity occurrence has a departure/historical signal
+              console.warn(`[p2-gateA] DEPARTURE FAIL: "${e.name}" (${e.title}) — all ${allHits.length} role-proximity match(es) contain departure signals. Withholding.`);
+              return { ...e, name: "", initials: "" };
+            }
+
+            // Recency/newest-wins: if passing AND departing matches coexist, compare dates
+            if (departing.length > 0) {
+              const newestPass   = Math.max(...passing.map(h => h.date));
+              const newestDepart = Math.max(...departing.map(h => h.date));
+              if (newestPass === 0 || newestDepart === 0) {
+                // Dates unavailable — fail-closed (requirement 3)
+                console.warn(`[p2-gateA] CONFLICT FAIL (no dates): "${e.name}" (${e.title}) — passing + departure matches, dates unresolvable. Withholding.`);
+                return { ...e, name: "", initials: "" };
+              }
+              if (newestDepart >= newestPass) {
+                // Departure signal is as recent or more recent — withhold
+                console.warn(`[p2-gateA] RECENCY FAIL: "${e.name}" (${e.title}) — departure (${new Date(newestDepart).getFullYear()}) >= confirming (${new Date(newestPass).getFullYear()}). Withholding.`);
+                return { ...e, name: "", initials: "" };
+              }
+              // Confirming source is newer — log and pass
+              console.log(`[p2-gateA] RECENCY PASS: "${e.name}" (${e.title}) — confirming (${new Date(newestPass).getFullYear()}) > departure (${new Date(newestDepart).getFullYear()}).`);
+            }
+
+            console.log(`[p2-gateA] PASS: "${e.name}" (${e.title}) — ${passing.length} passing, ${departing.length} departure hit(s).`);
             return e;
           });
         }
