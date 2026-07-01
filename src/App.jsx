@@ -1845,6 +1845,13 @@ function buildUserEditContext(edits, userEdits) {
   return out.join("\n");
 }
 
+// ── EXEC CACHE VERSION ───────────────────────────────────────────────────
+// Increment to invalidate stale exec caches that may contain hallucinated names.
+// v1 → v2: added sourceUrl requirement (Gate A enforcement) + extraction-first model.
+//          Pre-cache generative call removed. Names extracted from search snippets only,
+//          code-verified present in returned text (Gate A) + currency-checked (Gate B).
+const EXEC_CACHE_VERSION = 2;
+
 // generateBrief is NON-ASYNC so it returns skeleton + raw promises
 // immediately. pickAccount (the only caller) then renders the skeleton
 // right away and merges each micro-result as it resolves — no blocking
@@ -2135,33 +2142,36 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     const p1ExecHint = p1Snapshot ? `\nGROUND TRUTH FROM COMPANY WEBSITE: "${p1Snapshot.slice(0, 500)}"\nIf this snapshot names a CEO, founder, or other executive, THAT is the correct person. Do NOT contradict it with a different name from a blog or article.\n\n` : "";
 
     // No pre-cache — fire inline. Mark as billable run (1 per brief).
+    // Amendment G: extraction-first model. The model extracts names from search results;
+    // it does not generate names. Gate A (snippet verification) + Gate B (currency) enforced
+    // in code by mergeExecs after this call returns.
     const execPrompt = baseLight+
     p1ExecHint+
       (sellerICP?.sellerDescription ? `Seller context: ${sellerICP.sellerDescription} (${sellerICP?.marketCategory||""}). Products: ${products.filter(p=>p.name?.trim()).map(p=>p.name).join(", ")||"various"}.\n\n` : "")+
-      `Search for the CURRENT leadership team of ${co}${url && url !== co ? ` (website: ${url})` : ""}. Return 4-6 people.\n\n`+
-      `SEARCH STRATEGY — use BOTH searches:\n`+
-      `1. Search: site:${url || co.toLowerCase().replace(/\s+/g,"")+ ".com"} "team" OR "about" OR "leadership" OR "founders"\n`+
-      `2. Search: "${co}" CEO OR founder OR "chief" site:linkedin.com\n`+
-      `The company's OWN website is the #1 source of truth for who works there. LinkedIn is #2. Random blog posts, industry articles, or consultant profiles are NOT evidence that someone works at ${co}.\n`+
-      `For smaller companies, startups, and nonprofits: the "About", "Our Team", or "Leadership" page on their website is the BEST source. Founders and co-founders count as executives.\n\n`+
-      `ACCURACY RULES (CRITICAL — executive errors destroy deals):\n`+
-      `- EXECUTIVES CHANGE JOBS. Your training data may be stale. A name you "know" may have LEFT the company months or years ago. ALWAYS verify via web search that the person is CURRENTLY at ${co} before including them.\n`+
-      `- If your search shows an executive has LEFT ${co} (moved to a competitor, retired, was replaced), do NOT include them. Including a departed executive is worse than omitting them — a rep who names someone who left looks uninformed.\n`+
-      `- 3 verified CURRENT executives is better than 6 that include departed ones. Accuracy over completeness.\n`+
-      `- For smaller companies / startups / nonprofits: the founding team IS the leadership team. Return founders, co-founders, board members, and any named team leads.\n`+
-      `- NEVER return "Verify at LinkedIn" or any placeholder — either return the real name or omit entirely.\n`+
-      `- NEVER confuse people who WRITE ABOUT ${co} (authors, consultants, bloggers, industry analysts) with people who WORK AT ${co}. A consultant who mentioned ${co} in an article is NOT an executive there. Only include people whose LinkedIn or company bio explicitly says they work at ${co}.\n`+
-      `- Include: CEO/Founder, COO/Co-Founder, CTO, CFO, and any named leaders. For small orgs, board members and advisors count.\n`+
-      `- When in doubt about whether someone works at or is still at ${co}, OMIT them. A shorter list of verified current executives is always better than a longer list with wrong names. A rep who names the wrong CEO in a meeting loses the deal instantly.\n\n`+
-      `For each executive provide:\n`+
-      `- name: their full real name (NEVER a placeholder)\n`+
-      `- title: their exact current title\n`+
-      `- initials: first letter of first + last name\n`+
+      `You are a RETRIEVAL AND EXTRACTION ENGINE for ${co}'s current named leadership. You do NOT generate names from training knowledge — you extract names that appear verbatim in your web search results.\n\n`+
+      `SEARCH STRATEGY — run BOTH searches:\n`+
+      `Search 1: site:${url || co.toLowerCase().replace(/\s+/g,"")+ ".com"} leadership OR team OR about OR "our-people" OR founders\n`+
+      `Search 2: "${co}" CEO OR founder OR "chief executive" site:linkedin.com\n\n`+
+      `EXTRACTION RULES (non-negotiable):\n`+
+      `1. ONLY include a person whose name appears verbatim in a returned search result snippet or page text. Training knowledge is NOT a source. If you cannot point to exactly where in the search results you read their name, omit them entirely.\n`+
+      `2. ROLE-EVIDENCED SEATS ONLY: Only include a seat for a role that your search results actually show someone holding. Do NOT include an empty seat (name="") "because every company has a CFO" — only show a seat if a source evidences that specific role exists and someone fills it.\n`+
+      `3. TRANSITION/SUPERSESSION CHECK: Before including any name, scan for signals they may be FORMER: "former", "departed", "stepped down", "resigned", "left", "succeeded by", "interim", "replaces", "appointed … as new CEO". If a newer dated source names a DIFFERENT person for that role → use the newer name. If you see departure signals and no replacement named → withhold name (title-only seat is fine).\n`+
+      `4. Founders and co-founders count as executives for smaller companies, startups, and nonprofits.\n`+
+      `5. sourceUrl: the exact URL from your search results where you found this person's name. Must start with http/https. Empty string if name withheld.\n`+
+      `6. snippet: the verbatim 30–60 word excerpt from that URL's returned text that contains BOTH the person's name AND their title/role together — copy it exactly from the search result. Empty string if name withheld.\n`+
+      `7. sourceDate: a date string parsed from the search result (e.g. "March 2026", "2026-03-15"). Empty string if no date found in the snippet or URL.\n\n`+
+      `For each verified person provide:\n`+
+      `- name: full real name verbatim from search results — empty string if not found\n`+
+      `- title: their exact current title as stated in the source\n`+
+      `- initials: first+last initials if name known, empty string if not\n`+
       `- background: 1 sentence — prior company, prior role, board seats, or notable career move\n`+
-      `- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What strategic priority do they own? What keeps them up at night? How should a seller at ${sellerUrl} approach them? 2-3 specific sentences grounded in ${co}'s current situation and recent moves.\n`+
+      `- angle: Their MANDATE and PERSPECTIVE at ${co}. What were they hired to do? What strategic priority do they own? What keeps them up at night? How should a seller at ${sellerUrl} approach them? 2-3 specific sentences.\n`+
+      `- sourceUrl: URL from search results where you found this name. Empty string if not found — name must ALSO be empty string in that case.\n`+
+      `- snippet: verbatim 30–60 word excerpt from that source showing name+title together. Empty string if no name.\n`+
+      `- sourceDate: date string from the source (e.g. "March 2026"). Empty string if unknown.\n`+
       (KL_EXEC_PERSPECTIVES ? `  USE THESE ROLE ARCHETYPES to write richer angles:\n  - CFO: margins, cash flow, audit, cost structure. Lead with ROI.\n  - CRO: pipeline, quota, win rate, expansion. Lead with revenue impact.\n  - CIO: architecture, integration, security, modernization. Lead with technical fit.\n  - CISO: breach risk, compliance, vendor risk. Lead with security posture.\n  - CHRO: talent, retention, culture, engagement. Lead with employee impact.\n  - COO: efficiency, process, scale, cost. Lead with operational improvement.\n  - CMO: brand, demand gen, martech, attribution. Lead with growth.\n  Match the angle to the SPECIFIC role — don't write generic angles.\n\n` : "\n")+
       `Return ONLY raw JSON:\n`+
-      `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role at Prior Company","angle":"Their mandate at ${co}. 2-3 sentences."}],`+
+      `{"keyExecutives":[{"name":"Full Name verbatim from search or empty string","title":"CEO","initials":"FN or empty string","background":"Prior role at Prior Company","angle":"Their mandate at ${co}. 2-3 sentences.","sourceUrl":"https://... URL from search results — empty string if not found","snippet":"Verbatim 30-60 word excerpt showing name+title — empty string if no name","sourceDate":"March 2026 or empty string"}],`+
       `"sellerSnapshot":"2 sentences on ${sellerUrl} for ${co}"}`;
 
     const parseExecResponse = (d) => {
@@ -2178,15 +2188,58 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     };
 
     try {
-      // Phase 1: web search for current executives (Sonnet — exec accuracy is critical)
+      // Phase 1: web search + extraction (Sonnet, temp 0 — deterministic extraction per Batch 2d)
       const d = await claudeFetch({
         model: SONNET,
         max_tokens:3000,
+        temperature: 0,
         tools:[{type:"web_search_20250305",name:"web_search",max_uses:2}],
         messages:[{role:"user",content:execPrompt}],
       }, { extraHeaders: { "x-billable-run": "1" } });
+      // Gate A — raw corpus extraction from web_search_tool_result blocks.
+      // These come directly from Anthropic's search API — the model cannot fabricate them.
+      // Verifying names against this corpus is fundamentally different from verifying against
+      // the model-supplied snippet: the model could co-fabricate name + snippet; it cannot
+      // co-fabricate name + actual search tool output.
+      // Structure: d.content has blocks of type "web_search_tool_result"; each has a content
+      // array of {type:"web_search_result", url, title, page_content} items.
+      // We collect ALL page_content + title text into a single lowercase corpus.
+      const _rawToolBlocks = (d.content || []).filter(b => b.type === "web_search_tool_result");
+      const rawSearchCorpus = _rawToolBlocks.flatMap(block => {
+        const items = Array.isArray(block.content) ? block.content : [];
+        return items.map(r => [r.page_content || "", r.title || "", r.text || ""].join(" "));
+      }).join(" ").toLowerCase();
+      const hasRawCorpus = rawSearchCorpus.length > 50;
+      if (hasRawCorpus) {
+        console.log(`[p2-gateA] Raw search corpus: ${rawSearchCorpus.length} chars from ${_rawToolBlocks.length} tool result block(s) for "${co}"`);
+      } else {
+        console.log(`[p2-gateA] No raw corpus available for "${co}" (${_rawToolBlocks.length} tool blocks) — snippet-only Gate A in mergeExecs`);
+      }
+
       const result = parseExecResponse(d);
-      if(result?.keyExecutives?.length) return result;
+      if(result?.keyExecutives?.length) {
+        if (hasRawCorpus) {
+          // Code-level Gate A: verify each name against the raw tool output, NOT just the model's snippet.
+          // The model cannot fabricate what the search engine returned.
+          result.keyExecutives = result.keyExecutives.map(e => {
+            if (!e.name) return e; // already title-only — pass through
+            const nameParts = e.name.trim().split(/\s+/);
+            // Check full name first (strongest signal), then last name as fallback
+            const fullNameLower = e.name.toLowerCase().trim();
+            const lastNameLower = nameParts[nameParts.length - 1].toLowerCase();
+            const firstLastLower = nameParts.length >= 2
+              ? `${nameParts[0].toLowerCase()} ${lastNameLower}` : fullNameLower;
+            const inCorpus = rawSearchCorpus.includes(firstLastLower) ||
+              (lastNameLower.length >= 5 && rawSearchCorpus.includes(lastNameLower));
+            if (!inCorpus) {
+              console.warn(`[p2-gateA] CORPUS FAIL: "${e.name}" not found in raw search tool output — withholding. (Corpus length: ${rawSearchCorpus.length})`);
+              return { ...e, name: "", initials: "" };
+            }
+            return e;
+          });
+        }
+        return result;
+      }
 
       // Phase 2: extract ONLY from P1 snapshot — no training knowledge guessing.
       // Joe's directive: "We can only name executives that are listed explicitly on the company website."
@@ -2198,9 +2251,9 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
             `Extract the names and titles of people who WORK AT "${co}" from this text.\n\n`+
             `TEXT:\n"${p1Snapshot.slice(0, 800)}"\n\n`+
             `EXAMPLES: "founded by Rick Rubin" → {"name":"Rick Rubin","title":"Founder & CEO"}. "CTO Todd McGuire" → {"name":"Todd McGuire","title":"Chief Technology Officer"}.\n`+
-            `ONLY return people named in the text. Do NOT add anyone else.\n\n`+
+            `ONLY return people named in the text. Do NOT add anyone else. Do NOT add names from training knowledge.\n\n`+
             `Return ONLY raw JSON:\n`+
-            `{"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"1 sentence from text","angle":"2 sentences on their role."}],"sellerSnapshot":"${sellerUrl} for ${co}"}`;
+            `{"keyExecutives":[{"name":"Full Name","title":"Title","initials":"XX","background":"1 sentence from text","angle":"2 sentences on their role.","sourceUrl":"","snippet":"Verbatim excerpt from the text above showing name+title","sourceDate":""}],"sellerSnapshot":"${sellerUrl} for ${co}"}`;
           const d2 = await claudeFetch({
             model: SONNET, max_tokens: 1000, temperature: 0,
             messages: [{ role: "user", content: extractPrompt }],
@@ -2515,8 +2568,57 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     const next = {...prev,
       _loadingSections: {...(prev._loadingSections||{}), executives:false},
       _completedSections: [...new Set([...(prev._completedSections||[]), "executives"])]};
-    if (r2?.keyExecutives?.length) next.keyExecutives = sanitizeWebResult(r2.keyExecutives);
-    else { next._failedSections = [...(prev._failedSections||[]), "executives"]; }
+    if (r2?.keyExecutives?.length) {
+      // Amendment G Gate A + Gate B enforcement:
+      // Gate A — Authenticity: name must be code-verified present in returned snippet text.
+      // Gate B — Currency: snippet must not contain departure signals for this person.
+      // Fail-closed: keep the seat (title/angle), withhold the name on any gate failure.
+      const raw = sanitizeWebResult(r2.keyExecutives);
+      // Determine company domain for public-figure guard (url is in generateBrief scope)
+      const _coHostname = (url || "").toLowerCase().replace(/^https?:\/\//, "").split("/")[0];
+      const verified = raw.map(e => {
+        const hasSource = e.sourceUrl?.trim() && e.sourceUrl.startsWith("http");
+        const isRoleStub = /^(CEO|CFO|CTO|COO|CRO|CHRO|Founder|President|VP)$/i.test(e.name || "");
+        // Gate A — fail-closed on missing sourceUrl
+        if (!hasSource && e.name && !isRoleStub) {
+          console.warn(`[mergeExecs] Gate A: no sourceUrl for "${e.name}" (${e.title}) — withholding name`);
+          return { ...e, name: "", initials: "" };
+        }
+        if (!e.name) return e; // already title-only — no further checks needed
+        // Gate A — code-verify name appears in snippet (if snippet is present)
+        if (e.snippet) {
+          const snipLower = e.snippet.toLowerCase();
+          const nameParts = e.name.trim().split(/\s+/);
+          const lastName = nameParts[nameParts.length - 1].toLowerCase();
+          if (lastName.length >= 3 && !snipLower.includes(lastName)) {
+            console.warn(`[mergeExecs] Gate A snippet fail: "${e.name}" not found in snippet text — withholding`);
+            return { ...e, name: "", initials: "" };
+          }
+        }
+        // Gate B — currency: scan snippet for departure/transition signals
+        if (e.snippet) {
+          const snipLower = e.snippet.toLowerCase();
+          const departSignals = ["former ", "formerly ", "departed", "stepped down", "resigns", "resigned", "has left", "will leave", "succeeded by", "replaces", "announced his departure", "announced her departure"];
+          if (departSignals.some(sig => snipLower.includes(sig))) {
+            console.warn(`[mergeExecs] Gate B departure signal: "${e.name}" (${e.title}) — withholding name`);
+            return { ...e, name: "", initials: "" };
+          }
+        }
+        // Public-figure guard: well-known public figures rejected unless confirmed on company domain
+        const knownPublicFigures = ["jennifer gates", "bill gates", "elon musk", "jeff bezos", "mark zuckerberg", "tim cook", "sundar pichai", "marc benioff", "dave ulrich", "larry ellison", "satya nadella"];
+        const nameLower = e.name.toLowerCase().trim();
+        if (knownPublicFigures.includes(nameLower)) {
+          const srcHostname = (e.sourceUrl || "").toLowerCase().replace(/^https?:\/\//, "").split("/")[0];
+          const coRoot = _coHostname.split(".").slice(-2).join(".");
+          if (!coRoot || !srcHostname.includes(coRoot)) {
+            console.warn(`[mergeExecs] Public-figure guard: "${e.name}" not corroborated on company domain — withholding`);
+            return { ...e, name: "", initials: "" };
+          }
+        }
+        return e;
+      });
+      next.keyExecutives = verified;
+    } else { next._failedSections = [...(prev._failedSections||[]), "executives"]; }
     if (r2?.sellerSnapshot) next.sellerSnapshot = r2.sellerSnapshot;
     return next;
   };
@@ -2555,6 +2657,38 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     if (r4?.keyContacts?.some(c=>c?.name||c?.title)) next.keyContacts = r4.keyContacts;
     if (r4?.techStack) next.techStack = r4.techStack;
     if (r4?.mobilizer?.description) next.mobilizer = r4.mobilizer;
+
+    // P0c: Reconcile P2 keyExecutives vs P4 keyContacts — source-backed name wins.
+    // After A4 fail-closed in mergeExecs: P2 exec has name → has sourceUrl (sourced).
+    //   P2 exec has no name → unsourced or failed; P4 named contact can fill the gap.
+    // P4's prompt already requires "ONLY names found in web search" — treat P4 named contacts as sourced.
+    if (next.keyExecutives?.length && next.keyContacts?.length) {
+      const norm = t => (t || "").toLowerCase()
+        .replace(/\b(chief|vice president|vp of|head of|director of|senior|global|group)\b/g, "")
+        .replace(/[^a-z]/g, "").trim();
+      const updated = next.keyExecutives.map(exec => {
+        if (exec.name) {
+          // P2 has sourced name — check for P4 conflict (same normalized title, different name)
+          const p4match = next.keyContacts.find(c =>
+            c.name && norm(c.title) === norm(exec.title) &&
+            c.name.toLowerCase() !== exec.name.toLowerCase()
+          );
+          if (p4match) {
+            console.warn(`[reconcileExecs] P2/P4 name conflict — ${exec.title}: P2="${exec.name}" (sourced) vs P4="${p4match.name}" — keeping P2 sourceUrl-backed name`);
+          }
+          return exec;
+        }
+        // P2 has no name (withheld by A4 or not found) — try to fill from P4 named contact
+        const p4fill = next.keyContacts.find(c => c.name && norm(c.title) === norm(exec.title));
+        if (p4fill) {
+          const initials = (p4fill.initials || p4fill.name.split(" ").map(w => w[0] || "").join("").slice(0, 2).toUpperCase());
+          console.log(`[reconcileExecs] P4 fills unsourced P2 exec: "${p4fill.name}" (${exec.title})`);
+          return { ...exec, name: p4fill.name, initials, sourceUrl: "p4-contact-search" };
+        }
+        return exec;
+      });
+      next.keyExecutives = updated;
+    }
     return next;
   };
   const mergeLive = (r5raw) => (prev) => {
@@ -5943,34 +6077,13 @@ CRITICAL: EVERY COMPANY MUST BE UNIQUE. Never return the same company twice. Nev
           // Trigger pre-cache by simulating account selection for the useEffect
           // We can't call setSelectedAccount here (would navigate the UI), so
           // we directly populate the cache refs if empty.
-          if (!execCacheRef.current[co] && sellerUrl !== "research-only") {
-            execCacheRef.current[co] = (async () => {
-              try {
-                const base = `Sales brief about TARGET PROSPECT "${co}" for seller at ${sellerUrl}.\nRULE: All fields describe ${co} NOT the seller. ASCII only.\nACCURACY: NEVER invent facts. Empty string if unknown.\n`;
-                const d = await claudeFetch({
-                  model: activeModel(), max_tokens: 3000,
-                  tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
-                  messages: [{ role: "user", content: base +
-                    `Search for the CURRENT C-suite and senior leadership of ${co}. Return 4-6 executives.\n\n` +
-                    `ACCURACY: For well-known companies, you KNOW these executives. Search to confirm. NEVER return "Verify at LinkedIn" — either return the real name or omit the role. 4 verified execs > 6 with guesses.\n` +
-                    `Include: CEO, CFO, COO, CTO/CIO, and 1-2 functional leaders relevant to ${sellerUrl}.\n\n` +
-                    `For each: background (1 sentence — prior company/role) and angle (MANDATE at ${co} — what they own, what keeps them up, how seller approaches. 2-3 sentences).\n\nReturn ONLY raw JSON:\n` +
-                    `{"keyExecutives":[{"name":"Full Name","title":"CEO","initials":"FN","background":"Prior role at Prior Company","angle":"Mandate at ${co}. 2-3 sentences."}],` +
-                    `"sellerSnapshot":"2 sentences on ${sellerUrl} most relevant offerings"}`
-                  }],
-                });
-                if (d.error) { execCacheRef.current[co] = null; return null; }
-                const textBlocks = (d.content || []).filter(b => b.type === "text").map(b => b.text || "");
-                let parsed = null;
-                for (let i = textBlocks.length - 1; i >= 0 && !parsed; i--) {
-                  parsed = extractJsonWithKey(textBlocks[i], "keyExecutives");
-                }
-                if (!parsed) { const raw = textBlocks.join("").trim(); parsed = safeParseJSON(raw.startsWith("{") ? raw : "{" + raw); }
-                execCacheRef.current[co] = parsed || null;
-                return parsed || null;
-              } catch { execCacheRef.current[co] = null; return null; }
-            })();
-          }
+          // Amendment G: Pre-cache exec generative call REMOVED.
+          // The pre-cache was the primary cache-poisoning vector — it ran a generative model
+          // that could produce hallucinated names (e.g. "Jennifer Gates") which were then
+          // cached and reused by p2 without re-verification. Under Amendment G, exec extraction
+          // runs inline in generateBrief (p2) using the extraction-first model: retrieve →
+          // extract → code-verify (Gate A) → currency-check (Gate B). No names are cached
+          // before verification. Speed trade-off accepted under accuracy-over-speed principle.
         });
         return currentScores;
       });
@@ -7948,7 +8061,29 @@ Return ONLY raw JSON:
     if(d.selectedAccount) setSelectedAccount(d.selectedAccount);
     if(d.selectedOutcomes?.length) setSelectedOutcomes(d.selectedOutcomes);
     if(d.dealValue) setDealValue(d.dealValue);
-    if(d.brief) setBrief(d.brief);
+    if(d.brief) {
+      // Amendment G §5 self-heal: strip exec names that lack a web-search sourceUrl on restore.
+      // Prevents stale/hallucinated names (e.g. pre-v2 "Jennifer Gates") from persisting in saved sessions.
+      // Blanked seats are marked _needsVerification:true; brief gets _execNeedsVerification:true
+      // so the self-heal useEffect can re-run grounded extraction in the background (Step 7).
+      let restoredBrief = { ...d.brief };
+      if (restoredBrief.keyExecutives?.length) {
+        let anyBlanked = false;
+        restoredBrief.keyExecutives = restoredBrief.keyExecutives.map(e => {
+          const hasSource = e.sourceUrl?.trim() && e.sourceUrl.startsWith("http");
+          const isRoleStub = /^(CEO|CFO|CTO|COO|CRO|CHRO|Founder|President|VP)$/i.test(e.name || "");
+          if (!hasSource && e.name && !isRoleStub) {
+            console.warn(`[restore] self-heal: withholding unsourced exec name "${e.name}" (${e.title}) — will re-verify`);
+            anyBlanked = true;
+            return { ...e, name: "", initials: "", _needsVerification: true };
+          }
+          return e;
+        });
+        // Flag brief for background re-verification (Amendment G §5)
+        if (anyBlanked) restoredBrief._execNeedsVerification = true;
+      }
+      setBrief(restoredBrief);
+    }
     if(d.riverHypo) setRiverHypo(normalizeRiverHypo(d.riverHypo));
     if(d.gateAnswers) setGateAnswers(d.gateAnswers);
     if(d.riverData) setRiverData(d.riverData);
@@ -8275,6 +8410,26 @@ Return ONLY raw JSON:
     if (!riverHypo && !riverHypoLoading) buildRiverHypo(brief, selectedAccount);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brief?._completedSections, !!brief, !!selectedAccount, !!sellerICP]);
+
+  // Amendment G §5 self-heal: when a restored brief has unsourced exec seats, clear the
+  // exec cache for that account so the next brief load runs a fresh extraction-first p2.
+  // Non-blocking — the brief opened immediately with name-withheld seats; this triggers
+  // re-verification via pickAccount on the next navigation, or can be driven by Step 7
+  // (background re-verify useEffect that calls the extraction engine directly).
+  const selfHealExecsRef = useRef(false);
+  useEffect(() => {
+    if (!brief?._execNeedsVerification || !selectedAccount?.company) return;
+    if (selfHealExecsRef.current) return;
+    selfHealExecsRef.current = true;
+    const co = selectedAccount.company;
+    console.log(`[self-heal] Exec seats need verification for "${co}" — clearing exec cache for fresh re-extraction on next load`);
+    // Clear exec cache for this account so pickAccount runs a fresh p2 on re-entry
+    execCacheRef.current[co] = null;
+    // Mark brief as healed (won't trigger again)
+    setBrief(prev => prev ? { ...prev, _execNeedsVerification: false } : prev);
+    selfHealExecsRef.current = false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!brief?._execNeedsVerification, selectedAccount?.company]);
 
   // Load cached ICP when sellerUrl is set but ICP not loaded.
   // Uses cacheOnly — only serves from cache, never starts expensive fresh builds.
@@ -9039,11 +9194,15 @@ Return ONLY raw JSON:
     // briefPreCacheRef (P5 live search) has no seller context — reusable for both modes.
     // execCacheRef pre-fetch is already skipped for research-only (line ~5686).
     // Neither needs to be cleared here.
-    // Reject cached execs that are stubs — force fresh extraction with P1 snapshot
+    // Reject cached execs that are stubs OR pre-v2 (no sourceUrl requirement)
     const _rawCachedExecs = execCacheRef.current[co] || null;
     const _cachedIsStubs = _rawCachedExecs && !(_rawCachedExecs instanceof Promise) &&
       (_rawCachedExecs?.keyExecutives || []).every(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e?.name || ""));
-    if (_cachedIsStubs) execCacheRef.current[co] = null;
+    const _cachedVersion = _rawCachedExecs?._execCacheVersion || 1;
+    if (_cachedIsStubs || _cachedVersion < EXEC_CACHE_VERSION) {
+      if (_cachedVersion < EXEC_CACHE_VERSION) console.log(`[execCache] v${_cachedVersion} < v${EXEC_CACHE_VERSION} — invalidating pre-sourceUrl cache for "${co}"`);
+      execCacheRef.current[co] = null;
+    }
     const cachedExecs = execCacheRef.current[co] || null;
     const cachedBrief = briefPreCacheRef.current[co] || {};
 
