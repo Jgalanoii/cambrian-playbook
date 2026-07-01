@@ -1550,17 +1550,33 @@ OUTPUT SCHEMA:
 
 // validatePlay: run 6 post-generation checks. Returns { play, playState }.
 // Mutates play inline to strip bad clauses. Never throws.
+// Batch-2d rule (non-negotiable): a check failure strips/rewrites the offending clause.
+// It NEVER suppresses the entire Play. Suppression is reserved for null/unparseable output.
 function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
   if (!play || typeof play !== "object") return { play: null, playState: "unavailable" };
   let state = "full";
+  // Core-token normalizer: strips all non-alphanumeric chars for fuzzy matching.
+  // "O.C. Tanner" → "octanner", "OC Tanner" → "octanner" — these must match.
+  const _coreStr = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const targetLower = (targetCompany || "").toLowerCase();
-  const domainLower  = (targetDomain || "").toLowerCase();
-  const sellerLower  = (sellerICP?.sellerName || "").toLowerCase();
+  const targetCore  = _coreStr(targetCompany);
+  // Domain without TLD (e.g. "octanner" from "octanner.com") as secondary token
+  const domainCore  = _coreStr((targetDomain || "").replace(/\.(com|net|org|io|co|us|uk|ca|au)$/i, ""));
+  const sellerLower = (sellerICP?.sellerName || "").toLowerCase();
 
-  // Check 1 — target company present
-  const playStr = JSON.stringify(play).toLowerCase();
-  if (!playStr.includes(targetLower) && (!domainLower || !playStr.includes(domainLower))) {
-    console.warn("[ThePlay] Check 1 FAIL: target not found in play output");
+  // Check 1 — identity/contamination gate: target company must appear in play output.
+  // Normalize both sides before comparing (strips punctuation/whitespace/case):
+  //   "O.C. Tanner" → "octanner", "OC Tanner" → "octanner" → both match → render.
+  // Genuine mismatch (wrong company, even after normalization) → suppress.
+  // This is the ONE check that suppresses the whole card — all other checks strip/rewrite.
+  const playStr     = JSON.stringify(play).toLowerCase();
+  const playStrNorm = _coreStr(playStr);
+  const _targetPresent = (targetCore.length >= 3 && playStrNorm.includes(targetCore))
+    || (targetLower.length >= 3 && playStr.includes(targetLower))
+    || (domainCore.length >= 3 && playStrNorm.includes(domainCore));
+  if (!_targetPresent) {
+    // No match even after normalization → genuinely about the wrong company → suppress.
+    console.warn(`[ThePlay] Check 1: target "${targetCompany}" (core:"${targetCore}") not found in play after normalization — suppressing`);
     return { play: null, playState: "unavailable" };
   }
 
@@ -2177,6 +2193,10 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
   const _execCacheIsStubs = _rawExecCache && !(_rawExecCache instanceof Promise) &&
     (_rawExecCache?.keyExecutives || []).every(e => /^(CEO|CFO|CTO|COO|CRO|CHRO)$/i.test(e?.name || ""));
   const execCache = _execCacheIsStubs ? null : _rawExecCache;
+  if (execCache) {
+    const _cacheDesc = execCache instanceof Promise ? "promise (in-flight)" : `${execCache?.keyExecutives?.length || 0} entry/entries`;
+    console.log(`[p2-fetch] Exec cache hit for "${co}" — Phase 0 skipped (${_cacheDesc}). Clear exec cache or rebuild brief to run Phase 0.`);
+  }
   const p2 = execCache
     ? (execCache instanceof Promise ? execCache : Promise.resolve(execCache))
     : (async()=>{
@@ -2248,17 +2268,25 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       '/our-people', '/company/leadership', '/about-us/team', '/about/team',
       '/management', '/about-us/management', '/en/leadership', '/about',
     ];
-    // Canonical base domain for domain-match guard (no www, no protocol)
+    // Canonical base domain for domain-match guard (no www, no protocol).
+    // IMPORTANT: url = member.company_url || co. If company_url is empty, url = co (the company
+    // NAME, not a domain). A name is not a valid probe target — skip Phase 0 in that case.
     const _companyBaseDomain = (() => {
+      const raw = member.company_url || ""; // use ONLY company_url — never fall back to name
+      if (!raw) return ""; // no domain set → Phase 0 will not run
       try {
-        const raw = url || co;
         return new URL(raw.startsWith("http") ? raw : "https://" + raw)
           .hostname.replace(/^www\./, "").toLowerCase();
-      } catch { return (url || "").toLowerCase().replace(/^www\./, "").split("/")[0]; }
+      } catch {
+        // raw might be "octanner.com" (no protocol) — strip path
+        const stripped = raw.replace(/^https?:\/\//, "").split("/")[0].toLowerCase();
+        return stripped.includes(".") ? stripped : ""; // must look like a domain
+      }
     })();
     // Role language regex — same signal as /api/fetch isThin check
     const _P0_ROLE_RE = /\b(ceo|cfo|coo|cto|cro|chro|cmo|president|vice\s+president|\bvp\b|director|officer|founder|co-?founder|chair(?:man|woman|person)?|partner|managing\s+director|executive\s+director)\b/i;
 
+    console.log(`[p2-fetch] Phase 0 starting for "${co}" — domain: ${_companyBaseDomain || "(none — company_url not set, Phase 0 skipped)"}`);
     let _p0Result = null;
     if (_companyBaseDomain) {
       for (const _path of _LEADERSHIP_PATHS) {
@@ -2269,9 +2297,19 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
             headers: authHeaders(),
             body: JSON.stringify({ url: _probeUrl, render: "auto" }),
           });
-          if (!_fr.ok) continue;
+          if (!_fr.ok) {
+            console.warn(`[p2-fetch] ${_probeUrl} → HTTP ${_fr.status} from /api/fetch — skipping`);
+            continue;
+          }
           const _fd = await _fr.json();
-          if (!_fd?.ok || !_fd.text || _fd.text.length < 300) continue;
+          if (!_fd?.ok) {
+            console.log(`[p2-fetch] ${_probeUrl} → ok:false reason:${_fd?.reason} — skipping`);
+            continue;
+          }
+          if (!_fd.text || _fd.text.length < 150) {
+            console.log(`[p2-fetch] ${_probeUrl} → text too short (${_fd?.text?.length || 0} chars) — skipping`);
+            continue;
+          }
 
           // Domain match guard — SSRF-safe but off-domain redirect breaks account isolation
           if (_fd.finalUrl) {
@@ -2284,14 +2322,20 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
             } catch { continue; }
           }
           // Must contain exec role language — not a generic marketing page
-          if (!_P0_ROLE_RE.test(_fd.text)) continue;
+          if (!_P0_ROLE_RE.test(_fd.text)) {
+            console.log(`[p2-fetch] ${_probeUrl} → no role language in text — skipping`);
+            continue;
+          }
 
-          console.log(`[p2-fetch] Leadership page found at ${_fd.finalUrl || _probeUrl} (${_fd.contentChars} chars${_fd.renderUsed ? ", rendered" : ""})`);
+          console.log(`[p2-fetch] Leadership page found at ${_fd.finalUrl || _probeUrl} (${_fd.contentChars} chars${_fd.renderUsed ? ", rendered" : ", plain"})`);
           _p0Result = { ..._fd, _probeUrl };
           break;
         } catch (_e) {
           console.warn(`[p2-fetch] Probe failed for ${_probeUrl}:`, _e?.message);
         }
+      }
+      if (!_p0Result) {
+        console.log(`[p2-fetch] Phase 0 complete: probed ${_LEADERSHIP_PATHS.length} paths on ${_companyBaseDomain}, no usable leadership page found — falling through to web search`);
       }
     }
 
@@ -8576,7 +8620,7 @@ Return ONLY raw JSON:
         if (flagVal !== "shadow") setPlayState("unavailable");
         return;
       }
-      const { play: validated } = validatePlay(parsed, targetCompany, targetDomain, brief, sellerICP);
+      const { play: validated, playState: validatedState } = validatePlay(parsed, targetCompany, targetDomain, brief, sellerICP);
       if (!validated) {
         console.warn("[ThePlay] Validation failed — no card shown");
         if (flagVal !== "shadow") setPlayState("unavailable");
@@ -8585,12 +8629,12 @@ Return ONLY raw JSON:
       // Check 8: stamp score used at build time for drift detection in render
       validated._fitScore = fitScore?.score ?? null;
       if (flagVal === "shadow") {
-        console.log(`[ThePlay] Shadow — state:full target:${targetCompany}`, JSON.stringify(validated).slice(0, 300));
+        console.log(`[ThePlay] Shadow — state:${validatedState || "full"} target:${targetCompany}`, JSON.stringify(validated).slice(0, 300));
         return;
       }
       setThePlay(validated);
-      setPlayState("full");
-      console.log(`[ThePlay] Built — state:full target:${targetCompany}`);
+      setPlayState(validatedState || "full");
+      console.log(`[ThePlay] Built — state:${validatedState || "full"} target:${targetCompany}`);
     } catch (e) {
       console.warn("[ThePlay] Build error:", e.message);
       if (flagVal !== "shadow") setPlayState("unavailable");
