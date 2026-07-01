@@ -2216,6 +2216,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
         console.log(`[p2-gateA] No raw corpus available for "${co}" (${_rawToolBlocks.length} tool blocks) — snippet-only Gate A in mergeExecs`);
       }
 
+
       const result = parseExecResponse(d);
       if(result?.keyExecutives?.length) {
         if (hasRawCorpus) {
@@ -8321,7 +8322,7 @@ Return ONLY raw JSON:
     const hasOverview  = !!brief?.companySnapshot && !LOADING_STUB.test(brief.companySnapshot);
     const hasExecs     = !!(brief?.keyExecutives?.length || brief?.keyContacts?.length);
     const hasSolutions = !!(brief?.solutionMapping?.some(s => s?.product));
-    const hasSignals   = !!(brief?.recentSignals?.some(s => s?.trim()) || brief?.recentHeadlines);
+    const hasSignals   = !!(brief?.recentSignals?.some(s => typeof s === "string" ? s.trim() : !!(s?.signal || s?.text)) || brief?.recentHeadlines);
     // Under solConEnabled: Play also waits for pre-call SA recommendation before firing.
     // Amendment B: no "unavailable" — building/full/weak-inputs only. Hold in building until ready.
     const hasSARecommendation = !solConEnabled || !!solutionFit?.saRecommendation;
@@ -8361,7 +8362,7 @@ Return ONLY raw JSON:
     const hasOverview = !!brief?.companySnapshot && !LOADING_STUB.test(brief.companySnapshot);
     const hasExecs    = !!(brief?.keyExecutives?.length || brief?.keyContacts?.length);
     const hasSolutions= !!(brief?.solutionMapping?.some(s => s?.product));
-    const hasSignals  = !!(brief?.recentSignals?.some(s => s?.trim()) || brief?.recentHeadlines);
+    const hasSignals  = !!(brief?.recentSignals?.some(s => typeof s === "string" ? s.trim() : !!(s?.signal || s?.text)) || brief?.recentHeadlines);
     const missingData = !hasOverview || !hasExecs || !hasSolutions || !hasSignals;
     if (allSettled && missingData) {
       const flagVal = (() => { try { return localStorage.getItem("cc_play_synthesis") || "on"; } catch { return "on"; } })();
@@ -10675,13 +10676,19 @@ Return ONLY raw JSON:
       const disc  = s.discovery.map(p=>`${p.label}: ${riverData[p.id]||"Not captured"}`).join("; ");
       return `${s.label}: ${gates} | ${disc}`;
     }).join("\n") : "";
-    // Pre-call: surface brief signals to ground the recommendation
+    // Pre-call: surface brief signals to ground the recommendation.
+    // recentSignals can be strings OR objects {signal, text, ...} depending on schema version.
+    // recentHeadlines can be strings OR objects {headline, relevance, type} — handle both.
+    const _sigText = s => typeof s === "string" ? s : (s?.signal || s?.text || "");
+    const _hlText  = h => typeof h === "string" ? h : (h?.headline || h?.text || "");
     const fitSignals = isPreCall ? [
-      ...(brief.recentSignals||[]).filter(s=>s?.trim()).slice(0,5),
-      brief.recentHeadlines||"",
-      brief.fitRationale||"",
+      ...(brief.recentSignals||[]).map(_sigText).filter(s => s.trim()).slice(0, 5),
+      ...(Array.isArray(brief.recentHeadlines)
+        ? brief.recentHeadlines.map(_hlText).filter(Boolean)
+        : [brief.recentHeadlines || ""]),
+      brief.fitRationale || "",
       brief.icpFitScore != null ? `ICP Fit Score: ${brief.icpFitScore}%` : "",
-    ].filter(Boolean).join("\n") : "";
+    ].filter(s => typeof s === "string" && s.trim()).join("\n") : "";
 
     // Same proof pack the brief and hypothesis used. SA review should
     // ground its "confirmedSolutions" + "saRecommendation" in the
