@@ -2114,10 +2114,15 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `   - Key intel: Latest round (Series A/B/C/D), lead investors, total raised, valuation (if disclosed), board members from investor firms.\n`+
     `   - Funding: "Private (VC-backed, Series [X], $[total] raised)" — cite from Crunchbase or press.\n`+
     `   - Standard: Funding rounds have press releases. Search TechCrunch, Crunchbase, company blog.\n\n`+
-    `4. PRIVATE / BOOTSTRAPPED:\n`+
+    `4. PRIVATE / OWNER-OPERATED (no VC or PE funding):\n`+
     `   - Search: site:${url || co + ".com"} about OR team, then "${co}" LinkedIn\n`+
     `   - Revenue: Estimate with cited reasoning based on employee count and industry. Always disclose as estimate.\n`+
     `   - Employee count: Estimate from LinkedIn, team page, or industry databases.\n`+
+    `   - VOCABULARY PRECISION — "bootstrapped" is startup terminology for early-stage companies intentionally avoiding external funding. Do NOT apply it to:\n`+
+    `     * Companies founded more than ~20 years ago\n`+
+    `     * Companies with >300 employees or estimated >$50M revenue\n`+
+    `     * Multi-generational or family-owned businesses\n`+
+    `     Instead use accurate descriptors: "privately held," "family-owned," "founder-led," "employee-owned," "organically grown," "no external VC/PE funding." These are distinct facts — use the one(s) the evidence supports.\n`+
     `   - Standard: Limited data expected. Estimates acceptable with reasoning.\n\n`+
     `5. NONPROFIT:\n`+
     `   - Search: "${co}" Form 990 OR "${co}" annual report OR "${co}" GuideStar\n`+
@@ -2139,7 +2144,7 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `{"companySnapshot":"3-4 sentences: what ${co} does, market position, recent moves. Be specific.",`+
     `"revenue":"TOTAL consolidated revenue from most recent annual report (e.g. '$25.1B (FY2024)'). For PUBLIC companies: use the TOTAL revenue line from their income statement — NOT a segment, NOT net fee revenue, NOT subscription-only. For PRIVATE companies: provide a reasoned estimate with cited reasoning. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — NEVER return empty string, 'Not found', or any placeholder.","publicPrivate":"MUST be accurate — 'Public (NASDAQ: TICKER)' ONLY if currently listed, 'Nonprofit (501(c)(3))' for tax-exempt charities/foundations, otherwise 'Private' or 'Private (PE-backed)' or 'Private (acquired by X)'. For nonprofits: check if they file Form 990 or are registered as a 501(c)(3).","employeeCount":"For PUBLIC companies: use exact figure from annual report (e.g. '418,000'). For PRIVATE: '~30 (estimated from team page/LinkedIn)'. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — MUST provide exact figure for public companies, estimate for private. NEVER return empty string or 'Not found'.",`+
     `"headquarters":"Denver, CO OR best estimate from website/LinkedIn. THIS FIELD OVERRIDES THE EMPTY FIELD RULE — check website footer, contact page, LinkedIn. MUST provide a value. Kennesaw, GA if that's what the website says.","founded":"2023 OR best estimate. MUST provide a value.","website":"domain.com","linkedIn":"ONLY the exact LinkedIn company page URL if certain. Empty string if unsure.",`+
-    `"fundingProfile":"Ownership structure — MUST match publicPrivate field AND companySnapshot. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year. ANTI-HALLUCINATION: ONLY state acquisition or funding facts that appeared in your web search results. If companySnapshot mentions an acquirer, use THAT name — do NOT contradict it with a different acquirer from training knowledge. A wrong acquirer name (e.g. naming a medical device company as the acquirer of a rewards platform) destroys credibility instantly. Empty string if no verified funding data found.",`+
+    `"fundingProfile":"Ownership structure — MUST match publicPrivate field AND companySnapshot. PE firm + year, or Series + total raised, or Public exchange+ticker. If acquired, name the acquirer and year. For established private companies with no VC/PE history (especially family-owned or long-standing): use 'Privately held, family-owned' or 'Privately held, organically grown' — NEVER 'bootstrapped' ('bootstrapped' is startup terminology and factually wrong for multi-decade established businesses). ANTI-HALLUCINATION: ONLY state acquisition or funding facts that appeared in your web search results. If companySnapshot mentions an acquirer, use THAT name — do NOT contradict it with a different acquirer from training knowledge. A wrong acquirer name (e.g. naming a medical device company as the acquirer of a rewards platform) destroys credibility instantly. Empty string if no verified funding data found.",`+
     `"competitors":["ONLY direct competitors in the same product category — from web search results. Empty array if none found. Do NOT list companies from adjacent categories."],`+
     `"watchOuts":["PROCUREMENT: Flag structurally-difficult targets and recommend channel/partner path.","INCUMBENT: Name the specific vendor relationship to displace or land adjacent to.","CREDIBILITY: Assess seller-stage fit."]}`,
     (partial) => {
@@ -3051,12 +3056,22 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
           (isPublicCompany
             ? `This is a PUBLIC COMPANY. Search for:\n- "${co}" proxy statement DEF 14A board of directors (most authoritative source for board composition)\n- "${co}" institutional shareholders 13F filings\n- "${co}" activist investor OR shareholder proposal\n- "${co}" board committee assignments (audit, compensation, nominating)\nProxy statements contain exact board member names, committee assignments, tenure, compensation, and independence status. This is the gold standard for board intelligence.\n\n`
             : `For private/startup companies: search for funding rounds, lead investors, board observers.\nFor nonprofits: search for board members and major donors/grantors.\n\n`) +
+          // Amendment G Step 1: narrative fields (boardMandate, investmentThesis, leadInvestors)
+          // must use ROLE/RELATIONSHIP language — no specific current-person names. Verified
+          // names appear only in boardMembers[], where they are separately gated. Historical
+          // founder citations are OK only when clearly not in a current active role.
+          `NAMES IN NARRATIVE (non-negotiable): boardMandate, investmentThesis, and leadInvestors\n`+
+          `are narrative fields — use ROLE/RELATIONSHIP language, never specific individuals.\n`+
+          `Say "the founding family," "the board chair," "the incoming CEO," "majority family shareholders" —\n`+
+          `NOT "Stephen Tanner Irish is currently chair" or any current-person name.\n`+
+          `Historical founders may be cited by name ONLY when clearly historical and NOT in any active role\n`+
+          `(e.g. "founded by Obert Tanner in 1927" is fine; "Carolyn Tanner Irish chairs the board" is not).\n\n`+
           `Return raw JSON:\n`+
           `{"boardAndInvestors":{`+
-          `"boardMembers":[{"name":"Full name","title":"Board title or role","background":"1 sentence: where they came from, what expertise they bring","significance":"Why this person matters for understanding ${co}'s strategy"${isPublicCompany ? ',"committee":"Board committee assignments (Audit, Compensation, Nominating/Governance)"' : ""}}],`+
-          `"leadInvestors":"${isPublicCompany ? "Top institutional shareholders (Vanguard, BlackRock, etc.), any activist investors, notable insider ownership. Cite 13F data if found." : "Key investors or funding sources — names + amounts if known. For nonprofits: major grantors."}",`+
-          `"investmentThesis":"1-2 sentences: what bet are the investors making? What outcome are they driving toward?",`+
-          `"boardMandate":"1-2 sentences: what is the board pushing for right now? Growth, profitability, exit, expansion, compliance, turnaround?${isPublicCompany ? " Reference any stated board priorities from the proxy statement or recent shareholder communications." : ""}"}}`
+          `"boardMembers":[{"name":"Full name from search results","title":"Board title or role","background":"1 sentence: where they came from, what expertise they bring","significance":"Why this person matters for understanding ${co}'s strategy"${isPublicCompany ? ',"committee":"Board committee assignments (Audit, Compensation, Nominating/Governance)"' : ""}}],`+
+          `"leadInvestors":"${isPublicCompany ? "Top institutional shareholders (Vanguard, BlackRock, etc.), any activist investors, notable insider ownership. Cite 13F data if found. Use institution/firm names, not individual people." : "Key investors or funding sources. For family/founder-owned: 'founding family (majority)' not individual family member names. For PE: firm name only."}",`+
+          `"investmentThesis":"1-2 sentences on the ownership/structural bet — use role language ('the founding family maintains control for long-term stability'). No specific current-person names.",`+
+          `"boardMandate":"1-2 sentences on what the board is driving: growth, profitability, exit, expansion, compliance, turnaround. Use role language ('the board,' 'the chair,' 'the founding family'). No specific current-person names.${isPublicCompany ? " Reference any stated board priorities from the proxy statement or recent shareholder communications." : ""}"}}`
         }],
       });
       const textBlocks=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text||"");
@@ -16417,9 +16432,9 @@ Return ONLY raw JSON:
                         </div>
                       ))
                       : <div style={{background:"var(--bg-1)",borderLeft:"4px solid var(--amber)",borderRadius:"0 10px 10px 0",padding:"14px 16px"}}>
-                            <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>No named executives found in public sources</div>
+                            <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)",marginBottom:6}}>Executive names not yet retrieved</div>
                             <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.6,marginBottom:10}}>
-                              This is common for private companies with limited web presence. Before your call:
+                              Retry to load their leadership page, or look them up before your call:
                             </div>
                             <div style={{fontSize:12,color:"var(--ink-1)",lineHeight:1.8}}>
                               {selectedAccount?.company_url ? (
