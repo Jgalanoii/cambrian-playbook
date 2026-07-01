@@ -8,6 +8,89 @@
 
 import { promises as dnsPromises } from 'node:dns';
 
+// ── Alternative IPv4 notation normalization ───────────────────────────────────
+// Converts non-standard IPv4 representations to canonical dotted-decimal BEFORE
+// the private-range check. Defense-in-depth: the WHATWG URL parser already
+// normalizes most of these, but we do it explicitly so the security property is
+// self-contained and auditable in this module — not relying on any OS behavior.
+//
+// Handles all inet_aton forms:
+//   Decimal integer:  2130706433        → 127.0.0.1  (single 32-bit int)
+//   Hex integer:      0x7f000001        → 127.0.0.1
+//   Octal first part: 0177.0.0.1        → 127.0.0.1
+//   Mixed hex/octal:  0x7f.0x0.0.0x1   → 127.0.0.0 (each octet)
+//   3-part (c=16bit): 0177.0.1          → 127.0.0.1
+//   2-part (b=24bit): 0177.1            → 127.0.0.1
+//
+// Non-IP hostnames (contain alpha chars that aren't a 0x prefix) pass through
+// unchanged — parseIntFlex returns null for any non-numeric part.
+
+// Parse a string as hex (0x…), octal (leading 0 + only octal digits), or decimal.
+// Returns the integer value, or null if not a numeric string.
+function parseIntFlex(s) {
+  if (/^0x[0-9a-f]+$/i.test(s)) return parseInt(s, 16);
+  if (/^0[0-7]+$/.test(s)) return parseInt(s, 8);  // leading 0 + only [0-7]
+  if (/^[0-9]+$/.test(s)) return parseInt(s, 10);
+  return null; // domain label — contains non-numeric chars
+}
+
+// Convert a 32-bit unsigned integer to dotted-decimal notation
+function uint32ToDotted(n) {
+  return [
+    (n >>> 24) & 0xff,
+    (n >>> 16) & 0xff,
+    (n >>>  8) & 0xff,
+    (n >>>  0) & 0xff,
+  ].join('.');
+}
+
+export function normalizeHostname(hostname) {
+  const h = hostname.toLowerCase();
+
+  // IPv6 (contains colon or brackets) — pass through unchanged
+  if (h.includes(':') || h.startsWith('[')) return hostname;
+
+  const parts = h.split('.');
+
+  // ── Single-part: full 32-bit decimal or hex integer ──────────────────────
+  if (parts.length === 1) {
+    const n = parseIntFlex(h);
+    if (n !== null && Number.isInteger(n) && n >= 0 && n <= 0xffffffff) {
+      return uint32ToDotted(n);
+    }
+    return hostname; // not a number — it's a hostname, leave unchanged
+  }
+
+  // ── Multi-part: each part may be hex, octal, or decimal ──────────────────
+  // Any null from parseIntFlex means it's a domain label → leave unchanged
+  const nums = parts.map(p => parseIntFlex(p));
+  if (nums.some(n => n === null)) return hostname;
+
+  switch (parts.length) {
+    case 4:
+      // a.b.c.d — each octet must be 0-255
+      if (nums.every(n => n >= 0 && n <= 255)) return nums.join('.');
+      break;
+    case 3:
+      // a.b.c — c is a 16-bit value (inet_aton 3-part form)
+      if (nums[0] >= 0 && nums[0] <= 255 &&
+          nums[1] >= 0 && nums[1] <= 255 &&
+          nums[2] >= 0 && nums[2] <= 0xffff) {
+        return [nums[0], nums[1], (nums[2] >>> 8) & 0xff, nums[2] & 0xff].join('.');
+      }
+      break;
+    case 2:
+      // a.b — b is a 24-bit value (inet_aton 2-part form)
+      if (nums[0] >= 0 && nums[0] <= 255 &&
+          nums[1] >= 0 && nums[1] <= 0xffffff) {
+        return [nums[0], (nums[1] >>> 16) & 0xff, (nums[1] >>> 8) & 0xff, nums[1] & 0xff].join('.');
+      }
+      break;
+  }
+
+  return hostname; // out of range — leave; DNS will reject or block at resolve step
+}
+
 // ── Blocked host list ─────────────────────────────────────────────────────────
 // linkedin.com: ToS prohibition + exec names come from the snippet path anyway
 // (HANDOFF_05 §2). Expand cautiously — overly broad blocks degrade accuracy.
@@ -104,9 +187,12 @@ export async function validateUrl(rawUrl, { dnsLookup } = {}) {
     return { ok: false, reason: 'blocked_host' };
   }
 
-  // 5. Reject IP-literal hostnames in private ranges — no DNS lookup needed
-  //    Handles: http://127.0.0.1, http://192.168.1.1, http://[::1], etc.
-  if (isPrivateIp(hostname)) {
+  // 5. Normalize alternative IPv4 representations to canonical dotted-decimal,
+  //    then reject any private/reserved range — no DNS lookup needed.
+  //    Without normalization, 2130706433 / 0x7f000001 / 0177.0.0.1 pass the
+  //    literal check and reach DNS; this catches them before any connection.
+  const normalizedHost = normalizeHostname(hostname);
+  if (isPrivateIp(normalizedHost)) {
     return { ok: false, reason: 'blocked_private_ip' };
   }
 

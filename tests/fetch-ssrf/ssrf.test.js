@@ -17,6 +17,7 @@ import {
   isPrivateIPv4,
   isPrivateIPv6,
   isBlockedHost,
+  normalizeHostname,
 } from '../../api/_fetch-ssrf.js';
 
 let passed = 0;
@@ -218,6 +219,52 @@ async function run() {
   {
     const r = await validateUrl('https://example.com/', { dnsLookup: dns.ipv6loopback });
     assert(!r.ok && r.reason === 'blocked_private_ip', 'resolves to ::1 → blocked_private_ip');
+  }
+
+  // ── normalizeHostname unit tests ──────────────────────────────────────────
+  // These verify the normalization function in isolation so failures are
+  // clearly attributable to the normalization logic, not validateUrl's other checks.
+  console.log('\nnormalizeHostname — inet_aton alternative forms:');
+  assert(normalizeHostname('2130706433') === '127.0.0.1',    '2130706433 (decimal 32-bit) → 127.0.0.1');
+  assert(normalizeHostname('0x7f000001') === '127.0.0.1',    '0x7f000001 (hex 32-bit) → 127.0.0.1');
+  assert(normalizeHostname('0177.0.0.1') === '127.0.0.1',    '0177.0.0.1 (octal first octet) → 127.0.0.1');
+  assert(normalizeHostname('0xc0a80101') === '192.168.1.1',  '0xc0a80101 (hex 192.168.1.1) → 192.168.1.1');
+  assert(normalizeHostname('0xa9fea9fe') === '169.254.169.254', '0xa9fea9fe (hex cloud metadata) → 169.254.169.254');
+  assert(normalizeHostname('0x7f.0.0.1') === '127.0.0.1',   '0x7f.0.0.1 (hex first octet) → 127.0.0.1');
+  assert(normalizeHostname('127.0.0.1') === '127.0.0.1',     '127.0.0.1 (already canonical) → unchanged');
+  assert(normalizeHostname('example.com') === 'example.com', 'example.com (domain) → unchanged');
+  assert(normalizeHostname('octanner.com') === 'octanner.com', 'octanner.com (domain) → unchanged');
+  assert(normalizeHostname('::1') === '::1',                  '::1 (IPv6) → unchanged');
+  // 2-part form: a.b where b is 24-bit
+  assert(normalizeHostname('0x7f.1') === '127.0.0.1',        '0x7f.1 (2-part: 0x7f prefix, b=1) → 127.0.0.1');
+
+  // ── validateUrl: alternative IPv4 encoding ─────────────────────────────────
+  // These use dns.fail — the normalization catches the private IP BEFORE DNS,
+  // so dns.fail is passed but never called. Demonstrates normalization fires first.
+  console.log('\nvalidateUrl — decimal/hex/octal IP encoding (SSRF bypass vectors):');
+  {
+    const r = await validateUrl('http://2130706433/', { dnsLookup: dns.fail });
+    assert(!r.ok && r.reason === 'blocked_private_ip', 'http://2130706433 (decimal 127.0.0.1) → blocked_private_ip');
+  }
+  {
+    const r = await validateUrl('http://0x7f000001/', { dnsLookup: dns.fail });
+    assert(!r.ok && r.reason === 'blocked_private_ip', 'http://0x7f000001 (hex 127.0.0.1) → blocked_private_ip');
+  }
+  {
+    const r = await validateUrl('http://0177.0.0.1/', { dnsLookup: dns.fail });
+    assert(!r.ok && r.reason === 'blocked_private_ip', 'http://0177.0.0.1 (octal 127.0.0.1) → blocked_private_ip');
+  }
+  {
+    const r = await validateUrl('http://0xc0a80101/', { dnsLookup: dns.fail });
+    assert(!r.ok && r.reason === 'blocked_private_ip', 'http://0xc0a80101 (hex 192.168.1.1) → blocked_private_ip');
+  }
+  {
+    const r = await validateUrl('http://0xa9fea9fe/', { dnsLookup: dns.fail });
+    assert(!r.ok && r.reason === 'blocked_private_ip', 'http://0xa9fea9fe (hex 169.254.169.254 cloud metadata) → blocked_private_ip');
+  }
+  {
+    const r = await validateUrl('http://0xc0a80001/', { dnsLookup: dns.fail });
+    assert(!r.ok && r.reason === 'blocked_private_ip', 'http://0xc0a80001 (hex 192.168.0.1) → blocked_private_ip');
   }
 
   // ── validateUrl: blocked hosts ────────────────────────────────────────────
