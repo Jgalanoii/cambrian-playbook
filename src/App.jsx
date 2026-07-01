@@ -2325,27 +2325,83 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
                      || safeParseJSON(_p0Text.includes("{") ? _p0Text.slice(_p0Text.indexOf("{")) : _p0Text);
         const _p0Raw = _p0Json?.executives || [];
 
-        // Code-verify each name appears verbatim in the page text (case-insensitive).
-        // If not found → hallucinated → strip. This is Gate A equivalent for page-fetched names.
+        // Code-verify each name + title appears in the page text. Two-stage:
+        // Stage A (filter): full name must appear verbatim in page text — hallucinated names stripped.
+        // Stage B (map):
+        //   (1) Snippet check: snippet must contain the name AND appear in the page text
+        //       (first 40 chars as proxy). Clears snippet if it fails — prevents a hallucinated
+        //       snippet from laundering a misread title past mergeExecs Gate A.
+        //   (2) Title proximity check: the extracted title must appear in the page text within
+        //       ±300 chars of the name occurrence. Clears title if unverifiable (keeps the name;
+        //       the seat is real, the specific title is uncertain).
         const _pageTextLower = _p0Result.text.toLowerCase();
-        const _p0Verified = _p0Raw.filter(e => {
-          if (!e.name || e.name.trim().length < 3) return false;
-          const _nl = e.name.toLowerCase().trim();
-          if (!_pageTextLower.includes(_nl)) {
-            console.warn(`[p2-fetch] Verbatim fail: "${e.name}" not found in page text — skipping`);
-            return false;
+
+        // Helper: check if title (or common abbreviation) appears within ±300 chars of nameLower
+        const _titleNearName = (nl, tl) => {
+          if (!tl || tl.length < 2) return true; // no title → trivially pass
+          // Expand common abbreviations so "CEO" matches "chief executive" on the page
+          const _abbrevMap = { ceo: "chief executive", cfo: "chief financial", coo: "chief operating", cto: "chief technology", cro: "chief revenue", chro: "chief human", cmo: "chief marketing" };
+          const _altTl = _abbrevMap[tl] || null;
+          let _idx = _pageTextLower.indexOf(nl);
+          while (_idx !== -1) {
+            const _ws = Math.max(0, _idx - 300);
+            const _we = Math.min(_pageTextLower.length, _idx + nl.length + 300);
+            const _win = _pageTextLower.slice(_ws, _we);
+            if (_win.includes(tl) || (_altTl && _win.includes(_altTl))) return true;
+            _idx = _pageTextLower.indexOf(nl, _idx + 1);
           }
-          return true;
-        }).map(e => ({
-          name: e.name.trim(),
-          title: e.title || "",
-          initials: e.name.trim().split(/\s+/).map(p => p[0] || "").join("").toUpperCase().slice(0, 4),
-          background: e.background || "",
-          angle: e.angle || `${e.name.trim().split(" ")[0]} leads at ${co} as ${e.title || "an executive"}. Research their current mandate before reaching out.`,
-          sourceUrl: _p0Result.finalUrl || _p0Result._probeUrl,
-          snippet: e.snippet || "",
-          sourceDate: "",
-        }));
+          return false;
+        };
+
+        const _p0Verified = _p0Raw
+          // Stage A: name must appear verbatim in page text
+          .filter(e => {
+            if (!e.name || e.name.trim().length < 3) return false;
+            const _nl = e.name.toLowerCase().trim();
+            if (!_pageTextLower.includes(_nl)) {
+              console.warn(`[p2-fetch] Verbatim fail: "${e.name}" not found in page text — skipping`);
+              return false;
+            }
+            return true;
+          })
+          // Stage B: snippet + title validation
+          .map(e => {
+            const _nl = e.name.toLowerCase().trim();
+            const _tl = (e.title || "").toLowerCase().trim();
+
+            // Snippet check: must contain name AND its prefix must appear in page text
+            let _snippet = (e.snippet || "").trim();
+            if (_snippet.length >= 20) {
+              const _sl = _snippet.toLowerCase();
+              if (!_sl.includes(_nl)) {
+                console.warn(`[p2-fetch] Snippet name check: "${e.name}" not in snippet — clearing`);
+                _snippet = "";
+              } else if (!_pageTextLower.includes(_sl.slice(0, 40))) {
+                console.warn(`[p2-fetch] Snippet page check: prefix not in page text for "${e.name}" — clearing`);
+                _snippet = "";
+              }
+            } else {
+              _snippet = ""; // too short to be a real verbatim excerpt
+            }
+
+            // Title proximity check: title must appear within ±300 chars of name in page text
+            const _titleOk = _titleNearName(_nl, _tl);
+            const _verifiedTitle = _titleOk ? (e.title || "") : "";
+            if (!_titleOk) {
+              console.warn(`[p2-fetch] Title proximity fail: "${e.title}" not near "${e.name}" in page — clearing title`);
+            }
+
+            return {
+              name: e.name.trim(),
+              title: _verifiedTitle,
+              initials: e.name.trim().split(/\s+/).map(p => p[0] || "").join("").toUpperCase().slice(0, 4),
+              background: e.background || "",
+              angle: e.angle || `${e.name.trim().split(" ")[0]} leads at ${co} as ${_verifiedTitle || "an executive"}. Research their current mandate before reaching out.`,
+              sourceUrl: _p0Result.finalUrl || _p0Result._probeUrl,
+              snippet: _snippet,
+              sourceDate: "",
+            };
+          });
 
         if (_p0Verified.length > 0) {
           console.log(`[p2-fetch] ${_p0Verified.length} exec(s) code-verified from leadership page — returning without web search`);
