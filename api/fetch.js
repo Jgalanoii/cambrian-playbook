@@ -298,9 +298,12 @@ function isThin(text, html) {
 async function renderWithService(url) {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) {
-    console.warn('[/api/fetch] Stage 2: FIRECRAWL_API_KEY not set — render unavailable, falling through cascade');
+    // DIAGNOSTIC: if Phase 0 shows "render_failed detail:no_render_service", set FIRECRAWL_API_KEY
+    // in Vercel project settings → Environment Variables → v2-staging (or All Environments).
+    console.warn('[/api/fetch] Stage 2: FIRECRAWL_API_KEY not set — render unavailable. Bot-protected sites (octanner.com, linkedin.com) will not be fetchable until this key is set.');
     return { ok: false, reason: 'render_failed', detail: 'no_render_service' };
   }
+  console.log(`[/api/fetch] Stage 2: Firecrawl key present (${apiKey.slice(0, 6)}…) — sending render request`);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), RENDER_TIMEOUT_MS);
@@ -388,28 +391,47 @@ export default async function handler(req, res) {
 
   // ── Stage 1: plain HTTPS fetch + readability extraction ───────────────────
   const fetchResult = await doPlainFetch(rawUrl);
-  if (!fetchResult.ok) {
+  let stage1Html = null, finalUrl = null, httpStatus = 0, truncated = false, contentBytes = 0;
+  let stage1Text = "", stage1Title = "";
+  const stage1Ok = fetchResult.ok;
+
+  if (stage1Ok) {
+    ({ html: stage1Html, finalUrl, httpStatus, truncated, contentBytes } = fetchResult);
+    stage1Title = extractTitle(stage1Html);
+    stage1Text  = extractText(stage1Html);
+    const stage1Ms = Date.now() - t0;
+    console.log(`[/api/fetch] Stage 1 done in ${stage1Ms}ms — ${contentBytes}B raw, ${stage1Text.length} chars clean, thin=${isThin(stage1Text, stage1Html)}`);
+  } else {
+    // Stage 1 failed — bot/datacenter-IP protection is the typical cause.
+    // Log clearly so Phase 0 diagnostics can distinguish fetch_failed from render_failed.
     console.warn(`[/api/fetch] Stage 1 failed (${fetchResult.reason}): ${rawUrl}`);
-    return res.status(200).json({ ok: false, reason: fetchResult.reason, url: rawUrl });
   }
 
-  const { html, finalUrl, httpStatus, truncated, contentBytes } = fetchResult;
-  const title = extractTitle(html);
-  const text = extractText(html);
-  const stage1Ms = Date.now() - t0;
-  console.log(`[/api/fetch] Stage 1 done in ${stage1Ms}ms — ${contentBytes}B raw, ${text.length} chars clean, thin=${isThin(text, html)}`);
+  // ── Stage 2: Firecrawl render ─────────────────────────────────────────────
+  // Two escalation triggers (both blocked by render:'never'):
+  //   1. Stage 1 succeeded but text is thin — SPA shell, JS-rendered content (original)
+  //   2. Stage 1 failed (fetch_failed / timeout / non_html) — bot protection blocks our
+  //      server IP entirely; Firecrawl routes through a browser fingerprint that passes.
+  //      Bot-protected sites ALWAYS fail Stage 1 — failure must trigger render, not bail.
+  const shouldEscalate = render !== 'never' && (
+    render === 'always' ||
+    !stage1Ok ||                                          // ← NEW: hard Stage-1 failure
+    (stage1Ok && isThin(stage1Text, stage1Html))          // existing: thin-but-ok
+  );
 
-  // ── Stage 2: render escalation (only when Stage 1 is thin and render allows) ──
-  if (render !== 'never' && (render === 'always' || isThin(text, html))) {
-    console.log(`[/api/fetch] Stage 1 thin — escalating to render for ${finalUrl}`);
-    const renderResult = await renderWithService(finalUrl);
+  if (shouldEscalate) {
+    const escalationReason = !stage1Ok
+      ? `Stage 1 ${fetchResult.reason} (likely bot protection)`
+      : `Stage 1 thin`;
+    console.log(`[/api/fetch] Escalating to render — ${escalationReason} — for ${finalUrl || rawUrl}`);
+    const renderResult = await renderWithService(finalUrl || rawUrl);
     if (renderResult.ok) {
       const totalMs = Date.now() - t0;
       console.log(`[/api/fetch] Stage 2 success in ${totalMs}ms total for ${rawUrl}`);
       const result = {
-        ok: true, url: rawUrl, finalUrl,
+        ok: true, url: rawUrl, finalUrl: finalUrl || rawUrl,
         httpStatus, renderUsed: true,
-        title: renderResult.title || title,
+        title: renderResult.title || stage1Title,
         text: renderResult.text,
         contentChars: renderResult.text.length,
         truncated: false,
@@ -419,26 +441,38 @@ export default async function handler(req, res) {
       setCached(rawUrl, result);
       return res.status(200).json(result);
     }
-    // Stage 2 failed — if Stage 1 had any usable text, return it; else fail
-    if (text.length < 200) {
+
+    // Stage 2 also failed
+    if (!stage1Ok) {
+      // Both stages failed — nothing to fall back to
+      console.warn(`[/api/fetch] Both Stage 1 (${fetchResult.reason}) and Stage 2 (${renderResult.reason}) failed for ${rawUrl}`);
+      return res.status(200).json({ ok: false, reason: renderResult.reason, url: rawUrl });
+    }
+    // Stage 1 had some text — Stage 2 failed — fall back to Stage 1 if substantial
+    if (stage1Text.length < 200) {
       console.warn(`[/api/fetch] Both stages failed for ${rawUrl} — returning render_failed`);
       return res.status(200).json({ ok: false, reason: 'render_failed', url: rawUrl });
     }
     console.warn(`[/api/fetch] Stage 2 failed (${renderResult.reason}) — falling back to Stage 1 text for ${rawUrl}`);
-    // Fall through to return Stage 1 text (better than nothing)
+    // Fall through to return Stage 1 text
+  }
+
+  if (!stage1Ok) {
+    // render:'never' and Stage 1 failed — nothing we can do
+    return res.status(200).json({ ok: false, reason: fetchResult.reason, url: rawUrl });
   }
 
   // ── Return Stage 1 result ──────────────────────────────────────────────────
   const totalMs = Date.now() - t0;
   console.log(`[/api/fetch] Stage 1 return in ${totalMs}ms for ${rawUrl}`);
-  const cappedText = text.slice(0, TEXT_CAP_CHARS);
+  const cappedText = stage1Text.slice(0, TEXT_CAP_CHARS);
   const result = {
     ok: true, url: rawUrl, finalUrl,
     httpStatus, renderUsed: false,
-    title,
+    title: stage1Title,
     text: cappedText,
     contentChars: cappedText.length,
-    truncated: truncated || text.length > TEXT_CAP_CHARS,
+    truncated: truncated || stage1Text.length > TEXT_CAP_CHARS,
     fetchedAt: new Date().toISOString(),
     cached: false,
   };

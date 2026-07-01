@@ -1533,12 +1533,27 @@ ${sellerDesc} · products:${catalog} · customers:${customers}
 
 TASK: Build The Play for ${seller} selling into ${sf(targetCompany)}. Output valid JSON only.
 
+ENTRY STRATEGY — pick the right door, not just the top of the org chart:
+Step 1: Map topProduct → the function that OWNS this problem and controls the budget.
+  • Recognition / Reward catalog / Culture / Employee experience → Total Rewards, CHRO, VP People/HR, Chief People Officer
+  • Sales technology / CRM / Revenue tools → CRO, VP Sales, RevOps
+  • Finance / Spend management / Procurement → CFO, VP Finance, CPO
+  • IT / Infrastructure / Security → CIO, CISO, CTO, VP IT
+  • Marketing technology → CMO, VP Marketing, Demand Gen
+  • Recruiting / Talent acquisition → VP Talent, Head of TA, CHRO
+Step 2: Calibrate to company size from [P1] employeeCount.
+  • Enterprise (>3,000 employees): Cold C-suite rarely converts. Enter via the VP/Director who OWNS this budget. C-suite sponsorship comes AFTER the function is engaged. Do NOT recommend cold-approaching the CEO/COO/President as the first move for enterprise deals.
+  • Mid-market (300–3,000): VP or SVP level is reachable and appropriate; C-suite for strategic/board-level solutions only.
+  • SMB (<300): CEO/COO/founder is appropriate — they personally own most decisions.
+Step 3: Check [P2] for a name in the target function. If found → name them. If not → use function language only ('engage the VP of Total Rewards', 'reach the Chief People Officer').
+NEVER default to CEO/COO for enterprise recognition/HR/culture solutions — that is not where the buying decision lives.
+
 OUTPUT SCHEMA:
 {
   "situation": "2-3 sentences. What's happening at ${sf(targetCompany)} now, relevant to ${seller}. Ground in [P1]/[P5]. Name the signal.",
   "whyNow": "1-2 sentences. Which ${seller} product fits + the [P5] signal making it timely. Reference a named product.",
-  "yourMove": "2-3 sentences. Who to contact — use name+title from [P2] ONLY where name is non-empty string; if [P2] shows empty string for a role, use role/function language ONLY ('engage the CFO', 'reach the VP of Engineering'). NEVER supply a name from training knowledge. Channel, opening angle. Directive.",
-  "primaryContact": { "name": "from [P2] only — MUST be non-empty in [P2]; omit/null if [P2] has empty string for this role", "title": "from [P2] only", "rationale": "1 sentence from [P2]" },
+  "yourMove": "2-3 sentences. Who to contact — follow the ENTRY STRATEGY above to pick the right function and level. Use name+title from [P2] ONLY where name is non-empty string. If [P2] shows empty string, use function language only. NEVER supply a name from training knowledge.",
+  "primaryContact": { "name": "from [P2] only — the person in the owning function per ENTRY STRATEGY; omit/null if [P2] has empty string for that role", "title": "from [P2] only", "rationale": "1 sentence — why this function/person owns this decision" },
   "elevatorPitch": "3-4 sentences tailored to ${sf(targetCompany)}. May cite a verified customer from [ICP]. No capabilities not in [ICP].",
   "draftEmailSubject": "One line, specific to ${sf(targetCompany)}.",
   "draftEmailBody": "4-6 sentences: credibility → ${sf(targetCompany)} pain → low-friction ask.",
@@ -2259,83 +2274,123 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
 
     // ── Phase 0: Leadership-page fetch (2c) ────────────────────────────────────
     // Primary exec source: authoritative names from the company's own website.
-    // Probes common leadership paths via /api/fetch → extracts (name, title,
-    // background, angle) from page text → code-verifies each name verbatim.
-    // Domain match guard enforced: off-domain redirects break account isolation.
-    // Falls through to Phase 1 (web search) if no verified names found.
-    const _LEADERSHIP_PATHS = [
-      '/leadership', '/about/leadership', '/leadership-team', '/team',
-      '/our-people', '/company/leadership', '/about-us/team', '/about/team',
-      '/management', '/about-us/management', '/en/leadership', '/about',
-    ];
-    // Canonical base domain for domain-match guard (no www, no protocol).
-    // IMPORTANT: url = member.company_url || co. If company_url is empty, url = co (the company
-    // NAME, not a domain). A name is not a valid probe target — skip Phase 0 in that case.
+    // Step 1: web search finds the REAL leadership URL (no path-guessing).
+    //         Search: "${co} leadership team site:${domain}" → extract first on-domain result URL.
+    // Step 2: /api/fetch that URL with render:"auto".
+    //         Stage 1 (plain) → if bot-protected → Stage 2 (Firecrawl) escalation.
+    // Step 3: Extract (name, title, background, angle) from page text via Claude (temp 0, no tools).
+    // Step 4: Code-verify each name + title verbatim against page text.
+    // Falls through to Phase 1 (web search) if any step produces nothing.
+    // Domain match guard: finalUrl must stay on the company's domain (account isolation).
+
+    // Canonical base domain — uses company_url ONLY (not the company name which is not a domain)
     const _companyBaseDomain = (() => {
-      const raw = member.company_url || ""; // use ONLY company_url — never fall back to name
-      if (!raw) return ""; // no domain set → Phase 0 will not run
+      const raw = member.company_url || "";
+      if (!raw) return "";
       try {
         return new URL(raw.startsWith("http") ? raw : "https://" + raw)
           .hostname.replace(/^www\./, "").toLowerCase();
       } catch {
-        // raw might be "octanner.com" (no protocol) — strip path
         const stripped = raw.replace(/^https?:\/\//, "").split("/")[0].toLowerCase();
-        return stripped.includes(".") ? stripped : ""; // must look like a domain
+        return stripped.includes(".") ? stripped : "";
       }
     })();
-    // Role language regex — same signal as /api/fetch isThin check
+    // Role language regex — leadership page must contain exec role terms to be useful
     const _P0_ROLE_RE = /\b(ceo|cfo|coo|cto|cro|chro|cmo|president|vice\s+president|\bvp\b|director|officer|founder|co-?founder|chair(?:man|woman|person)?|partner|managing\s+director|executive\s+director)\b/i;
 
-    console.log(`[p2-fetch] Phase 0 starting for "${co}" — domain: ${_companyBaseDomain || "(none — company_url not set, Phase 0 skipped)"}`);
+    console.log(`[p2-fetch] Phase 0 starting for "${co}" — domain: ${_companyBaseDomain || "(none — company_url not set, skipping Phase 0)"}`);
     let _p0Result = null;
+
     if (_companyBaseDomain) {
-      for (const _path of _LEADERSHIP_PATHS) {
-        const _probeUrl = `https://${_companyBaseDomain}${_path}`;
+      // ── Step 1: Find the real leadership URL via web search ─────────────────
+      // One targeted search → extract the on-domain result URL.
+      // Eliminates guessing 12 paths; works even for non-standard URL structures.
+      let _leadershipUrl = null;
+      try {
+        const _urlSearchResp = await claudeFetch({
+          model: SONNET, max_tokens: 200, temperature: 0,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 }],
+          messages: [{ role: "user", content:
+            `Find the leadership or team page for ${co} on their official website.\n` +
+            `Search query: ${co} leadership team site:${_companyBaseDomain}\n` +
+            `Return ONLY the URL of the leadership/team/about page — a single URL, nothing else.`,
+          }],
+        });
+        // Extract URL from search result items (prefer on-domain hits)
+        const _srBlocks = (_urlSearchResp?.content || []).filter(b => b.type === "web_search_tool_result");
+        for (const _srb of _srBlocks) {
+          for (const _sri of (Array.isArray(_srb.content) ? _srb.content : [])) {
+            const _iu = _sri.url || "";
+            if (!_iu.startsWith("http")) continue;
+            try {
+              const _ih = new URL(_iu).hostname.replace(/^www\./, "").toLowerCase();
+              if (_ih.includes(_companyBaseDomain) || _companyBaseDomain.includes(_ih)) {
+                _leadershipUrl = _iu;
+                break;
+              }
+            } catch {}
+          }
+          if (_leadershipUrl) break;
+        }
+        // Fall back to URL in model's text response (some searches surface it there)
+        if (!_leadershipUrl) {
+          const _srText = (_urlSearchResp?.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+          const _srUrlMatch = _srText.match(/https?:\/\/[^\s"'<>]+/);
+          if (_srUrlMatch) {
+            try {
+              const _ih = new URL(_srUrlMatch[0]).hostname.replace(/^www\./, "").toLowerCase();
+              if (_ih.includes(_companyBaseDomain)) _leadershipUrl = _srUrlMatch[0];
+            } catch {}
+          }
+        }
+        console.log(`[p2-fetch] Leadership URL search → ${_leadershipUrl || "(no on-domain URL found)"}`);
+      } catch (_se) {
+        console.warn("[p2-fetch] Leadership URL search failed:", _se?.message);
+      }
+
+      // ── Step 2: Fetch the leadership page via /api/fetch ────────────────────
+      if (_leadershipUrl) {
         try {
           const _fr = await fetch("/api/fetch", {
             method: "POST",
             headers: authHeaders(),
-            body: JSON.stringify({ url: _probeUrl, render: "auto" }),
+            body: JSON.stringify({ url: _leadershipUrl, render: "auto" }),
           });
           if (!_fr.ok) {
-            console.warn(`[p2-fetch] ${_probeUrl} → HTTP ${_fr.status} from /api/fetch — skipping`);
-            continue;
-          }
-          const _fd = await _fr.json();
-          if (!_fd?.ok) {
-            console.log(`[p2-fetch] ${_probeUrl} → ok:false reason:${_fd?.reason} — skipping`);
-            continue;
-          }
-          if (!_fd.text || _fd.text.length < 150) {
-            console.log(`[p2-fetch] ${_probeUrl} → text too short (${_fd?.text?.length || 0} chars) — skipping`);
-            continue;
-          }
-
-          // Domain match guard — SSRF-safe but off-domain redirect breaks account isolation
-          if (_fd.finalUrl) {
-            try {
-              const _fh = new URL(_fd.finalUrl).hostname.replace(/^www\./, "").toLowerCase();
-              if (!_fh.includes(_companyBaseDomain) && !_companyBaseDomain.includes(_fh)) {
-                console.warn(`[p2-fetch] Domain mismatch: ${_probeUrl} → ${_fh} — skipping`);
-                continue;
+            console.warn(`[p2-fetch] /api/fetch HTTP ${_fr.status} for ${_leadershipUrl}`);
+          } else {
+            const _fd = await _fr.json();
+            if (!_fd?.ok) {
+              console.log(`[p2-fetch] ${_leadershipUrl} → ok:false reason:${_fd?.reason}${_fd?.detail ? " detail:" + _fd.detail : ""}`);
+            } else if (!_fd.text || _fd.text.length < 150) {
+              console.log(`[p2-fetch] ${_leadershipUrl} → text too short (${_fd?.text?.length || 0} chars)`);
+            } else {
+              // Domain match guard — off-domain redirect breaks account isolation
+              let _domainOk = true;
+              if (_fd.finalUrl) {
+                try {
+                  const _fh = new URL(_fd.finalUrl).hostname.replace(/^www\./, "").toLowerCase();
+                  if (!_fh.includes(_companyBaseDomain) && !_companyBaseDomain.includes(_fh)) {
+                    console.warn(`[p2-fetch] Domain mismatch: ${_leadershipUrl} → ${_fh} — skipping`);
+                    _domainOk = false;
+                  }
+                } catch { _domainOk = false; }
               }
-            } catch { continue; }
+              if (_domainOk && !_P0_ROLE_RE.test(_fd.text)) {
+                console.log(`[p2-fetch] ${_leadershipUrl} → no role language in text`);
+              } else if (_domainOk) {
+                console.log(`[p2-fetch] Leadership page loaded: ${_fd.finalUrl || _leadershipUrl} (${_fd.contentChars} chars${_fd.renderUsed ? ", Firecrawl-rendered" : ", plain"})`);
+                _p0Result = { ..._fd, _probeUrl: _leadershipUrl };
+              }
+            }
           }
-          // Must contain exec role language — not a generic marketing page
-          if (!_P0_ROLE_RE.test(_fd.text)) {
-            console.log(`[p2-fetch] ${_probeUrl} → no role language in text — skipping`);
-            continue;
-          }
-
-          console.log(`[p2-fetch] Leadership page found at ${_fd.finalUrl || _probeUrl} (${_fd.contentChars} chars${_fd.renderUsed ? ", rendered" : ", plain"})`);
-          _p0Result = { ..._fd, _probeUrl };
-          break;
-        } catch (_e) {
-          console.warn(`[p2-fetch] Probe failed for ${_probeUrl}:`, _e?.message);
+        } catch (_fe) {
+          console.warn(`[p2-fetch] Fetch failed for ${_leadershipUrl}:`, _fe?.message);
         }
       }
+
       if (!_p0Result) {
-        console.log(`[p2-fetch] Phase 0 complete: probed ${_LEADERSHIP_PATHS.length} paths on ${_companyBaseDomain}, no usable leadership page found — falling through to web search`);
+        console.log(`[p2-fetch] Phase 0 complete: no usable leadership page for ${_companyBaseDomain} — falling through to web search`);
       }
     }
 
