@@ -2237,6 +2237,130 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
       return null;
     };
 
+    // ── Phase 0: Leadership-page fetch (2c) ────────────────────────────────────
+    // Primary exec source: authoritative names from the company's own website.
+    // Probes common leadership paths via /api/fetch → extracts (name, title,
+    // background, angle) from page text → code-verifies each name verbatim.
+    // Domain match guard enforced: off-domain redirects break account isolation.
+    // Falls through to Phase 1 (web search) if no verified names found.
+    const _LEADERSHIP_PATHS = [
+      '/leadership', '/about/leadership', '/leadership-team', '/team',
+      '/our-people', '/company/leadership', '/about-us/team', '/about/team',
+      '/management', '/about-us/management', '/en/leadership', '/about',
+    ];
+    // Canonical base domain for domain-match guard (no www, no protocol)
+    const _companyBaseDomain = (() => {
+      try {
+        const raw = url || co;
+        return new URL(raw.startsWith("http") ? raw : "https://" + raw)
+          .hostname.replace(/^www\./, "").toLowerCase();
+      } catch { return (url || "").toLowerCase().replace(/^www\./, "").split("/")[0]; }
+    })();
+    // Role language regex — same signal as /api/fetch isThin check
+    const _P0_ROLE_RE = /\b(ceo|cfo|coo|cto|cro|chro|cmo|president|vice\s+president|\bvp\b|director|officer|founder|co-?founder|chair(?:man|woman|person)?|partner|managing\s+director|executive\s+director)\b/i;
+
+    let _p0Result = null;
+    if (_companyBaseDomain) {
+      for (const _path of _LEADERSHIP_PATHS) {
+        const _probeUrl = `https://${_companyBaseDomain}${_path}`;
+        try {
+          const _fr = await fetch("/api/fetch", {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ url: _probeUrl, render: "auto" }),
+          });
+          if (!_fr.ok) continue;
+          const _fd = await _fr.json();
+          if (!_fd?.ok || !_fd.text || _fd.text.length < 300) continue;
+
+          // Domain match guard — SSRF-safe but off-domain redirect breaks account isolation
+          if (_fd.finalUrl) {
+            try {
+              const _fh = new URL(_fd.finalUrl).hostname.replace(/^www\./, "").toLowerCase();
+              if (!_fh.includes(_companyBaseDomain) && !_companyBaseDomain.includes(_fh)) {
+                console.warn(`[p2-fetch] Domain mismatch: ${_probeUrl} → ${_fh} — skipping`);
+                continue;
+              }
+            } catch { continue; }
+          }
+          // Must contain exec role language — not a generic marketing page
+          if (!_P0_ROLE_RE.test(_fd.text)) continue;
+
+          console.log(`[p2-fetch] Leadership page found at ${_fd.finalUrl || _probeUrl} (${_fd.contentChars} chars${_fd.renderUsed ? ", rendered" : ""})`);
+          _p0Result = { ..._fd, _probeUrl };
+          break;
+        } catch (_e) {
+          console.warn(`[p2-fetch] Probe failed for ${_probeUrl}:`, _e?.message);
+        }
+      }
+    }
+
+    if (_p0Result) {
+      // Extract executives from fetched leadership page using Claude (temp 0, no tools).
+      // Ask for name, title, background, angle, and verbatim snippet — all from page text.
+      const _p0Prompt =
+        `You are an extraction engine. Extract the current executives listed on this leadership page for "${co}".\n\n` +
+        `SOURCE: ${_p0Result.finalUrl || _p0Result._probeUrl}\n\n` +
+        `PAGE TEXT:\n${_p0Result.text.slice(0, 10000)}\n\n` +
+        `EXTRACTION RULES (non-negotiable):\n` +
+        `1. ONLY include people whose full name AND current title both appear explicitly in the TEXT above. Do NOT add anyone from training knowledge.\n` +
+        `2. Include C-suite, VP-level, director-level, and president-level roles. Skip board members and advisors unless this is explicitly a board page.\n` +
+        `3. Do NOT include historical founders who are clearly deceased or no longer affiliated.\n` +
+        `4. background: 1 sentence from the page bio about their prior role or experience. Empty string if the page gives none.\n` +
+        `5. angle: What strategic priority does this person own at ${co} based on their title and page bio? How should a seller approach them? 2-3 specific sentences.\n` +
+        (KL_EXEC_PERSPECTIVES
+          ? `   ROLE ARCHETYPES for angle: CFO → ROI/cost. CRO → revenue/pipeline. CIO → architecture/integration. CISO → risk/compliance. CHRO → talent/retention. COO → efficiency/process. CMO → growth/brand. Match the angle to the SPECIFIC role.\n`
+          : "") +
+        `6. snippet: verbatim 30-60 word excerpt from the text above that contains BOTH the person's name AND their title together. Copy it exactly — do not paraphrase.\n\n` +
+        `Return ONLY raw JSON (no commentary):\n` +
+        `{"executives":[{"name":"Full Name exactly as written in text","title":"Exact title as in text","background":"1 sentence or empty string","angle":"2-3 sentences on mandate/approach","snippet":"Verbatim excerpt containing name+title"}]}`;
+
+      try {
+        const _p0Resp = await claudeFetch({
+          model: SONNET, max_tokens: 2000, temperature: 0,
+          messages: [{ role: "user", content: _p0Prompt }],
+        });
+        const _p0Text = (_p0Resp?.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+        const _p0Json = extractJsonWithKey(_p0Text, "executives")
+                     || safeParseJSON(_p0Text.includes("{") ? _p0Text.slice(_p0Text.indexOf("{")) : _p0Text);
+        const _p0Raw = _p0Json?.executives || [];
+
+        // Code-verify each name appears verbatim in the page text (case-insensitive).
+        // If not found → hallucinated → strip. This is Gate A equivalent for page-fetched names.
+        const _pageTextLower = _p0Result.text.toLowerCase();
+        const _p0Verified = _p0Raw.filter(e => {
+          if (!e.name || e.name.trim().length < 3) return false;
+          const _nl = e.name.toLowerCase().trim();
+          if (!_pageTextLower.includes(_nl)) {
+            console.warn(`[p2-fetch] Verbatim fail: "${e.name}" not found in page text — skipping`);
+            return false;
+          }
+          return true;
+        }).map(e => ({
+          name: e.name.trim(),
+          title: e.title || "",
+          initials: e.name.trim().split(/\s+/).map(p => p[0] || "").join("").toUpperCase().slice(0, 4),
+          background: e.background || "",
+          angle: e.angle || `${e.name.trim().split(" ")[0]} leads at ${co} as ${e.title || "an executive"}. Research their current mandate before reaching out.`,
+          sourceUrl: _p0Result.finalUrl || _p0Result._probeUrl,
+          snippet: e.snippet || "",
+          sourceDate: "",
+        }));
+
+        if (_p0Verified.length > 0) {
+          console.log(`[p2-fetch] ${_p0Verified.length} exec(s) code-verified from leadership page — returning without web search`);
+          return {
+            keyExecutives: _p0Verified,
+            sellerSnapshot: `${sellerUrl} provides solutions relevant to ${co}'s market.`,
+          };
+        }
+        console.log(`[p2-fetch] Page found but 0 names passed verbatim validation — falling through to web search`);
+      } catch (_e0) {
+        console.warn("[p2-fetch] Leadership page extraction failed:", _e0?.message);
+        // Fall through to Phase 1 web search
+      }
+    }
+
     try {
       // Phase 1: web search + extraction (Sonnet, temp 0 — deterministic extraction per Batch 2d)
       const d = await claudeFetch({
