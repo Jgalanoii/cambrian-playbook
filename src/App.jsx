@@ -1487,7 +1487,23 @@ function buildPlayPrompt(targetCompany, targetDomain, sellerICP, brief, fitScore
   const catalog   = (sellerICP?.icp?.productCatalog || []).slice(0, 3).map(p => sf(typeof p === "string" ? p : p?.name || "")).filter(Boolean).join(", ");
   const customers = (sellerICP?.icp?.verifiedCustomers || sellerICP?.icp?.customerExamples || []).slice(0, 3).map(sf).join(", ");
   const p1 = `${trunc(brief?.companySnapshot, 2000)} · revenue:${brief?.revenue||""} · employees:${brief?.employeeCount||""} · HQ:${brief?.headquarters||""} · ${brief?.fundingProfile||""}`.slice(0, 3000);
-  const p2 = trunc(JSON.stringify([...(brief?.keyExecutives || []), ...(brief?.keyContacts || [])]), 2000);
+  // Step 1 (Amendment G §4): P2 carries ONLY names that are in verifiedPersons —
+  // code-verified present in a fetched source with a real sourceUrl (not "p4-contact-search").
+  // P4-filled contacts and unverified keyContacts are passed role-only (name blanked).
+  // This stops the P4→Play name-echo leak ("Scott Sperry, COO" from stale P4 training recall).
+  const _vpSet1 = new Set(
+    (brief?.keyExecutives || [])
+      .filter(e => e.name && e.sourceUrl?.startsWith("http"))
+      .map(e => e.name.toLowerCase().trim())
+  );
+  const _gateToVP = (persons) => persons.map(p => {
+    const _verified = _vpSet1.has((p.name || "").toLowerCase().trim());
+    return { ...p, name: _verified ? p.name : "", initials: _verified ? p.initials : "" };
+  });
+  const p2 = trunc(JSON.stringify([
+    ..._gateToVP(brief?.keyExecutives || []),
+    ..._gateToVP(brief?.keyContacts   || []),
+  ]), 2000);
   const p4 = trunc(JSON.stringify(brief?.solutionMapping || []), 2000);
   const p5 = `${(brief?.recentSignals || []).join(" · ")} · ${brief?.recentHeadlines||""} · ${brief?.growthSignals||""} · sentiment:${brief?.publicSentiment?.sentimentSummary||""}`.slice(0, 2000);
   const p3 = brief?.strategicTheme ? `${brief.strategicTheme} · ${brief.openingAngle||""} · ${brief.sellerOpportunity||""}`.slice(0, 1500) : null;
@@ -1521,8 +1537,8 @@ OUTPUT SCHEMA:
 {
   "situation": "2-3 sentences. What's happening at ${sf(targetCompany)} now, relevant to ${seller}. Ground in [P1]/[P5]. Name the signal.",
   "whyNow": "1-2 sentences. Which ${seller} product fits + the [P5] signal making it timely. Reference a named product.",
-  "yourMove": "2-3 sentences. Who to contact (name+title from [P2] ONLY), channel, opening angle. Directive.",
-  "primaryContact": { "name": "from [P2] only", "title": "from [P2] only", "rationale": "1 sentence from [P2]" },
+  "yourMove": "2-3 sentences. Who to contact — use name+title from [P2] ONLY where name is non-empty string; if [P2] shows empty string for a role, use role/function language ONLY ('engage the CFO', 'reach the VP of Engineering'). NEVER supply a name from training knowledge. Channel, opening angle. Directive.",
+  "primaryContact": { "name": "from [P2] only — MUST be non-empty in [P2]; omit/null if [P2] has empty string for this role", "title": "from [P2] only", "rationale": "1 sentence from [P2]" },
   "elevatorPitch": "3-4 sentences tailored to ${sf(targetCompany)}. May cite a verified customer from [ICP]. No capabilities not in [ICP].",
   "draftEmailSubject": "One line, specific to ${sf(targetCompany)}.",
   "draftEmailBody": "4-6 sentences: credibility → ${sf(targetCompany)} pain → low-friction ask.",
@@ -1564,13 +1580,20 @@ function validatePlay(play, targetCompany, targetDomain, brief, sellerICP) {
     }
   }
 
-  // Check 3 — primaryContact name in P2 source
-  const p2Str = JSON.stringify([...(brief?.keyExecutives || []), ...(brief?.keyContacts || [])]).toLowerCase();
+  // Check 3 — primaryContact must be in verifiedPersons (sourceUrl-backed — not just in P2 JSON).
+  // "Appears somewhere in P2 JSON string" is too weak: a name could appear in an angle/background
+  // field even for an unverified person. Require sourceUrl?.startsWith("http") — the same bar
+  // as buildPlayPrompt's P2 gate — so only code-verified names can be primaryContact.
+  const _vpCheck3 = new Set(
+    (brief?.keyExecutives || [])
+      .filter(e => e.name && e.sourceUrl?.startsWith("http"))
+      .map(e => e.name.toLowerCase().trim())
+  );
   const contactName = (play?.primaryContact?.name || "").toLowerCase().trim();
-  if (contactName && !p2Str.includes(contactName)) {
-    console.warn("[ThePlay] Check 3 FAIL: primaryContact not found in P2");
+  if (contactName && !_vpCheck3.has(contactName)) {
+    console.warn(`[ThePlay] Check 3 FAIL: primaryContact "${play?.primaryContact?.name}" not in verifiedPersons (sourceUrl-backed) — clearing`);
     play.primaryContact = null;
-    play._contactCleared = true; // rendered as an informational note; not a separate play state
+    play._contactCleared = true;
   }
 
   // Check 4 — topProduct in solutionMapping (preferred) or ICP catalog
@@ -10501,7 +10524,7 @@ Return ONLY raw JSON:
         reality:"2-3 sentences: the specific current-state problem "+co+" has that "+sellerUrl+" can solve. Include ONE real signal (hiring, news, Glassdoor, funding). No fluff.",
         impact:"What this problem is costing "+co+" in real business terms. One number or consequence if possible. Short and visceral — something the economic buyer feels.",
         vision:"Success in "+co+"'s words — not a product feature list. 1-2 sentences. Specific, measurable, tied to their stated business outcomes.",
-        entryPoints:"The Mobilizer profile at "+co+" — NOT just any stakeholder. Who asks 'how do we make this happen?'. Name the type, title, and what they personally win.",
+        entryPoints:"The Mobilizer profile at "+co+" — NOT just any stakeholder. Who asks 'how do we make this happen?'. Describe the ROLE TYPE and title (e.g. 'the VP of Operations' or 'a mid-level champion in Finance') and what they personally win. Do NOT include a specific person's name — names come only from verified sources.",
         route:"STRING (not object). 3-4 prose sentences covering JOLT-structured next step: name the indecision risk, give ONE clear recommendation (not options), scope it small (pilot or workshop), state how risk is taken off the table. Stage-appropriate: Series A=partner/innovation arm, B/C=departmental pilot, D+=full enterprise. Output as flowing sentences in a single string field, NOT as a JSON sub-object.",
         openingAngle:"2 sentences max. Challenge a widely-held assumption about "+co+"'s industry. Reference something real. Human, provocative, not scripted.",
         challengerInsight:"The insight you teach the ORGANIZATION through the Mobilizer — one assumption their industry holds that "+sellerUrl+" can disprove with data or a case study.",
@@ -16372,10 +16395,13 @@ Return ONLY raw JSON:
                   <div className="bb-body" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
                     {(()=>{
                       const isStub = (n) => /^(CEO|CFO|CTO|COO|CRO|CHRO|Founder|President)$/i.test(n?.trim());
-                      const realExecs = (brief.keyExecutives||[]).filter(e=>e?.name && !isStub(e.name));
+                      // Step 1 (Amendment G §4): only show names that have a real sourceUrl
+                      // (code-verified present in a fetched source). P4-filled names (sourceUrl:
+                      // "p4-contact-search") are unverified — they show as title-only seats.
+                      const realExecs = (brief.keyExecutives||[]).filter(e=>e?.name && e?.sourceUrl?.startsWith("http") && !isStub(e.name));
                       return realExecs.length > 0;
                     })()
-                      ? (brief.keyExecutives||[]).filter(e=>e?.name && !/^(CEO|CFO|CTO|COO|CRO|CHRO|Founder|President)$/i.test(e?.name?.trim())).map((ex,i)=>(
+                      ? (brief.keyExecutives||[]).filter(e=>e?.name && e?.sourceUrl?.startsWith("http") && !/^(CEO|CFO|CTO|COO|CRO|CHRO|Founder|President)$/i.test(e?.name?.trim())).map((ex,i)=>(
                         <div key={i} className="contact-row" style={{margin:0}}>
                           <div className="contact-av" style={{background:"#2C4A7A",color:"var(--surface)",fontFamily:"Lora,serif",fontWeight:700,fontSize:11}}>{ex.initials||ex.name?.split(" ").map(w=>w[0]).join("").slice(0,2)||"··"}</div>
                           <div style={{flex:1,minWidth:0}}>
@@ -16856,18 +16882,31 @@ Return ONLY raw JSON:
                           {brief.boardAndInvestors.boardMembers?.length > 0 && (
                             <div>
                               <div style={{fontSize:10,fontWeight:700,color:"var(--ink-2)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Board Members</div>
-                              {brief.boardAndInvestors.boardMembers.map((b,i) => (
+                              {brief.boardAndInvestors.boardMembers.map((b,i) => {
+                                // Step 1 (Amendment G §4): board member names are not yet in
+                                // verifiedPersons (registry built by Step 2 /api/fetch pipeline).
+                                // Show title/background/significance only — no unverified name.
+                                const _vpBoard = new Set(
+                                  (brief?.keyExecutives||[])
+                                    .filter(e=>e.name&&e.sourceUrl?.startsWith("http"))
+                                    .map(e=>e.name.toLowerCase().trim())
+                                );
+                                const _bVerified = _vpBoard.has((b.name||"").toLowerCase().trim());
+                                return (
                                 <div key={i} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:i<brief.boardAndInvestors.boardMembers.length-1?"1px solid var(--line-0)":"none"}}>
                                   <div style={{width:32,height:32,borderRadius:"50%",background:"var(--navy)",color:"var(--surface)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
-                                    {(b.name||"").split(" ").map(w=>w[0]||"").join("").slice(0,2).toUpperCase()}
+                                    {_bVerified ? (b.name||"").split(" ").map(w=>w[0]||"").join("").slice(0,2).toUpperCase() : "··"}
                                   </div>
                                   <div style={{flex:1}}>
-                                    <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)"}}>{b.name} <span style={{fontWeight:400,color:"var(--ink-3)"}}>· {b.title}</span></div>
+                                    <div style={{fontSize:13,fontWeight:600,color:"var(--ink-0)"}}>
+                                      {_bVerified ? <>{b.name} <span style={{fontWeight:400,color:"var(--ink-3)"}}>· {b.title}</span></> : <span style={{fontWeight:400,color:"var(--ink-2)"}}>{b.title}</span>}
+                                    </div>
                                     <div style={{fontSize:12,color:"var(--ink-2)",lineHeight:1.5}}>{b.background}</div>
                                     {b.significance && <div style={{fontSize:11,color:"var(--navy)",marginTop:2,fontStyle:"italic"}}>{b.significance}</div>}
                                   </div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                           {brief.boardAndInvestors.leadInvestors && (
