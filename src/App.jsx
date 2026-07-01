@@ -2129,7 +2129,14 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
     `     * Companies founded more than ~20 years ago\n`+
     `     * Companies with >300 employees or estimated >$50M revenue\n`+
     `     * Multi-generational or family-owned businesses\n`+
-    `     Instead use accurate descriptors: "privately held," "family-owned," "founder-led," "employee-owned," "organically grown," "no external VC/PE funding." These are distinct facts — use the one(s) the evidence supports.\n`+
+    `     Instead pick the descriptor(s) that are FACTUALLY TRUE for this specific company — each is a distinct claim, not a synonym:\n`+
+    `     - "privately held" — always accurate for a company with no public stock; safe fallback when ownership structure is unclear\n`+
+    `     - "family-owned" — ONLY if the founding family still owns or controls the company\n`+
+    `     - "founder-led" — ONLY if the founder is alive and actively leads the company today\n`+
+    `     - "owner-operated" — ONLY if an owner is genuinely running day-to-day operations\n`+
+    `     - "organically grown" — ONLY if no significant outside funding is evident from research\n`+
+    `     - "employee-owned" — ONLY if there is evidence of an ESOP or employee ownership structure\n`+
+    `     NEVER use "founder-led" when the founder is deceased. NEVER use "owner-operated" for a professionally managed company. When in doubt: "privately held" is always accurate.\n`+
     `   - Standard: Limited data expected. Estimates acceptable with reasoning.\n\n`+
     `5. NONPROFIT:\n`+
     `   - Search: "${co}" Form 990 OR "${co}" annual report OR "${co}" GuideStar\n`+
@@ -3128,12 +3135,12 @@ function generateBrief(member, sellerUrl, sellerDocs, products, selectedCohort, 
               `- VC-BACKED: Search "${co}" funding round Series Crunchbase. Total raised and valuation are often in press releases. Revenue is rarely disclosed — estimate from stage + employee count.\n`+
               `- NONPROFIT: Search "${co}" Form 990 OR annual report. Total revenue, program spend, and executive compensation are public record for US nonprofits.\n`+
               `- GOVERNMENT: Search "${co}" budget allocation. Use fiscal year budget, not revenue.\n`+
-              `- PRIVATE / OWNER-OPERATED: Search for funding rounds, growth metrics, valuation signals. VOCABULARY: Do NOT write "bootstrapped" for companies >20 years old or >300 employees — use "privately held," "founder-led," or "family-owned" instead.\n`+
+              `- PRIVATE / OWNER-OPERATED: Search for funding rounds, growth metrics, valuation signals. VOCABULARY: Do NOT write "bootstrapped" for companies >20 years old or >300 employees. Use only the descriptor(s) factually true for this company: "privately held" (always accurate), "family-owned" (only if family still controls), "founder-led" (ONLY if the founder is alive and actively leads today), "owner-operated" (ONLY if an owner runs day-to-day), "organically grown" (only if no outside funding found). "privately held" is always safe when unsure.\n`+
               `For NONPROFITS: search for annual reports, grant funding, program spending.\n`+
               `CRITICAL FOR PRIVATE COMPANIES: If no public financial data exists, provide REASONED ESTIMATES based on company size, industry, funding stage, and comparable companies. Format: "No published data. Based on [evidence], estimated [metric] is [range]. Comparable companies like [name] in [industry] typically [benchmark]." NEVER leave fields empty — always provide your best estimate with cited reasoning. NEVER state estimates as facts — always disclose they are estimates.\n\n`) +
           `Return raw JSON:\n`+
           `{"financialDeepDive":{`+
-          `"revenueTrend":"${isPublicCompany ? "2-3 sentences: revenue trajectory over 2-3 years. Cite specific numbers from 10-K filings (e.g. '$4.2B FY2024, up 12% from $3.75B FY2023')." : "2-3 sentences. If public data exists, cite it. If not, provide a reasoned estimate: 'No published revenue data. Based on [employee count/funding stage/industry], estimated annual revenue is $X-$Y. Companies like [comparable] at similar stage typically generate [range].' VOCABULARY: Do NOT use the word 'bootstrapped' — for established private companies use 'privately held,' 'family-owned,' 'founder-led,' or 'organically grown' instead."}",`+
+          `"revenueTrend":"${isPublicCompany ? "2-3 sentences: revenue trajectory over 2-3 years. Cite specific numbers from 10-K filings (e.g. '$4.2B FY2024, up 12% from $3.75B FY2023')." : "2-3 sentences. If public data exists, cite it. If not, provide a reasoned estimate: 'No published revenue data. Based on [employee count/funding stage/industry], estimated annual revenue is $X-$Y. Companies like [comparable] at similar stage typically generate [range].' VOCABULARY: Do NOT use the word 'bootstrapped.' Use only the descriptor factually true for this company: 'privately held' (always accurate), 'family-owned' (only if family still controls), 'founder-led' (ONLY if the founder is alive and actively leads today), 'organically grown' (only if no outside funding found). When unsure: 'privately held.'"}",`+
           `"marginTrend":"${isPublicCompany ? "1-2 sentences: Reference specific 10-K data (e.g. 'Operating margin expanded 200bps to 18.3% per 10-K filed 3/1/2025')." : "1-2 sentences. If no data, estimate based on business model: 'SaaS companies at this stage typically operate at [X-Y%] gross margin with [negative/breakeven] EBITDA.'"}",`+
           `"segmentBreakdown":"Which business segments or product lines drive the most revenue? ${isPublicCompany ? "Use 10-K segment reporting." : "Describe their product lines and estimate which drives the most revenue based on pricing and market signals."}",`+
           `"earningsInsight":"${isPublicCompany ? "1-2 sentences: the most revealing quote from the latest earnings call with speaker name, title, and call date." : "1-2 sentences: most revealing public statement from leadership (press release, interview, LinkedIn). If none found, describe what their product launches and hiring patterns suggest about priorities."}",`+
@@ -9186,7 +9193,7 @@ Return ONLY raw JSON:
                           `EXTRACTION RULES:\n` +
                           `1. Only state facts that appear in the intelligence above — no outside statistics.\n` +
                           `2. topRisk: the single biggest obstacle to selling into ${co} — extracted from the text above. If no explicit risk is stated, describe the structural challenge (e.g. "PE-backed exploring exit — deal cycles may stall" or "deep incumbent relationships require board-level access") WITHOUT fabricating numbers.\n` +
-                          `3. VOCABULARY: Do NOT describe any company as "bootstrapped." For privately held companies use "privately held," "family-owned," "founder-led," or "organically grown" — "bootstrapped" is startup terminology and factually wrong for established businesses.\n\n` +
+                          `3. VOCABULARY: Do NOT describe any company as "bootstrapped." Use only the descriptor factually true for this company: "privately held" (always accurate), "family-owned" (only if family still controls), "founder-led" (ONLY if the founder is alive and actively leads today), "organically grown" (only if no outside funding found). "privately held" is always safe when unsure.\n\n` +
                           `Return ONLY raw JSON: {"tldr":{"topFinding":"...","topOpportunity":"...","topRisk":"..."}}`,
                           { maxTokens: 600 }
                         ).then(r => { if (r?.tldr?.topFinding) { setBrief(prev => prev ? { ...prev, tldr: r.tldr } : prev); console.log("[cache] Quick Take generated"); } }).catch(() => {});
@@ -9528,7 +9535,7 @@ Return ONLY raw JSON:
           `2. Do NOT add any statistics, market share figures, revenue numbers, competitor counts, or percentages from your own knowledge. ZERO. Only numbers that appear verbatim in the intelligence above.\n` +
           `3. Do NOT cite G2 rankings, review-site metrics, or product-listing counts as market share or competitive position. These are review-platform artifacts, not market economics.\n` +
           `4. If the intelligence above lacks a clear risk, state the structural challenge (e.g. "private company with limited public data" or "highly fragmented market with switching costs") WITHOUT inventing specific numbers.\n` +
-          `5. VOCABULARY: Do NOT describe any company as "bootstrapped." For privately held companies use "privately held," "family-owned," "founder-led," or "organically grown" — "bootstrapped" is startup terminology and factually wrong for established businesses.\n\n` +
+          `5. VOCABULARY: Do NOT describe any company as "bootstrapped." Use only the descriptor factually true for this company: "privately held" (always accurate), "family-owned" (only if family still controls), "founder-led" (ONLY if the founder is alive and actively leads today), "organically grown" (only if no outside funding found). "privately held" is always safe when unsure.\n\n` +
           `FORMAT:\n` +
           `- topFinding: the single most important fact FROM THE TEXT ABOVE that changes how a seller approaches ${co}.\n` +
           `- topOpportunity: the single biggest reason to engage ${co} RIGHT NOW — extracted FROM THE TEXT ABOVE.\n` +
