@@ -109,15 +109,14 @@ export async function provisionTrialAccess({ email, name, company, invitedBy = "
     return { ok: true, orgId: pending[0].org_id, invitationId: pending[0].id, emailSent, action: `resent_${action}` };
   }
 
-  // Fresh trial org (plan/run limits come from column defaults, as in
-  // _usage.js). The admitting promo code is stamped on the org — checkout
+  // Fresh trial org. The admitting promo code is stamped on the org — checkout
   // verifies run-pack eligibility against it (migration 034). Conditional so
   // non-promo callers (issue #3 admin approval) never touch the column.
-  // Promo-code signups get 10 free runs (vs. the default 3 for standard trial)
-  // so they can evaluate the product before the $45/mo promo subscription (issue #137).
+  // Every new trial gets 10 free runs — the promo funnel (10 free → $45/mo half-off
+  // → Starter) applies to all signups, promo code or not (issue #151).
   const orgName = (company || name || cleanEmail).trim();
   const created = await sbFetch("orgs", "POST",
-    promoCode ? { name: orgName, promo_code: promoCode, run_limit: 10 } : { name: orgName });
+    promoCode ? { name: orgName, promo_code: promoCode, run_limit: 10 } : { name: orgName, run_limit: 10 });
   const orgId = Array.isArray(created) ? created[0]?.id : created?.id;
   if (!orgId) {
     console.warn("[provision] Org creation failed:", JSON.stringify(created));

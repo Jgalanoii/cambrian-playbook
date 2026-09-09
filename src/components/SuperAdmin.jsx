@@ -29,7 +29,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
   const [error, setError] = useState("");
   const [tab, setTab] = useState("overview"); // overview | users | activity | urls
   const [plans, setPlans] = useState([
-    { id: "trial", name: "Trial", tokens: 3, maxTokens: 0, price: 0, costPerToken: 1.16 },
+    { id: "trial", name: "Trial", tokens: 10, maxTokens: 0, price: 0, costPerToken: 1.16 },
     { id: "starter", name: "Starter", tokens: 25, maxTokens: 5, price: 99, costPerToken: 1.16 },
     { id: "pro", name: "Pro", tokens: 100, maxTokens: 20, price: 349, costPerToken: 1.16 },
     { id: "team", name: "Team", tokens: 250, maxTokens: 50, price: 799, costPerToken: 1.16 },
@@ -1297,7 +1297,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                     if (!name) { setPlanSaveMsg("Org name required"); setTimeout(() => setPlanSaveMsg(""), 3000); return; }
                     const url = document.getElementById("sa-new-org-url")?.value?.trim();
                     const plan = document.getElementById("sa-new-org-plan")?.value || "trial";
-                    const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 } };
+                    const limits = { trial: { run_limit: 10, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5 }, pro: { run_limit: 100, max_run_limit: 20 }, team: { run_limit: 250, max_run_limit: 50 }, enterprise: { run_limit: 1000, max_run_limit: 200 } };
                     const body = { name, plan, ...(limits[plan] || {}) };
                     if (url) body.seller_url = url.startsWith("http") ? url : `https://${url}`;
                     try {
@@ -1369,7 +1369,7 @@ export default function SuperAdmin({ sbUser, sbToken, orgCtx, onClose }) {
                                   return (
                                 <select defaultValue={o.plan} onChange={e => {
                                   const plan = e.target.value;
-                                  const limits = { trial: { run_limit: 3, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5, rollover_cap: 25 }, pro: { run_limit: 100, max_run_limit: 20, rollover_cap: 100 }, team: { run_limit: 250, max_run_limit: 50, rollover_cap: 250 }, enterprise: { run_limit: 1000, max_run_limit: 200, rollover_cap: 1000 }, promo_monthly: { run_limit: 20, max_run_limit: 0, rollover_cap: 20 } };
+                                  const limits = { trial: { run_limit: 10, max_run_limit: 0 }, starter: { run_limit: 25, max_run_limit: 5, rollover_cap: 25 }, pro: { run_limit: 100, max_run_limit: 20, rollover_cap: 100 }, team: { run_limit: 250, max_run_limit: 50, rollover_cap: 250 }, enterprise: { run_limit: 1000, max_run_limit: 200, rollover_cap: 1000 }, promo_monthly: { run_limit: 20, max_run_limit: 0, rollover_cap: 20 } };
                                   patchOrg({ plan, ...(limits[plan] || {}) }, `${o.name} \u2192 ${plan}${limits[plan]?.run_limit ? ` (${limits[plan].run_limit} runs)` : ""}`);
                                 }} style={{ background: ps.bg, borderColor: ps.border, color: ps.border, fontWeight: 700 }}>
                                   <option value="trial">Trial</option>
