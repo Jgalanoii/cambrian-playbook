@@ -4,7 +4,7 @@ import { OUTCOMES } from "./data/outcomes.js";
 import { RIVER_STAGES } from "./data/riverFramework.js";
 import { SAMPLE_ROWS } from "./data/sampleAccounts.js";
 import { sbAuth, sbGetUser, sbSessions, sbStoreTokens, sbRestoreSession, sbRefreshSession, sbClearTokens, sbSetTokenCallback, sbUpdateUserMetadata } from "./lib/supabase.js";
-import { fetchOrgContext, sbPatch } from "./lib/org.js";
+import { fetchOrgContext, sbPatch, sbRpc } from "./lib/org.js";
 import SuperAdmin from "./components/SuperAdmin.jsx";
 import UserDashboard from "./components/UserDashboard.jsx";
 import S9SolutionFit from "./stages/S9_SolutionFit.jsx";
@@ -5606,6 +5606,7 @@ export default function App(){
   const[icpDelta,setIcpDelta]=useState(null); // {alignments:[], gaps:[], recommendations:[]}
   const[icpDeltaLoading,setIcpDeltaLoading]=useState(false);
   const[orgCtx,setOrgCtx]=useState(null); // {id, name, run_count, run_limit, plan, userRole, ...}
+  const[promoOffer,setPromoOffer]=useState(null); // 'run_pack' | 'monthly' | null — which promo card this org gets (promo_offer_kind RPC, migration 037)
   const[upgradeOpen,setUpgradeOpen]=useState(false); // show upgrade prompt modal
   const[contactFormOpen,setContactFormOpen]=useState(false);
   const[contactFormMsg,setContactFormMsg]=useState("");
@@ -13459,6 +13460,17 @@ Return ONLY raw JSON:
   // Refresh orgCtx after billable calls to keep token count accurate
   const refreshOrgCtx = () => { if (sbUser?.id && sbToken) fetchOrgContext(sbUser.id, sbToken).then(org => { if (org) setOrgCtx(org); }); };
 
+  // Which promo offer card the pricing modal shows. grants_run_pack lives in the
+  // service-role-only promo_codes table, so the client asks the promo_offer_kind()
+  // RPC (migration 037) instead of deciding from orgCtx alone — otherwise orgs
+  // admitted by a non-pack code would see a Run Pack button /api/checkout rejects.
+  React.useEffect(() => {
+    if (!sbToken || !orgCtx?.promo_code) { setPromoOffer(null); return; }
+    sbRpc("promo_offer_kind", sbToken, {})
+      .then(kind => setPromoOffer(kind === "run_pack" || kind === "monthly" ? kind : null))
+      .catch(() => setPromoOffer(null));
+  }, [sbToken, orgCtx?.promo_code, orgCtx?.plan]);
+
   // Auto-populate seller URL from org context on new sessions
   // so users don't have to re-enter their company every time.
   // Pre-fills the field and sets sellerUrl, but does NOT auto-trigger
@@ -13487,7 +13499,7 @@ Return ONLY raw JSON:
       // knowledge, compliance, battle cards, etc. Without this, the cached
       // trial-tier layers would persist until the 5-min cache expires.
       setTimeout(fetchKnowledgeLayer, 2500);
-      setChatMessages(prev => [...prev, { role: "assistant", content: plan === "promo_pack" ? "Your 20-run pack is active — the runs are already on your account. Let's go close some deals." : `Welcome to the ${plan.charAt(0).toUpperCase()+plan.slice(1)} plan! Your runs have been upgraded. Let's go close some deals.` }]);
+      setChatMessages(prev => [...prev, { role: "assistant", content: plan === "promo_pack" ? "Your 20-run pack is active — the runs are already on your account. Let's go close some deals." : plan === "promo_monthly" ? "Your promo plan is active — 20 runs a month for 2 months, then you'll graduate to Starter automatically. Let's go close some deals." : `Welcome to the ${plan.charAt(0).toUpperCase()+plan.slice(1)} plan! Your runs have been upgraded. Let's go close some deals.` }]);
       setChatOpen(true);
     } else if (checkout === "cancel") {
       window.history.replaceState({}, "", window.location.pathname);
@@ -20308,8 +20320,8 @@ Return ONLY raw JSON:
 
             {/* Pricing cards */}
             <div style={{padding:"20px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(145px, 1fr))",gap:10}}>
-              {/* One-time run pack — only for orgs admitted via a promo code, still on trial (or topping up a prior pack). Eligibility is re-verified server-side in /api/checkout. */}
-              {sbUser&&orgCtx?.promo_code&&(orgCtx?.plan==="trial"||orgCtx?.plan==="promo")&&(
+              {/* One-time run pack — only for orgs whose admitting promo code grants it (promo_offer_kind RPC). Eligibility is re-verified server-side in /api/checkout. */}
+              {sbUser&&promoOffer==="run_pack"&&(
                 <div style={{border:"2px solid var(--green)",borderRadius:10,padding:"18px 16px",position:"relative",background:"var(--surface)"}}>
                   <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:10,fontWeight:700,padding:"2px 10px",borderRadius:20,background:"var(--green)",color:"var(--surface)",textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Your Offer</div>
                   <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Run Pack</div>
@@ -20334,6 +20346,35 @@ Return ONLY raw JSON:
                   }}
                     style={{display:"block",width:"100%",textAlign:"center",padding:"10px",borderRadius:8,background:"var(--green)",color:"var(--surface)",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",marginTop:12,fontFamily:"var(--font-sans)"}}>
                     Get 20 runs →
+                  </button>
+                </div>
+              )}
+              {/* $45/mo promo subscription (issue #143) — promo-code trial orgs whose code doesn't grant the run pack. 2 billing cycles, then Stripe's subscription schedule graduates the org to Starter. Eligibility is re-verified server-side in /api/checkout. */}
+              {sbUser&&promoOffer==="monthly"&&(
+                <div style={{border:"2px solid var(--green)",borderRadius:10,padding:"18px 16px",position:"relative",background:"var(--surface)"}}>
+                  <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",fontSize:10,fontWeight:700,padding:"2px 10px",borderRadius:20,background:"var(--green)",color:"var(--surface)",textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>Your Offer</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--ink-0)",marginBottom:4}}>Promo Plan</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:2,marginBottom:2}}>
+                    <span style={{fontSize:32,fontWeight:700,color:"var(--ink-0)",fontFamily:"'Crimson Pro',serif"}}>$45</span>
+                    <span style={{fontSize:12,color:"var(--ink-3)"}}>/mo</span>
+                  </div>
+                  <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>20 runs / month</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)",marginBottom:10}}>Exclusive {orgCtx.promo_code} offer — 2 months, then Starter at $99/mo</div>
+                  {["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Paid-tier knowledge layers"].map(f=>(
+                    <div key={f} style={{fontSize:11,color:"var(--ink-1)",padding:"2px 0",display:"flex",gap:6}}>
+                      <span style={{color:"var(--green)",flexShrink:0}}>✓</span>{f}
+                    </div>
+                  ))}
+                  <button onClick={async()=>{
+                    try{
+                      const r=await apiFetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${sbToken}`},body:JSON.stringify({planId:"promo_monthly"})});
+                      const d=await r.json();
+                      if(d.url)window.location.href=d.url;
+                      else alert(d.error||"Checkout failed — please try again.");
+                    }catch{alert("Failed to start checkout — check your connection.");}
+                  }}
+                    style={{display:"block",width:"100%",textAlign:"center",padding:"10px",borderRadius:8,background:"var(--green)",color:"var(--surface)",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",marginTop:12,fontFamily:"var(--font-sans)"}}>
+                    Start promo plan →
                   </button>
                 </div>
               )}
