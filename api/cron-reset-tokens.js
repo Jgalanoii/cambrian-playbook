@@ -59,19 +59,12 @@ export default async function handler(req, res) {
       body: JSON.stringify({ max_run_count: 0 }),
     });
 
-    // Step 2: Reset trial orgs (no rollover, just zero out)
-    const trialRes = await fetch(`${SB_URL}/rest/v1/orgs?plan=eq.trial&run_count=gt.0`, {
-      method: "PATCH",
-      headers: {
-        apikey: SB_KEY,
-        Authorization: `Bearer ${SB_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify({ run_count: 0, max_run_count: 0, rollover_runs: 0 }),
-    });
-    const trialUpdated = await trialRes.json();
-    const trialCount = Array.isArray(trialUpdated) ? trialUpdated.length : 0;
+    // Step 2: Trial orgs are NOT reset. The 10 free runs are a one-time
+    // allotment in the promo funnel (10 free → $45/mo half-off → Starter,
+    // issue #151) — resetting monthly would hand out fresh free runs forever
+    // and remove the reason to convert at run 11. Trial run_count is monotonic,
+    // same as the old one-time run pack.
+    const trialCount = 0;
 
     // Step 3: Reset referral bonus counters (monthly cap resets)
     await fetch(`${SB_URL}/rest/v1/orgs?referral_bonus_runs=gt.0`, {

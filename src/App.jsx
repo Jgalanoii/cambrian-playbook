@@ -5208,7 +5208,7 @@ const APP_GUIDES = {
     subtitle: "Complete walkthrough of the 9-step sales intelligence workflow",
     icon: "📘",
     sections: [
-      { h: "Getting Started", body: "Sign up at cambree.ai. 3 free runs, no credit card. Each run takes you through the full 9-step workflow." },
+      { h: "Getting Started", body: "Sign up at cambree.ai. 10 free runs, no credit card. Each run takes you through the full 9-step workflow." },
       { h: "Step 0: Start", body: "Sets up your selling identity — who you are, what you sell, and what proof you have.\n\n1. Enter your company URL (e.g., yourcompany.com)\n2. Cambree researches your company and auto-builds your Ideal Customer Profile\n3. Upload sales materials (PDFs, decks, one-pagers) to ground AI output in YOUR proof\n4. Add proof points (ROI metrics, awards, customer wins) — cited in every brief\n5. Select your funding stage — this calibrates how the tool positions you\n\nTip: Use a URL, not just a company name — URLs give the best results." },
       { h: "Step 1: ICP & RFPs", body: "Shows your auto-generated Ideal Customer Profile — industries, buyer personas, pain points, conferences, and RFP opportunities.\n\n• Review every field — click any text to edit it\n• Your corrections override AI content in all downstream output\n• Switch to \"RFP Intel\" tab for matching procurement opportunities\n• Adjust Fit Scoring Weights to prioritize different dimensions\n\nTip: Edit the Industries list if the AI picked wrong verticals — this directly affects which companies get matched." },
       { h: "Step 2: Import", body: "Three ways to add target companies:\n\n• Upload CSV/Excel — columns auto-map (Company, Industry, URL, Employees, Ownership)\n• Quick Entry — type company names one per line\n• Build Target Accounts — AI generates 25-30 ICP-matched companies with industry, headcount, and revenue filters\n\nAll imported companies are automatically scored for ICP fit." },
@@ -5230,7 +5230,7 @@ const APP_GUIDES = {
     icon: "📙",
     sections: [
       { h: "User Management", body: "Invite: Settings → Team → Invite Member → enter email + role.\n\nRoles:\n• Rep — run briefs, save sessions, push to HubSpot\n• Manager — Rep + view team sessions and reporting\n• Admin — Manager + invite/remove members, change org settings\n\nChange role: Team → click role dropdown → select new role.\nRemove: Team → \"...\" → Remove. Sessions remain in the org." },
-      { h: "Organization Setup", body: "Seller URL: Settings → Account → enter your company URL. Triggers ICP generation.\n\nPlans:\n• Trial: 3 free runs, no credit card\n• Starter ($99/mo): 25 runs\n• Pro ($349/mo): 100 runs\n• Team ($799/mo): 250 runs\n• Enterprise ($2,500/mo): 1,000 runs\n\nRollover: Unused runs carry forward (capped at 1 month's allocation)." },
+      { h: "Organization Setup", body: "Seller URL: Settings → Account → enter your company URL. Triggers ICP generation.\n\nPlans:\n• Trial: 10 free runs, no credit card\n• Promo ($45/mo): 20 runs, first 2 months half off, then Starter\n• Starter ($99/mo): 25 runs\n• Pro ($349/mo): 100 runs\n• Team ($799/mo): 250 runs\n• Enterprise ($2,500/mo): 1,000 runs\n\nRollover: Unused runs carry forward (capped at 1 month's allocation)." },
       { h: "HubSpot Setup", body: "Settings → HubSpot → Connect. Must be logged into HubSpot in the same browser first.\n\nAfter connecting, \"Push to HubSpot\" appears in brief and post-call action bars.\n\nIf push fails: Disconnect → Reconnect in Settings." },
       { h: "Troubleshooting — ICP", body: "ICP not building?\n1. Check the URL — use a full domain like company.com\n2. Try with .com — some TLDs don't resolve\n3. Click \"Regenerate ICP\" to force fresh build\n4. Check console (DevTools → Console) for errors\n5. Check run limit — 0 remaining = ICP won't build" },
       { h: "Troubleshooting — Briefs", body: "Sections blank?\n1. Look for amber banner — \"X sections incomplete\"\n2. Hit Regenerate — free, doesn't count against runs\n3. Some sections (P3 Strategy with Opus) take 15-30 seconds\n4. Check console for specific failures" },
@@ -13462,14 +13462,14 @@ Return ONLY raw JSON:
 
   // Which promo offer card the pricing modal shows. grants_run_pack lives in the
   // service-role-only promo_codes table, so the client asks the promo_offer_kind()
-  // RPC (migration 037) instead of deciding from orgCtx alone — otherwise orgs
-  // admitted by a non-pack code would see a Run Pack button /api/checkout rejects.
+  // RPC (migration 038) instead of deciding from orgCtx alone. Any trial org can
+  // qualify for the monthly offer — no promo code required (issue #151).
   React.useEffect(() => {
-    if (!sbToken || !orgCtx?.promo_code) { setPromoOffer(null); return; }
+    if (!sbToken || !orgCtx?.id) { setPromoOffer(null); return; }
     sbRpc("promo_offer_kind", sbToken, {})
       .then(kind => setPromoOffer(kind === "run_pack" || kind === "monthly" ? kind : null))
       .catch(() => setPromoOffer(null));
-  }, [sbToken, orgCtx?.promo_code, orgCtx?.plan]);
+  }, [sbToken, orgCtx?.id, orgCtx?.promo_code, orgCtx?.plan]);
 
   // Auto-populate seller URL from org context on new sessions
   // so users don't have to re-enter their company every time.
@@ -14648,7 +14648,7 @@ Return ONLY raw JSON:
                       </div>
                     ))}
                   </div>
-                  <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:8}}>3 free runs, no credit card required</div>
+                  <div style={{fontSize:12,color:"var(--ink-3)",marginBottom:8}}>10 free runs, no credit card required</div>
                 </div>
               )}
 
@@ -20312,7 +20312,8 @@ Return ONLY raw JSON:
               </div>
               <div style={{fontSize:13,color:"var(--ink-2)",lineHeight:1.5}}>
                 {!sbUser
-                  ? "Create a free account — 3 full runs, zero credit card. Full ICP, deep briefs, RIVER hypothesis, and the confidence that comes from actually doing your homework."
+                  ? "Create a free account — 10 full runs, zero credit card. Full ICP, deep briefs, RIVER hypothesis, and the confidence that comes from actually doing your homework."
+                  : orgCtx?.plan==="trial" && promoOffer==="monthly" && (orgCtx?.run_count||0) >= (orgCtx?.run_limit||0) ? `You've used all ${orgCtx?.run_limit||10} free runs. Unlock 20 more for half off — $45/mo for 2 months, then Starter.`
                   : orgCtx?.plan==="trial" ? `You've used ${orgCtx?.run_count||0} of ${orgCtx?.run_limit||3} trial runs. If the briefs made you better, imagine what a full month does.`
                   : `You're on the ${orgCtx?.plan} plan (${orgCtx?.run_count||0}/${orgCtx?.run_limit||3} runs used). Need more firepower?`}
               </div>
@@ -20359,7 +20360,7 @@ Return ONLY raw JSON:
                     <span style={{fontSize:12,color:"var(--ink-3)"}}>/mo</span>
                   </div>
                   <div style={{fontSize:11,color:"var(--tan-0)",fontWeight:600,marginBottom:2}}>20 runs / month</div>
-                  <div style={{fontSize:11,color:"var(--ink-3)",marginBottom:10}}>Exclusive {orgCtx.promo_code} offer — 2 months, then Starter at $99/mo</div>
+                  <div style={{fontSize:11,color:"var(--ink-3)",marginBottom:10}}>Half off Starter — 2 months at $45, then $99/mo</div>
                   {["Full ICP + brief pipeline","RIVER hypothesis + discovery","Milton coaching","Paid-tier knowledge layers"].map(f=>(
                     <div key={f} style={{fontSize:11,color:"var(--ink-1)",padding:"2px 0",display:"flex",gap:6}}>
                       <span style={{color:"var(--green)",flexShrink:0}}>✓</span>{f}

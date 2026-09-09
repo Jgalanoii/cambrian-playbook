@@ -125,11 +125,13 @@ export default async function handler(req, res) {
   if (isPromoMonthly) {
     try {
       if (!orgId) return res.status(403).json({ error: "This offer isn't available for your account" });
-      const orgRes = await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}&select=promo_code,plan`, {
+      const orgRes = await fetch(`${SB_URL}/rest/v1/orgs?id=eq.${orgId}&select=plan`, {
         headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
       });
       const org = (await orgRes.json())?.[0];
-      const eligible = org?.promo_code && org.plan === "trial";
+      // Any trial org qualifies — the promo funnel is the default new-user path,
+      // no promo code required (issue #151).
+      const eligible = org?.plan === "trial";
       if (!eligible) return res.status(403).json({ error: "This offer isn't available for your account" });
     } catch (e) {
       console.error("[checkout] Promo monthly eligibility check failed:", e.message);
